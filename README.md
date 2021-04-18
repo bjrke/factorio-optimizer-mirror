@@ -4,5 +4,5 @@
 `~/.steam/steam/steamapps/common/Factorio/data/base/prototypes/recipe.lua`
 
 #### Predefined Run Configs of Intellij:
-`./gradle browserProductionRun --continuous` or
-`./browserDevelopmentRun --continuous`
+`./gradlew browserProductionRun --continuous` or
+`./gradlew browserDevelopmentRun --continuous`
