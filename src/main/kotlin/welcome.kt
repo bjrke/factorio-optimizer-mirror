@@ -9,13 +9,12 @@ import styled.css
 import styled.styledDiv
 import styled.styledInput
 
-external interface WelcomeProps : RProps {
+interface WelcomeProps : RProps {
     var name: String
 }
 
 data class WelcomeState(val name: String) : RState
 
-@JsExport
 class Welcome(props: WelcomeProps) : RComponent<WelcomeProps, WelcomeState>(props) {
 
     init {
@@ -38,7 +37,7 @@ class Welcome(props: WelcomeProps) : RComponent<WelcomeProps, WelcomeState>(prop
                 value = state.name
                 onChangeFunction = { event ->
                     setState(
-                            WelcomeState(name = (event.target as HTMLInputElement).value)
+                        WelcomeState(name = (event.target as HTMLInputElement).value)
                     )
                 }
             }

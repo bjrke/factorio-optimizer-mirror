@@ -1,38 +1,47 @@
 package de.bjrke.factorio.common.component
 
 import de.bjrke.factorio.common.model.Material
+import de.bjrke.factorio.optimizer.ChangeMaterial
+import de.bjrke.factorio.optimizer.OptimizerAppState
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
-import react.RBuilder
-import react.RComponent
-import react.RProps
-import react.RState
+import react.*
+
 import react.dom.option
 import react.dom.select
+import react.redux.rConnect
+import redux.WrapperAction
 
-external interface MaterialSelectorProps : RProps {
-    var material: Material
-    var availableMaterials: List<Material>
+
+interface MaterialSelectorStateProps : RProps {
+    var material: Material?
+    var availableMaterials: Array<Material>
 }
 
-data class MaterialSelectorState(val material: Material) : RState
+interface MaterialSelectorDispatchProps : RProps {
+    var changeMaterial: (Material) -> Unit
+}
 
-@JsExport
-class MaterialSelector(props: MaterialSelectorProps) : RComponent<MaterialSelectorProps, MaterialSelectorState>(props) {
+interface MaterialSelectorProps : RProps {
+    var material: Material?
+    var availableMaterials: Array<Material>
+    var changeMaterial: (Material) -> Unit
+}
+
+class MaterialSelector(props: MaterialSelectorProps) :
+    RComponent<MaterialSelectorProps, RState>(props) {
 
     init {
-        state = MaterialSelectorState(props.material);
+        state = BoxedState { }
     }
 
     override fun RBuilder.render() {
         select {
             attrs {
                 onChangeFunction = { event ->
-                    setState(
-                        MaterialSelectorState(Material((event.target as HTMLSelectElement).value))
-                    )
+                    props.changeMaterial(Material((event.target as HTMLSelectElement).value))
                 }
-                value = state.material.name
+                value = props.material?.name ?: ""
             }
             for (m in props.availableMaterials) {
                 option {
@@ -45,3 +54,14 @@ class MaterialSelector(props: MaterialSelectorProps) : RComponent<MaterialSelect
     }
 
 }
+
+val materialSelector: RClass<RProps> =
+    rConnect<OptimizerAppState, ChangeMaterial, WrapperAction, RProps, MaterialSelectorStateProps, MaterialSelectorDispatchProps, MaterialSelectorProps>(
+        { state, _ ->
+            availableMaterials = arrayOf(Material("foo"), Material("bar"))
+            material = state.target
+        },
+        { dispatch, _ ->
+            changeMaterial = { dispatch(ChangeMaterial(it)) }
+        }
+    )(MaterialSelector::class.rClass)
