@@ -26,6 +26,11 @@ fun main() {
         render(document.getElementById("root")) {
             provider(store) {
                 div {
+                    child(Welcome::class) {
+                        attrs {
+                            name = "bleibt hier für tests"
+                        }
+                    }
                     materialSelector {}
                     materialSelector {}
                 }
