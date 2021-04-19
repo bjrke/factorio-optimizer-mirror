@@ -12,7 +12,6 @@ import react.dom.select
 import react.redux.rConnect
 import redux.WrapperAction
 
-
 interface MaterialSelectorStateProps : RProps {
     var material: Material
     var availableMaterials: Array<Material>
@@ -22,18 +21,10 @@ interface MaterialSelectorDispatchProps : RProps {
     var changeMaterial: (Material) -> Unit
 }
 
-interface MaterialSelectorProps : RProps {
-    var material: Material
-    var availableMaterials: Array<Material>
-    var changeMaterial: (Material) -> Unit
-}
+interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
 class MaterialSelector(props: MaterialSelectorProps) :
     RComponent<MaterialSelectorProps, RState>(props) {
-
-    init {
-        state = BoxedState { }
-    }
 
     override fun RBuilder.render() {
         select {
