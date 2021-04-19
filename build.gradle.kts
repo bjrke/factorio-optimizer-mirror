@@ -12,12 +12,12 @@ repositories {
 }
 
 dependencies {
-    testImplementation(kotlin("test-js"))
-    val kotlinVersionSuffix = "-pre.125-kotlin-1.4.10"
+    val kotlinVersionSuffix = "-pre.153-kotlin-1.4.32"
+    implementation("org.jetbrains", "kotlin-styled", "5.2.3$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-react-router-dom", "5.2.0$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-react-redux", "7.2.3$kotlinVersionSuffix")
 
-    implementation("org.jetbrains", "kotlin-styled", "5.2.0$kotlinVersionSuffix")
-    implementation("org.jetbrains", "kotlin-react-router-dom", "5.1.2$kotlinVersionSuffix")
-    implementation("org.jetbrains", "kotlin-react-redux", "5.0.7$kotlinVersionSuffix")
+    testImplementation(kotlin("test-js"))
 }
 
 kotlin {
