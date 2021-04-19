@@ -27,6 +27,7 @@ fun main() {
             provider(store) {
                 div {
                     materialSelector {}
+                    materialSelector {}
                 }
 
             }

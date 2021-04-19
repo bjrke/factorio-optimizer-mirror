@@ -14,7 +14,7 @@ import redux.WrapperAction
 
 
 interface MaterialSelectorStateProps : RProps {
-    var material: Material?
+    var material: Material
     var availableMaterials: Array<Material>
 }
 
@@ -23,7 +23,7 @@ interface MaterialSelectorDispatchProps : RProps {
 }
 
 interface MaterialSelectorProps : RProps {
-    var material: Material?
+    var material: Material
     var availableMaterials: Array<Material>
     var changeMaterial: (Material) -> Unit
 }
@@ -41,7 +41,7 @@ class MaterialSelector(props: MaterialSelectorProps) :
                 onChangeFunction = { event ->
                     props.changeMaterial(Material((event.target as HTMLSelectElement).value))
                 }
-                value = props.material?.name ?: ""
+                set("value", props.material.name)
             }
             for (m in props.availableMaterials) {
                 option {
