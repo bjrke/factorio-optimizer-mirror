@@ -3,13 +3,16 @@ import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.rootReducer
 import kotlinx.browser.document
 import kotlinx.browser.window
-import react.dom.div
+import kotlinx.css.Color
+import kotlinx.css.backgroundColor
 import react.dom.render
 import react.redux.provider
 import redux.RAction
 import redux.compose
 import redux.createStore
 import redux.rEnhancer
+import styled.css
+import styled.styledDiv
 
 fun main() {
 
@@ -25,11 +28,9 @@ fun main() {
     window.onload = {
         render(document.getElementById("root")) {
             provider(store) {
-                div {
-                    child(Welcome::class) {
-                        attrs {
-                            name = "bleibt hier für tests"
-                        }
+                styledDiv {
+                    css {
+                        backgroundColor = Color.red
                     }
                     materialSelector {}
                     materialSelector {}
