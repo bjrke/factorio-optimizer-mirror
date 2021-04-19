@@ -32,7 +32,7 @@ class MaterialSelector(props: MaterialSelectorProps) :
                 onChangeFunction = { event ->
                     props.changeMaterial(Material((event.target as HTMLSelectElement).value))
                 }
-                set("value", props.material.name)
+                value = props.material.name
             }
             for (m in props.availableMaterials) {
                 option {
