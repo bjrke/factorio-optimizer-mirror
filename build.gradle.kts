@@ -13,13 +13,13 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test-js"))
-    val kotlinJsVersion = "113-kotlin-1.4.0"
-    implementation("org.jetbrains", "kotlin-react", "16.13.1-pre.$kotlinJsVersion")
-    implementation("org.jetbrains", "kotlin-react-dom", "16.13.1-pre.$kotlinJsVersion")
-    implementation("org.jetbrains", "kotlin-styled", "1.0.0-pre.$kotlinJsVersion")
-    implementation("org.jetbrains", "kotlin-react-router-dom", "5.1.2-pre.$kotlinJsVersion")
-    implementation("org.jetbrains", "kotlin-redux", "4.0.0-pre.$kotlinJsVersion")
-    implementation("org.jetbrains", "kotlin-react-redux", "5.0.7-pre.$kotlinJsVersion")
+    val kotlinVersionSuffix = "-pre.113-kotlin-1.4.0"
+    implementation("org.jetbrains", "kotlin-react", "16.13.1$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-react-dom", "16.13.1$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-styled", "1.0.0$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-react-router-dom", "5.1.2$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-redux", "4.0.0$kotlinVersionSuffix")
+    implementation("org.jetbrains", "kotlin-react-redux", "5.0.7$kotlinVersionSuffix")
 }
 
 kotlin {
