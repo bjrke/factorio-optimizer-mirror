@@ -1,6 +1,7 @@
 import de.bjrke.factorio.common.component.materialSelector
 import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.rootReducer
+import kotlinext.js.require
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.Color
@@ -24,6 +25,9 @@ fun main() {
             js("if(window.__REDUX_DEVTOOLS_EXTENSION__ )window.__REDUX_DEVTOOLS_EXTENSION__ ();else(function(f){return f;});")
         )
     )
+    //val json = require("../../../resources/main/recipe.json")
+    val json = require("recipe.json")
+    console.log(json)
 
     window.onload = {
         render(document.getElementById("root")) {
