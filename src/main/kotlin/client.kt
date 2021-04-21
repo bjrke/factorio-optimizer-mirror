@@ -14,9 +14,6 @@ import redux.rEnhancer
 import styled.css
 import styled.styledDiv
 
-@JsModule("recipe.json")
-@JsNonModule
-external val json: dynamic
 
 fun main() {
 
@@ -28,8 +25,6 @@ fun main() {
             js("if(window.__REDUX_DEVTOOLS_EXTENSION__ )window.__REDUX_DEVTOOLS_EXTENSION__ ();else(function(f){return f;});")
         )
     )
-
-    console.log(json)
 
     window.onload = {
         render(document.getElementById("root")) {

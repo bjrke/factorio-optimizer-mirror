@@ -1,5 +1,6 @@
 package de.bjrke.factorio.common.component
 
+import de.bjrke.factorio.common.materials
 import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.OptimizerAppState
@@ -14,7 +15,7 @@ import redux.WrapperAction
 
 interface MaterialSelectorStateProps : RProps {
     var material: Material
-    var availableMaterials: Array<Material>
+    var availableMaterials: List<Material>
 }
 
 interface MaterialSelectorDispatchProps : RProps {
@@ -49,7 +50,7 @@ class MaterialSelector(props: MaterialSelectorProps) :
 val materialSelector: RClass<RProps> =
     rConnect<OptimizerAppState, ChangeMaterial, WrapperAction, RProps, MaterialSelectorStateProps, MaterialSelectorDispatchProps, MaterialSelectorProps>(
         { state, _ ->
-            availableMaterials = arrayOf(Material("foo"), Material("bar"))
+            availableMaterials = materials
             material = state.target
         },
         { dispatch, _ ->
