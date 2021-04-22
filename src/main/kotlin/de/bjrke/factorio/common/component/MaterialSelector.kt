@@ -1,6 +1,5 @@
 package de.bjrke.factorio.common.component
 
-import de.bjrke.factorio.common.materials
 import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.OptimizerAppState
@@ -50,7 +49,7 @@ class MaterialSelector(props: MaterialSelectorProps) :
 val materialSelector: RClass<RProps> =
     rConnect<OptimizerAppState, ChangeMaterial, WrapperAction, RProps, MaterialSelectorStateProps, MaterialSelectorDispatchProps, MaterialSelectorProps>(
         { state, _ ->
-            availableMaterials = materials
+            availableMaterials = state.parsedRecipe.materials
             material = state.target
         },
         { dispatch, _ ->

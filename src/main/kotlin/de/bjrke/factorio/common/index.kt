@@ -1,27 +1,29 @@
 package de.bjrke.factorio.common
 
 import de.bjrke.factorio.common.model.Material
+import de.bjrke.factorio.common.model.ParsedRecipe
 import de.bjrke.factorio.common.model.Recipe
+import de.bjrke.kotlinjs.double
+import de.bjrke.kotlinjs.jsObject
+import de.bjrke.kotlinjs.string
 
 @JsModule("recipe.json")
 @JsNonModule
-private external val json: dynamic
+private external val defaultRecipesJson: dynamic
 
-private val materialsBuilder = mutableMapOf<String, Material>()
 
-private fun string(name: dynamic) = name as String
 
-private fun material(name: dynamic): Material {
-    val s = string(name)
-    return materialsBuilder.getOrPut(s) { Material(s) }
-}
+fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
 
-private fun double(number: dynamic) = number as Double
-
-val recipes = run {
+    val materialsBuilder = mutableMapOf<String, Material>()
     val recipesBuilder = mutableListOf<Recipe>()
 
-    for (jsRecipe in js("Object").values(json)) {
+    fun material(name: dynamic): Material {
+        val s = string(name)
+        return materialsBuilder.getOrPut(s) { Material(s) }
+    }
+
+    for (jsRecipe in jsObject.values(json)) {
         val result = mutableMapOf<Material, Double>()
         for (jsProduct in jsRecipe.products) {
             result[material(jsProduct.name)] = double(jsProduct.amount) * double(jsProduct.probability)
@@ -40,7 +42,8 @@ val recipes = run {
         )
     }
 
-    recipesBuilder.toList()
+    return ParsedRecipe(
+        materials = materialsBuilder.values.sortedBy { it.name }.toList(),
+        recipes = recipesBuilder.toList()
+    )
 }
-
-val materials = materialsBuilder.values.sortedBy { it.name }.toList()
