@@ -3,15 +3,15 @@ package de.bjrke.factorio.common
 import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.common.model.ParsedRecipe
 import de.bjrke.factorio.common.model.Recipe
-import de.bjrke.kotlinjs.double
-import de.bjrke.kotlinjs.jsObject
-import de.bjrke.kotlinjs.string
 
 @JsModule("recipe.json")
 @JsNonModule
 private external val defaultRecipesJson: dynamic
 
+private val jsObject = js("Object")
 
+private fun string(name: dynamic) = name as String
+private fun double(number: dynamic) = number as Double
 
 fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
 

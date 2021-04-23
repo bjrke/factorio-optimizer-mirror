@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.model.OptimizationResult
+import de.bjrke.factorio.optimizer.round2
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
 import kotlinx.html.TD
@@ -14,7 +15,6 @@ import react.dom.*
 import react.redux.rConnect
 import redux.RAction
 import redux.WrapperAction
-import de.bjrke.factorio.optimizer.round2
 import styled.css
 import styled.styledThead
 
@@ -55,14 +55,20 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
             }
 
             tbody {
-                props.optimizationResult.factories.forEach { (material, factoryProduction) ->
+                props.optimizationResult.factories.forEach { (m, factoryProduction) ->
                     tr {
                         td {
                             a {
                                 attrs {
-                                    onClickFunction = { props.changeMaterial(material) }
+                                    onClickFunction = { props.changeMaterial(m) }
                                 }
-                                +material.name
+                                child(MaterialIcon::class) {
+                                    attrs {
+                                        material = m
+                                        size = 32
+                                    }
+                                }
+                                +m.name
                             }
 
                         }
@@ -70,7 +76,7 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
                             renderAmount(factoryProduction.amount)
                         }
                         td {
-                            renderAmount(factoryProduction.production(material))
+                            renderAmount(factoryProduction.production(m))
                         }
                     }
                 }

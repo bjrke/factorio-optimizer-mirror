@@ -49,7 +49,7 @@ class MaterialSelector(props: MaterialSelectorProps) :
 val materialSelector: RClass<RProps> =
     rConnect<OptimizerAppState, ChangeMaterial, WrapperAction, RProps, MaterialSelectorStateProps, MaterialSelectorDispatchProps, MaterialSelectorProps>(
         { state, _ ->
-            availableMaterials = state.parsedRecipe.materials
+            availableMaterials = state.parsedRecipes.materials
             material = state.target
         },
         { dispatch, _ ->

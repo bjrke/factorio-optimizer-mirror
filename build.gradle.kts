@@ -30,3 +30,14 @@ kotlin {
         }
     }
 }
+
+task("copyImages", Copy::class) {
+
+
+    from(fileTree("${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio/data/base/graphics") {
+        include("icons/**/*.png")
+    }.files)
+
+    duplicatesStrategy = DuplicatesStrategy.WARN
+    into("src/main/resources/icons/")
+}

@@ -57,8 +57,6 @@ fun optimize(
             factories = factories.toMap(),
             recipe = recipe,
         )
-
-        console.log("result", re)
         return re
     }
 
