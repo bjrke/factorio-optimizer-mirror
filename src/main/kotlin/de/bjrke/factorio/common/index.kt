@@ -24,6 +24,9 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
     }
 
     for (jsRecipe in jsObject.values(json)) {
+        val subgroup = jsRecipe.subgroup?.name
+        if (subgroup == "fill-barrel" || subgroup == "empty-barrel") continue
+
         val result = mutableMapOf<Material, Double>()
         for (jsProduct in jsRecipe.products) {
             result[material(jsProduct.name)] = double(jsProduct.amount) * double(jsProduct.probability)
