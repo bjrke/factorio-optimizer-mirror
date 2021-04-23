@@ -1,10 +1,13 @@
 import de.bjrke.factorio.common.component.materialSelector
+import de.bjrke.factorio.common.component.normalizeTargetPresenter
+import de.bjrke.factorio.common.component.optimizationResultPresenter
 import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.rootReducer
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
+import react.dom.div
 import react.dom.render
 import react.redux.provider
 import redux.RAction
@@ -29,12 +32,10 @@ fun main() {
     window.onload = {
         render(document.getElementById("root")) {
             provider(store) {
-                styledDiv {
-                    css {
-                        backgroundColor = Color.red
-                    }
+                div {
                     materialSelector {}
-                    materialSelector {}
+                    normalizeTargetPresenter {}
+                    optimizationResultPresenter {}
                 }
 
             }

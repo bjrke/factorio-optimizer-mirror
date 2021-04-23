@@ -4,3 +4,5 @@ import de.bjrke.factorio.common.model.Material
 import redux.RAction
 
 data class ChangeMaterial(val newMaterial: Material) : RAction
+
+data class NormalizeTo(val newNormalizeTarget: Double) : RAction
