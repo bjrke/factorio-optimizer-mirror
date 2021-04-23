@@ -14,6 +14,7 @@ import react.dom.*
 import react.redux.rConnect
 import redux.RAction
 import redux.WrapperAction
+import de.bjrke.factorio.optimizer.round2
 import styled.css
 import styled.styledThead
 
@@ -54,7 +55,7 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
             }
 
             tbody {
-                props.optimizationResult.factories.forEach { (material, amount) ->
+                props.optimizationResult.factories.forEach { (material, factoryProduction) ->
                     tr {
                         td {
                             a {
@@ -66,10 +67,10 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
 
                         }
                         td {
-                            renderAmount(amount)
+                            renderAmount(factoryProduction.amount)
                         }
                         td {
-                            renderAmount(props.optimizationResult.production[material]!!)
+                            renderAmount(factoryProduction.production(material))
                         }
                     }
                 }
@@ -82,7 +83,7 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
             attrs {
                 onClickFunction = { props.changeNormalizeTo(amount) }
             }
-            +(amount / props.normalizeTarget).toString()
+            +round2(amount / props.normalizeTarget).toString()
         }
     }
 }

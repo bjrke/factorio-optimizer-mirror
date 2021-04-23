@@ -4,6 +4,7 @@ import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.common.model.ParsedRecipe
 import de.bjrke.factorio.common.model.Recipe
 import de.bjrke.factorio.common.parseRecipes
+import de.bjrke.factorio.optimizer.model.FactoryProduction
 import de.bjrke.factorio.optimizer.model.OptimizationResult
 
 private val defaultMaterial = Material("foo")
@@ -18,8 +19,7 @@ private val defaultRecipe = Recipe(
 private val defaultOptimizationResult = OptimizationResult(
     target = defaultMaterial,
     recipe = defaultRecipe,
-    factories = mapOf(defaultMaterial to 1.0),
-    production = mapOf(defaultMaterial to 1.0)
+    factories = mapOf(defaultMaterial to FactoryProduction(defaultRecipe)),
 )
 
 data class OptimizerAppState(

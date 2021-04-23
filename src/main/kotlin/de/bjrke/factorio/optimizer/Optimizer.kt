@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer
 import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.common.model.ParsedRecipe
 import de.bjrke.factorio.common.model.Recipe
+import de.bjrke.factorio.optimizer.model.FactoryProduction
 import de.bjrke.factorio.optimizer.model.OptimizationResult
 
 fun optimize(
@@ -18,11 +19,11 @@ fun optimize(
             result = mapOf(target to 1.0),
             time = 1.0
         )
-        val factories = mutableMapOf<Material, Double>()
+        val factories = mutableMapOf<Material, FactoryProduction>()
         val production = mutableMapOf<Material, Double>()
 
-        fun addFactory(material: Material, amount: Double) {
-            factories[material] = (factories[material] ?: 0.0) + amount
+        fun addFactory(material: Material, recipe: Recipe, amount: Double) {
+            factories[material] = (factories[material] ?: FactoryProduction(recipe)) + amount
         }
 
         fun addProduction(material: Material, amount: Double) {
@@ -41,25 +42,20 @@ fun optimize(
                 val nested = optimize(material, parsedRecipe, cache, visited)
 
                 nested.factories.forEach { (nestedMaterial, nestedFactories) ->
-                    addFactory(nestedMaterial, requirement * nestedFactories)
-                }
-
-                nested.production.forEach { (nestedMaterial, nestedProduction) ->
-                    addProduction(nestedMaterial, requirement * nestedProduction)
+                    addFactory(nestedMaterial, nestedFactories.recipe, requirement * nestedFactories.amount)
                 }
 
             }
             visited.remove(target)
         }
 
-        addFactory(target, outputTime / outputAmount)
+        addFactory(target, recipe, outputTime / outputAmount)
         addProduction(target, 1.0)
 
         val re = OptimizationResult(
             target = target,
             factories = factories.toMap(),
             recipe = recipe,
-            production = production.toMap()
         )
 
         console.log("result", re)
