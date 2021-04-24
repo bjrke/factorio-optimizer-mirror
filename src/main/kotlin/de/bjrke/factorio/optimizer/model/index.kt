@@ -8,5 +8,26 @@ data class Recipe(
     val result: Map<Material, Double>,
     val time: Double,
     val subgroup: Subgroup,
+    val category: Category,
 )
+
 data class Subgroup(val name: String = "no subgroup")
+enum class Category(val identifier: String) {
+
+    ADVANCED_CRAFTING("advanced-crafting"),
+    CENTRIFUGING("centrifuging"),
+    CRAFTING("crafting"),
+    CRAFTING_WITH_FLUID("crafting-with-fluid"),
+    ROCKET_BUILDING("rocket-building"),
+    OIL_PROCESSING("oil-processing"),
+    CHEMISTRY("chemistry"),
+    SMELTING("smelting"),
+
+    NO_CATEGORY("no-category")
+
+    ;
+
+}
+
+private val categoryMap = Category.values().associateBy { it.identifier }
+fun category(identifier: String) = categoryMap[identifier]

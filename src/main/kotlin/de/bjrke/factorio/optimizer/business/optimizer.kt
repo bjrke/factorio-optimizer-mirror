@@ -1,17 +1,13 @@
 package de.bjrke.factorio.optimizer.business
 
-import de.bjrke.factorio.optimizer.model.Material
-import de.bjrke.factorio.optimizer.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.model.Recipe
-import de.bjrke.factorio.optimizer.model.Subgroup
-import de.bjrke.factorio.optimizer.model.FactoryProduction
-import de.bjrke.factorio.optimizer.model.OptimizationResult
+import de.bjrke.factorio.optimizer.model.*
 
 fun optimize(
     target: Material,
     parsedRecipe: ParsedRecipe,
     cache: MutableMap<Material, OptimizationResult> = mutableMapOf(),
-    visited: MutableSet<Material> = mutableSetOf()
+    visited: MutableSet<Material> = mutableSetOf(),
+    factories: Set<Factory> = defaultFactories
 ): OptimizationResult =
     cache.getOrPut(target) {
         val recipe = parsedRecipe.recipes.firstOrNull { it.result.containsKey(target) } ?: Recipe(
@@ -19,23 +15,22 @@ fun optimize(
             ingredients = mapOf(),
             result = mapOf(target to 1.0),
             time = 1.0,
-            subgroup = Subgroup()
+            subgroup = Subgroup(),
+            category = Category.NO_CATEGORY
         )
-        val factories = mutableMapOf<Material, FactoryProduction>()
-        val production = mutableMapOf<Material, Double>()
 
-        fun addFactory(material: Material, recipe: Recipe, amount: Double) {
-            factories[material] = (factories[material] ?: FactoryProduction(recipe)) + amount
+        val factory = factories.find { it.categories.contains(recipe.category) } ?: Factory.NO_FACTORY
+
+        val factoryProductions = mutableMapOf<Material, FactoryProduction>()
+        fun addFactory(material: Material, recipe: Recipe, factory: Factory, amount: Double) {
+            factoryProductions[material] = (factoryProductions[material] ?: FactoryProduction(recipe, factory)) + amount
         }
 
-        fun addProduction(material: Material, amount: Double) {
-            production[material] = (production[material] ?: 0.0) + amount
-        }
 
         val add = visited.add(target)
 
         val outputAmount = recipe.result[target]!!
-        val outputTime = recipe.time
+        val outputTime = recipe.time / factory.speed
 
         if (add) { // cycle protection
             recipe.ingredients.forEach { (material, amount) ->
@@ -44,19 +39,23 @@ fun optimize(
                 val nested = optimize(material, parsedRecipe, cache, visited)
 
                 nested.factories.forEach { (nestedMaterial, nestedFactories) ->
-                    addFactory(nestedMaterial, nestedFactories.recipe, requirement * nestedFactories.amount)
+                    addFactory(
+                        nestedMaterial,
+                        nestedFactories.recipe,
+                        nestedFactories.factory,
+                        requirement * nestedFactories.amount
+                    )
                 }
 
             }
             visited.remove(target)
         }
 
-        addFactory(target, recipe, outputTime / outputAmount)
-        addProduction(target, 1.0)
+        addFactory(target, recipe, factory, outputTime / outputAmount)
 
         return OptimizationResult(
             target = target,
-            factories = factories.toMap(),
+            factories = factoryProductions.toMap(),
             recipe = recipe,
         )
     }

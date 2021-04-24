@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.component
 
-import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
+import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
 import de.bjrke.factorio.optimizer.round2
 import kotlinx.css.Color
@@ -55,28 +55,29 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
             }
 
             tbody {
-                props.optimizationResult.factories.forEach { (m, factoryProduction) ->
+                props.optimizationResult.factories.forEach { (material, factoryProduction) ->
                     tr {
                         td {
                             a {
                                 attrs {
-                                    onClickFunction = { props.changeMaterial(m) }
+                                    onClickFunction = { props.changeMaterial(material) }
                                 }
-                                child(MaterialIcon::class) {
-                                    attrs {
-                                        material = m
-                                        size = 32
-                                    }
+                                icon {
+                                    name = material.name
                                 }
-                                +m.name
+                                +material.name
                             }
 
                         }
                         td {
                             renderAmount(factoryProduction.amount)
+                            +" * "
+                            icon {
+                                name = factoryProduction.factory.identifier
+                            }
                         }
                         td {
-                            renderAmount(factoryProduction.production(m))
+                            renderAmount(factoryProduction.production(material))
                         }
                     }
                 }

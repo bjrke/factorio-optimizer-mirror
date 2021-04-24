@@ -1,9 +1,6 @@
 package de.bjrke.factorio.optimizer.business
 
-import de.bjrke.factorio.optimizer.model.Material
-import de.bjrke.factorio.optimizer.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.model.Recipe
-import de.bjrke.factorio.optimizer.model.Subgroup
+import de.bjrke.factorio.optimizer.model.*
 
 @JsModule("recipe.json")
 @JsNonModule
@@ -48,7 +45,8 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
             ingredients = ingredients.toMap(),
             result = result.toMap(),
             time = double(jsRecipe.energy),
-            subgroup = subgroup
+            subgroup = subgroup,
+            category = category(string(jsRecipe.category))!!
         )
     }
 

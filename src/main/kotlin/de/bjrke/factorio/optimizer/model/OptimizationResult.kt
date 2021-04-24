@@ -2,11 +2,12 @@ package de.bjrke.factorio.optimizer.model
 
 data class FactoryProduction(
     val recipe: Recipe,
+    val factory: Factory,
     val amount: Double = 0.0
 ) {
-    operator fun plus(amount: Double) = FactoryProduction(recipe, this.amount + amount)
+    operator fun plus(amount: Double) = FactoryProduction(recipe, factory, this.amount + amount)
 
-    fun production(material: Material) = amount * recipe.result[material]!! / recipe.time
+    fun production(material: Material) = factory.speed * amount * recipe.result[material]!! / recipe.time
 }
 
 data class OptimizationResult(
