@@ -1,9 +1,9 @@
-package de.bjrke.factorio.common
+package de.bjrke.factorio.optimizer.business
 
-import de.bjrke.factorio.common.model.Material
-import de.bjrke.factorio.common.model.ParsedRecipe
-import de.bjrke.factorio.common.model.Recipe
-import de.bjrke.factorio.common.model.Subgroup
+import de.bjrke.factorio.optimizer.model.Material
+import de.bjrke.factorio.optimizer.model.ParsedRecipe
+import de.bjrke.factorio.optimizer.model.Recipe
+import de.bjrke.factorio.optimizer.model.Subgroup
 
 @JsModule("recipe.json")
 @JsNonModule

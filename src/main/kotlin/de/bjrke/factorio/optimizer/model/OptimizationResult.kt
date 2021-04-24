@@ -1,8 +1,5 @@
 package de.bjrke.factorio.optimizer.model
 
-import de.bjrke.factorio.common.model.Material
-import de.bjrke.factorio.common.model.Recipe
-
 data class FactoryProduction(
     val recipe: Recipe,
     val amount: Double = 0.0

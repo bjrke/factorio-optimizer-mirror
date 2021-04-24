@@ -1,9 +1,9 @@
-package de.bjrke.factorio.optimizer
+package de.bjrke.factorio.optimizer.business
 
-import de.bjrke.factorio.common.model.Material
-import de.bjrke.factorio.common.model.ParsedRecipe
-import de.bjrke.factorio.common.model.Recipe
-import de.bjrke.factorio.common.model.Subgroup
+import de.bjrke.factorio.optimizer.model.Material
+import de.bjrke.factorio.optimizer.model.ParsedRecipe
+import de.bjrke.factorio.optimizer.model.Recipe
+import de.bjrke.factorio.optimizer.model.Subgroup
 import de.bjrke.factorio.optimizer.model.FactoryProduction
 import de.bjrke.factorio.optimizer.model.OptimizationResult
 
@@ -54,11 +54,10 @@ fun optimize(
         addFactory(target, recipe, outputTime / outputAmount)
         addProduction(target, 1.0)
 
-        val re = OptimizationResult(
+        return OptimizationResult(
             target = target,
             factories = factories.toMap(),
             recipe = recipe,
         )
-        return re
     }
 

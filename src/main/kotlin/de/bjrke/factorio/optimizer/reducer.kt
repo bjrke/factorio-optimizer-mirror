@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer
 
-import de.bjrke.factorio.common.model.Material
+import de.bjrke.factorio.optimizer.business.optimize
+import de.bjrke.factorio.optimizer.model.Material
 import redux.RAction
 
 fun targetReducer(state: Material, action: RAction): Material = when (action) {

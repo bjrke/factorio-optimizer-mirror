@@ -1,6 +1,6 @@
-package de.bjrke.factorio.common.component
+package de.bjrke.factorio.optimizer.component
 
-import de.bjrke.factorio.common.model.Material
+import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState

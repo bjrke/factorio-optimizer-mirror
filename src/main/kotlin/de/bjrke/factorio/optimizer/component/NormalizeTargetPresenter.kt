@@ -1,4 +1,4 @@
-package de.bjrke.factorio.common.component
+package de.bjrke.factorio.optimizer.component
 
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState

@@ -1,4 +1,4 @@
-package de.bjrke.factorio.common.model
+package de.bjrke.factorio.optimizer.model
 
 data class Material(val name: String)
 data class ParsedRecipe(val materials: List<Material>, val recipes: List<Recipe>)
