@@ -3,6 +3,7 @@ package de.bjrke.factorio.common
 import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.common.model.ParsedRecipe
 import de.bjrke.factorio.common.model.Recipe
+import de.bjrke.factorio.common.model.Subgroup
 
 @JsModule("recipe.json")
 @JsNonModule
@@ -17,31 +18,37 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
 
     val materialsBuilder = mutableMapOf<String, Material>()
     val recipesBuilder = mutableListOf<Recipe>()
+    val subgroups = mutableMapOf<String, Subgroup>()
 
-    fun material(name: dynamic): Material {
-        val s = string(name)
-        return materialsBuilder.getOrPut(s) { Material(s) }
-    }
+    fun material(name: String) = materialsBuilder.getOrPut(name) { Material(name) }
+    fun jsMaterial(name: dynamic): Material = material(string(name))
+    fun subgroup(name: String): Subgroup = subgroups.getOrPut(name) { Subgroup(name) }
+    fun jsSubgroup(name: dynamic): Subgroup = subgroup(string(name))
+
+    val filteredOut = setOf(subgroup("fill-barrel"), subgroup("empty-barrel"))
+    val noSubGroup = Subgroup()
 
     for (jsRecipe in jsObject.values(json)) {
-        val subgroup = jsRecipe.subgroup?.name
-        if (subgroup == "fill-barrel" || subgroup == "empty-barrel") continue
+        val subgroupName = jsRecipe.subgroup?.name
+        val subgroup = if (subgroupName != null) jsSubgroup(subgroupName) else noSubGroup
+        if (filteredOut.contains(subgroup)) continue
 
         val result = mutableMapOf<Material, Double>()
         for (jsProduct in jsRecipe.products) {
-            result[material(jsProduct.name)] = double(jsProduct.amount) * double(jsProduct.probability)
+            result[jsMaterial(jsProduct.name)] = double(jsProduct.amount) * double(jsProduct.probability)
         }
 
         val ingredients = mutableMapOf<Material, Double>()
         for (jsIngredient in jsRecipe.ingredients) {
-            ingredients[material(jsIngredient.name)] = double(jsIngredient.amount)
+            ingredients[jsMaterial(jsIngredient.name)] = double(jsIngredient.amount)
         }
 
         recipesBuilder += Recipe(
             name = string(jsRecipe.name),
             ingredients = ingredients.toMap(),
             result = result.toMap(),
-            time = double(jsRecipe.energy)
+            time = double(jsRecipe.energy),
+            subgroup = subgroup
         )
     }
 

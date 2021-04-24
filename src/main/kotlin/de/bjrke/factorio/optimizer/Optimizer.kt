@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer
 import de.bjrke.factorio.common.model.Material
 import de.bjrke.factorio.common.model.ParsedRecipe
 import de.bjrke.factorio.common.model.Recipe
+import de.bjrke.factorio.common.model.Subgroup
 import de.bjrke.factorio.optimizer.model.FactoryProduction
 import de.bjrke.factorio.optimizer.model.OptimizationResult
 
@@ -17,7 +18,8 @@ fun optimize(
             name = target.name,
             ingredients = mapOf(),
             result = mapOf(target to 1.0),
-            time = 1.0
+            time = 1.0,
+            subgroup = Subgroup()
         )
         val factories = mutableMapOf<Material, FactoryProduction>()
         val production = mutableMapOf<Material, Double>()
