@@ -70,11 +70,10 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
 
                         }
                         td {
-                            renderAmount(factoryProduction.amount)
-                            +" * "
                             icon {
                                 name = factoryProduction.factory.identifier
                             }
+                            renderAmount(factoryProduction.amount)
                         }
                         td {
                             renderAmount(factoryProduction.production(material))
