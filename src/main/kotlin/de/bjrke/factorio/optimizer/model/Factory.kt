@@ -29,4 +29,4 @@ val allFactories = Factory.values().toSet()
 val smelters = allFactories.filter { it.categories == smelterCategories }
 val assemblers = allFactories.filter { it.categories.contains(Category.CRAFTING) }
 val tech = allFactories - smelters - assemblers - Factory.NO_FACTORY
-val defaultFactories = setOf(Factory.ASSEMBLING_MACHINE_2, Factory.ELECTRIC_FURNACE, Factory.NO_FACTORY)
+val defaultFactories = setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE, Factory.NO_FACTORY) + tech
