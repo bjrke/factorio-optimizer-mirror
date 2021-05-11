@@ -50,6 +50,20 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
         )
     }
 
+    recipesBuilder += Recipe(
+        name = "space-science-pack",
+        ingredients = mapOf(
+            material("satellite") to 1.0,
+            material("rocket-part") to 100.0
+        ),
+        result = mapOf(
+            material("space-science-pack") to 1000.0
+        ),
+        time = 1.0,
+        category = Category.ROCKET_BUILDING,
+        subgroup = noSubGroup
+    )
+
     return ParsedRecipe(
         materials = materialsBuilder.values.sortedBy { it.name }.toList(),
         recipes = recipesBuilder.toList()
