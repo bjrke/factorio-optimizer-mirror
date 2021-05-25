@@ -5,9 +5,9 @@ import de.bjrke.factorio.optimizer.model.*
 fun optimize(
     target: Material,
     parsedRecipe: ParsedRecipe,
+    factories: Set<Factory>,
     cache: MutableMap<Material, OptimizationResult> = mutableMapOf(),
     visited: MutableSet<Material> = mutableSetOf(),
-    factories: Set<Factory> = defaultFactories
 ): OptimizationResult =
     cache.getOrPut(target) {
         val recipe = parsedRecipe.recipes.firstOrNull { it.result.containsKey(target) } ?: Recipe(
@@ -36,7 +36,7 @@ fun optimize(
             recipe.ingredients.forEach { (material, amount) ->
 
                 val requirement = amount / outputAmount
-                val nested = optimize(material, parsedRecipe, cache, visited)
+                val nested = optimize(material, parsedRecipe, factories, cache, visited)
 
                 nested.factories.forEach { (nestedMaterial, nestedFactories) ->
                     addFactory(

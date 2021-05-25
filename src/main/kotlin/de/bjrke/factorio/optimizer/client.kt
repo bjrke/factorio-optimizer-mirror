@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer
 
+import de.bjrke.factorio.optimizer.component.factorySelector
 import de.bjrke.factorio.optimizer.component.materialSelector
 import de.bjrke.factorio.optimizer.component.normalizeTargetPresenter
 import de.bjrke.factorio.optimizer.component.optimizationResultPresenter
@@ -26,6 +27,7 @@ fun main() {
             provider(store) {
                 div {
                     materialSelector {}
+                    factorySelector {}
                     normalizeTargetPresenter {}
                     optimizationResultPresenter {}
                 }

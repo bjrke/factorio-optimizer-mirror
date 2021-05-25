@@ -30,3 +30,14 @@ val smelters = allFactories.filter { it.categories == smelterCategories }
 val assemblers = allFactories.filter { it.categories.contains(Category.CRAFTING) }
 val tech = allFactories - smelters - assemblers - Factory.NO_FACTORY
 val defaultFactories = setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE, Factory.NO_FACTORY) + tech
+val selectableFactories = Factory.values().toList() - Factory.NO_FACTORY
+
+fun selectFactory(state: Set<Factory>, factory: Factory, enabled: Boolean): Set<Factory> {
+    val result = when (factory) {
+        in smelters -> state - smelters - factory
+        in assemblers -> state - assemblers - factory
+        Factory.NO_FACTORY -> state
+        else -> state - factory
+    }
+    return if (enabled) result + factory else result
+}
