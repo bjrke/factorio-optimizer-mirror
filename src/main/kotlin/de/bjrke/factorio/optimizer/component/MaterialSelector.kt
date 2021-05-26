@@ -1,12 +1,11 @@
 package de.bjrke.factorio.optimizer.component
 
-import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.OptimizerAppState
+import de.bjrke.factorio.optimizer.model.Material
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
 import react.*
-
 import react.dom.option
 import react.dom.select
 import react.redux.rConnect
@@ -28,12 +27,10 @@ class MaterialSelector(props: MaterialSelectorProps) :
 
     override fun RBuilder.render() {
         select {
-            attrs {
-                onChangeFunction = { event ->
-                    props.changeMaterial(Material((event.target as HTMLSelectElement).value))
-                }
-                value = props.material.name
+            attrs.onChangeFunction = { event ->
+                props.changeMaterial(Material((event.target as HTMLSelectElement).value))
             }
+            attrs.value = props.material.name
             for (m in props.availableMaterials) {
                 option {
                     attrs.value = m.name

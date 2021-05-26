@@ -33,20 +33,16 @@ class FactorySelector(props: FactorySelectorProps) :
                 icon {
                     name = factory.identifier
                 }
-                input {
+                input(type = InputType.checkBox) {
                     val enabled = props.selectedFactories.contains(factory)
-                    attrs {
-                        type = InputType.checkBox
-                        value = ""
-                        onChangeFunction = { _ ->
-                            props.selectFactory(
-                                selectFactory(
-                                    props.selectedFactories,
-                                    factory,
-                                    !enabled
-                                )
+                    attrs.onChangeFunction = { _ ->
+                        props.selectFactory(
+                            selectFactory(
+                                props.selectedFactories,
+                                factory,
+                                !enabled
                             )
-                        }
+                        )
                     }
                     // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
                     attrs["checked"] = enabled

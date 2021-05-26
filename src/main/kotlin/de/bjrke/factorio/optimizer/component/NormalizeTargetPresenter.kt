@@ -27,13 +27,10 @@ class NormalizeTargetPresenter(props: NormalizeTargetPresenterProps) :
     RComponent<NormalizeTargetPresenterProps, RState>(props) {
 
     override fun RBuilder.render() {
-        input {
-            attrs {
-                type = InputType.number
-                onChangeFunction =
-                    { event -> props.changeNormalizeTo((event.target as HTMLInputElement).value.toDouble()) }
-                value = props.normalizeTarget.toString()
-            }
+        input(type = InputType.number) {
+            attrs.onChangeFunction =
+                { event -> props.changeNormalizeTo((event.target as HTMLInputElement).value.toDouble()) }
+            attrs.value = props.normalizeTarget.toString()
         }
     }
 }

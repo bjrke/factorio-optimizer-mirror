@@ -23,9 +23,7 @@ class Icon(props: IconProps) : RComponent<IconProps, RState>(props) {
                 objectFit = ObjectFit.cover
                 objectPosition = "0 0"
             }
-            attrs {
-                height = "$size"
-            }
+            attrs.height = "$size"
         }
     }
 }

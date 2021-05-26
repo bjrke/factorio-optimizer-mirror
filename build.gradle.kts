@@ -1,5 +1,5 @@
 plugins {
-    kotlin("js") version "1.4.32"
+    kotlin("js") version "1.5.0"
 }
 
 group = "de.bjrke.factorio"
@@ -7,15 +7,13 @@ version = "1.0"
 
 repositories {
     mavenCentral()
-    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers")
-    maven("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven")
 }
 
 dependencies {
-    val kotlinVersionSuffix = "-pre.153-kotlin-1.4.32"
-    implementation("org.jetbrains", "kotlin-styled", "5.2.3$kotlinVersionSuffix")
-    implementation("org.jetbrains", "kotlin-react-router-dom", "5.2.0$kotlinVersionSuffix")
-    implementation("org.jetbrains", "kotlin-react-redux", "7.2.3$kotlinVersionSuffix")
+    val kotlinVersionSuffix = "-pre.204-kotlin-1.5.0"
+    implementation("org.jetbrains.kotlin-wrappers", "kotlin-styled", "5.3.0$kotlinVersionSuffix")
+    implementation("org.jetbrains.kotlin-wrappers", "kotlin-react-router-dom", "5.2.0$kotlinVersionSuffix")
+    implementation("org.jetbrains.kotlin-wrappers", "kotlin-react-redux", "7.2.3$kotlinVersionSuffix")
 
     testImplementation(kotlin("test-js"))
 }
@@ -32,8 +30,6 @@ kotlin {
 }
 
 task("copyImages", Copy::class) {
-
-
     from(fileTree("${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio/data/base/graphics") {
         include("icons/**/*.png")
     }.files)
