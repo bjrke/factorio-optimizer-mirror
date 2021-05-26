@@ -10,7 +10,9 @@ fun optimize(
     visited: MutableSet<Material> = mutableSetOf(),
 ): OptimizationResult =
     cache.getOrPut(target) {
-        val recipe = parsedRecipe.recipes.firstOrNull { it.result.containsKey(target) } ?: Recipe(
+        val recipe = parsedRecipe.recipes
+            .filter { findFactory(factories, it) != null }
+            .firstOrNull { it.result.containsKey(target) } ?: Recipe(
             name = target.name,
             ingredients = mapOf(),
             result = mapOf(target to 1.0),
@@ -19,7 +21,7 @@ fun optimize(
             category = Category.NO_CATEGORY
         )
 
-        val factory = factories.find { it.categories.contains(recipe.category) } ?: Factory.NO_FACTORY
+        val factory = findFactory(factories, recipe) ?: Factory.NO_FACTORY
 
         val factoryProductions = mutableMapOf<Material, FactoryProduction>()
         fun addFactory(material: Material, recipe: Recipe, factory: Factory, amount: Double) {
@@ -59,4 +61,7 @@ fun optimize(
             recipe = recipe,
         )
     }
+
+private fun findFactory(factories: Set<Factory>, recipe: Recipe) =
+    factories.find { it.categories.contains(recipe.category) }
 
