@@ -30,9 +30,6 @@ class FactorySelector(props: FactorySelectorProps) :
     override fun RBuilder.render() {
         for (factory in props.availableFactories) {
             label {
-                icon {
-                    name = factory.identifier
-                }
                 input(type = InputType.checkBox) {
                     val enabled = props.selectedFactories.contains(factory)
                     attrs.onChangeFunction = { _ ->
@@ -46,6 +43,9 @@ class FactorySelector(props: FactorySelectorProps) :
                     }
                     // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
                     attrs["checked"] = enabled
+                }
+                icon {
+                    name = factory.identifier
                 }
             }
         }

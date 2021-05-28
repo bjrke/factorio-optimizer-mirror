@@ -8,7 +8,7 @@ import de.bjrke.factorio.optimizer.model.OptimizationResult
 import de.bjrke.factorio.optimizer.round2
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
-import kotlinx.html.TD
+import kotlinx.html.A
 import kotlinx.html.js.onClickFunction
 import react.*
 import react.dom.*
@@ -70,13 +70,21 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
 
                         }
                         td {
-                            icon {
-                                name = factoryProduction.factory.identifier
+                            amountLink(factoryProduction.amount) {
+                                icon {
+                                    name = factoryProduction.factory.identifier
+                                }
+                                +amountText(factoryProduction.amount)
                             }
-                            renderAmount(factoryProduction.amount)
                         }
                         td {
-                            renderAmount(factoryProduction.production(material))
+                            val amount = factoryProduction.production(material)
+                            amountLink(amount) {
+                                icon {
+                                    name = material.name
+                                }
+                                +amountText(amount)
+                            }
                         }
                     }
                 }
@@ -84,14 +92,15 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
         }
     }
 
-    private fun RDOMBuilder<TD>.renderAmount(amount: Double) {
+    private fun amountText(amount: Double) = "x " + round2(amount / props.normalizeTarget).toString()
+
+    private fun <X : kotlinx.html.Tag> RDOMBuilder<X>.amountLink(amount: Double, block: RDOMBuilder<A>.() -> Unit) =
         a {
             attrs {
                 onClickFunction = { props.changeNormalizeTo(amount) }
             }
-            +round2(amount / props.normalizeTarget).toString()
+            block()
         }
-    }
 }
 
 val optimizationResultPresenter: RClass<RProps> =

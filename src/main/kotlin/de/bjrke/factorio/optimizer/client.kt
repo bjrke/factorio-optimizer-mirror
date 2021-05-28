@@ -26,10 +26,16 @@ fun main() {
         render(document.getElementById("root")) {
             provider(store) {
                 div {
-                    materialSelector {}
-                    factorySelector {}
-                    normalizeTargetPresenter {}
-                    optimizationResultPresenter {}
+                    div {
+                        materialSelector {}
+                        normalizeTargetPresenter {}
+                    }
+                    div {
+                        factorySelector {}
+                    }
+                    div {
+                        optimizationResultPresenter {}
+                    }
                 }
 
             }

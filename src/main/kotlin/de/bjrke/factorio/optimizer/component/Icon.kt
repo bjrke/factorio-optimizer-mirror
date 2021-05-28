@@ -22,6 +22,8 @@ class Icon(props: IconProps) : RComponent<IconProps, RState>(props) {
                 height = size.px
                 objectFit = ObjectFit.cover
                 objectPosition = "0 0"
+                verticalAlign = VerticalAlign.middle
+                marginRight = 5.px
             }
             attrs.height = "$size"
         }
