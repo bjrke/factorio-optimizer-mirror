@@ -1,3 +1,5 @@
+import javax.imageio.ImageIO
+
 plugins {
     kotlin("js") version "1.5.0"
 }
@@ -29,11 +31,31 @@ kotlin {
     }
 }
 
-task("copyImages", Copy::class) {
+val imgDir = "src/main/resources/icons"
+val copyImages = task("copyImages", Copy::class) {
     from(fileTree("${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio/data/base/graphics") {
         include("icons/**/*.png")
     }.files)
 
     duplicatesStrategy = DuplicatesStrategy.WARN
-    into("src/main/resources/icons/")
+    into(imgDir)
+    eachFile {
+        val img = ImageIO.read(file)
+        if (img.width != 120 || img.height != 64) {
+            exclude()
+        }
+    }
+}
+
+task("optimizeImages", Exec::class) {
+    dependsOn(copyImages)
+    commandLine = listOf("sh")
+
+    workingDir = rootDir.resolve(imgDir)
+    standardInput = ("" +
+            "mogrify -crop 64x64+0+0 *\n" +
+            "chmod 664 *\n" +
+            "pngquant --strip --speed 1 --ext=.png --force --skip-if-larger *\n" +
+            "optipng -o7 -zm1-9 *\n")
+        .byteInputStream()
 }

@@ -20,8 +20,6 @@ class Icon(props: IconProps) : RComponent<IconProps, RState>(props) {
             css {
                 width = size.px
                 height = size.px
-                objectFit = ObjectFit.cover
-                objectPosition = "0 0"
                 verticalAlign = VerticalAlign.middle
                 marginRight = 5.px
             }
