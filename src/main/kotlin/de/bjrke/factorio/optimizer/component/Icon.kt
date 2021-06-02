@@ -1,10 +1,12 @@
 package de.bjrke.factorio.optimizer.component
 
 import kotlinx.css.*
+import kotlinx.html.title
 import react.RBuilder
 import react.RComponent
 import react.RProps
 import react.RState
+import react.dom.attrs
 import styled.css
 import styled.styledImg
 
@@ -23,7 +25,11 @@ class Icon(props: IconProps) : RComponent<IconProps, RState>(props) {
                 verticalAlign = VerticalAlign.middle
                 marginRight = 5.px
             }
-            attrs.height = "$size"
+            attrs {
+                height = "$size"
+                alt = props.name
+                title = props.name
+            }
         }
     }
 }
