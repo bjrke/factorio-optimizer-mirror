@@ -38,9 +38,9 @@ class NormalizeTargetPresenter(props: NormalizeTargetPresenterProps) :
 val normalizeTargetPresenter: RClass<RProps> =
     rConnect<OptimizerAppState, RAction, WrapperAction, RProps, NormalizeTargetPresenterStateProps, NormalizeTargetPresenterDispatchProps, NormalizeTargetPresenterProps>(
         { state, _ ->
-            normalizeTarget = 1 / state.normalizeTarget
+            normalizeTarget = state.normalizeTarget
         },
         { dispatch, _ ->
-            changeNormalizeTo = { dispatch(NormalizeTo(1 / it)) }
+            changeNormalizeTo = { dispatch(NormalizeTo(it)) }
         }
     )(NormalizeTargetPresenter::class.rClass)

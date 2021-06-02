@@ -94,7 +94,7 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
         }
     }
 
-    private fun amountText(amount: Double) = "x " + round2(amount / props.normalizeTarget).toString()
+    private fun amountText(amount: Double) = "x " + round2(amount * props.normalizeTarget).toString()
 
     private fun <X : kotlinx.html.Tag> RDOMBuilder<X>.amountLink(amount: Double, block: RDOMBuilder<A>.() -> Unit) =
         a {
@@ -113,6 +113,6 @@ val optimizationResultPresenter: RClass<RProps> =
         },
         { dispatch, _ ->
             changeMaterial = { dispatch(ChangeMaterial(it)) }
-            changeNormalizeTo = { dispatch(NormalizeTo(it)) }
+            changeNormalizeTo = { dispatch(NormalizeTo(1 / it)) }
         }
     )(OptimizationResultPresenter::class.rClass)
