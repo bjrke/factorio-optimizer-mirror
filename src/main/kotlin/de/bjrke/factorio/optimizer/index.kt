@@ -39,7 +39,7 @@ fun main() {
             provider(store) {
                 hashRouter {
                     switch {
-                        route("/redux", strict = true) {
+                        route("/redux") {
                             div {
                                 div {
                                     reduxMaterialSelector()
@@ -68,10 +68,11 @@ fun main() {
                                 div {
                                     urlOptimizationResultPresenter(routeResultProps)
                                 }
+                                navLink<RProps>("/redux") {
+                                    +"redux based"
+                                }
                             }
-                            navLink<RProps>("/redux") {
-                                +"redux based"
-                            }
+
                         }
                     }
                     redirect(to = "/1")
@@ -79,5 +80,4 @@ fun main() {
             }
         }
     }
-}
 }

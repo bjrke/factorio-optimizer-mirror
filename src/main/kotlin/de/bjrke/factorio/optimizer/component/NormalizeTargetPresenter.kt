@@ -7,8 +7,11 @@ import de.bjrke.factorio.optimizer.changeUrl
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLInputElement
-import react.*
+import react.RBuilder
+import react.RProps
 import react.dom.input
+import react.invoke
+import react.rFunction
 import react.redux.rConnect
 import react.router.dom.RouteResultProps
 import redux.RAction
@@ -33,7 +36,7 @@ val normalizeTargetPresenter = rFunction<NormalizeTargetPresenterProps>("normali
     }
 }
 
-private val reduxNormalizeTargetPresenter: RClass<RProps> =
+private val reduxNormalizeTargetPresenter =
     rConnect<OptimizerAppState, RAction, WrapperAction, RProps, NormalizeTargetPresenterStateProps, NormalizeTargetPresenterDispatchProps, NormalizeTargetPresenterProps>(
         { state, _ ->
             normalizeTarget = state.normalizeTarget
@@ -41,7 +44,7 @@ private val reduxNormalizeTargetPresenter: RClass<RProps> =
         { dispatch, _ ->
             changeNormalizeTo = { dispatch(NormalizeTo(it)) }
         }
-    ).invoke(normalizeTargetPresenter)
+    )(normalizeTargetPresenter)
 
 fun RBuilder.reduxNormalizeTargetPresenter() = reduxNormalizeTargetPresenter {}
 
