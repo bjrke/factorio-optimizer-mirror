@@ -1,5 +1,46 @@
 package de.bjrke.factorio.optimizer
 
+import de.bjrke.factorio.optimizer.component.factorySelector
+import de.bjrke.factorio.optimizer.component.materialSelector
+import de.bjrke.factorio.optimizer.component.normalizeTargetPresenter
+import de.bjrke.factorio.optimizer.component.optimizationResultPresenter
+import kotlinx.browser.document
+import kotlinx.browser.window
+import react.dom.div
+import react.dom.render
+import react.redux.provider
+import redux.compose
+import redux.createStore
+import redux.rEnhancer
 import kotlin.math.round
 
-fun round2(d: Double) = round(d * 100.0) / 100.0
+
+fun main() {
+    window.onload = {
+        val store = createStore(
+            ::rootReducer,
+            OptimizerAppState(),
+            compose(
+                rEnhancer(),
+                js("if(window.__REDUX_DEVTOOLS_EXTENSION__ )window.__REDUX_DEVTOOLS_EXTENSION__ ();else(function(f){return f;});")
+            )
+        )
+        render(document.getElementById("root")) {
+            provider(store) {
+                div {
+                    div {
+                        materialSelector {}
+                        normalizeTargetPresenter {}
+                    }
+                    div {
+                        factorySelector {}
+                    }
+                    div {
+                        optimizationResultPresenter {}
+                    }
+                }
+
+            }
+        }
+    }
+}

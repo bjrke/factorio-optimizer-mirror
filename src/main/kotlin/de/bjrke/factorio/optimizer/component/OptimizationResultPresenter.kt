@@ -5,7 +5,6 @@ import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
-import de.bjrke.factorio.optimizer.round2
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
 import kotlinx.html.A
@@ -17,6 +16,9 @@ import redux.RAction
 import redux.WrapperAction
 import styled.css
 import styled.styledThead
+import kotlin.math.round
+
+fun round2(d: Double) = round(d * 100.0) / 100.0
 
 interface OptimizationResultPresenterStateProps : RProps {
     var optimizationResult: OptimizationResult
