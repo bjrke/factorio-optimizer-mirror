@@ -1,17 +1,20 @@
 package de.bjrke.factorio.optimizer.component
 
-import de.bjrke.factorio.optimizer.ChangeMaterial
-import de.bjrke.factorio.optimizer.NormalizeTo
-import de.bjrke.factorio.optimizer.OptimizerAppState
+import de.bjrke.factorio.optimizer.*
 import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
+import kotlinext.js.Object
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
 import kotlinx.html.A
 import kotlinx.html.js.onClickFunction
-import react.*
+import react.RBuilder
+import react.RProps
 import react.dom.*
+import react.invoke
+import react.rFunction
 import react.redux.rConnect
+import react.router.dom.RouteResultProps
 import redux.RAction
 import redux.WrapperAction
 import styled.css
@@ -33,11 +36,19 @@ interface OptimizationResultPresenterDispatchProps : RProps {
 interface OptimizationResultPresenterProps : OptimizationResultPresenterStateProps,
     OptimizationResultPresenterDispatchProps
 
+private val optimizationResultPresenter =
+    rFunction<OptimizationResultPresenterProps>("optimizationResultPresenter") { props ->
 
-class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
-    RComponent<OptimizationResultPresenterProps, RState>(props) {
+        fun amountText(amount: Double) = "x " + round2(amount * props.normalizeTarget).toString()
 
-    override fun RBuilder.render() {
+        fun <X : kotlinx.html.Tag> RDOMBuilder<X>.amountLink(amount: Double, block: RDOMBuilder<A>.() -> Unit) =
+            a {
+                attrs {
+                    onClickFunction = { props.changeNormalizeTo(amount) }
+                }
+                block()
+            }
+
         table {
             styledThead {
                 css {
@@ -64,27 +75,21 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
                                 attrs {
                                     onClickFunction = { props.changeMaterial(material) }
                                 }
-                                icon {
-                                    name = material.name
-                                }
+                                icon(material.name)
                                 +material.name
                             }
 
                         }
                         td {
                             amountLink(factoryProduction.amount) {
-                                icon {
-                                    name = factoryProduction.factory.identifier
-                                }
+                                icon(factoryProduction.factory.identifier)
                                 +amountText(factoryProduction.amount)
                             }
                         }
                         td {
                             val amount = factoryProduction.production(material)
                             amountLink(amount) {
-                                icon {
-                                    name = material.name
-                                }
+                                icon(material.name)
                                 +amountText(amount)
                             }
                         }
@@ -94,18 +99,7 @@ class OptimizationResultPresenter(props: OptimizationResultPresenterProps) :
         }
     }
 
-    private fun amountText(amount: Double) = "x " + round2(amount * props.normalizeTarget).toString()
-
-    private fun <X : kotlinx.html.Tag> RDOMBuilder<X>.amountLink(amount: Double, block: RDOMBuilder<A>.() -> Unit) =
-        a {
-            attrs {
-                onClickFunction = { props.changeNormalizeTo(amount) }
-            }
-            block()
-        }
-}
-
-val optimizationResultPresenter: RClass<RProps> =
+private val reduxOptimizationResultPresenter =
     rConnect<OptimizerAppState, RAction, WrapperAction, RProps, OptimizationResultPresenterStateProps, OptimizationResultPresenterDispatchProps, OptimizationResultPresenterProps>(
         { state, _ ->
             optimizationResult = state.optimizationResult
@@ -115,4 +109,22 @@ val optimizationResultPresenter: RClass<RProps> =
             changeMaterial = { dispatch(ChangeMaterial(it)) }
             changeNormalizeTo = { dispatch(NormalizeTo(1 / it)) }
         }
-    )(OptimizationResultPresenter::class.rClass)
+    )(optimizationResultPresenter)
+
+fun RBuilder.reduxOptimizationResultPresenter() = reduxOptimizationResultPresenter {}
+
+private val urlOptimizationResultPresenter =
+    rConnect<OptimizerAppState, RAction, WrapperAction, RouteResultProps<UrlProps>, OptimizationResultPresenterStateProps, OptimizationResultPresenterDispatchProps, OptimizationResultPresenterProps>(
+        { state, routeResultProps ->
+            optimizationResult = state.optimizationResult
+            normalizeTarget = routeResultProps.match.params.normalizeTarget
+        },
+        { dispatch, routeResultProps ->
+            changeMaterial = { dispatch(ChangeMaterial(it)) }
+            changeNormalizeTo = { routeResultProps.changeUrl { normalizeTarget = 1 / it } }
+        }
+    )(optimizationResultPresenter)
+
+fun RBuilder.urlOptimizationResultPresenter(props: RouteResultProps<UrlProps>) {
+    urlOptimizationResultPresenter { Object.assign(attrs, props) }
+}

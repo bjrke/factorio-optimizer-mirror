@@ -5,9 +5,12 @@ import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.model.Material
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
-import react.*
+import react.RBuilder
+import react.RProps
 import react.dom.option
 import react.dom.select
+import react.invoke
+import react.rFunction
 import react.redux.rConnect
 import redux.WrapperAction
 
@@ -22,28 +25,22 @@ interface MaterialSelectorDispatchProps : RProps {
 
 interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
-class MaterialSelector(props: MaterialSelectorProps) :
-    RComponent<MaterialSelectorProps, RState>(props) {
-
-    override fun RBuilder.render() {
-        select {
-            attrs.onChangeFunction = { event ->
-                props.changeMaterial(Material((event.target as HTMLSelectElement).value))
+private val materialSelector = rFunction<MaterialSelectorProps>("materialSelector") { props ->
+    select {
+        attrs.onChangeFunction = { event ->
+            props.changeMaterial(Material((event.target as HTMLSelectElement).value))
+        }
+        attrs.value = props.material.name
+        for (m in props.availableMaterials) {
+            option {
+                attrs.value = m.name
+                +m.name
             }
-            attrs.value = props.material.name
-            for (m in props.availableMaterials) {
-                option {
-                    attrs.value = m.name
-                    +m.name
-                }
-            }
-
         }
     }
-
 }
 
-val materialSelector: RClass<RProps> =
+private val reduxMaterialSelector =
     rConnect<OptimizerAppState, ChangeMaterial, WrapperAction, RProps, MaterialSelectorStateProps, MaterialSelectorDispatchProps, MaterialSelectorProps>(
         { state, _ ->
             availableMaterials = state.parsedRecipes.materials
@@ -52,4 +49,6 @@ val materialSelector: RClass<RProps> =
         { dispatch, _ ->
             changeMaterial = { dispatch(ChangeMaterial(it)) }
         }
-    )(MaterialSelector::class.rClass)
+    )(materialSelector)
+
+fun RBuilder.reduxMaterialSelector() = reduxMaterialSelector{}

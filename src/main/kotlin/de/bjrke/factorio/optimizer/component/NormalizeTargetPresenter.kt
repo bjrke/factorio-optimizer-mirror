@@ -2,12 +2,15 @@ package de.bjrke.factorio.optimizer.component
 
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
+import de.bjrke.factorio.optimizer.UrlProps
+import de.bjrke.factorio.optimizer.changeUrl
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLInputElement
 import react.*
 import react.dom.input
 import react.redux.rConnect
+import react.router.dom.RouteResultProps
 import redux.RAction
 import redux.WrapperAction
 
@@ -22,20 +25,15 @@ interface NormalizeTargetPresenterDispatchProps : RProps {
 interface NormalizeTargetPresenterProps : NormalizeTargetPresenterStateProps,
     NormalizeTargetPresenterDispatchProps
 
-
-class NormalizeTargetPresenter(props: NormalizeTargetPresenterProps) :
-    RComponent<NormalizeTargetPresenterProps, RState>(props) {
-
-    override fun RBuilder.render() {
-        input(type = InputType.number) {
-            attrs.onChangeFunction =
-                { event -> props.changeNormalizeTo((event.target as HTMLInputElement).value.toDouble()) }
-            attrs.value = props.normalizeTarget.toString()
-        }
+val normalizeTargetPresenter = rFunction<NormalizeTargetPresenterProps>("normalizeTargetPresenter") { props ->
+    input(type = InputType.number) {
+        attrs.onChangeFunction =
+            { event -> props.changeNormalizeTo((event.target as HTMLInputElement).value.toDouble()) }
+        attrs.value = props.normalizeTarget.toString()
     }
 }
 
-val normalizeTargetPresenter: RClass<RProps> =
+private val reduxNormalizeTargetPresenter: RClass<RProps> =
     rConnect<OptimizerAppState, RAction, WrapperAction, RProps, NormalizeTargetPresenterStateProps, NormalizeTargetPresenterDispatchProps, NormalizeTargetPresenterProps>(
         { state, _ ->
             normalizeTarget = state.normalizeTarget
@@ -43,4 +41,15 @@ val normalizeTargetPresenter: RClass<RProps> =
         { dispatch, _ ->
             changeNormalizeTo = { dispatch(NormalizeTo(it)) }
         }
-    )(NormalizeTargetPresenter::class.rClass)
+    ).invoke(normalizeTargetPresenter)
+
+fun RBuilder.reduxNormalizeTargetPresenter() = reduxNormalizeTargetPresenter {}
+
+fun RBuilder.urlNormalizeTargetPresenter(props: RouteResultProps<UrlProps>) {
+    normalizeTargetPresenter {
+        attrs {
+            normalizeTarget = props.match.params.normalizeTarget
+            changeNormalizeTo = { props.changeUrl { normalizeTarget = it } }
+        }
+    }
+}

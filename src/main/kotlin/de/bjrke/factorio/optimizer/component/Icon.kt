@@ -3,10 +3,9 @@ package de.bjrke.factorio.optimizer.component
 import kotlinx.css.*
 import kotlinx.html.title
 import react.RBuilder
-import react.RComponent
 import react.RProps
-import react.RState
 import react.dom.attrs
+import react.rFunction
 import styled.css
 import styled.styledImg
 
@@ -15,23 +14,26 @@ interface IconProps : RProps {
     var size: Int?
 }
 
-class Icon(props: IconProps) : RComponent<IconProps, RState>(props) {
-    override fun RBuilder.render() {
-        val size = props.size ?: 32
-        styledImg(src = "icons/${props.name}.png") {
-            css {
-                width = size.px
-                height = size.px
-                verticalAlign = VerticalAlign.middle
-                marginRight = 5.px
-            }
-            attrs {
-                height = "$size"
-                alt = props.name
-                title = props.name
-            }
+private val iconX = rFunction<IconProps>("icon") { props ->
+
+    val size = props.size ?: 32
+    styledImg(src = "icons/${props.name}.png") {
+        css {
+            width = size.px
+            height = size.px
+            verticalAlign = VerticalAlign.middle
+            marginRight = 5.px
+        }
+        attrs {
+            height = "$size"
+            alt = props.name
+            title = props.name
         }
     }
+
 }
 
-fun RBuilder.icon(handler: IconProps.() -> Unit) = child(Icon::class) { attrs(handler) }
+fun RBuilder.icon(name: String, handler: IconProps.() -> Unit = {}) = iconX {
+    attrs.name = name
+    attrs(handler)
+}

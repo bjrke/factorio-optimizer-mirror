@@ -1,19 +1,29 @@
 package de.bjrke.factorio.optimizer
 
-import de.bjrke.factorio.optimizer.component.factorySelector
-import de.bjrke.factorio.optimizer.component.materialSelector
-import de.bjrke.factorio.optimizer.component.normalizeTargetPresenter
-import de.bjrke.factorio.optimizer.component.optimizationResultPresenter
+import de.bjrke.factorio.optimizer.component.*
 import kotlinx.browser.document
 import kotlinx.browser.window
+import react.RProps
 import react.dom.div
 import react.dom.render
 import react.redux.provider
+import react.router.dom.*
 import redux.compose
 import redux.createStore
 import redux.rEnhancer
-import kotlin.math.round
 
+interface UrlProps : RProps {
+    var normalizeTarget: Double
+}
+
+fun UrlProps.createNewUrl(): String = "/$normalizeTarget"
+
+fun RouteResultProps<UrlProps>.createNewUrl(change: UrlProps.() -> Unit): String =
+    match.params.apply(change).createNewUrl()
+
+fun RouteResultProps<UrlProps>.changeUrl(change: UrlProps.() -> Unit) {
+    history.push(createNewUrl(change))
+}
 
 fun main() {
     window.onload = {
@@ -27,20 +37,47 @@ fun main() {
         )
         render(document.getElementById("root")) {
             provider(store) {
-                div {
-                    div {
-                        materialSelector {}
-                        normalizeTargetPresenter {}
+                hashRouter {
+                    switch {
+                        route("/redux", strict = true) {
+                            div {
+                                div {
+                                    reduxMaterialSelector()
+                                    reduxNormalizeTargetPresenter()
+                                }
+                                div {
+                                    reduxFactorySelector()
+                                }
+                                div {
+                                    reduxOptimizationResultPresenter()
+                                }
+                                navLink<RProps>("/1") {
+                                    +"URL based"
+                                }
+                            }
+                        }
+                        route<UrlProps>("/:normalizeTarget") { routeResultProps ->
+                            div {
+                                div {
+                                    reduxMaterialSelector()
+                                    urlNormalizeTargetPresenter(routeResultProps)
+                                }
+                                div {
+                                    reduxFactorySelector()
+                                }
+                                div {
+                                    urlOptimizationResultPresenter(routeResultProps)
+                                }
+                            }
+                            navLink<RProps>("/redux") {
+                                +"redux based"
+                            }
+                        }
                     }
-                    div {
-                        factorySelector {}
-                    }
-                    div {
-                        optimizationResultPresenter {}
-                    }
+                    redirect(to = "/1")
                 }
-
             }
         }
     }
+}
 }

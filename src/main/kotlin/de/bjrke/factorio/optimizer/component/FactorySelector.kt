@@ -24,36 +24,29 @@ interface FactorySelectorDispatchProps : RProps {
 
 interface FactorySelectorProps : FactorySelectorStateProps, FactorySelectorDispatchProps
 
-class FactorySelector(props: FactorySelectorProps) :
-    RComponent<FactorySelectorProps, RState>(props) {
-
-    override fun RBuilder.render() {
-        for (factory in props.availableFactories) {
-            label {
-                input(type = InputType.checkBox) {
-                    val enabled = props.selectedFactories.contains(factory)
-                    attrs.onChangeFunction = { _ ->
-                        props.selectFactory(
-                            selectFactory(
-                                props.selectedFactories,
-                                factory,
-                                !enabled
-                            )
+private val factorySelector = rFunction<FactorySelectorProps>("factorySelector") { props ->
+    for (factory in props.availableFactories) {
+        label {
+            input(type = InputType.checkBox) {
+                val enabled = props.selectedFactories.contains(factory)
+                attrs.onChangeFunction = { _ ->
+                    props.selectFactory(
+                        selectFactory(
+                            props.selectedFactories,
+                            factory,
+                            !enabled
                         )
-                    }
-                    // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
-                    attrs["checked"] = enabled
+                    )
                 }
-                icon {
-                    name = factory.identifier
-                }
+                // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
+                attrs["checked"] = enabled
             }
+            icon(factory.identifier)
         }
     }
-
 }
 
-val factorySelector: RClass<RProps> =
+private val reduxFactorySelector: RClass<RProps> =
     rConnect<OptimizerAppState, SelectFactory, WrapperAction, RProps, FactorySelectorStateProps, FactorySelectorDispatchProps, FactorySelectorProps>(
         { state, _ ->
             availableFactories = selectableFactories
@@ -62,4 +55,6 @@ val factorySelector: RClass<RProps> =
         { dispatch, _ ->
             selectFactory = { dispatch(SelectFactory(it)) }
         }
-    )(FactorySelector::class.rClass)
+    )(factorySelector)
+
+fun RBuilder.reduxFactorySelector() = reduxFactorySelector {}
