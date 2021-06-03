@@ -1,9 +1,8 @@
 package de.bjrke.factorio.optimizer.component
 
+import de.bjrke.factorio.optimizer.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
-import de.bjrke.factorio.optimizer.UrlProps
-import de.bjrke.factorio.optimizer.changeUrl
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLInputElement
@@ -13,7 +12,6 @@ import react.dom.input
 import react.invoke
 import react.rFunction
 import react.redux.rConnect
-import react.router.dom.RouteResultProps
 import redux.RAction
 import redux.WrapperAction
 
@@ -48,10 +46,10 @@ private val reduxNormalizeTargetPresenter =
 
 fun RBuilder.reduxNormalizeTargetPresenter() = reduxNormalizeTargetPresenter {}
 
-fun RBuilder.urlNormalizeTargetPresenter(props: RouteResultProps<UrlProps>) {
+fun RBuilder.urlNormalizeTargetPresenter(props: FactorioOptimizerProps) {
     normalizeTargetPresenter {
         attrs {
-            normalizeTarget = props.match.params.normalizeTarget
+            normalizeTarget = props.normalizeTarget
             changeNormalizeTo = { props.changeUrl { normalizeTarget = it } }
         }
     }

@@ -1,6 +1,14 @@
 package de.bjrke.factorio.optimizer.model
 
-data class Material(val name: String)
+data class Material(val name: String) {
+    companion object {
+        private val materialsBuilder = mutableMapOf<String, Material>()
+
+        fun of(name: String) = materialsBuilder.getOrPut(name) { Material(name) }
+    }
+}
+
+
 data class ParsedRecipe(val materials: List<Material>, val recipes: List<Recipe>)
 data class Recipe(
     val name: String,

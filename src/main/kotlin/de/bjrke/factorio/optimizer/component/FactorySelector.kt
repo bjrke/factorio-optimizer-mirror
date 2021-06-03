@@ -1,9 +1,11 @@
 package de.bjrke.factorio.optimizer.component
 
+import de.bjrke.factorio.optimizer.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.SelectFactory
 import de.bjrke.factorio.optimizer.model.Factory
-import de.bjrke.factorio.optimizer.model.selectFactory
+import de.bjrke.factorio.optimizer.model.addFactory
+import de.bjrke.factorio.optimizer.model.removeFactory
 import de.bjrke.factorio.optimizer.model.selectableFactories
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
@@ -31,11 +33,11 @@ private val factorySelector = rFunction<FactorySelectorProps>("factorySelector")
                 val enabled = props.selectedFactories.contains(factory)
                 attrs.onChangeFunction = { _ ->
                     props.selectFactory(
-                        selectFactory(
-                            props.selectedFactories,
-                            factory,
-                            !enabled
-                        )
+                        if (enabled) {
+                            props.selectedFactories.removeFactory(factory)
+                        } else {
+                            props.selectedFactories.addFactory(factory)
+                        }
                     )
                 }
                 // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
@@ -58,3 +60,13 @@ private val reduxFactorySelector: RClass<RProps> =
     )(factorySelector)
 
 fun RBuilder.reduxFactorySelector() = reduxFactorySelector {}
+
+fun RBuilder.urlFactorySelector(props: FactorioOptimizerProps) {
+    factorySelector {
+        attrs {
+            availableFactories = selectableFactories
+            selectedFactories = props.factories
+            selectFactory = { props.changeUrl { factories = it } }
+        }
+    }
+}

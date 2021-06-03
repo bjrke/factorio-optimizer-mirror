@@ -1,9 +1,11 @@
 package de.bjrke.factorio.optimizer.component
 
-import de.bjrke.factorio.optimizer.*
+import de.bjrke.factorio.optimizer.ChangeMaterial
+import de.bjrke.factorio.optimizer.FactorioOptimizerProps
+import de.bjrke.factorio.optimizer.NormalizeTo
+import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
-import kotlinext.js.Object
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
 import kotlinx.html.A
@@ -14,7 +16,6 @@ import react.dom.*
 import react.invoke
 import react.rFunction
 import react.redux.rConnect
-import react.router.dom.RouteResultProps
 import redux.RAction
 import redux.WrapperAction
 import styled.css
@@ -113,18 +114,13 @@ private val reduxOptimizationResultPresenter =
 
 fun RBuilder.reduxOptimizationResultPresenter() = reduxOptimizationResultPresenter {}
 
-private val urlOptimizationResultPresenter =
-    rConnect<OptimizerAppState, RAction, WrapperAction, RouteResultProps<UrlProps>, OptimizationResultPresenterStateProps, OptimizationResultPresenterDispatchProps, OptimizationResultPresenterProps>(
-        { state, routeResultProps ->
-            optimizationResult = state.optimizationResult
-            normalizeTarget = routeResultProps.match.params.normalizeTarget
-        },
-        { dispatch, routeResultProps ->
-            changeMaterial = { dispatch(ChangeMaterial(it)) }
-            changeNormalizeTo = { routeResultProps.changeUrl { normalizeTarget = 1 / it } }
+fun RBuilder.urlOptimizationResultPresenter(props: FactorioOptimizerProps) {
+    optimizationResultPresenter {
+        attrs {
+            optimizationResult = props.optimizationResult
+            normalizeTarget = props.normalizeTarget
+            changeMaterial = { props.changeUrl { target = it } }
+            changeNormalizeTo = { props.changeUrl { normalizeTarget = 1 / it } }
         }
-    )(optimizationResultPresenter)
-
-fun RBuilder.urlOptimizationResultPresenter(props: RouteResultProps<UrlProps>) {
-    urlOptimizationResultPresenter { Object.assign(attrs, props) }
+    }
 }

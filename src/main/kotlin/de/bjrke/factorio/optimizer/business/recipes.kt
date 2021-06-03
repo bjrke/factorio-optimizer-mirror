@@ -17,7 +17,7 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
     val recipesBuilder = mutableListOf<Recipe>()
     val subgroups = mutableMapOf<String, Subgroup>()
 
-    fun material(name: String) = materialsBuilder.getOrPut(name) { Material(name) }
+    fun material(name: String) = materialsBuilder.getOrPut(name) { Material.of(name) }
     fun jsMaterial(name: dynamic): Material = material(string(name))
     fun subgroup(name: String): Subgroup = subgroups.getOrPut(name) { Subgroup(name) }
     fun jsSubgroup(name: dynamic): Subgroup = subgroup(string(name))

@@ -4,7 +4,7 @@ import de.bjrke.factorio.optimizer.business.optimize
 import de.bjrke.factorio.optimizer.business.parseRecipes
 import de.bjrke.factorio.optimizer.model.*
 
-private val defaultParsedRecipes = parseRecipes()
+val defaultParsedRecipes = parseRecipes()
 private val defaultMaterial = defaultParsedRecipes.materials.first()
 private val defaultOptimizationResult = optimize(defaultMaterial, defaultParsedRecipes, defaultFactories)
 
