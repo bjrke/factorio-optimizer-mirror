@@ -72,10 +72,9 @@ fun main() {
                                     +"redux based"
                                 }
                             }
-
                         }
+                        redirect(to = "/1")
                     }
-                    redirect(to = "/1")
                 }
             }
         }
