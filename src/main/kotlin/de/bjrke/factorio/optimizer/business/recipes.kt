@@ -57,8 +57,24 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
             ingredients = mapOf(material("satellite") to 1.0, material("rocket-part") to 100.0),
             result = mapOf(material("space-science-pack") to 1000.0),
             time = 1.0,
-            category = Category.ROCKET_BUILDING,
-            subgroup = noSubGroup
+            category = Category.ROCKET_BUILDING
+        )
+    recipesBuilder +=
+        Recipe(
+            name = "all-science-packs",
+            ingredients =
+                mapOf(
+                    material("automation-science-pack") to 1.0,
+                    material("chemical-science-pack") to 1.0,
+                    material("logistic-science-pack") to 1.0,
+                    material("military-science-pack") to 1.0,
+                    material("production-science-pack") to 1.0,
+                    material("space-science-pack") to 1.0,
+                    material("utility-science-pack") to 1.0
+                ),
+            result = mapOf(material("all-science-packs") to 1.0),
+            time = 1.0,
+            category = Category.SCIENCE_LAB
         )
 
     return ParsedRecipe(

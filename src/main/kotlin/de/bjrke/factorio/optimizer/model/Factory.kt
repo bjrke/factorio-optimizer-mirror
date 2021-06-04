@@ -20,25 +20,27 @@ enum class Factory(
     STONE_FURNACE('f', "stone-furnace", smelterCategories),
     STEEL_FURNACE('s', "steel-furnace", smelterCategories, 2.0),
     ELECTRIC_FURNACE('e', "electric-furnace", smelterCategories, 2.0),
+    SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
     NO_FACTORY(null, "compilatron-chest", setOf())
 }
 
 val allFactories = Factory.values().toSet()
 val smelters = allFactories.filter { it.categories == smelterCategories }
 val assemblers = allFactories.filter { it.categories.contains(Category.CRAFTING) }
-val tech = allFactories - smelters - assemblers - Factory.NO_FACTORY
+val alwaysEnabledFactories = setOf(Factory.NO_FACTORY, Factory.SCIENCE_LAB)
+val tech = allFactories - smelters - assemblers - alwaysEnabledFactories
 val defaultFactories =
-    setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE, Factory.NO_FACTORY) + tech
-val selectableFactories = Factory.values().toList() - Factory.NO_FACTORY
+    setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE) + alwaysEnabledFactories + tech
+val selectableFactories = Factory.values().toList() - alwaysEnabledFactories
 private val factoriesByCode = Factory.values().filter { it.code != null }.associateBy { it.code }
 
 fun Set<Factory>.removeFactory(factory: Factory) =
     when (factory) {
         in smelters -> this - smelters - factory
         in assemblers -> this - assemblers - factory
-        Factory.NO_FACTORY -> this
+        in alwaysEnabledFactories -> this
         else -> this - factory
-    }
+    } + alwaysEnabledFactories
 
 fun Set<Factory>.addFactory(factory: Factory) = removeFactory(factory) + factory
 

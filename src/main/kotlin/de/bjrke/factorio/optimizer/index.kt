@@ -41,7 +41,7 @@ class FactorioOptimizerProps(private val routeResultProps: RouteResultProps<UrlP
 
 fun main() {
 
-    val defaultUrl = "/1/assembling-machine-3/${defaultFactories.toUrlParam()}"
+    val defaultUrl = "/1/all-science-packs/${defaultFactories.toUrlParam()}"
 
     window.onload =
         {
