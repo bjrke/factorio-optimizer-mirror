@@ -26,32 +26,38 @@ interface MaterialSelectorDispatchProps : RProps {
 
 interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
-private val materialSelector = rFunction<MaterialSelectorProps>("materialSelector") { props ->
-    select {
-        attrs.onChangeFunction = { event ->
-            props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
-        }
-        attrs.value = props.material.name
-        for (m in props.availableMaterials) {
-            option {
-                attrs.value = m.name
-                +m.name
+private val materialSelector =
+    rFunction<MaterialSelectorProps>("materialSelector") { props ->
+        select {
+            attrs.onChangeFunction =
+                { event ->
+                    props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
+                }
+            attrs.value = props.material.name
+            for (m in props.availableMaterials) {
+                option {
+                    attrs.value = m.name
+                    +m.name
+                }
             }
         }
     }
-}
 
 private val reduxMaterialSelector =
-    rConnect<OptimizerAppState, ChangeMaterial, WrapperAction, RProps, MaterialSelectorStateProps, MaterialSelectorDispatchProps, MaterialSelectorProps>(
+    rConnect<
+        OptimizerAppState,
+        ChangeMaterial,
+        WrapperAction,
+        RProps,
+        MaterialSelectorStateProps,
+        MaterialSelectorDispatchProps,
+        MaterialSelectorProps>(
         { state, _ ->
             availableMaterials = state.parsedRecipes.materials
             material = state.target
         },
-        { dispatch, _ ->
-            changeMaterial = { dispatch(ChangeMaterial(it)) }
-        }
+        { dispatch, _ -> changeMaterial = { dispatch(ChangeMaterial(it)) } }
     )(materialSelector)
-
 
 fun RBuilder.reduxMaterialSelector() = reduxMaterialSelector {}
 

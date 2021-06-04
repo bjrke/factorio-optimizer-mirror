@@ -8,8 +8,8 @@ data class Material(val name: String) {
     }
 }
 
-
 data class ParsedRecipe(val materials: List<Material>, val recipes: List<Recipe>)
+
 data class Recipe(
     val name: String,
     val ingredients: Map<Material, Double>,
@@ -20,8 +20,8 @@ data class Recipe(
 )
 
 data class Subgroup(val name: String = "no subgroup")
-enum class Category(val identifier: String) {
 
+enum class Category(val identifier: String) {
     ADVANCED_CRAFTING("advanced-crafting"),
     CENTRIFUGING("centrifuging"),
     CRAFTING("crafting"),
@@ -30,12 +30,9 @@ enum class Category(val identifier: String) {
     OIL_PROCESSING("oil-processing"),
     CHEMISTRY("chemistry"),
     SMELTING("smelting"),
-
     NO_CATEGORY("no-category")
-
-    ;
-
 }
 
 private val categoryMap = Category.values().associateBy { it.identifier }
+
 fun category(identifier: String) = categoryMap[identifier]

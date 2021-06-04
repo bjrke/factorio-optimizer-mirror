@@ -37,65 +37,57 @@ class FactorioOptimizerProps(private val routeResultProps: RouteResultProps<UrlP
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         routeResultProps.history.push(apply(change).createNewUrl())
     }
-
 }
 
 fun main() {
 
     val defaultUrl = "/1/assembling-machine-3/${defaultFactories.toUrlParam()}"
 
-    window.onload = {
-        val store = createStore(
-            ::rootReducer,
-            OptimizerAppState(),
-            compose(
-                rEnhancer(),
-                js("if(window.__REDUX_DEVTOOLS_EXTENSION__ )window.__REDUX_DEVTOOLS_EXTENSION__ ();else(function(f){return f;});")
-            )
-        )
-        render(document.getElementById("root")) {
-            provider(store) {
-                hashRouter {
-                    switch {
-                        route("/redux") {
-                            div {
+    window.onload =
+        {
+            val store =
+                createStore(
+                    ::rootReducer,
+                    OptimizerAppState(),
+                    compose(
+                        rEnhancer(),
+                        js(
+                            "if(window.__REDUX_DEVTOOLS_EXTENSION__ )window.__REDUX_DEVTOOLS_EXTENSION__ ();else(function(f){return f;});"
+                        )
+                    )
+                )
+            render(document.getElementById("root")) {
+                provider(store) {
+                    hashRouter {
+                        switch {
+                            route("/redux") {
                                 div {
-                                    reduxMaterialSelector()
-                                    reduxNormalizeTargetPresenter()
-                                }
-                                div {
-                                    reduxFactorySelector()
-                                }
-                                div {
-                                    reduxOptimizationResultPresenter()
-                                }
-                                navLink<RProps>(defaultUrl) {
-                                    +"URL based"
+                                    div {
+                                        reduxMaterialSelector()
+                                        reduxNormalizeTargetPresenter()
+                                    }
+                                    div { reduxFactorySelector() }
+                                    div { reduxOptimizationResultPresenter() }
+                                    navLink<RProps>(defaultUrl) { +"URL based" }
                                 }
                             }
-                        }
-                        route<UrlProps>("/:normalizeTarget/:target/:factories") { routeResultProps ->
-                            val props = FactorioOptimizerProps(routeResultProps)
-                            div {
+                            route<UrlProps>("/:normalizeTarget/:target/:factories") {
+                                routeResultProps ->
+                                val props = FactorioOptimizerProps(routeResultProps)
                                 div {
-                                    urlMaterialSelector(props)
-                                    urlNormalizeTargetPresenter(props)
-                                }
-                                div {
-                                    urlFactorySelector(props)
-                                }
-                                div {
-                                    urlOptimizationResultPresenter(props)
-                                }
-                                navLink<RProps>("/redux") {
-                                    +"redux based"
+                                    div {
+                                        urlMaterialSelector(props)
+                                        urlNormalizeTargetPresenter(props)
+                                    }
+                                    div { urlFactorySelector(props) }
+                                    div { urlOptimizationResultPresenter(props) }
+                                    navLink<RProps>("/redux") { +"redux based" }
                                 }
                             }
+                            redirect(to = defaultUrl)
                         }
-                        redirect(to = defaultUrl)
                     }
                 }
             }
         }
-    }
 }

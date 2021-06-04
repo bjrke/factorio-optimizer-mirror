@@ -23,25 +23,31 @@ interface NormalizeTargetPresenterDispatchProps : RProps {
     var changeNormalizeTo: (Double) -> Unit
 }
 
-interface NormalizeTargetPresenterProps : NormalizeTargetPresenterStateProps,
-    NormalizeTargetPresenterDispatchProps
+interface NormalizeTargetPresenterProps :
+    NormalizeTargetPresenterStateProps, NormalizeTargetPresenterDispatchProps
 
-val normalizeTargetPresenter = rFunction<NormalizeTargetPresenterProps>("normalizeTargetPresenter") { props ->
-    input(type = InputType.number) {
-        attrs.onChangeFunction =
-            { event -> props.changeNormalizeTo((event.target as HTMLInputElement).value.toDouble()) }
-        attrs.value = props.normalizeTarget.toString()
+val normalizeTargetPresenter =
+    rFunction<NormalizeTargetPresenterProps>("normalizeTargetPresenter") { props ->
+        input(type = InputType.number) {
+            attrs.onChangeFunction =
+                { event ->
+                    props.changeNormalizeTo((event.target as HTMLInputElement).value.toDouble())
+                }
+            attrs.value = props.normalizeTarget.toString()
+        }
     }
-}
 
 private val reduxNormalizeTargetPresenter =
-    rConnect<OptimizerAppState, RAction, WrapperAction, RProps, NormalizeTargetPresenterStateProps, NormalizeTargetPresenterDispatchProps, NormalizeTargetPresenterProps>(
-        { state, _ ->
-            normalizeTarget = state.normalizeTarget
-        },
-        { dispatch, _ ->
-            changeNormalizeTo = { dispatch(NormalizeTo(it)) }
-        }
+    rConnect<
+        OptimizerAppState,
+        RAction,
+        WrapperAction,
+        RProps,
+        NormalizeTargetPresenterStateProps,
+        NormalizeTargetPresenterDispatchProps,
+        NormalizeTargetPresenterProps>(
+        { state, _ -> normalizeTarget = state.normalizeTarget },
+        { dispatch, _ -> changeNormalizeTo = { dispatch(NormalizeTo(it)) } }
     )(normalizeTargetPresenter)
 
 fun RBuilder.reduxNormalizeTargetPresenter() = reduxNormalizeTargetPresenter {}

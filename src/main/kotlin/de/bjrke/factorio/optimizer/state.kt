@@ -6,7 +6,8 @@ import de.bjrke.factorio.optimizer.model.*
 
 val defaultParsedRecipes = parseRecipes()
 private val defaultMaterial = defaultParsedRecipes.materials.first()
-private val defaultOptimizationResult = optimize(defaultMaterial, defaultParsedRecipes, defaultFactories)
+private val defaultOptimizationResult =
+    optimize(defaultMaterial, defaultParsedRecipes, defaultFactories)
 
 data class OptimizerAppState(
     val target: Material = defaultMaterial,

@@ -2,13 +2,12 @@ package de.bjrke.factorio.optimizer.business
 
 import de.bjrke.factorio.optimizer.model.*
 
-@JsModule("recipe.json")
-@JsNonModule
-private external val defaultRecipesJson: dynamic
+@JsModule("recipe.json") @JsNonModule private external val defaultRecipesJson: dynamic
 
 private val jsObject = js("Object")
 
 private fun string(name: dynamic) = name as String
+
 private fun double(number: dynamic) = number as Double
 
 fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
@@ -32,7 +31,8 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
 
         val result = mutableMapOf<Material, Double>()
         for (jsProduct in jsRecipe.products) {
-            result[jsMaterial(jsProduct.name)] = double(jsProduct.amount) * double(jsProduct.probability)
+            result[jsMaterial(jsProduct.name)] =
+                double(jsProduct.amount) * double(jsProduct.probability)
         }
 
         val ingredients = mutableMapOf<Material, Double>()
@@ -40,29 +40,26 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
             ingredients[jsMaterial(jsIngredient.name)] = double(jsIngredient.amount)
         }
 
-        recipesBuilder += Recipe(
-            name = string(jsRecipe.name),
-            ingredients = ingredients.toMap(),
-            result = result.toMap(),
-            time = double(jsRecipe.energy),
-            subgroup = subgroup,
-            category = category(string(jsRecipe.category))!!
-        )
+        recipesBuilder +=
+            Recipe(
+                name = string(jsRecipe.name),
+                ingredients = ingredients.toMap(),
+                result = result.toMap(),
+                time = double(jsRecipe.energy),
+                subgroup = subgroup,
+                category = category(string(jsRecipe.category))!!
+            )
     }
 
-    recipesBuilder += Recipe(
-        name = "space-science-pack",
-        ingredients = mapOf(
-            material("satellite") to 1.0,
-            material("rocket-part") to 100.0
-        ),
-        result = mapOf(
-            material("space-science-pack") to 1000.0
-        ),
-        time = 1.0,
-        category = Category.ROCKET_BUILDING,
-        subgroup = noSubGroup
-    )
+    recipesBuilder +=
+        Recipe(
+            name = "space-science-pack",
+            ingredients = mapOf(material("satellite") to 1.0, material("rocket-part") to 100.0),
+            result = mapOf(material("space-science-pack") to 1000.0),
+            time = 1.0,
+            category = Category.ROCKET_BUILDING,
+            subgroup = noSubGroup
+        )
 
     return ParsedRecipe(
         materials = materialsBuilder.values.sortedBy { it.name }.toList(),

@@ -10,24 +10,26 @@ fun optimize(
     visited: MutableSet<Material> = mutableSetOf(),
 ): OptimizationResult =
     cache.getOrPut(target) {
-        val recipe = parsedRecipe.recipes
-            .filter { findFactory(factories, it) != null }
-            .firstOrNull { it.result.containsKey(target) } ?: Recipe(
-            name = target.name,
-            ingredients = mapOf(),
-            result = mapOf(target to 1.0),
-            time = 1.0,
-            subgroup = Subgroup(),
-            category = Category.NO_CATEGORY
-        )
+        val recipe =
+            parsedRecipe.recipes.filter { findFactory(factories, it) != null }.firstOrNull {
+                it.result.containsKey(target)
+            }
+                ?: Recipe(
+                    name = target.name,
+                    ingredients = mapOf(),
+                    result = mapOf(target to 1.0),
+                    time = 1.0,
+                    subgroup = Subgroup(),
+                    category = Category.NO_CATEGORY
+                )
 
         val factory = findFactory(factories, recipe) ?: Factory.NO_FACTORY
 
         val factoryProductions = mutableMapOf<Material, FactoryProduction>()
         fun addFactory(material: Material, recipe: Recipe, factory: Factory, amount: Double) {
-            factoryProductions[material] = (factoryProductions[material] ?: FactoryProduction(recipe, factory)) + amount
+            factoryProductions[material] =
+                (factoryProductions[material] ?: FactoryProduction(recipe, factory)) + amount
         }
-
 
         val add = visited.add(target)
 
@@ -36,7 +38,6 @@ fun optimize(
 
         if (add) { // cycle protection
             recipe.ingredients.forEach { (material, amount) ->
-
                 val requirement = amount / outputAmount
                 val nested = optimize(material, parsedRecipe, factories, cache, visited)
 
@@ -48,7 +49,6 @@ fun optimize(
                         requirement * nestedFactories.amount
                     )
                 }
-
             }
             visited.remove(target)
         }
@@ -64,4 +64,3 @@ fun optimize(
 
 private fun findFactory(factories: Set<Factory>, recipe: Recipe) =
     factories.find { it.categories.contains(recipe.category) }
-

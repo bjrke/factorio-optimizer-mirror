@@ -14,24 +14,23 @@ interface IconProps : RProps {
     var size: Int?
 }
 
-private val iconX = rFunction<IconProps>("icon") { props ->
-
-    val size = props.size ?: 32
-    styledImg(src = "icons/${props.name}.png") {
-        css {
-            width = size.px
-            height = size.px
-            verticalAlign = VerticalAlign.middle
-            marginRight = 5.px
-        }
-        attrs {
-            height = "$size"
-            alt = props.name
-            title = props.name
+private val iconX =
+    rFunction<IconProps>("icon") { props ->
+        val size = props.size ?: 32
+        styledImg(src = "icons/${props.name}.png") {
+            css {
+                width = size.px
+                height = size.px
+                verticalAlign = VerticalAlign.middle
+                marginRight = 5.px
+            }
+            attrs {
+                height = "$size"
+                alt = props.name
+                title = props.name
+            }
         }
     }
-
-}
 
 fun RBuilder.icon(name: String, handler: IconProps.() -> Unit = {}) = iconX {
     attrs.name = name
