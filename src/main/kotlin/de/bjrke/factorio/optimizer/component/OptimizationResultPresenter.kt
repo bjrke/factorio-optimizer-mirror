@@ -7,8 +7,7 @@ import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.business.round3
 import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
-import kotlinx.css.rem
-import kotlinx.css.width
+import kotlinx.css.*
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
@@ -26,6 +25,7 @@ import react.redux.rConnect
 import redux.RAction
 import redux.WrapperAction
 import styled.css
+import styled.styledDiv
 import styled.styledInput
 
 interface OptimizationResultPresenterStateProps : RProps {
@@ -62,7 +62,11 @@ private val optimizationResultPresenter =
         }
 
         props.optimizationResult.factories.forEach { (material, factoryProduction) ->
-            div {
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    marginRight = 1.rem
+                }
                 amount(factoryProduction.factory.identifier, factoryProduction.amount)
                 +" "
                 amount(material.name, factoryProduction.production(material))
