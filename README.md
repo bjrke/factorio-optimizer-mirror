@@ -1,3 +1,8 @@
+# Factorio-Optimizer
+
+#### Website
+<https://bjrke.gitlab.io/factorio-optimizer>
+
 #### Predefined Run Configs of Intellij:
 `./gradlew browserProductionRun --continuous` or
 `./gradlew browserDevelopmentRun --continuous`
