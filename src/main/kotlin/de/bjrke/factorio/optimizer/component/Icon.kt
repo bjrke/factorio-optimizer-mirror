@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.component
 
-import kotlinx.css.*
+import kotlinx.css.VerticalAlign
+import kotlinx.css.verticalAlign
 import kotlinx.html.title
 import react.RBuilder
 import react.RProps
@@ -14,17 +15,19 @@ interface IconProps : RProps {
     var size: Int?
 }
 
+private fun correctName(s: String) =
+    when (s) {
+        "stone-wall" -> "wall"
+        else -> s
+    }
+
 private val iconX =
     rFunction<IconProps>("icon") { props ->
         val size = props.size ?: 32
-        styledImg(src = "icons/${props.name}.png") {
-            css {
-                width = size.px
-                height = size.px
-                verticalAlign = VerticalAlign.middle
-                marginRight = 5.px
-            }
+        styledImg(src = "icons/${correctName(props.name)}.png") {
+            css { verticalAlign = VerticalAlign.middle }
             attrs {
+                width = "$size"
                 height = "$size"
                 alt = props.name
                 title = props.name

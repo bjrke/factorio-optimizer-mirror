@@ -4,25 +4,28 @@ import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
+import de.bjrke.factorio.optimizer.business.round3
 import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
-import kotlin.math.round
-import kotlinx.css.Color
-import kotlinx.css.backgroundColor
-import kotlinx.html.A
+import kotlinx.css.rem
+import kotlinx.css.width
+import kotlinx.html.InputType
+import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import org.w3c.dom.HTMLInputElement
 import react.RBuilder
 import react.RProps
-import react.dom.*
+import react.dom.a
+import react.dom.attrs
+import react.dom.button
+import react.dom.div
 import react.invoke
 import react.rFunction
 import react.redux.rConnect
 import redux.RAction
 import redux.WrapperAction
 import styled.css
-import styled.styledThead
-
-fun round2(d: Double) = round(d * 100.0) / 100.0
+import styled.styledInput
 
 interface OptimizationResultPresenterStateProps : RProps {
     var optimizationResult: OptimizationResult
@@ -39,50 +42,33 @@ interface OptimizationResultPresenterProps :
 
 private val optimizationResultPresenter =
     rFunction<OptimizationResultPresenterProps>("optimizationResultPresenter") { props ->
-        fun amountText(amount: Double) = "x " + round2(amount * props.normalizeTarget).toString()
-
-        fun <X : kotlinx.html.Tag> RDOMBuilder<X>.amountLink(
-            amount: Double,
-            block: RDOMBuilder<A>.() -> Unit
-        ) = a {
-            attrs { onClickFunction = { props.changeNormalizeTo(amount) } }
-            block()
+        fun RBuilder.amount(name: String, amount: Double) {
+            a {
+                attrs { onClickFunction = { props.changeNormalizeTo(amount) } }
+                icon(name)
+                +" x "
+            }
+            styledInput(type = InputType.number) {
+                css { width = 5.rem }
+                attrs.onChangeFunction =
+                    { event ->
+                        props.changeNormalizeTo(
+                            amount / (event.target as HTMLInputElement).value.toDouble()
+                        )
+                    }
+                attrs.value = round3(amount * props.normalizeTarget).toString()
+            }
         }
 
-        table {
-            styledThead {
-                css { backgroundColor = Color.lightGray }
-                tr {
-                    th { +"material" }
-                    th { +"factories" }
-                    th { +"production" }
-                }
-            }
-
-            tbody {
-                props.optimizationResult.factories.forEach { (material, factoryProduction) ->
-                    tr {
-                        td {
-                            a {
-                                attrs { onClickFunction = { props.changeMaterial(material) } }
-                                icon(material.name)
-                                +material.name
-                            }
-                        }
-                        td {
-                            amountLink(factoryProduction.amount) {
-                                icon(factoryProduction.factory.identifier)
-                                +amountText(factoryProduction.amount)
-                            }
-                        }
-                        td {
-                            val amount = factoryProduction.production(material)
-                            amountLink(amount) {
-                                icon(material.name)
-                                +amountText(amount)
-                            }
-                        }
-                    }
+        props.optimizationResult.factories.forEach { (material, factoryProduction) ->
+            div {
+                amount(factoryProduction.factory.identifier, factoryProduction.amount)
+                +" "
+                amount(material.name, factoryProduction.production(material))
+                +" "
+                button {
+                    +">"
+                    attrs { onClickFunction = { props.changeMaterial(material) } }
                 }
             }
         }

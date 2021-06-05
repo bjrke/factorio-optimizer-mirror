@@ -62,10 +62,7 @@ fun main() {
                         switch {
                             route("/redux") {
                                 div {
-                                    div {
-                                        reduxMaterialSelector()
-                                        reduxNormalizeTargetPresenter()
-                                    }
+                                    div { reduxMaterialSelector() }
                                     div { reduxFactorySelector() }
                                     div { reduxOptimizationResultPresenter() }
                                     navLink<RProps>(defaultUrl) { +"URL based" }
@@ -75,10 +72,7 @@ fun main() {
                                 routeResultProps ->
                                 val props = FactorioOptimizerProps(routeResultProps)
                                 div {
-                                    div {
-                                        urlMaterialSelector(props)
-                                        urlNormalizeTargetPresenter(props)
-                                    }
+                                    div { urlMaterialSelector(props) }
                                     div { urlFactorySelector(props) }
                                     div { urlOptimizationResultPresenter(props) }
                                     navLink<RProps>("/redux") { +"redux based" }
