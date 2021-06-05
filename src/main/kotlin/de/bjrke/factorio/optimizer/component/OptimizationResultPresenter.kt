@@ -12,6 +12,7 @@ import kotlinx.css.width
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import react.RBuilder
 import react.RProps
@@ -68,7 +69,10 @@ private val optimizationResultPresenter =
                 +" "
                 button {
                     +">"
-                    attrs { onClickFunction = { props.changeMaterial(material) } }
+                    attrs {
+                        onClickFunction = { props.changeMaterial(material) }
+                        title = "select " + material.name
+                    }
                 }
             }
         }
