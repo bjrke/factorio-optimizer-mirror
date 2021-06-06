@@ -1,3 +1,5 @@
 package de.bjrke.factorio.optimizer.business
 
-fun round3(d: Double) = d
+import kotlin.math.round
+
+fun roundN(d: Double, to: Double = 10000.0) = round(d * to) / to

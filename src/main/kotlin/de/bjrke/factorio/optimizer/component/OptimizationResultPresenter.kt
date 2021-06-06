@@ -4,7 +4,7 @@ import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.NormalizeTo
 import de.bjrke.factorio.optimizer.OptimizerAppState
-import de.bjrke.factorio.optimizer.business.round3
+import de.bjrke.factorio.optimizer.business.roundN
 import de.bjrke.factorio.optimizer.model.Material
 import de.bjrke.factorio.optimizer.model.OptimizationResult
 import kotlinx.css.*
@@ -18,7 +18,6 @@ import react.RProps
 import react.dom.a
 import react.dom.attrs
 import react.dom.button
-import react.dom.div
 import react.invoke
 import react.rFunction
 import react.redux.rConnect
@@ -57,7 +56,7 @@ private val optimizationResultPresenter =
                             amount / (event.target as HTMLInputElement).value.toDouble()
                         )
                     }
-                attrs.value = round3(amount * props.normalizeTarget).toString()
+                attrs.value = roundN(amount * props.normalizeTarget).toString()
             }
         }
 
