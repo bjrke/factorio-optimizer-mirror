@@ -12,13 +12,13 @@ test:
   artifacts:
     expire_in: 1 week
     paths:
-      - build/distributions
+      - webapp/build/distributions
 
 pages:
   stage: deploy
   image: alpine:latest
   script:
-    - mv build/distributions public
+    - mv webapp/build/distributions public
   artifacts:
     expire_in: 1 week
     paths:

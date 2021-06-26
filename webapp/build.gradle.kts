@@ -2,14 +2,7 @@ import javax.imageio.ImageIO
 
 plugins {
     kotlin("js") version "1.5.0"
-    id("com.diffplug.spotless") version "5.12.5"
 }
-
-group = "de.bjrke.factorio"
-
-version = "1.0"
-
-repositories { mavenCentral() }
 
 dependencies {
     val kotlinVersionSuffix = "-pre.204-kotlin-1.5.0"
@@ -35,21 +28,13 @@ kotlin {
     }
 }
 
-spotless {
-    kotlin {
-        target("src/**/*.kt")
-        ktfmt().kotlinlangStyle()
-    }
-    kotlinGradle { ktfmt().kotlinlangStyle() }
-}
-
 val imgDir = "src/main/resources/icons"
 val copyImages =
     task("copyImages", Copy::class) {
         from(
             fileTree(
-                    "${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio/data/base/graphics"
-                ) { include("icons/**/*.png") }
+                "${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio/data/base/graphics"
+            ) { include("icons/**/*.png") }
                 .files
         )
 
