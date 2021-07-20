@@ -25,6 +25,18 @@ kotlin {
         implementation("org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.3$kotlinVersionSuffix")
     }
     sourceSets["jsTest"].dependencies { implementation(kotlin("test-js")) }
+
+    jvm()
+}
+
+task("run", JavaExec::class) {
+    main = "de.bjrke.factorio.optimizer.jvm.CliOptimizerKt"
+    kotlin {
+        val main = targets["jvm"].compilations["main"]
+        dependsOn(main.compileAllTaskName)
+        classpath({ main.output.allOutputs.files }, { configurations["jvmRuntimeClasspath"] })
+    }
+    systemProperty("java.awt.headless", "true")
 }
 
 spotless {
