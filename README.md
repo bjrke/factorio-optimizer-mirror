@@ -4,8 +4,8 @@
 <https://bjrke.gitlab.io/factorio-optimizer>
 
 #### Predefined Run Configs of Intellij:
-`./gradlew browserProductionRun --continuous` or
-`./gradlew browserDevelopmentRun --continuous`
+`./gradlew jsBrowserProductionRun --continuous` or
+`./gradlew jsBrowserDevelopmentRun --continuous`
 
 #### recipe.json
 Install Mod <https://mods.factorio.com/mod/recipelister> by copying the zip it into `~/.factorio/mods`

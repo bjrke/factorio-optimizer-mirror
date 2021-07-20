@@ -8,17 +8,17 @@ test:
   variables:
     GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   script:
-    - gradle --no-daemon clean check browserDistribution
+    - gradle --no-daemon clean check jsBrowserDistribution
   artifacts:
     expire_in: 1 week
     paths:
-      - webapp/build/distributions
+      - build/distributions
 
 pages:
   stage: deploy
   image: alpine:latest
   script:
-    - mv webapp/build/distributions public
+    - mv build/distributions public
   artifacts:
     expire_in: 1 week
     paths:
