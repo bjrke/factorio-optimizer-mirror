@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.model
+package de.bjrke.factorio.optimizer.common.model
 
 data class FactoryProduction(val recipe: Recipe, val factory: Factory, val amount: Double = 0.0) {
     operator fun plus(amount: Double) = FactoryProduction(recipe, factory, this.amount + amount)

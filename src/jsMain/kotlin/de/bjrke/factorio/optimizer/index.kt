@@ -1,8 +1,10 @@
 package de.bjrke.factorio.optimizer
 
-import de.bjrke.factorio.optimizer.business.optimize
+import de.bjrke.factorio.optimizer.common.business.optimize
+import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
+import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
 import de.bjrke.factorio.optimizer.component.*
-import de.bjrke.factorio.optimizer.model.*
 import kotlinx.browser.document
 import kotlinx.browser.window
 import react.RProps

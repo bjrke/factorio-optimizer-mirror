@@ -3,7 +3,7 @@ package de.bjrke.factorio.optimizer.component
 import de.bjrke.factorio.optimizer.ChangeMaterial
 import de.bjrke.factorio.optimizer.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.OptimizerAppState
-import de.bjrke.factorio.optimizer.model.Material
+import de.bjrke.factorio.optimizer.common.model.Material
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
 import react.RBuilder

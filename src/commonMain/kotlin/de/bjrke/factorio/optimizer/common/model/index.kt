@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.model
+package de.bjrke.factorio.optimizer.common.model
 
 data class Material(val name: String) {
     companion object {

@@ -1,6 +1,6 @@
-package de.bjrke.factorio.optimizer.business
+package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.model.*
+import de.bjrke.factorio.optimizer.common.model.*
 
 fun optimize(
     target: Material,

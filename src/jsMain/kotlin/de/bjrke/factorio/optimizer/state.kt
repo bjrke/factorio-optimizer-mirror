@@ -1,8 +1,9 @@
 package de.bjrke.factorio.optimizer
 
-import de.bjrke.factorio.optimizer.business.optimize
 import de.bjrke.factorio.optimizer.business.parseRecipes
-import de.bjrke.factorio.optimizer.model.*
+import de.bjrke.factorio.optimizer.common.business.optimize
+import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 
 val defaultParsedRecipes = parseRecipes()
 private val defaultMaterial = defaultParsedRecipes.materials.first()

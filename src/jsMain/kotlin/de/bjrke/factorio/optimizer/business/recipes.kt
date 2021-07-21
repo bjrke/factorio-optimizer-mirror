@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.business
 
-import de.bjrke.factorio.optimizer.model.*
+import de.bjrke.factorio.optimizer.common.model.*
 
 @JsModule("recipe.json") @JsNonModule private external val defaultRecipesJson: dynamic
 

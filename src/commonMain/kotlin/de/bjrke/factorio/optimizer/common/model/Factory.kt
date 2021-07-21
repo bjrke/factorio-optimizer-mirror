@@ -1,4 +1,6 @@
-package de.bjrke.factorio.optimizer.model
+package de.bjrke.factorio.optimizer.common.model
+
+import de.bjrke.factorio.optimizer.common.model.Factories.removeFactory
 
 private val assembler1Categories = setOf(Category.CRAFTING, Category.ADVANCED_CRAFTING)
 private val assembler2Categories = assembler1Categories.plus(Category.CRAFTING_WITH_FLUID)
@@ -24,27 +26,33 @@ enum class Factory(
     NO_FACTORY(null, "compilatron-chest", setOf())
 }
 
-val allFactories = Factory.values().toSet()
-val smelters = allFactories.filter { it.categories == smelterCategories }
-val assemblers = allFactories.filter { it.categories.contains(Category.CRAFTING) }
-val alwaysEnabledFactories = setOf(Factory.NO_FACTORY, Factory.SCIENCE_LAB)
-val tech = allFactories - smelters - assemblers - alwaysEnabledFactories
-val defaultFactories =
-    setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE) + alwaysEnabledFactories + tech
-val selectableFactories = Factory.values().toList() - alwaysEnabledFactories
-private val factoriesByCode = Factory.values().filter { it.code != null }.associateBy { it.code }
+object Factories {
 
-fun Set<Factory>.removeFactory(factory: Factory) =
-    when (factory) {
-        in smelters -> this - smelters - factory
-        in assemblers -> this - assemblers - factory
-        in alwaysEnabledFactories -> this
-        else -> this - factory
-    } + alwaysEnabledFactories
+    private val allFactories = Factory.values().toSet()
+    private val smelters = allFactories.filter { it.categories == smelterCategories }
+    private val assemblers = allFactories.filter { it.categories.contains(Category.CRAFTING) }
+    private val alwaysEnabledFactories = setOf(Factory.NO_FACTORY, Factory.SCIENCE_LAB)
+    private val tech = allFactories - smelters - assemblers - alwaysEnabledFactories
+    val defaultFactories =
+        setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE) +
+            alwaysEnabledFactories +
+            tech
+    val selectableFactories = Factory.values().toList() - alwaysEnabledFactories
+    private val factoriesByCode =
+        Factory.values().filter { it.code != null }.associateBy { it.code }
+
+    fun Set<Factory>.removeFactory(factory: Factory) =
+        when (factory) {
+            in smelters -> this - smelters - factory
+            in assemblers -> this - assemblers - factory
+            in alwaysEnabledFactories -> this
+            else -> this - factory
+        } + alwaysEnabledFactories
+
+    fun factorySetFromUrl(s: String) =
+        s.mapNotNull { factoriesByCode[it] }.fold(setOf(), Set<Factory>::addFactory)
+}
 
 fun Set<Factory>.addFactory(factory: Factory) = removeFactory(factory) + factory
 
 fun Set<Factory>.toUrlParam() = sorted().mapNotNull { it.code }.joinToString("")
-
-fun factorySetFromUrl(s: String) =
-    s.mapNotNull { factoriesByCode[it] }.fold(setOf(), Set<Factory>::addFactory)

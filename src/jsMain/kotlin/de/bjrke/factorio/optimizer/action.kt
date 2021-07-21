@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer
 
-import de.bjrke.factorio.optimizer.model.Factory
-import de.bjrke.factorio.optimizer.model.Material
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.Material
 import redux.RAction
 
 data class ChangeMaterial(val newMaterial: Material) : RAction

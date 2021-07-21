@@ -3,10 +3,10 @@ package de.bjrke.factorio.optimizer.component
 import de.bjrke.factorio.optimizer.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.SelectFactory
-import de.bjrke.factorio.optimizer.model.Factory
-import de.bjrke.factorio.optimizer.model.addFactory
-import de.bjrke.factorio.optimizer.model.removeFactory
-import de.bjrke.factorio.optimizer.model.selectableFactories
+import de.bjrke.factorio.optimizer.common.model.Factories.removeFactory
+import de.bjrke.factorio.optimizer.common.model.Factories.selectableFactories
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.addFactory
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import react.*
