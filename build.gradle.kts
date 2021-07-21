@@ -47,7 +47,7 @@ spotless {
     kotlinGradle { ktfmt().kotlinlangStyle() }
 }
 
-val imgDir = "src/main/resources/icons"
+val imgDir = "src/jsMain/resources/icons"
 val copyImages =
     task("copyImages", Copy::class) {
         from(
