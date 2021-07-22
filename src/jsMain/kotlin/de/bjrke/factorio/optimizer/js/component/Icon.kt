@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.component
+package de.bjrke.factorio.optimizer.js.component
 
 import kotlinx.css.VerticalAlign
 import kotlinx.css.verticalAlign

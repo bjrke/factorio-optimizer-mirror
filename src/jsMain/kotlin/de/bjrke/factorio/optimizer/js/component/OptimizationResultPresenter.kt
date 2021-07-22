@@ -1,12 +1,12 @@
-package de.bjrke.factorio.optimizer.component
+package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.ChangeMaterial
-import de.bjrke.factorio.optimizer.FactorioOptimizerProps
-import de.bjrke.factorio.optimizer.NormalizeTo
-import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.common.business.roundN
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.js.ChangeMaterial
+import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
+import de.bjrke.factorio.optimizer.js.NormalizeTo
+import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import kotlinx.css.*
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction

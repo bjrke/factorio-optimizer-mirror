@@ -1,12 +1,12 @@
-package de.bjrke.factorio.optimizer.component
+package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.FactorioOptimizerProps
-import de.bjrke.factorio.optimizer.OptimizerAppState
-import de.bjrke.factorio.optimizer.SelectFactory
 import de.bjrke.factorio.optimizer.common.model.Factories.removeFactory
 import de.bjrke.factorio.optimizer.common.model.Factories.selectableFactories
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.addFactory
+import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
+import de.bjrke.factorio.optimizer.js.OptimizerAppState
+import de.bjrke.factorio.optimizer.js.SelectFactory
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import react.*

@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.business
+package de.bjrke.factorio.optimizer.js.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 

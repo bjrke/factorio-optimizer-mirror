@@ -1,9 +1,9 @@
-package de.bjrke.factorio.optimizer.component
+package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.ChangeMaterial
-import de.bjrke.factorio.optimizer.FactorioOptimizerProps
-import de.bjrke.factorio.optimizer.OptimizerAppState
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.js.ChangeMaterial
+import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
+import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
 import react.RBuilder
