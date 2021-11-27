@@ -57,7 +57,6 @@ fun main() {
             val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
             render(document.getElementById("root")) {
                 provider(store) {
-                    div { +"Hello 123" }
                     HashRouter {
                         Switch {
                             Route {
