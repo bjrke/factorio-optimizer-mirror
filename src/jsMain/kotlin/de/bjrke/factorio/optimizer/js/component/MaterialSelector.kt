@@ -6,49 +6,48 @@ import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
+import react.Props
 import react.RBuilder
-import react.RProps
 import react.dom.option
 import react.dom.select
+import react.fc
 import react.invoke
-import react.rFunction
 import react.redux.rConnect
 import redux.WrapperAction
 
-interface MaterialSelectorStateProps : RProps {
+interface MaterialSelectorStateProps : Props {
     var material: Material
     var availableMaterials: List<Material>
 }
 
-interface MaterialSelectorDispatchProps : RProps {
+interface MaterialSelectorDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
 }
 
 interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
-private val materialSelector =
-    rFunction<MaterialSelectorProps>("materialSelector") { props ->
-        select {
-            attrs.onChangeFunction =
-                { event ->
-                    props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
-                }
-            attrs.value = props.material.name
-            for (m in props.availableMaterials) {
-                option {
-                    attrs.value = m.name
-                    +m.name
-                }
+private fun RBuilder.materialSelector(props: MaterialSelectorProps) {
+    select {
+        attrs.onChangeFunction =
+            { event ->
+                props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
+            }
+        attrs.value = props.material.name
+        for (m in props.availableMaterials) {
+            option {
+                attrs.value = m.name
+                +m.name
             }
         }
     }
+}
 
 private val reduxMaterialSelector =
     rConnect<
         OptimizerAppState,
         ChangeMaterial,
         WrapperAction,
-        RProps,
+        Props,
         MaterialSelectorStateProps,
         MaterialSelectorDispatchProps,
         MaterialSelectorProps>(
@@ -57,12 +56,12 @@ private val reduxMaterialSelector =
             material = state.target
         },
         { dispatch, _ -> changeMaterial = { dispatch(ChangeMaterial(it)) } }
-    )(materialSelector)
+    )(RBuilder::materialSelector)
 
 fun RBuilder.reduxMaterialSelector() = reduxMaterialSelector {}
 
 fun RBuilder.urlMaterialSelector(props: FactorioOptimizerProps) {
-    materialSelector {
+    child(fc(RBuilder::materialSelector)) {
         attrs {
             availableMaterials = props.parsedRecipes.materials
             material = props.target

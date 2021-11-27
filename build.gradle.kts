@@ -1,8 +1,10 @@
 import javax.imageio.ImageIO
 
 plugins {
-    kotlin("multiplatform") version "1.5.0"
-    id("com.diffplug.spotless") version "5.12.5"
+    // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
+    kotlin("multiplatform") version "1.6.0"
+    // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
+    id("com.diffplug.spotless") version "6.0.0"
 }
 
 group = "de.bjrke.factorio"
@@ -17,12 +19,15 @@ kotlin {
         browser { commonWebpackConfig { cssSupport.enabled = true } }
     }
     sourceSets["jsMain"].dependencies {
-        val kotlinVersionSuffix = "-pre.204-kotlin-1.5.0"
-        implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.0$kotlinVersionSuffix")
+        val kotlinVersionSuffix = "-pre.267-kotlin-1.6.0"
+        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
+        implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix")
+        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
         implementation(
-            "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:5.2.0$kotlinVersionSuffix"
+            "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:5.3.0$kotlinVersionSuffix"
         )
-        implementation("org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.3$kotlinVersionSuffix")
+        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
+        implementation("org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.6$kotlinVersionSuffix")
     }
     sourceSets["jsTest"].dependencies { implementation(kotlin("test-js")) }
 

@@ -9,53 +9,55 @@ import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import de.bjrke.factorio.optimizer.js.SelectFactory
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
-import react.*
+import react.Props
+import react.RBuilder
 import react.dom.input
 import react.dom.label
+import react.fc
+import react.invoke
 import react.redux.rConnect
 import redux.WrapperAction
 
-interface FactorySelectorStateProps : RProps {
+interface FactorySelectorStateProps : Props {
     var selectedFactories: Set<Factory>
     var availableFactories: List<Factory>
 }
 
-interface FactorySelectorDispatchProps : RProps {
+interface FactorySelectorDispatchProps : Props {
     var selectFactory: (Set<Factory>) -> Unit
 }
 
 interface FactorySelectorProps : FactorySelectorStateProps, FactorySelectorDispatchProps
 
-private val factorySelector =
-    rFunction<FactorySelectorProps>("factorySelector") { props ->
-        for (factory in props.availableFactories) {
-            label {
-                input(type = InputType.checkBox) {
-                    val enabled = props.selectedFactories.contains(factory)
-                    attrs.onChangeFunction =
-                        { _ ->
-                            props.selectFactory(
-                                if (enabled) {
-                                    props.selectedFactories.removeFactory(factory)
-                                } else {
-                                    props.selectedFactories.addFactory(factory)
-                                }
-                            )
-                        }
-                    // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
-                    attrs["checked"] = enabled
-                }
-                icon(factory.identifier)
+private fun RBuilder.facorySelector(props: FactorySelectorProps) {
+    for (factory in props.availableFactories) {
+        label {
+            input(type = InputType.checkBox) {
+                val enabled = props.selectedFactories.contains(factory)
+                attrs.onChangeFunction =
+                    { _ ->
+                        props.selectFactory(
+                            if (enabled) {
+                                props.selectedFactories.removeFactory(factory)
+                            } else {
+                                props.selectedFactories.addFactory(factory)
+                            }
+                        )
+                    }
+                // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
+                attrs["checked"] = enabled
             }
+            icon(factory.identifier)
         }
     }
+}
 
-private val reduxFactorySelector: RClass<RProps> =
+private val reduxFactorySelector =
     rConnect<
         OptimizerAppState,
         SelectFactory,
         WrapperAction,
-        RProps,
+        Props,
         FactorySelectorStateProps,
         FactorySelectorDispatchProps,
         FactorySelectorProps>(
@@ -64,12 +66,12 @@ private val reduxFactorySelector: RClass<RProps> =
             selectedFactories = state.factories
         },
         { dispatch, _ -> selectFactory = { dispatch(SelectFactory(it)) } }
-    )(factorySelector)
+    )(RBuilder::facorySelector)
 
 fun RBuilder.reduxFactorySelector() = reduxFactorySelector {}
 
 fun RBuilder.urlFactorySelector(props: FactorioOptimizerProps) {
-    factorySelector {
+    child(fc(RBuilder::facorySelector)) {
         attrs {
             availableFactories = selectableFactories
             selectedFactories = props.factories

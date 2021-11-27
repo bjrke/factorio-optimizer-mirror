@@ -3,14 +3,14 @@ package de.bjrke.factorio.optimizer.js.component
 import kotlinx.css.VerticalAlign
 import kotlinx.css.verticalAlign
 import kotlinx.html.title
+import react.Props
 import react.RBuilder
-import react.RProps
 import react.dom.attrs
-import react.rFunction
+import react.functionComponent
 import styled.css
 import styled.styledImg
 
-interface IconProps : RProps {
+interface IconProps : Props {
     var name: String
     var size: Int?
 }
@@ -22,7 +22,7 @@ private fun correctName(s: String) =
     }
 
 private val iconX =
-    rFunction<IconProps>("icon") { props ->
+    functionComponent<IconProps>("icon") { props ->
         val size = props.size ?: 32
         styledImg(src = "icons/${correctName(props.name)}.png") {
             css { verticalAlign = VerticalAlign.middle }
