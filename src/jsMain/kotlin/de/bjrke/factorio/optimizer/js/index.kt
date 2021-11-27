@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.js
 import de.bjrke.factorio.optimizer.common.business.optimize
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
-import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
@@ -21,7 +20,6 @@ import react.dom.render
 import react.fc
 import react.redux.provider
 import react.router.dom.HashRouter
-import react.router.dom.History
 import react.router.dom.Link
 import react.router.dom.Redirect
 import react.router.dom.Route
@@ -31,17 +29,19 @@ import react.router.dom.useParams
 import redux.createStore
 import redux.rEnhancer
 
-class FactorioOptimizerProps(
-    var normalizeTarget: Double,
-    var target: Material,
-    var factories: Set<Factory>,
-    private val history: History
-) : Props {
-    val parsedRecipes = defaultParsedRecipes
+class FactorioOptimizerProps : Props {
+    private val params = useParams()
+    private val history = useHistory()
 
+    var normalizeTarget = params["normalizeTarget"]?.toDouble() ?: 1.0
+    var target = Material.of(params["target"] ?: "all-science-packs")
+    var factories = params["factories"]?.let { factorySetFromUrl(it) } ?: defaultFactories
+
+    val parsedRecipes = defaultParsedRecipes
     val optimizationResult: OptimizationResult = optimize(target, parsedRecipes, factories)
 
-    fun createNewUrl(): String = "/$normalizeTarget/${target.name}/${factories.toUrlParam()}"
+    private fun createNewUrl(): String =
+        "/$normalizeTarget/${target.name}/${factories.toUrlParam()}"
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         history.push(apply(change).createNewUrl())
@@ -73,18 +73,20 @@ fun main() {
                             }
                             Route {
                                 attrs.path = arrayOf("/:normalizeTarget/:target/:factories")
-                                fc<Props> {
-                                    val props = getRouteParams()
-                                    div {
-                                        div { urlMaterialSelector(props) }
-                                        div { urlFactorySelector(props) }
-                                        div { urlOptimizationResultPresenter(props) }
-                                        Link {
-                                            attrs.to = "/redux"
-                                            +"redux based"
+                                child(
+                                    fc {
+                                        val props = FactorioOptimizerProps()
+                                        div {
+                                            div { urlMaterialSelector(props) }
+                                            div { urlFactorySelector(props) }
+                                            div { urlOptimizationResultPresenter(props) }
+                                            Link {
+                                                attrs.to = "/redux"
+                                                +"redux based"
+                                            }
                                         }
                                     }
-                                }()
+                                )
                             }
                         }
                         Redirect { attrs.to = defaultUrl }
@@ -92,15 +94,4 @@ fun main() {
                 }
             }
         }
-}
-
-private fun getRouteParams(): FactorioOptimizerProps {
-    val params = useParams()
-
-    val normalizeTarget = params["normalizeTarget"]?.toDouble() ?: 1.0
-    val target = Material.of(params["target"] ?: "all-science-packs")
-    val factories = params["factories"]?.let { factorySetFromUrl(it) } ?: defaultFactories
-
-    val props = FactorioOptimizerProps(normalizeTarget, target, factories, useHistory())
-    return props
 }
