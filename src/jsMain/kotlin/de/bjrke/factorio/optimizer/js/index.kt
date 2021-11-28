@@ -80,7 +80,9 @@ fun main() {
     window.onload =
         {
             val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
-            render(document.getElementById("root")) {
+            val root = document.createElement("div")
+            document.body?.prepend(root)
+            render(root) {
                 provider(store) {
                     HashRouter {
                         Routes {
