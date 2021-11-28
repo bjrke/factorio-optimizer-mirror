@@ -10,7 +10,7 @@ import react.functionComponent
 import styled.css
 import styled.styledImg
 
-interface IconProps : Props {
+external interface IconProps : Props {
     var name: String
     var size: Int?
 }

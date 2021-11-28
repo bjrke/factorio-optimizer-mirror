@@ -18,16 +18,16 @@ import react.invoke
 import react.redux.rConnect
 import redux.WrapperAction
 
-interface FactorySelectorStateProps : Props {
+external interface FactorySelectorStateProps : Props {
     var selectedFactories: Set<Factory>
     var availableFactories: List<Factory>
 }
 
-interface FactorySelectorDispatchProps : Props {
+external interface FactorySelectorDispatchProps : Props {
     var selectFactory: (Set<Factory>) -> Unit
 }
 
-interface FactorySelectorProps : FactorySelectorStateProps, FactorySelectorDispatchProps
+external interface FactorySelectorProps : FactorySelectorStateProps, FactorySelectorDispatchProps
 
 private fun RBuilder.facorySelector(props: FactorySelectorProps) {
     for (factory in props.availableFactories) {

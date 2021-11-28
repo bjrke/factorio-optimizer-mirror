@@ -15,16 +15,17 @@ import react.invoke
 import react.redux.rConnect
 import redux.WrapperAction
 
-interface MaterialSelectorStateProps : Props {
+external interface MaterialSelectorStateProps : Props {
     var material: Material
     var availableMaterials: List<Material>
 }
 
-interface MaterialSelectorDispatchProps : Props {
+external interface MaterialSelectorDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
 }
 
-interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
+external interface MaterialSelectorProps :
+    MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
 private fun RBuilder.materialSelector(props: MaterialSelectorProps) {
     select {

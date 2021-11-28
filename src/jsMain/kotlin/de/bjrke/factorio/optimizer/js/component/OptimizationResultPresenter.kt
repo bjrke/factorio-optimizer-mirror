@@ -31,17 +31,17 @@ import styled.css
 import styled.styledDiv
 import styled.styledInput
 
-interface OptimizationResultPresenterStateProps : Props {
+external interface OptimizationResultPresenterStateProps : Props {
     var optimizationResult: OptimizationResult
     var normalizeTarget: Double
 }
 
-interface OptimizationResultPresenterDispatchProps : Props {
+external interface OptimizationResultPresenterDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
     var changeNormalizeTo: (Double) -> Unit
 }
 
-interface OptimizationResultPresenterProps :
+external interface OptimizationResultPresenterProps :
     OptimizationResultPresenterStateProps, OptimizationResultPresenterDispatchProps
 
 private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps) {

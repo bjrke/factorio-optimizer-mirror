@@ -14,7 +14,7 @@ version = "1.0"
 repositories { mavenCentral() }
 
 kotlin {
-    js(LEGACY) {
+    js(IR) {
         binaries.executable()
         browser { commonWebpackConfig { cssSupport.enabled = true } }
     }
