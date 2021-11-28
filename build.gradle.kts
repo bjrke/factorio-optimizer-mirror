@@ -19,12 +19,12 @@ kotlin {
         browser { commonWebpackConfig { cssSupport.enabled = true } }
     }
     sourceSets["jsMain"].dependencies {
-        val kotlinVersionSuffix = "-pre.267-kotlin-1.6.0"
+        val kotlinVersionSuffix = "-pre.268-kotlin-1.6.0"
         // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
         implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix")
         // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
         implementation(
-            "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:5.3.0$kotlinVersionSuffix"
+            "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.0.2$kotlinVersionSuffix"
         )
         // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
         implementation("org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.6$kotlinVersionSuffix")
