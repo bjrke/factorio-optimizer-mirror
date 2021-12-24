@@ -35,7 +35,7 @@ kotlin {
 }
 
 task("run", JavaExec::class) {
-    main = "de.bjrke.factorio.optimizer.jvm.CliOptimizerKt"
+    mainClass.set("de.bjrke.factorio.optimizer.jvm.CliOptimizerKt")
     kotlin {
         val main = targets["jvm"].compilations["main"]
         dependsOn(main.compileAllTaskName)
