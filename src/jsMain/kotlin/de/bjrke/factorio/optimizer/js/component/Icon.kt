@@ -6,7 +6,7 @@ import kotlinx.html.title
 import react.Props
 import react.RBuilder
 import react.dom.attrs
-import react.functionComponent
+import react.fc
 import styled.css
 import styled.styledImg
 
@@ -22,7 +22,7 @@ private fun correctName(s: String) =
     }
 
 private val iconX =
-    functionComponent<IconProps>("icon") { props ->
+    fc<IconProps>("icon") { props ->
         val size = props.size ?: 32
         styledImg(src = "icons/${correctName(props.name)}.png") {
             css { verticalAlign = VerticalAlign.middle }

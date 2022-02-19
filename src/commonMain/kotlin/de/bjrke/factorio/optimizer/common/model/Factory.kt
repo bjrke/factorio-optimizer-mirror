@@ -29,8 +29,9 @@ enum class Factory(
 object Factories {
 
     private val allFactories = Factory.values().toSet()
-    private val smelters = allFactories.filter { it.categories == smelterCategories }
-    private val assemblers = allFactories.filter { it.categories.contains(Category.CRAFTING) }
+    private val smelters = allFactories.filter { it.categories == smelterCategories }.toSet()
+    private val assemblers =
+        allFactories.filter { it.categories.contains(Category.CRAFTING) }.toSet()
     private val alwaysEnabledFactories = setOf(Factory.NO_FACTORY, Factory.SCIENCE_LAB)
     private val tech = allFactories - smelters - assemblers - alwaysEnabledFactories
     val defaultFactories =
