@@ -4,7 +4,7 @@ plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
     kotlin("multiplatform") version "1.6.10"
     // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
-    id("com.diffplug.spotless") version "6.0.5"
+    id("com.diffplug.spotless") version "6.3.0"
 }
 
 group = "de.bjrke.factorio"
@@ -19,7 +19,7 @@ kotlin {
         browser { commonWebpackConfig { cssSupport.enabled = true } }
     }
     sourceSets["jsMain"].dependencies {
-        val kotlinVersionSuffix = "-pre.283-kotlin-1.6.10"
+        val kotlinVersionSuffix = "-pre.301-kotlin-1.6.10"
         // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
         implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix")
         // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
