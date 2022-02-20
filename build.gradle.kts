@@ -18,20 +18,51 @@ kotlin {
         binaries.executable()
         browser { commonWebpackConfig { cssSupport.enabled = true } }
     }
-    sourceSets["jsMain"].dependencies {
-        val kotlinVersionSuffix = "-pre.301-kotlin-1.6.10"
-        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
-        implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix")
-        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
-        implementation(
-            "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.2.1$kotlinVersionSuffix"
-        )
-        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
-        implementation("org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.6$kotlinVersionSuffix")
-    }
-    sourceSets["jsTest"].dependencies { implementation(kotlin("test-js")) }
-
     jvm()
+
+    sourceSets {
+        commonTest {
+            dependencies {
+                // https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine
+                implementation("io.kotest:kotest-framework-engine:5.1.0")
+                // https://mvnrepository.com/artifact/io.kotest/kotest-framework-datatest
+                implementation("io.kotest:kotest-framework-datatest:5.1.0")
+            }
+        }
+
+        getByName("jsMain") {
+            dependencies {
+                val kotlinVersionSuffix = "-pre.301-kotlin-1.6.10"
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
+                implementation(
+                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix"
+                )
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
+                implementation(
+                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.2.1$kotlinVersionSuffix"
+                )
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
+                implementation(
+                    "org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.6$kotlinVersionSuffix"
+                )
+            }
+        }
+
+        getByName("jsTest") { dependencies { implementation(kotlin("test-js")) } }
+
+        getByName("jvmTest") {
+            dependencies {
+                // https://mvnrepository.com/artifact/io.kotest/kotest-runner-junit5-jvm
+                implementation("io.kotest:kotest-runner-junit5-jvm:5.1.0")
+            }
+        }
+    }
+}
+
+tasks.named<Test>("jvmTest") {
+    useJUnitPlatform()
+
+    reports { html.isEnabled = true }
 }
 
 task("run", JavaExec::class) {
