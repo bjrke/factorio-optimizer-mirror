@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.js.NormalizeTo
 import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import kotlinx.css.Display
+import kotlinx.css.ch
 import kotlinx.css.display
 import kotlinx.css.marginRight
 import kotlinx.css.rem
@@ -19,7 +20,6 @@ import kotlinx.html.title
 import org.w3c.dom.HTMLInputElement
 import react.Props
 import react.RBuilder
-import react.dom.a
 import react.dom.attrs
 import react.dom.button
 import react.fc
@@ -28,6 +28,7 @@ import react.redux.rConnect
 import redux.RAction
 import redux.WrapperAction
 import styled.css
+import styled.styledA
 import styled.styledDiv
 import styled.styledInput
 
@@ -45,14 +46,12 @@ external interface OptimizationResultPresenterProps :
     OptimizationResultPresenterStateProps, OptimizationResultPresenterDispatchProps
 
 private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps) {
-    fun RBuilder.amount(name: String, amount: Double) {
-        a {
-            attrs { onClickFunction = { props.changeNormalizeTo(amount) } }
-            icon(name)
-            +" x "
-        }
+    fun RBuilder.amountInput(amount: Double) {
         styledInput(type = InputType.number) {
-            css { width = 5.rem }
+            css {
+                width = 5.rem
+                marginRight = 1.ch
+            }
             attrs.onChangeFunction =
                 { event ->
                     props.changeNormalizeTo(
@@ -63,16 +62,30 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
         }
     }
 
-    props.optimizationResult.factories.forEach { (material, factoryProduction) ->
+    fun RBuilder.amountIcon(name: String, amount: Double) {
+        styledA {
+            css { marginRight = 1.ch }
+            attrs { onClickFunction = { props.changeNormalizeTo(amount) } }
+            icon(name)
+        }
+    }
+
+    val sortedEntries =
+        props.optimizationResult.factories.entries.sortedWith(
+            compareBy({ it.value.factory }, { it.value.recipe.name })
+        )
+    sortedEntries.forEach { (material, factoryProduction) ->
         styledDiv {
             css {
                 display = Display.inlineBlock
-                marginRight = 1.rem
+                marginRight = 2.rem
             }
-            amount(factoryProduction.factory.identifier, factoryProduction.amount)
-            +" "
-            amount(material.name, factoryProduction.production(material))
-            +" "
+            amountInput(factoryProduction.amount)
+            amountIcon(factoryProduction.factory.identifier, factoryProduction.amount)
+
+            val amount = factoryProduction.production(material)
+            amountIcon(material.name, amount)
+            amountInput(amount)
             button {
                 +">"
                 attrs {
