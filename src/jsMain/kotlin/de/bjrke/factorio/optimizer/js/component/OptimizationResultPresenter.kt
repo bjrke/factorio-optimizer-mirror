@@ -1,17 +1,23 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.business.roundN
+import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.js.ChangeMaterial
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.js.NormalizeTo
 import de.bjrke.factorio.optimizer.js.OptimizerAppState
+import kotlin.math.max
+import kotlinx.css.Color
 import kotlinx.css.Display
+import kotlinx.css.VerticalAlign
+import kotlinx.css.backgroundColor
 import kotlinx.css.ch
 import kotlinx.css.display
 import kotlinx.css.marginRight
+import kotlinx.css.padding
 import kotlinx.css.rem
+import kotlinx.css.verticalAlign
 import kotlinx.css.width
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
@@ -22,6 +28,7 @@ import react.Props
 import react.RBuilder
 import react.dom.attrs
 import react.dom.button
+import react.dom.div
 import react.fc
 import react.invoke
 import react.redux.rConnect
@@ -49,7 +56,7 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
     fun RBuilder.amountInput(amount: Double) {
         styledInput(type = InputType.number) {
             css {
-                width = 5.rem
+                width = 4.rem
                 marginRight = 1.ch
             }
             attrs.onChangeFunction =
@@ -58,7 +65,7 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
                         amount / (event.target as HTMLInputElement).value.toDouble()
                     )
                 }
-            attrs.value = roundN(amount * props.normalizeTarget).toString()
+            attrs.value = superRound(amount * props.normalizeTarget).toString()
         }
     }
 
@@ -70,22 +77,56 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
         }
     }
 
+    fun RBuilder.amountIconInput(name: String, amount: Double) {
+        amountIcon(name, amount)
+        amountInput(amount)
+    }
+
+    fun RBuilder.amountInputIcon(name: String, amount: Double) {
+        amountInput(amount)
+        amountIcon(name, amount)
+    }
+
     val sortedEntries =
         props.optimizationResult.factories.entries.sortedWith(
-            compareBy({ it.value.factory }, { it.value.recipe.name })
+            compareBy(
+                { max(it.value.recipe.ingredients.size, it.value.recipe.result.size) },
+                { it.value.level },
+                { it.value.factory },
+                { it.value.recipe.name }
+            )
         )
     sortedEntries.forEach { (material, factoryProduction) ->
         styledDiv {
             css {
                 display = Display.inlineBlock
-                marginRight = 2.rem
+                verticalAlign = VerticalAlign.middle
+                padding(all = 0.5.rem)
+                backgroundColor = hashColor(material.name).withAlpha(0.75)
             }
-            amountInput(factoryProduction.amount)
-            amountIcon(factoryProduction.factory.identifier, factoryProduction.amount)
+            amountInputIcon(factoryProduction.factory.identifier, factoryProduction.amount)
+            amountIcon(factoryProduction.recipe.name, factoryProduction.amount)
 
-            val amount = factoryProduction.production(material)
-            amountIcon(material.name, amount)
-            amountInput(amount)
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    verticalAlign = VerticalAlign.middle
+                }
+                factoryProduction.recipe.ingredients.keys.forEach {
+                    div { amountInputIcon(it.name, factoryProduction.consumption(it)) }
+                }
+            }
+
+            styledDiv {
+                css {
+                    display = Display.inlineBlock
+                    verticalAlign = VerticalAlign.middle
+                }
+                factoryProduction.recipe.result.keys.forEach {
+                    div { amountInputIcon(it.name, factoryProduction.production(it)) }
+                }
+            }
+
             button {
                 +">"
                 attrs {
@@ -95,6 +136,15 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
             }
         }
     }
+}
+
+fun hashColor(s: String): Color {
+    val hash = s.hashCode()
+    val r = hash and 0x7F0000 shr 16
+    val g = hash and 0x007F00 shr 8
+    val b = hash and 0x00007F
+
+    return Color("rgb(${r + 128}, ${g + 128}, ${b + 128})")
 }
 
 private val reduxOptimizationResultPresenter =

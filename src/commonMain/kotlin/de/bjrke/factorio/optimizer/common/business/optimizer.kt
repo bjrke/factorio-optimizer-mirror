@@ -1,6 +1,13 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.model.Subgroup
 
 fun optimize(
     target: Material,
@@ -16,7 +23,7 @@ fun optimize(
             }
                 ?: Recipe(
                     name = target.name,
-                    ingredients = mapOf(),
+                    ingredients = mapOf(target to 1.0),
                     result = mapOf(target to 1.0),
                     time = 1.0,
                     subgroup = Subgroup(),
@@ -26,9 +33,17 @@ fun optimize(
         val factory = findFactory(factories, recipe) ?: Factory.NO_FACTORY
 
         val factoryProductions = mutableMapOf<Material, FactoryProduction>()
-        fun addFactory(material: Material, recipe: Recipe, factory: Factory, amount: Double) {
+        fun addFactory(
+            material: Material,
+            recipe: Recipe,
+            factory: Factory,
+            amount: Double,
+            level: Int
+        ) {
             factoryProductions[material] =
-                (factoryProductions[material] ?: FactoryProduction(recipe, factory)) + amount
+                (factoryProductions[material]
+                    ?: FactoryProduction(recipe = recipe, factory = factory, level = level)) +
+                    amount
         }
 
         val add = visited.add(target)
@@ -46,19 +61,26 @@ fun optimize(
                         nestedMaterial,
                         nestedFactories.recipe,
                         nestedFactories.factory,
-                        requirement * nestedFactories.amount
+                        requirement * nestedFactories.amount,
+                        nestedFactories.level
                     )
                 }
             }
             visited.remove(target)
         }
 
-        addFactory(target, recipe, factory, outputTime / outputAmount)
+        addFactory(
+            target,
+            recipe,
+            factory,
+            outputTime / outputAmount,
+            1 + (factoryProductions.values.maxOfOrNull(FactoryProduction::level) ?: 0)
+        )
 
         return OptimizationResult(
             target = target,
             factories = factoryProductions.toMap(),
-            recipe = recipe,
+            recipe = recipe
         )
     }
 

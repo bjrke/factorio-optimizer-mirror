@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.optimize
+import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
 import de.bjrke.factorio.optimizer.common.model.Material
@@ -41,7 +42,7 @@ class FactorioOptimizerProps : Props {
     val optimizationResult: OptimizationResult = optimize(target, parsedRecipes, factories)
 
     private fun createNewUrl(): String =
-        "/$normalizeTarget/${target.name}/${factories.toUrlParam()}"
+        "/${superRound(normalizeTarget, 1000000.0)}/${target.name}/${factories.toUrlParam()}"
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         navigate(apply(change).createNewUrl())
