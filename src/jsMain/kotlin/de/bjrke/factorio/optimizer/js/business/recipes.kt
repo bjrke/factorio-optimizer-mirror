@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.js.business
 
-import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.business.defaultRecipes
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.model.Recipe
@@ -56,34 +56,30 @@ fun parseRecipes(json: dynamic = defaultRecipesJson): ParsedRecipe {
             )
     }
 
-    recipesBuilder +=
-        Recipe(
-            name = "space-science-pack",
-            ingredients = mapOf(material("satellite") to 1.0, material("rocket-part") to 100.0),
-            result = mapOf(material("space-science-pack") to 1000.0),
-            time = 1.0,
-            category = Category.ROCKET_BUILDING
-        )
-    recipesBuilder +=
-        Recipe(
-            name = "all-science-packs",
-            ingredients =
-                mapOf(
-                    material("automation-science-pack") to 1.0,
-                    material("chemical-science-pack") to 1.0,
-                    material("logistic-science-pack") to 1.0,
-                    material("military-science-pack") to 1.0,
-                    material("production-science-pack") to 1.0,
-                    material("space-science-pack") to 1.0,
-                    material("utility-science-pack") to 1.0
-                ),
-            result = mapOf(material("all-science-packs") to 1.0),
-            time = 1.0,
-            category = Category.SCIENCE_LAB
+    recipesBuilder += defaultRecipes(::material)
+    val parsedRecipe =
+        ParsedRecipe(
+            materials = materialsBuilder.values.sortedBy { it.name }.toList(),
+            recipes = recipesBuilder.sortedBy { it.name }.toList()
         )
 
-    return ParsedRecipe(
-        materials = materialsBuilder.values.sortedBy { it.name }.toList(),
-        recipes = recipesBuilder.toList()
-    )
+    val luaParsed = de.bjrke.factorio.optimizer.common.business.parseRecipes()
+
+    parsedRecipe.recipes.zip(luaParsed.recipes).forEach { (j, l) ->
+        fun cmp(f: (Recipe) -> Any) {
+            val lf = f(l)
+            val jf = f(j)
+            if (lf != jf) {
+                console.log("${j.name} $f $lf != $jf")
+            }
+        }
+
+        cmp(Recipe::name)
+        cmp(Recipe::time)
+        cmp(Recipe::category)
+        cmp(Recipe::ingredients)
+        cmp(Recipe::result)
+    }
+
+    return parsedRecipe
 }

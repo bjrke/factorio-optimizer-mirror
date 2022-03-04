@@ -27,6 +27,8 @@ kotlin {
                 implementation("io.kotest:kotest-framework-engine:5.1.0")
                 // https://mvnrepository.com/artifact/io.kotest/kotest-framework-datatest
                 implementation("io.kotest:kotest-framework-datatest:5.1.0")
+                // https://mvnrepository.com/artifact/io.kotest/kotest-assertions-core
+                implementation("io.kotest:kotest-assertions-core:5.1.0")
             }
         }
 
@@ -84,14 +86,13 @@ spotless {
 }
 
 val imgDir = "src/jsMain/resources/icons"
+val factorioDir by lazy {
+    "${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio"
+}
+
 val copyImages =
     task("copyImages", Copy::class) {
-        from(
-            fileTree(
-                    "${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio/data/base/graphics"
-                ) { include("icons/**/*.png") }
-                .files
-        )
+        from(fileTree("$factorioDir/data/base/graphics") { include("icons/**/*.png") }.files)
 
         duplicatesStrategy = DuplicatesStrategy.WARN
         into(imgDir)
@@ -117,4 +118,9 @@ task("optimizeImages", Exec::class) {
         """
             .trimIndent()
             .byteInputStream()
+}
+
+task("copyRecipes", Copy::class) {
+    from(file("$factorioDir/data/base/prototypes/recipe.lua"))
+    into("src/commonMain/resources/recipes")
 }

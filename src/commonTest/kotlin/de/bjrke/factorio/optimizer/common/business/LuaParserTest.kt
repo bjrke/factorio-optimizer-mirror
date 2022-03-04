@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.parser.UnexpectedEndOfFile
+import de.bjrke.parser.UnexpectedTokenException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.datatest.withData
@@ -15,6 +17,7 @@ class LuaParserTest :
                 "{   0.1  }" to listOf(LuaNumber(0.1)),
                 "{\"foo\"}" to listOf(LuaString("foo")),
                 "{ \"bar\"   }" to listOf(LuaString("bar")),
+                "{ \"\\\\\\\"\"   }" to listOf(LuaString("\\\"")),
                 "{true}" to listOf(LuaBoolean(true)),
                 "{   false   }" to listOf(LuaBoolean(false)),
                 "{{}}" to listOf(LuaTable(listOf())),
@@ -28,6 +31,13 @@ class LuaParserTest :
                 }
                 """ to
                     listOf(LuaTableEntry("foo", LuaString("bar"))),
+                """
+                {
+                    foo = "bar" --with comment
+                    -- more comments
+                }
+                """ to
+                    listOf(LuaTableEntry("foo", LuaString("bar"))),
                 "stuff around { foo = \"bar\" } doesn't matter" to
                     listOf(LuaTableEntry("foo", LuaString("bar"))),
                 "{ \"xxx\", 1, true, foo = \"bar\" }" to
@@ -36,7 +46,8 @@ class LuaParserTest :
                         LuaNumber(1.0),
                         LuaBoolean(true),
                         LuaTableEntry("foo", LuaString("bar"))
-                    )
+                    ),
+                "{ 1. }" to listOf(LuaNumber(1.0)),
             ) { (s, expected) -> parseLua(s).elements.shouldBe(expected) }
         }
 
@@ -46,9 +57,10 @@ class LuaParserTest :
                 "{,}",
                 "{   falsex   }",
                 "{   false false   }",
+                "{   0.1.2  }",
                 "{   fals  }",
-                "{   FALSE  }",
-                "{ 1. }"
+                "{  foo foo = \"bar\"  }",
+                "{   FALSE  }"
             ) { s -> shouldThrow<UnexpectedTokenException> { parseLua(s) } }
         }
 
