@@ -3,11 +3,11 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
 import de.bjrke.factorio.optimizer.js.ChangeMaterial
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.js.NormalizeTo
 import de.bjrke.factorio.optimizer.js.OptimizerAppState
-import kotlin.math.max
 import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.VerticalAlign
@@ -87,16 +87,8 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
         amountIcon(name, amount)
     }
 
-    val sortedEntries =
-        props.optimizationResult.factories.entries.sortedWith(
-            compareBy(
-                { max(it.value.recipe.ingredients.size, it.value.recipe.result.size) },
-                { it.value.level },
-                { it.value.factory },
-                { it.value.recipe.name }
-            )
-        )
-    sortedEntries.forEach { (material, factoryProduction) ->
+    props.optimizationResult.factories.entries.sortedWith(factoryProductionComparator).forEach {
+        (material, factoryProduction) ->
         styledDiv {
             css {
                 display = Display.inlineBlock

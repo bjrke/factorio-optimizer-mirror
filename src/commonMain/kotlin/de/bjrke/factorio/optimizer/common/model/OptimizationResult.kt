@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.model
 
+import kotlin.math.max
+
 data class FactoryProduction(
     val recipe: Recipe,
     val factory: Factory,
@@ -22,3 +24,11 @@ data class OptimizationResult(
     // TODO key should be a recipe
     val factories: Map<Material, FactoryProduction>
 )
+
+val factoryProductionComparator =
+    compareBy<Map.Entry<Material, FactoryProduction>>(
+        { max(it.value.recipe.ingredients.size, it.value.recipe.result.size) },
+        { it.value.level },
+        { it.value.factory },
+        { it.value.recipe.name }
+    )

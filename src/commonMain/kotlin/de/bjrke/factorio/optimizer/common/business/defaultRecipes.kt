@@ -6,9 +6,11 @@ import de.bjrke.factorio.optimizer.common.model.Recipe
 
 private const val SPACE_SCIENCE_PACK = "space-science-pack"
 
+const val ALL_SCIENCE_PACKS = "all-science-packs"
+
 private fun allSciencePacks(material: (String) -> Material) =
     Recipe(
-        name = "all-science-packs",
+        name = ALL_SCIENCE_PACKS,
         ingredients =
             mapOf(
                 material("automation-science-pack") to 1.0,
@@ -19,7 +21,7 @@ private fun allSciencePacks(material: (String) -> Material) =
                 material(SPACE_SCIENCE_PACK) to 1.0,
                 material("utility-science-pack") to 1.0
             ),
-        result = mapOf(material("all-science-packs") to 1.0),
+        result = mapOf(material(ALL_SCIENCE_PACKS) to 1.0),
         time = 1.0,
         category = Category.SCIENCE_LAB
     )

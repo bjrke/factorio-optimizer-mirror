@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Material
@@ -11,8 +12,8 @@ import de.bjrke.factorio.optimizer.common.model.Subgroup
 
 fun optimize(
     target: Material,
-    parsedRecipe: ParsedRecipe,
-    factories: Set<Factory>,
+    parsedRecipe: ParsedRecipe = parseRecipes(),
+    factories: Set<Factory> = defaultFactories,
     cache: MutableMap<Material, OptimizationResult> = mutableMapOf(),
     visited: MutableSet<Material> = mutableSetOf(),
 ): OptimizationResult =

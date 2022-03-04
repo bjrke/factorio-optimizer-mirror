@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.optimize
+import de.bjrke.factorio.optimizer.common.business.parseRecipes
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.js.business.parseRecipes
 
 val defaultParsedRecipes = parseRecipes()
 private val defaultMaterial = defaultParsedRecipes.materials.first()

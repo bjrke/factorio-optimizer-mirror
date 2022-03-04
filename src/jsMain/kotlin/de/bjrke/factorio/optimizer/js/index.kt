@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.js
 
+import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.optimize
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
@@ -35,7 +36,7 @@ class FactorioOptimizerProps : Props {
     private val navigate = useNavigate()
 
     var normalizeTarget = params["normalizeTarget"]?.toDouble() ?: 1.0
-    var target = Material.of(params["target"] ?: "all-science-packs")
+    var target = Material.of(params["target"] ?: ALL_SCIENCE_PACKS)
     var factories = params["factories"]?.let { factorySetFromUrl(it) } ?: defaultFactories
 
     val parsedRecipes = defaultParsedRecipes
