@@ -18,7 +18,28 @@ kotlin {
         binaries.executable()
         browser { commonWebpackConfig { cssSupport.enabled = true } }
     }
-    jvm()
+    jvm {
+        withJava()
+
+        compilations {
+            val main = getByName("main")
+            tasks.register<Jar>("buildFatJar") {
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                dependsOn(tasks.build)
+                manifest {
+                    attributes["Main-Class"] = "de.bjrke.factorio.optimizer.jvm.CliOptimizerKt"
+                }
+                from(
+                    configurations.getByName("runtimeClasspath").map {
+                        if (it.isDirectory) it else zipTree(it)
+                    },
+                    main.output.classesDirs,
+                    main.output.resourcesDir
+                )
+                archiveBaseName.set("${project.name}")
+            }
+        }
+    }
 
     sourceSets {
         commonTest {
@@ -74,7 +95,6 @@ task("run", JavaExec::class) {
         dependsOn(main.compileAllTaskName)
         classpath({ main.output.allOutputs.files }, { configurations["jvmRuntimeClasspath"] })
     }
-    systemProperty("java.awt.headless", "true")
 }
 
 spotless {
