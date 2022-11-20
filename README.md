@@ -7,10 +7,11 @@
 `./gradlew jsBrowserProductionRun --continuous` or
 `./gradlew jsBrowserDevelopmentRun --continuous`
 
-#### recipe.json
-Install Mod <https://mods.factorio.com/mod/recipelister> by copying the zip it into `~/.factorio/mods`
-The export happens when you start a game with activated mod
-The file can be found in `~/.factorio/script-output/recipe-lister/recipe.json`
+#### recipe.lua
+The recipes have to be copied from `data/base/prototypes/recipe.lua` in the factorio folder into the recipes directory `src/commonMain/resources/recipes`.
+Luckily there is a gradle task for it.
+
+`./gradlew copyRecipes`
 
 #### Updating Icons
 
