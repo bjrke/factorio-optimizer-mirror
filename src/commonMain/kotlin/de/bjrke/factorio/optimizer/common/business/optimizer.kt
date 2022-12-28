@@ -24,7 +24,7 @@ fun optimize(
             }
                 ?: Recipe(
                     name = target.name,
-                    ingredients = mapOf(target to 1.0),
+                    ingredients = mapOf(),
                     result = mapOf(target to 1.0),
                     time = 1.0,
                     subgroup = Subgroup(),

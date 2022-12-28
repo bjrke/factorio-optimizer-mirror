@@ -104,8 +104,16 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
                     display = Display.inlineBlock
                     verticalAlign = VerticalAlign.middle
                 }
-                factoryProduction.recipe.ingredients.keys.forEach {
-                    div { amountInputIcon(it.name, factoryProduction.consumption(it)) }
+                val ingredients = factoryProduction.recipe.ingredients
+                if (ingredients.isEmpty()) {
+                    // this is duplication of the recipe output to avoid breaking the layout
+                    factoryProduction.recipe.result.keys.forEach {
+                        div { amountInputIcon(it.name, factoryProduction.production(it)) }
+                    }
+                } else {
+                    ingredients.keys.forEach {
+                        div { amountInputIcon(it.name, factoryProduction.consumption(it)) }
+                    }
                 }
             }
 
