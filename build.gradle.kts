@@ -55,7 +55,7 @@ kotlin {
 
         getByName("jsMain") {
             dependencies {
-                val kotlinVersionSuffix = "-pre.301-kotlin-1.6.10"
+                val kotlinVersionSuffix = "-pre.322-kotlin-1.6.10"
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
                 implementation(
                     "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix"

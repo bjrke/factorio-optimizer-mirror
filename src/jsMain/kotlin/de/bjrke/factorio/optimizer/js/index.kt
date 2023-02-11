@@ -90,15 +90,15 @@ fun main() {
                         Routes {
                             Route {
                                 attrs.path = "/redux"
-                                attrs.element = createElement { ReduxBasedParams {} }
+                                attrs.element = createElement<Props> { ReduxBasedParams {} }
                             }
                             Route {
                                 attrs.path = "/:normalizeTarget/:target/:factories"
-                                attrs.element = createElement { RouterBasedParams {} }
+                                attrs.element = createElement<Props> { RouterBasedParams {} }
                             }
                             Route {
                                 attrs.path = "*"
-                                attrs.element = createElement { RouterBasedParams {} }
+                                attrs.element = createElement<Props> { RouterBasedParams {} }
                             }
                         }
                     }
