@@ -18,7 +18,7 @@ val kotestVersion = "5.5.5"
 kotlin {
     js(IR) {
         binaries.executable()
-        browser { commonWebpackConfig { cssSupport.enabled = true } }
+        browser { commonWebpackConfig { cssSupport { enabled = true } } }
     }
     jvm {
         withJava()
