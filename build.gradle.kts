@@ -55,14 +55,14 @@ kotlin {
 
         getByName("jsMain") {
             dependencies {
-                val kotlinVersionSuffix = "-pre.322-kotlin-1.6.10"
+                val kotlinVersionSuffix = "-pre.332-kotlin-1.6.21"
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.3$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.5$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.2.1$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.3.0$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
                 implementation(
