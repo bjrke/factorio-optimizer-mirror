@@ -2,7 +2,7 @@ import javax.imageio.ImageIO
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
-    kotlin("multiplatform") version "1.6.21"
+    kotlin("multiplatform") version "1.7.22"
     // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
     id("com.diffplug.spotless") version "6.25.0"
 }
@@ -12,6 +12,8 @@ group = "de.bjrke.factorio"
 version = "1.0"
 
 repositories { mavenCentral() }
+
+val kotestVersion = "5.5.5"
 
 kotlin {
     js(IR) {
@@ -45,20 +47,20 @@ kotlin {
         commonTest {
             dependencies {
                 // https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine
-                implementation("io.kotest:kotest-framework-engine:5.1.0")
+                implementation("io.kotest:kotest-framework-engine:$kotestVersion")
                 // https://mvnrepository.com/artifact/io.kotest/kotest-framework-datatest
-                implementation("io.kotest:kotest-framework-datatest:5.1.0")
+                implementation("io.kotest:kotest-framework-datatest:$kotestVersion")
                 // https://mvnrepository.com/artifact/io.kotest/kotest-assertions-core
-                implementation("io.kotest:kotest-assertions-core:5.1.0")
+                implementation("io.kotest:kotest-assertions-core:$kotestVersion")
             }
         }
 
         getByName("jsMain") {
             dependencies {
-                val kotlinVersionSuffix = "-pre.332-kotlin-1.6.21"
+                val kotlinVersionSuffix = "-pre.451"
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.5$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.6$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
                 implementation(
@@ -76,7 +78,7 @@ kotlin {
         getByName("jvmTest") {
             dependencies {
                 // https://mvnrepository.com/artifact/io.kotest/kotest-runner-junit5-jvm
-                implementation("io.kotest:kotest-runner-junit5-jvm:5.1.0")
+                implementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
             }
         }
     }

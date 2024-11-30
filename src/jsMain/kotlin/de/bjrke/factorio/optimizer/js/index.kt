@@ -8,14 +8,8 @@ import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
-import de.bjrke.factorio.optimizer.js.component.reduxFactorySelector
-import de.bjrke.factorio.optimizer.js.component.reduxMaterialSelector
-import de.bjrke.factorio.optimizer.js.component.reduxOptimizationResultPresenter
-import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
-import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
-import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
-import kotlinx.browser.document
-import kotlinx.browser.window
+import de.bjrke.factorio.optimizer.js.component.*
+import kotlinx.js.get
 import react.Props
 import react.createElement
 import react.dom.div
@@ -31,7 +25,7 @@ import react.router.useParams
 import redux.createStore
 import redux.rEnhancer
 
-class FactorioOptimizerProps : Props {
+class FactorioOptimizerProps {
     private val params = useParams()
     private val navigate = useNavigate()
 
@@ -79,10 +73,10 @@ val ReduxBasedParams =
 
 fun main() {
 
-    window.onload = {
+    browser.window.onload = {
         val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
-        val root = document.createElement("div")
-        document.body?.prepend(root)
+        val root = browser.document.createElement("div")
+        browser.document.body.prepend(root)
         render(root) {
             provider(store) {
                 HashRouter {
