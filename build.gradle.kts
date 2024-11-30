@@ -36,7 +36,7 @@ kotlin {
                     main.output.classesDirs,
                     main.output.resourcesDir
                 )
-                archiveBaseName.set("${project.name}")
+                archiveBaseName.set(project.name)
             }
         }
     }
@@ -85,7 +85,7 @@ kotlin {
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
 
-    reports { html.isEnabled = true }
+    reports { html.required.set(true) }
 }
 
 task("run", JavaExec::class) {
