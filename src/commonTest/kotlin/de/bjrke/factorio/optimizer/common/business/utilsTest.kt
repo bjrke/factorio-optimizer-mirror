@@ -14,5 +14,7 @@ class utilsTest :
             100.12345 to 100.1,
             9876.5432 to 9877,
             123456789.1234 to 123456789.0
-        ) { (from, expected) -> superRound(from).shouldBe(expected) }
+        ) { (from, expected) ->
+            superRound(from).shouldBe(expected)
+        }
     })

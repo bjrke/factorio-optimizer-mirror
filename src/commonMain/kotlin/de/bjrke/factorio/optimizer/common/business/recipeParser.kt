@@ -13,7 +13,9 @@ private open class WrappedTable(val table: LuaTable) {
     }
 
     operator fun get(field: String) = map[field]
+
     operator fun get(index: Int) = if (index < table.elements.size) table.elements[index] else null
+
     fun getElementsAsTables(): List<WrappedTable> =
         table.elements.filterIsInstance<LuaTable>().map(::WrappedTable)
 
@@ -27,9 +29,13 @@ private open class WrappedTable(val table: LuaTable) {
         this[field]?.let { it as? L }?.let(f)
 
     fun getString(field: String) = getAs(field, LuaString::s)
+
     fun getBoolean(field: String) = getAs(field, LuaBoolean::b)
+
     fun getNumber(field: String) = getAs(field, LuaNumber::n)
+
     fun getTable(field: String) = getAs(field, ::WrappedTable)
+
     fun getTableList(field: String) =
         getAs(field) { table: LuaTable -> WrappedTable(table).getElementsAsTables() } ?: listOf()
 
@@ -37,8 +43,11 @@ private open class WrappedTable(val table: LuaTable) {
         this[index]?.let { it as? L }?.let(f)
 
     fun getString(index: Int) = getAs(index, LuaString::s)
+
     fun getBoolean(index: Int) = getAs(index, LuaBoolean::b)
+
     fun getNumber(index: Int) = getAs(index, LuaNumber::n)
+
     fun getTable(index: Int) = getAs(index, ::WrappedTable)
 }
 
@@ -110,8 +119,11 @@ fun parseRecipes(
     class LuaRecipe(val table: WrappedTable) {
 
         fun getSubgroup() = table.getString("subgroup")
+
         fun getType() = table.getString("type")
+
         fun getResults() = getNested(NestedRecipe::getResults)
+
         fun getIngredients() = getNested(NestedRecipe::getIngredients)
 
         private val thisRecipe = NestedRecipe(table)
@@ -150,7 +162,8 @@ fun parseRecipes(
 
                     val subgroupName = luaRecipe.getSubgroup()
                     when (subgroupName) {
-                        "fill-barrel", "empty-barrel" -> continue
+                        "fill-barrel",
+                        "empty-barrel" -> continue
                     }
 
                     val result =

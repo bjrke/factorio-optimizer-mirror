@@ -34,16 +34,15 @@ private fun RBuilder.facorySelector(props: FactorySelectorProps) {
         label {
             input(type = InputType.checkBox) {
                 val enabled = props.selectedFactories.contains(factory)
-                attrs.onChangeFunction =
-                    { _ ->
-                        props.selectFactory(
-                            if (enabled) {
-                                props.selectedFactories.removeFactory(factory)
-                            } else {
-                                props.selectedFactories.addFactory(factory)
-                            }
-                        )
-                    }
+                attrs.onChangeFunction = { _ ->
+                    props.selectFactory(
+                        if (enabled) {
+                            props.selectedFactories.removeFactory(factory)
+                        } else {
+                            props.selectedFactories.addFactory(factory)
+                        }
+                    )
+                }
                 // work around for https://github.com/JetBrains/kotlin-wrappers/issues/35
                 attrs["checked"] = enabled
             }
@@ -60,7 +59,8 @@ private val reduxFactorySelector =
         Props,
         FactorySelectorStateProps,
         FactorySelectorDispatchProps,
-        FactorySelectorProps>(
+        FactorySelectorProps
+    >(
         { state, _ ->
             availableFactories = selectableFactories
             selectedFactories = state.factories

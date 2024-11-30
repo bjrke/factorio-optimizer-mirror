@@ -59,12 +59,11 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
                 width = 4.rem
                 marginRight = 1.ch
             }
-            attrs.onChangeFunction =
-                { event ->
-                    props.changeNormalizeTo(
-                        amount / (event.target as HTMLInputElement).value.toDouble()
-                    )
-                }
+            attrs.onChangeFunction = { event ->
+                props.changeNormalizeTo(
+                    amount / (event.target as HTMLInputElement).value.toDouble()
+                )
+            }
             attrs.value = superRound(amount * props.normalizeTarget).toString()
         }
     }
@@ -155,7 +154,8 @@ private val reduxOptimizationResultPresenter =
         Props,
         OptimizationResultPresenterStateProps,
         OptimizationResultPresenterDispatchProps,
-        OptimizationResultPresenterProps>(
+        OptimizationResultPresenterProps
+    >(
         { state, _ ->
             optimizationResult = state.optimizationResult
             normalizeTarget = state.normalizeTarget

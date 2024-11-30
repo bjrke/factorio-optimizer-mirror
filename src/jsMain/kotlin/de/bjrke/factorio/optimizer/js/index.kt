@@ -79,30 +79,29 @@ val ReduxBasedParams =
 
 fun main() {
 
-    window.onload =
-        {
-            val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
-            val root = document.createElement("div")
-            document.body?.prepend(root)
-            render(root) {
-                provider(store) {
-                    HashRouter {
-                        Routes {
-                            Route {
-                                attrs.path = "/redux"
-                                attrs.element = createElement<Props> { ReduxBasedParams {} }
-                            }
-                            Route {
-                                attrs.path = "/:normalizeTarget/:target/:factories"
-                                attrs.element = createElement<Props> { RouterBasedParams {} }
-                            }
-                            Route {
-                                attrs.path = "*"
-                                attrs.element = createElement<Props> { RouterBasedParams {} }
-                            }
+    window.onload = {
+        val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
+        val root = document.createElement("div")
+        document.body?.prepend(root)
+        render(root) {
+            provider(store) {
+                HashRouter {
+                    Routes {
+                        Route {
+                            attrs.path = "/redux"
+                            attrs.element = createElement<Props> { ReduxBasedParams {} }
+                        }
+                        Route {
+                            attrs.path = "/:normalizeTarget/:target/:factories"
+                            attrs.element = createElement<Props> { RouterBasedParams {} }
+                        }
+                        Route {
+                            attrs.path = "*"
+                            attrs.element = createElement<Props> { RouterBasedParams {} }
                         }
                     }
                 }
             }
         }
+    }
 }

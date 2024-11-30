@@ -19,9 +19,9 @@ fun optimize(
 ): OptimizationResult =
     cache.getOrPut(target) {
         val recipe =
-            parsedRecipe.recipes.filter { findFactory(factories, it) != null }.firstOrNull {
-                it.result.containsKey(target)
-            }
+            parsedRecipe.recipes
+                .filter { findFactory(factories, it) != null }
+                .firstOrNull { it.result.containsKey(target) }
                 ?: Recipe(
                     name = target.name,
                     ingredients = mapOf(),

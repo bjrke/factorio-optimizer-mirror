@@ -29,10 +29,9 @@ external interface MaterialSelectorProps :
 
 private fun RBuilder.materialSelector(props: MaterialSelectorProps) {
     select {
-        attrs.onChangeFunction =
-            { event ->
-                props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
-            }
+        attrs.onChangeFunction = { event ->
+            props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
+        }
         attrs.value = props.material.name
         for (m in props.availableMaterials) {
             option {
@@ -51,7 +50,8 @@ private val reduxMaterialSelector =
         Props,
         MaterialSelectorStateProps,
         MaterialSelectorDispatchProps,
-        MaterialSelectorProps>(
+        MaterialSelectorProps
+    >(
         { state, _ ->
             availableMaterials = state.parsedRecipes.materials
             material = state.target

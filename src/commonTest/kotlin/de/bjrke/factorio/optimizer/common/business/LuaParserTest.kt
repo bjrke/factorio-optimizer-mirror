@@ -48,7 +48,9 @@ class LuaParserTest :
                         LuaTableEntry("foo", LuaString("bar"))
                     ),
                 "{ 1. }" to listOf(LuaNumber(1.0)),
-            ) { (s, expected) -> parseLua(s).elements.shouldBe(expected) }
+            ) { (s, expected) ->
+                parseLua(s).elements.shouldBe(expected)
+            }
         }
 
         describe("should throw unexpected token exceptions") {
@@ -61,7 +63,9 @@ class LuaParserTest :
                 "{   fals  }",
                 "{  foo foo = \"bar\"  }",
                 "{   FALSE  }"
-            ) { s -> shouldThrow<UnexpectedTokenException> { parseLua(s) } }
+            ) { s ->
+                shouldThrow<UnexpectedTokenException> { parseLua(s) }
+            }
         }
 
         describe("should throw unexpected end of file exception") {

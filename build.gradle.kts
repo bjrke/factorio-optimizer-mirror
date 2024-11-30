@@ -4,7 +4,7 @@ plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
     kotlin("multiplatform") version "1.6.10"
     // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
-    id("com.diffplug.spotless") version "6.3.0"
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "de.bjrke.factorio"
