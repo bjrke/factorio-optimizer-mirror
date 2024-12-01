@@ -2,7 +2,7 @@ import javax.imageio.ImageIO
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
-    kotlin("multiplatform") version "1.7.22"
+    kotlin("multiplatform") version "1.8.22"
     // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
     id("com.diffplug.spotless") version "6.25.0"
 }
@@ -13,12 +13,12 @@ version = "1.0"
 
 repositories { mavenCentral() }
 
-val kotestVersion = "5.5.5"
+val kotestVersion = "5.6.2"
 
 kotlin {
     js(IR) {
         binaries.executable()
-        browser { commonWebpackConfig { cssSupport { enabled = true } } }
+        browser { commonWebpackConfig { cssSupport { enabled.set(true) } } }
     }
     jvm {
         withJava()
@@ -57,14 +57,14 @@ kotlin {
 
         getByName("jsMain") {
             dependencies {
-                val kotlinVersionSuffix = "-pre.451"
+                val kotlinVersionSuffix = "-pre.551"
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.6$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.10$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.3.0$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.11.2$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
                 implementation(
