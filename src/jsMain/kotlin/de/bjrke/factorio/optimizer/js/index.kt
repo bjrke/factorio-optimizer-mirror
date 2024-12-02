@@ -9,7 +9,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
 import de.bjrke.factorio.optimizer.js.component.*
-import js.core.jso
+import js.objects.jso
 import react.Props
 import react.createElement
 import react.dom.client.createRoot
@@ -24,6 +24,7 @@ import react.router.useParams
 import redux.createStore
 import redux.rEnhancer
 import web.dom.document
+import web.events.EventHandler
 import web.window.window
 
 class FactorioOptimizerProps {
@@ -74,7 +75,7 @@ val ReduxBasedParams =
 
 fun main() {
 
-    window.onload = {
+    window.onload = EventHandler {
         val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
         val root = document.createElement("div")
         document.body.prepend(root)
