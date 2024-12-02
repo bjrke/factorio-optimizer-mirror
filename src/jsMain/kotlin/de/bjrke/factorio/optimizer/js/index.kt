@@ -12,8 +12,8 @@ import de.bjrke.factorio.optimizer.js.component.*
 import js.core.jso
 import react.Props
 import react.createElement
+import react.dom.client.createRoot
 import react.dom.div
-import react.dom.render
 import react.fc
 import react.redux.provider
 import react.router.RouterProvider
@@ -97,6 +97,9 @@ fun main() {
                         }
                     )
             )
-        render(root) { provider(store) { RouterProvider { attrs.router = hashRouter } } }
+
+        val app = fc<Props> { provider(store) { RouterProvider { attrs.router = hashRouter } } }
+
+        createRoot(root).render(createElement<Props> { app() })
     }
 }

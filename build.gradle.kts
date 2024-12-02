@@ -16,10 +16,13 @@ repositories { mavenCentral() }
 val kotestVersion = "5.6.2"
 
 kotlin {
+    jvmToolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+
     js(IR) {
         binaries.executable()
         browser { commonWebpackConfig { cssSupport { enabled.set(true) } } }
     }
+
     jvm {
         withJava()
 
