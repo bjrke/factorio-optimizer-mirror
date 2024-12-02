@@ -8,17 +8,7 @@ import de.bjrke.factorio.optimizer.js.ChangeMaterial
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import de.bjrke.factorio.optimizer.js.NormalizeTo
 import de.bjrke.factorio.optimizer.js.OptimizerAppState
-import kotlinx.css.Color
-import kotlinx.css.Display
-import kotlinx.css.VerticalAlign
-import kotlinx.css.backgroundColor
-import kotlinx.css.ch
-import kotlinx.css.display
-import kotlinx.css.marginRight
-import kotlinx.css.padding
-import kotlinx.css.rem
-import kotlinx.css.verticalAlign
-import kotlinx.css.width
+import kotlinx.css.*
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
@@ -92,7 +82,7 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
             css {
                 display = Display.inlineBlock
                 verticalAlign = VerticalAlign.middle
-                padding(all = 0.5.rem)
+                padding = Padding(all = 0.5.rem)
                 backgroundColor = hashColor(material.name).withAlpha(0.75)
             }
             amountInputIcon(factoryProduction.factory.identifier, factoryProduction.amount)

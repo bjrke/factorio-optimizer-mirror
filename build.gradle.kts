@@ -2,7 +2,7 @@ import javax.imageio.ImageIO
 
 plugins {
     // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
-    kotlin("multiplatform") version "1.8.22"
+    kotlin("multiplatform") version "1.9.25"
     // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
     id("com.diffplug.spotless") version "6.25.0"
 }
@@ -13,7 +13,7 @@ version = "1.0"
 
 repositories { mavenCentral() }
 
-val kotestVersion = "5.6.2"
+val kotestVersion = "5.7.2"
 
 kotlin {
     jvmToolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
@@ -60,14 +60,14 @@ kotlin {
 
         getByName("jsMain") {
             dependencies {
-                val kotlinVersionSuffix = "-pre.551"
+                val kotlinVersionSuffix = "-pre.600"
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.10$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.11$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.11.2$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.14.1$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
                 implementation(
