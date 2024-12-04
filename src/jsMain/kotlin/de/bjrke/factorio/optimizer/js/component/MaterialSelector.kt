@@ -1,9 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.js.ChangeMaterial
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
-import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import kotlinx.html.js.onChangeFunction
 import org.w3c.dom.HTMLSelectElement
 import react.Props
@@ -11,9 +9,6 @@ import react.RBuilder
 import react.dom.option
 import react.dom.select
 import react.fc
-import react.invoke
-import react.redux.rConnect
-import redux.WrapperAction
 
 external interface MaterialSelectorStateProps : Props {
     var material: Material
@@ -41,25 +36,6 @@ private fun RBuilder.materialSelector(props: MaterialSelectorProps) {
         }
     }
 }
-
-private val reduxMaterialSelector =
-    rConnect<
-        OptimizerAppState,
-        ChangeMaterial,
-        WrapperAction,
-        Props,
-        MaterialSelectorStateProps,
-        MaterialSelectorDispatchProps,
-        MaterialSelectorProps
-    >(
-        { state, _ ->
-            availableMaterials = state.parsedRecipes.materials
-            material = state.target
-        },
-        { dispatch, _ -> changeMaterial = { dispatch(ChangeMaterial(it)) } }
-    )(RBuilder::materialSelector)
-
-fun RBuilder.reduxMaterialSelector() = reduxMaterialSelector {}
 
 fun RBuilder.urlMaterialSelector(props: FactorioOptimizerProps) {
     child(fc(RBuilder::materialSelector)) {

@@ -5,8 +5,6 @@ import de.bjrke.factorio.optimizer.common.model.Factories.selectableFactories
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.addFactory
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
-import de.bjrke.factorio.optimizer.js.OptimizerAppState
-import de.bjrke.factorio.optimizer.js.SelectFactory
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import react.Props
@@ -14,9 +12,6 @@ import react.RBuilder
 import react.dom.input
 import react.dom.label
 import react.fc
-import react.invoke
-import react.redux.rConnect
-import redux.WrapperAction
 
 external interface FactorySelectorStateProps : Props {
     var selectedFactories: Set<Factory>
@@ -50,25 +45,6 @@ private fun RBuilder.facorySelector(props: FactorySelectorProps) {
         }
     }
 }
-
-private val reduxFactorySelector =
-    rConnect<
-        OptimizerAppState,
-        SelectFactory,
-        WrapperAction,
-        Props,
-        FactorySelectorStateProps,
-        FactorySelectorDispatchProps,
-        FactorySelectorProps
-    >(
-        { state, _ ->
-            availableFactories = selectableFactories
-            selectedFactories = state.factories
-        },
-        { dispatch, _ -> selectFactory = { dispatch(SelectFactory(it)) } }
-    )(RBuilder::facorySelector)
-
-fun RBuilder.reduxFactorySelector() = reduxFactorySelector {}
 
 fun RBuilder.urlFactorySelector(props: FactorioOptimizerProps) {
     child(fc(RBuilder::facorySelector)) {

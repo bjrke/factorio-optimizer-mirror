@@ -69,10 +69,6 @@ kotlin {
                 implementation(
                     "org.jetbrains.kotlin-wrappers:kotlin-react-router-dom:6.26.0$kotlinVersionSuffix"
                 )
-                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-redux
-                implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-react-redux:7.2.6$kotlinVersionSuffix"
-                )
             }
         }
 

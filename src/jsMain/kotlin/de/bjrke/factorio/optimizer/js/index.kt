@@ -8,21 +8,19 @@ import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
-import de.bjrke.factorio.optimizer.js.component.*
+import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
+import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
+import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
 import js.objects.jso
 import react.Props
 import react.createElement
 import react.dom.client.createRoot
 import react.dom.div
 import react.fc
-import react.redux.provider
 import react.router.RouterProvider
-import react.router.dom.Link
 import react.router.dom.createHashRouter
 import react.router.useNavigate
 import react.router.useParams
-import redux.createStore
-import redux.rEnhancer
 import web.dom.document
 import web.events.EventHandler
 import web.window.window
@@ -53,30 +51,12 @@ val RouterBasedParams =
             div { urlMaterialSelector(props) }
             div { urlFactorySelector(props) }
             div { urlOptimizationResultPresenter(props) }
-            Link {
-                attrs.to = "/redux"
-                +"redux based"
-            }
-        }
-    }
-
-val ReduxBasedParams =
-    fc<Props> {
-        div {
-            div { reduxMaterialSelector() }
-            div { reduxFactorySelector() }
-            div { reduxOptimizationResultPresenter() }
-            Link {
-                attrs.to = "/"
-                +"URL based"
-            }
         }
     }
 
 fun main() {
 
     window.onload = EventHandler {
-        val store = createStore(::rootReducer, OptimizerAppState(), rEnhancer())
         val root = document.createElement("div")
         document.body.prepend(root)
 
@@ -84,10 +64,6 @@ fun main() {
             createHashRouter(
                 routes =
                     arrayOf(
-                        jso {
-                            path = "/redux"
-                            element = createElement<Props> { ReduxBasedParams {} }
-                        },
                         jso {
                             path = "/:normalizeTarget/:target/:factories"
                             element = createElement<Props> { RouterBasedParams {} }
@@ -99,7 +75,7 @@ fun main() {
                     )
             )
 
-        val app = fc<Props> { provider(store) { RouterProvider { attrs.router = hashRouter } } }
+        val app = fc<Props> { RouterProvider { attrs.router = hashRouter } }
 
         createRoot(root).render(createElement<Props> { app() })
     }

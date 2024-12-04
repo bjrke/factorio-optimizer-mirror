@@ -4,10 +4,7 @@ import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
-import de.bjrke.factorio.optimizer.js.ChangeMaterial
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
-import de.bjrke.factorio.optimizer.js.NormalizeTo
-import de.bjrke.factorio.optimizer.js.OptimizerAppState
 import kotlinx.css.*
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
@@ -20,10 +17,6 @@ import react.dom.attrs
 import react.dom.button
 import react.dom.div
 import react.fc
-import react.invoke
-import react.redux.rConnect
-import redux.RAction
-import redux.WrapperAction
 import styled.css
 import styled.styledA
 import styled.styledDiv
@@ -135,28 +128,6 @@ fun hashColor(s: String): Color {
 
     return Color("rgb(${r + 128}, ${g + 128}, ${b + 128})")
 }
-
-private val reduxOptimizationResultPresenter =
-    rConnect<
-        OptimizerAppState,
-        RAction,
-        WrapperAction,
-        Props,
-        OptimizationResultPresenterStateProps,
-        OptimizationResultPresenterDispatchProps,
-        OptimizationResultPresenterProps
-    >(
-        { state, _ ->
-            optimizationResult = state.optimizationResult
-            normalizeTarget = state.normalizeTarget
-        },
-        { dispatch, _ ->
-            changeMaterial = { dispatch(ChangeMaterial(it)) }
-            changeNormalizeTo = { dispatch(NormalizeTo(1 / it)) }
-        }
-    )(RBuilder::optimizationResult)
-
-fun RBuilder.reduxOptimizationResultPresenter() = reduxOptimizationResultPresenter {}
 
 fun RBuilder.urlOptimizationResultPresenter(props: FactorioOptimizerProps) {
     child(fc(RBuilder::optimizationResult)) {
