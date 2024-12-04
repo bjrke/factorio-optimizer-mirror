@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.optimize
+import de.bjrke.factorio.optimizer.common.business.parseRecipes
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
@@ -25,6 +26,8 @@ import web.dom.document
 import web.events.EventHandler
 import web.window.window
 
+val defaultRecipes = parseRecipes()
+
 class FactorioOptimizerProps {
     private val params = useParams()
     private val navigate = useNavigate()
@@ -33,7 +36,7 @@ class FactorioOptimizerProps {
     var target = Material.of(params["target"] ?: ALL_SCIENCE_PACKS)
     var factories = params["factories"]?.let { factorySetFromUrl(it) } ?: defaultFactories
 
-    val parsedRecipes = defaultParsedRecipes
+    val parsedRecipes = defaultRecipes
     val optimizationResult: OptimizationResult = optimize(target, parsedRecipes, factories)
 
     private fun createNewUrl(): String =

@@ -59,11 +59,6 @@ private fun RBuilder.optimizationResult(props: OptimizationResultPresenterProps)
         }
     }
 
-    fun RBuilder.amountIconInput(name: String, amount: Double) {
-        amountIcon(name, amount)
-        amountInput(amount)
-    }
-
     fun RBuilder.amountInputIcon(name: String, amount: Double) {
         amountInput(amount)
         amountIcon(name, amount)
