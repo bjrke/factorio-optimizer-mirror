@@ -60,8 +60,16 @@ kotlin {
 
         getByName("jsMain") {
             dependencies {
-                implementation(kotlinWrappers.wrappers.styled.next)
-                implementation(kotlinWrappers.wrappers.react.router.dom)
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
+                implementation(
+                    project.dependencies.platform(
+                        "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom:1.0.0-pre.790"
+                    )
+                )
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled-next
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-styled-next")
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-react-router-dom")
             }
         }
 
