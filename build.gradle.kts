@@ -61,9 +61,9 @@ kotlin {
         getByName("jsMain") {
             dependencies {
                 val kotlinVersionSuffix = "-pre.717"
-                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled-next
                 implementation(
-                    "org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.11$kotlinVersionSuffix"
+                    "org.jetbrains.kotlin-wrappers:kotlin-styled-next:1.2.4$kotlinVersionSuffix"
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
                 implementation(
