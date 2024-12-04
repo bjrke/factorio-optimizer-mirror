@@ -63,7 +63,7 @@ kotlin {
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
                 implementation(
                     project.dependencies.platform(
-                        "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom:1.0.0-pre.790"
+                        "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom:1.0.0-pre.839"
                     )
                 )
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled-next
