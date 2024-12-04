@@ -4,7 +4,7 @@ cache:
 
 test:
   stage: test
-  image: gradle:7.6.4-jdk17
+  image: gradle:8.5-jdk17
   variables:
     GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   script:
