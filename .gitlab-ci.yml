@@ -12,7 +12,7 @@ test:
   artifacts:
     expire_in: 1 week
     paths:
-      - build/distributions
+      - build/dist/js/productionExecutable
 
 pages:
   stage: deploy
