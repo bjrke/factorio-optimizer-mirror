@@ -1,10 +1,8 @@
 import javax.imageio.ImageIO
 
 plugins {
-    // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
-    kotlin("multiplatform") version "2.0.21"
-    // https://mvnrepository.com/artifact/com.diffplug.spotless/spotless-plugin-gradle
-    id("com.diffplug.spotless") version "6.25.0"
+    kotlin("multiplatform") version libs.versions.kotlin
+    alias(libs.plugins.spotless)
 }
 
 group = "de.bjrke.factorio"
@@ -12,8 +10,6 @@ group = "de.bjrke.factorio"
 version = "1.0"
 
 repositories { mavenCentral() }
-
-val kotestVersion = "5.9.1"
 
 kotlin {
     jvmToolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
@@ -49,23 +45,15 @@ kotlin {
     sourceSets {
         commonTest {
             dependencies {
-                // https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine
-                implementation("io.kotest:kotest-framework-engine:$kotestVersion")
-                // https://mvnrepository.com/artifact/io.kotest/kotest-framework-datatest
-                implementation("io.kotest:kotest-framework-datatest:$kotestVersion")
-                // https://mvnrepository.com/artifact/io.kotest/kotest-assertions-core
-                implementation("io.kotest:kotest-assertions-core:$kotestVersion")
+                implementation(libs.kotest.framework.engine)
+                implementation(libs.kotest.framework.datatest)
+                implementation(libs.kotest.assertions.core)
             }
         }
 
         getByName("jsMain") {
             dependencies {
-                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
-                implementation(
-                    project.dependencies.platform(
-                        "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom:1.0.0-pre.839"
-                    )
-                )
+                implementation(dependencies.platform(libs.kotlin.wrappers.bom))
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled-next
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-styled-next")
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-react-router-dom
@@ -75,12 +63,7 @@ kotlin {
 
         getByName("jsTest") { dependencies { implementation(kotlin("test-js")) } }
 
-        getByName("jvmTest") {
-            dependencies {
-                // https://mvnrepository.com/artifact/io.kotest/kotest-runner-junit5-jvm
-                implementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
-            }
-        }
+        getByName("jvmTest") { dependencies { implementation(libs.kotest.runner.junit5.jvm) } }
     }
 }
 
