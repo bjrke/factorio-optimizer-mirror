@@ -1,16 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.parser.Position
-import de.bjrke.parser.advance
-import de.bjrke.parser.advanceUntil
-import de.bjrke.parser.appendTo
-import de.bjrke.parser.expect
-import de.bjrke.parser.isChar
-import de.bjrke.parser.isDigit
-import de.bjrke.parser.isLetter
-import de.bjrke.parser.isString
-import de.bjrke.parser.isWhitespace
-import de.bjrke.parser.parse
+import de.bjrke.parser.*
 
 interface LuaNode
 
@@ -134,12 +124,30 @@ private fun Position.luaBoolean() =
 
 private fun Position.luaObject() = luaTable() ?: luaString() ?: luaNumber() ?: luaBoolean()
 
-fun parseLua(s: String): LuaTable =
-    parse(s).run {
-        s.indexOf('{').let {
-            when {
-                it < 0 -> unexpectedToken()
-                else -> advance(it).luaTable()!!.second
+fun findLastCurlyBlock(s: String): Int? {
+    var result: Int? = null
+    var start = 0
+    var count = 0
+    for (i in s.indices) {
+        when (s[i]) {
+            '{' -> {
+                if (count == 0) {
+                    start = i
+                }
+                count++
+            }
+            '}' -> {
+                count--
+                if (count == 0) {
+                    result = start
+                }
             }
         }
     }
+    return result
+}
+
+fun parseLua(s: String): LuaTable {
+    val lastCurlyBlock = findLastCurlyBlock(s) ?: throw UnexpectedEndOfFile(s.length)
+    return parse(s, lastCurlyBlock).run { luaTable()?.second ?: unexpectedToken() }
+}

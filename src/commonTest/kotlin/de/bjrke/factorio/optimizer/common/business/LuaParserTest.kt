@@ -55,7 +55,6 @@ class LuaParserTest :
 
         describe("should throw unexpected token exceptions") {
             withData(
-                "{,",
                 "{,}",
                 "{   falsex   }",
                 "{   false false   }",
@@ -69,7 +68,7 @@ class LuaParserTest :
         }
 
         describe("should throw unexpected end of file exception") {
-            withData("{", "{{}", "{\"}", "{foo =", "{1") { s: String ->
+            withData("{,", "{", "{{}", "{\"}", "{foo =", "{1") { s: String ->
                 shouldThrow<UnexpectedEndOfFile> { parseLua(s) }
             }
         }

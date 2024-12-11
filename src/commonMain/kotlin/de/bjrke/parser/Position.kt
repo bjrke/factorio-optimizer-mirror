@@ -88,4 +88,6 @@ private data class Wrapper(val complete: String) {
     }
 }
 
-fun parse(s: String): Position = Wrapper(s).PositionImpl(0)
+fun parse(s: String, offset: Int = 0): Position {
+    return Wrapper(s).PositionImpl(offset)
+}
