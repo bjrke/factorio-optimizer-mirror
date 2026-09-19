@@ -5,7 +5,7 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 8.5, Kotlin 2.0.21) app tha
 ## Commands
 
 - `./gradlew jsBrowserDevelopmentRun --continuous` / `jsBrowserProductionRun --continuous` — dev server for the web UI
-- `./gradlew jvmTest` — run Kotest suites (commonTest + jvmTest); add `--tests "*RecipeParserTest*"` to filter
+- `./gradlew jvmTest` — run kotlin-test suites (commonTest + jvmTest); add `--tests "*RecipeParserTest*"` to filter
 - `./gradlew check` — formatting check + all tests. CI runs `gradle --no-daemon clean check jsBrowserDistribution -x jsBrowserTest` (jsBrowserTest is excluded; it needs a browser)
 - `./gradlew spotlessApply` — fix formatting (Spotless/ktfmt `kotlinlangStyle`; covers `src/**/*.kt` and `build.gradle.kts`)
 - `./gradlew run` — run the CLI (`CliOptimizerKt`); `./gradlew buildFatJar` produces a runnable fat jar
@@ -19,13 +19,14 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 8.5, Kotlin 2.0.21) app tha
 - `src/commonMain` — shared logic: Lua parser (`LuaParser.kt`), recipe parser (`recipeParser.kt`), the optimizer (`optimizer.kt`), model, and `recipes/recipe.lua` data
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`, `react-router-dom`); entry point `js/index.kt`; `js/business/loadRecipe.kt` pulls recipes via `@JsModule` + webpack config in `webpack.config.d/`
 - `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`; `jvm/business/loadRecipe.kt` loads recipes from the classpath resource
-- `src/commonTest` — shared Kotest (`FreeSpec`) suites run by both JVM and JS test tasks
+- `src/commonTest` — shared kotlin-test suites run by both JVM and JS test tasks
 
 The same `commonMain` code compiles to both targets, so keep it platform-neutral. Platform differences belong in target-specific `loadRecipe.kt`/`index.kt` files.
 
 ## Git workflow
 
 - When on `main`, branch off before making changes.
+- Branch names contain the author, e.g. `<author>/<topic>`.
 - Commit after the work is done. Headline is limited to 50 chars; the body
   is wrapped at 72 chars.
 

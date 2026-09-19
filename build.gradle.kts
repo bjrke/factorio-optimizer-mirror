@@ -43,13 +43,7 @@ kotlin {
     }
 
     sourceSets {
-        commonTest {
-            dependencies {
-                implementation(libs.kotest.framework.engine)
-                implementation(libs.kotest.framework.datatest)
-                implementation(libs.kotest.assertions.core)
-            }
-        }
+        commonTest { dependencies { implementation(kotlin("test")) } }
 
         getByName("jsMain") {
             dependencies {
@@ -63,7 +57,7 @@ kotlin {
 
         getByName("jsTest") { dependencies { implementation(kotlin("test-js")) } }
 
-        getByName("jvmTest") { dependencies { implementation(libs.kotest.runner.junit5.jvm) } }
+        getByName("jvmTest") { dependencies { implementation(kotlin("test")) } }
     }
 }
 

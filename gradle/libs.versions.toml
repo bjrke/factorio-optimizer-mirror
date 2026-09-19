@@ -5,17 +5,6 @@ spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
 [versions]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
 kotlin = "2.0.21"
-#https://mvnrepository.com/artifact/io.kotest/kotest-runner-junit5-jvm
-kotest = "5.9.1"
-
 [libraries]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
 kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "1.0.0-pre.839" }
-#https://mvnrepository.com/artifact/io.kotest/kotest-framework-engine
-kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
-#https://mvnrepository.com/artifact/io.kotest/kotest-framework-datatest
-kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
-#https://mvnrepository.com/artifact/io.kotest/kotest-assertions-core
-kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
-#https://mvnrepository.com/artifact/io.kotest/kotest-runner-junit5-jvm
-kotest-runner-junit5-jvm = { module = "io.kotest:kotest-runner-junit5-jvm", version.ref = "kotest" }
