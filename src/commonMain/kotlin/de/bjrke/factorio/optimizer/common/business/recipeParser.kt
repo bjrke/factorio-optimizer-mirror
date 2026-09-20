@@ -53,7 +53,7 @@ private open class WrappedTable(val table: LuaTable) {
 
 enum class Mode(val fieldName: String) {
     NORMAL("normal"),
-    EXPENSINVE("expensive")
+    EXPENSINVE("expensive"),
 }
 
 private const val DEFAULT_PROBABILITY = 1.0
@@ -63,13 +63,13 @@ private const val DEFAULT_TYPE = "item"
 private data class RecipeResult(
     val name: String,
     val amount: Double = DEFAULT_AMOUNT,
-    val probability: Double = DEFAULT_PROBABILITY
+    val probability: Double = DEFAULT_PROBABILITY,
 )
 
 private data class RecipeIngredient(
     val name: String,
     val amount: Double,
-    val type: String = DEFAULT_TYPE
+    val type: String = DEFAULT_TYPE,
 )
 
 private class NestedRecipe(val table: WrappedTable) {
@@ -86,7 +86,7 @@ private class NestedRecipe(val table: WrappedTable) {
                 RecipeResult(
                     name = result.getString("name") ?: continue,
                     amount = result.getNumber("amount") ?: DEFAULT_AMOUNT,
-                    probability = result.getNumber("probability") ?: DEFAULT_PROBABILITY
+                    probability = result.getNumber("probability") ?: DEFAULT_PROBABILITY,
                 )
             )
         }
@@ -99,7 +99,7 @@ private class NestedRecipe(val table: WrappedTable) {
                 RecipeIngredient(
                     name = result.getString("name") ?: continue,
                     amount = result.getNumber("amount") ?: DEFAULT_AMOUNT,
-                    type = result.getString("type") ?: DEFAULT_TYPE
+                    type = result.getString("type") ?: DEFAULT_TYPE,
                 )
             )
         }
@@ -113,7 +113,7 @@ expect fun loadRecipe(): String
 fun parseRecipes(
     s: String = loadRecipe(),
     mode: Mode = Mode.NORMAL,
-    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = ::defaultRecipes
+    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = ::defaultRecipes,
 ): ParsedRecipe {
 
     class LuaRecipe(val table: WrappedTable) {
@@ -182,7 +182,7 @@ fun parseRecipes(
                             result = result,
                             time = luaRecipe.getEnergyRequired() ?: 0.5,
                             subgroup = subGroup(subgroupName),
-                            category = category(luaRecipe.getCategory() ?: "crafting")!!
+                            category = category(luaRecipe.getCategory() ?: "crafting")!!,
                         )
                     )
                 }

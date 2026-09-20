@@ -25,7 +25,7 @@ class RecipeParserTest {
                     result = mapOf(Material("copper-plate") to 1.0),
                     time = 3.2,
                     category = Category.SMELTING,
-                    subgroup = Subgroup()
+                    subgroup = Subgroup(),
                 )
             ),
             parse(
@@ -39,7 +39,7 @@ class RecipeParserTest {
                 result = "copper-plate"
                 }}
                 """
-            )
+            ),
         )
 
     @Test
@@ -52,7 +52,7 @@ class RecipeParserTest {
                     result = mapOf(Material("copper-plate") to 1.0),
                     time = 3.2,
                     category = Category.SMELTING,
-                    subgroup = Subgroup()
+                    subgroup = Subgroup(),
                 )
             ),
             parse(
@@ -66,7 +66,7 @@ class RecipeParserTest {
                 result = "copper-plate"
                 }})
                 """
-            )
+            ),
         )
 
     @Test
@@ -80,7 +80,7 @@ class RecipeParserTest {
                         mapOf(Material("uranium-235") to 0.007, Material("uranium-238") to 0.993),
                     time = 12.0,
                     category = Category.CENTRIFUGING,
-                    subgroup = Subgroup("raw-material")
+                    subgroup = Subgroup("raw-material"),
                 )
             ),
             parse(
@@ -111,7 +111,7 @@ class RecipeParserTest {
                 }
               }}
               """
-            )
+            ),
         )
 
     @Test
@@ -124,7 +124,7 @@ class RecipeParserTest {
                     result = mapOf(Material("iron-gear-wheel") to 1.0),
                     time = 0.5,
                     category = Category.CRAFTING,
-                    subgroup = Subgroup()
+                    subgroup = Subgroup(),
                 )
             ),
             parse(
@@ -144,7 +144,7 @@ class RecipeParserTest {
                 }
                 }}
                 """
-            )
+            ),
         )
 
     @Test
@@ -157,7 +157,7 @@ class RecipeParserTest {
                     result = mapOf(Material("iron-gear-wheel") to 1.0),
                     time = 0.5,
                     category = Category.CRAFTING,
-                    subgroup = Subgroup()
+                    subgroup = Subgroup(),
                 )
             ),
             parse(
@@ -177,8 +177,8 @@ class RecipeParserTest {
                 }
                 }}
                 """,
-                mode = Mode.EXPENSINVE
-            )
+                mode = Mode.EXPENSINVE,
+            ),
         )
 
     @Test fun parseAllRecipes() = assertTrue(parse(loadRecipe()).isNotEmpty())

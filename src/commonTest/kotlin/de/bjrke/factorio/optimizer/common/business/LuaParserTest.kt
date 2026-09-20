@@ -46,9 +46,9 @@ class LuaParserTest {
                     LuaString("xxx"),
                     LuaNumber(1.0),
                     LuaBoolean(true),
-                    LuaTableEntry("foo", LuaString("bar"))
+                    LuaTableEntry("foo", LuaString("bar")),
                 ),
-            "{ 1. }" to listOf(LuaNumber(1.0))
+            "{ 1. }" to listOf(LuaNumber(1.0)),
         ) { (s, expected) ->
             assertContentEquals(expected, parseLua(s).elements)
         }
@@ -62,7 +62,7 @@ class LuaParserTest {
             "{   0.1.2  }",
             "{   fals  }",
             "{  foo foo = \"bar\"  }",
-            "{   FALSE  }"
+            "{   FALSE  }",
         ) {
             assertFailsWith<UnexpectedTokenException> { parseLua(it) }
         }

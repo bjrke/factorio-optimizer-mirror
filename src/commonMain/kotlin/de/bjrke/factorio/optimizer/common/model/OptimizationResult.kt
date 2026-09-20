@@ -6,7 +6,7 @@ data class FactoryProduction(
     val recipe: Recipe,
     val factory: Factory,
     val amount: Double = 0.0,
-    val level: Int
+    val level: Int,
 ) {
     operator fun plus(amount: Double) =
         FactoryProduction(recipe, factory, this.amount + amount, this.level)
@@ -22,7 +22,7 @@ data class OptimizationResult(
     val target: Material,
     val recipe: Recipe,
     // TODO key should be a recipe
-    val factories: Map<Material, FactoryProduction>
+    val factories: Map<Material, FactoryProduction>,
 )
 
 val factoryProductionComparator =
@@ -30,5 +30,5 @@ val factoryProductionComparator =
         { max(it.value.recipe.ingredients.size, it.value.recipe.result.size) },
         { it.value.level },
         { it.value.factory },
-        { it.value.recipe.name }
+        { it.value.recipe.name },
     )

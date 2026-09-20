@@ -19,11 +19,11 @@ private fun allSciencePacks(material: (String) -> Material) =
                 material("military-science-pack") to 1.0,
                 material("production-science-pack") to 1.0,
                 material(SPACE_SCIENCE_PACK) to 1.0,
-                material("utility-science-pack") to 1.0
+                material("utility-science-pack") to 1.0,
             ),
         result = mapOf(material(ALL_SCIENCE_PACKS) to 1.0),
         time = 1.0,
-        category = Category.SCIENCE_LAB
+        category = Category.SCIENCE_LAB,
     )
 
 private fun spaceSciencePack(material: (String) -> Material) =
@@ -32,7 +32,7 @@ private fun spaceSciencePack(material: (String) -> Material) =
         ingredients = mapOf(material("satellite") to 1.0, material("rocket-part") to 100.0),
         result = mapOf(material(SPACE_SCIENCE_PACK) to 1000.0),
         time = 1.0,
-        category = Category.ROCKET_BUILDING
+        category = Category.ROCKET_BUILDING,
     )
 
 fun defaultRecipes(material: (String) -> Material) =

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Factorio-Optimizer is a Kotlin Multiplatform (Gradle 8.5, Kotlin 2.0.21) app that optimizes Factorio factory layouts. It compiles to a React web app (JS) and a CLI (JVM).
+Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app that optimizes Factorio factory layouts. It compiles to a React web app (JS) and a CLI (JVM).
 
 ## Commands
 
@@ -12,7 +12,7 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 8.5, Kotlin 2.0.21) app tha
 
 ## Prerequisites
 
-- JDK 17 is required. `gradle.properties` sets `org.gradle.java.installations.auto-download=false`, so a local JDK 17 must exist; otherwise the build fails with a cryptic error (just the installed version string). CI uses the `gradle:8.5-jdk17` image.
+- JDK 25 is required. `gradle.properties` sets `org.gradle.java.installations.auto-download=false`, so a local JDK 25 must exist; otherwise the build fails with a cryptic error (just the installed version string). CI uses the `gradle:9.7.1-jdk25` image.
 
 ## Code layout (Kotlin Multiplatform)
 

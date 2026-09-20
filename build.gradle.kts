@@ -12,30 +12,28 @@ version = "1.0"
 repositories { mavenCentral() }
 
 kotlin {
-    jvmToolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
+    jvmToolchain { languageVersion.set(JavaLanguageVersion.of(25)) }
 
-    js(IR) {
+    js {
         binaries.executable()
         browser { commonWebpackConfig { cssSupport { enabled.set(true) } } }
     }
 
     jvm {
-        withJava()
-
         compilations {
             val main = getByName("main")
             tasks.register<Jar>("buildFatJar") {
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-                dependsOn(tasks.build)
+                dependsOn(main.compileAllTaskName)
                 manifest {
                     attributes["Main-Class"] = "de.bjrke.factorio.optimizer.jvm.CliOptimizerKt"
                 }
                 from(
-                    configurations.getByName("runtimeClasspath").map {
+                    main.runtimeDependencyFiles.map {
                         if (it.isDirectory) it else zipTree(it)
                     },
                     main.output.classesDirs,
-                    main.output.resourcesDir
+                    main.output.resourcesDir,
                 )
                 archiveBaseName.set(project.name)
             }
@@ -67,7 +65,7 @@ tasks.named<Test>("jvmTest") {
     reports { html.required.set(true) }
 }
 
-task("run", JavaExec::class) {
+tasks.register<JavaExec>("run") {
     mainClass.set("de.bjrke.factorio.optimizer.jvm.CliOptimizerKt")
     kotlin {
         val main = targets["jvm"].compilations["main"]
@@ -90,7 +88,7 @@ val factorioDir by lazy {
 }
 
 val copyImages =
-    task("copyImages", Copy::class) {
+    tasks.register<Copy>("copyImages") {
         from(fileTree("$factorioDir/data/base/graphics") { include("icons/**/*.png") }.files)
 
         duplicatesStrategy = DuplicatesStrategy.WARN
@@ -103,7 +101,7 @@ val copyImages =
         }
     }
 
-task("optimizeImages", Exec::class) {
+tasks.register<Exec>("optimizeImages") {
     dependsOn(copyImages)
     commandLine = listOf("sh")
 
@@ -119,7 +117,7 @@ task("optimizeImages", Exec::class) {
             .byteInputStream()
 }
 
-task("copyRecipes", Copy::class) {
+tasks.register<Copy>("copyRecipes") {
     from(file("$factorioDir/data/base/prototypes/recipe.lua"))
     into("src/commonMain/resources/recipes")
 }

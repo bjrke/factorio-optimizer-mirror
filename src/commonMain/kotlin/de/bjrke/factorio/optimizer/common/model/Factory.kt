@@ -10,7 +10,7 @@ enum class Factory(
     val code: Char?,
     val identifier: String,
     val categories: Set<Category>,
-    val speed: Double = 1.0
+    val speed: Double = 1.0,
 ) {
     ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
     ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
@@ -23,7 +23,7 @@ enum class Factory(
     STEEL_FURNACE('s', "steel-furnace", smelterCategories, 2.0),
     ELECTRIC_FURNACE('e', "electric-furnace", smelterCategories, 2.0),
     SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
-    NO_FACTORY(null, "compilatron-chest", setOf())
+    NO_FACTORY(null, "compilatron-chest", setOf()),
 }
 
 object Factories {

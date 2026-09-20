@@ -28,7 +28,7 @@ fun optimize(
                     result = mapOf(target to 1.0),
                     time = 1.0,
                     subgroup = Subgroup(),
-                    category = Category.NO_CATEGORY
+                    category = Category.NO_CATEGORY,
                 )
 
         val factory = findFactory(factories, recipe) ?: Factory.NO_FACTORY
@@ -39,7 +39,7 @@ fun optimize(
             recipe: Recipe,
             factory: Factory,
             amount: Double,
-            level: Int
+            level: Int,
         ) {
             factoryProductions[material] =
                 (factoryProductions[material]
@@ -63,7 +63,7 @@ fun optimize(
                         nestedFactories.recipe,
                         nestedFactories.factory,
                         requirement * nestedFactories.amount,
-                        nestedFactories.level
+                        nestedFactories.level,
                     )
                 }
             }
@@ -75,15 +75,16 @@ fun optimize(
             recipe,
             factory,
             outputTime / outputAmount,
-            1 + (factoryProductions.values.maxOfOrNull(FactoryProduction::level) ?: 0)
+            1 + (factoryProductions.values.maxOfOrNull(FactoryProduction::level) ?: 0),
         )
 
         return OptimizationResult(
             target = target,
             factories = factoryProductions.toMap(),
-            recipe = recipe
+            recipe = recipe,
         )
     }
 
-private fun findFactory(factories: Set<Factory>, recipe: Recipe) =
-    factories.find { it.categories.contains(recipe.category) }
+private fun findFactory(factories: Set<Factory>, recipe: Recipe) = factories.find {
+    it.categories.contains(recipe.category)
+}

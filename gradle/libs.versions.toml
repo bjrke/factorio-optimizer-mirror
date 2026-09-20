@@ -1,10 +1,10 @@
 [plugins]
 #https://plugins.gradle.org/plugin/com.diffplug.gradle.spotless
-spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
+spotless = { id = "com.diffplug.spotless", version = "8.10.2" }
 
 [versions]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
-kotlin = "2.0.21"
+kotlin = "2.4.20"
 [libraries]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
 kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "1.0.0-pre.839" }

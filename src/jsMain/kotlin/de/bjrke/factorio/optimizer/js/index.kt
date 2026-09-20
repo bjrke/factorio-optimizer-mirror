@@ -74,7 +74,7 @@ fun main() {
                         jso {
                             path = "*"
                             element = createElement<Props> { RouterBasedParams {} }
-                        }
+                        },
                     )
             )
 

@@ -19,8 +19,7 @@ external interface MaterialSelectorDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
 }
 
-external interface MaterialSelectorProps :
-    MaterialSelectorStateProps, MaterialSelectorDispatchProps
+external interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
 private fun RBuilder.materialSelector(props: MaterialSelectorProps) {
     select {

@@ -15,7 +15,7 @@ class UtilsKtTest {
             1.5 to 1.5,
             100.12345 to 100.1,
             9876.5432 to 9877.0,
-            123456789.1234 to 123456789.0
+            123456789.1234 to 123456789.0,
         ) { (from, expected) ->
             assertEquals(expected, superRound(from))
         }

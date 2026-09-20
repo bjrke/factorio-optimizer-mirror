@@ -32,7 +32,7 @@ enum class Category(val identifier: String) {
     SMELTING("smelting"),
     NO_CATEGORY("no-category"),
     /** custom category for dummy recipe to consume all science-packs */
-    SCIENCE_LAB("science-lab")
+    SCIENCE_LAB("science-lab"),
 }
 
 private val categoryMap = Category.values().associateBy { it.identifier }
