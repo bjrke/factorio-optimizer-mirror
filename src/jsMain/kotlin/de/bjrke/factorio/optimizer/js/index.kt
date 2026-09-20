@@ -12,16 +12,22 @@ import de.bjrke.factorio.optimizer.common.model.toUrlParam
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
 import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
-import js.objects.jso
 import react.Props
 import react.createElement
 import react.dom.client.createRoot
 import react.dom.div
 import react.fc
-import react.router.RouterProvider
-import react.router.dom.createHashRouter
-import react.router.useNavigate
-import react.router.useParams
+import tanstack.history.createHashHistory
+import tanstack.react.router.RouteOptions
+import tanstack.react.router.RouterOptions
+import tanstack.react.router.RouterProvider
+import tanstack.react.router.createRootRoute
+import tanstack.react.router.createRoute
+import tanstack.react.router.createRouter
+import tanstack.react.router.useNavigate
+import tanstack.react.router.useParams
+import tanstack.router.core.ParamName
+import tanstack.router.core.RoutePath
 import web.dom.document
 import web.events.EventHandler
 import web.window.window
@@ -32,9 +38,10 @@ class FactorioOptimizerProps {
     private val params = useParams()
     private val navigate = useNavigate()
 
-    var normalizeTarget = params["normalizeTarget"]?.toDouble() ?: 1.0
-    var target = Material.of(params["target"] ?: ALL_SCIENCE_PACKS)
-    var factories = params["factories"]?.let { factorySetFromUrl(it) } ?: defaultFactories
+    var normalizeTarget = params[ParamName("normalizeTarget")]?.toDouble() ?: 1.0
+    var target = Material.of(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
+    var factories =
+        params[ParamName("factories")]?.let { factorySetFromUrl(it) } ?: defaultFactories
 
     val parsedRecipes = defaultRecipes
     val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
@@ -43,7 +50,9 @@ class FactorioOptimizerProps {
         "/${superRound(normalizeTarget, 1000000.0)}/${target.name}/${factories.toUrlParam()}"
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
-        navigate(apply(change).createNewUrl())
+        navigate {
+            to = RoutePath(apply(change).createNewUrl())
+        }
     }
 }
 
@@ -63,22 +72,37 @@ fun main() {
         val root = document.createElement("div")
         document.body.prepend(root)
 
-        val hashRouter =
-            createHashRouter(
-                routes =
-                    arrayOf(
-                        jso {
-                            path = "/:normalizeTarget/:target/:factories"
-                            element = createElement<Props> { RouterBasedParams {} }
-                        },
-                        jso {
-                            path = "*"
-                            element = createElement<Props> { RouterBasedParams {} }
-                        },
-                    )
+        val rootRoute = createRootRoute()
+
+        val indexRoute =
+            createRoute(
+                RouteOptions(
+                    getParentRoute = { rootRoute },
+                    path = RoutePath("/\$normalizeTarget/\$target/\$factories"),
+                    component = RouterBasedParams,
+                )
             )
 
-        val app = fc<Props> { RouterProvider { attrs.router = hashRouter } }
+        val catchAllRoute =
+            createRoute(
+                RouteOptions(
+                    getParentRoute = { rootRoute },
+                    path = RoutePath("\$"),
+                    component = RouterBasedParams,
+                )
+            )
+
+        rootRoute.addChildren(arrayOf(indexRoute, catchAllRoute))
+
+        val router =
+            createRouter(
+                RouterOptions(
+                    routeTree = rootRoute,
+                    history = createHashHistory(),
+                )
+            )
+
+        val app = fc<Props> { RouterProvider { attrs.router = router } }
 
         createRoot(root).render(createElement<Props> { app() })
     }
