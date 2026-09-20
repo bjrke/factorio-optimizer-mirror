@@ -35,6 +35,6 @@ enum class Category(val identifier: String) {
     SCIENCE_LAB("science-lab"),
 }
 
-private val categoryMap = Category.values().associateBy { it.identifier }
+private val categoryMap = Category.entries.associateBy { it.identifier }
 
 fun category(identifier: String) = categoryMap[identifier]

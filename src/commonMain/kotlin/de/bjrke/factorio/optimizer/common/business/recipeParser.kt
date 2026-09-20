@@ -1,10 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.common.model.Subgroup
-import de.bjrke.factorio.optimizer.common.model.category
+import de.bjrke.factorio.optimizer.common.model.*
 
 private open class WrappedTable(val table: LuaTable) {
 
@@ -192,8 +188,6 @@ fun parseRecipes(
             .sortedBy(Recipe::name)
             .toList()
 
-    return ParsedRecipe(
-        recipes = recipes,
-        materials = materialsBuilder.values.sortedBy(Material::name).toList(),
-    )
+    val materials = materialsBuilder.values.sortedBy(Material::name).toList()
+    return ParsedRecipe(materials, recipes)
 }

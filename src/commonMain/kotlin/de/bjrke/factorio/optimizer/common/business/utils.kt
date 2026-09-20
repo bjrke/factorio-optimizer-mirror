@@ -2,7 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 import kotlin.math.round
 
-fun superRound(d: Double, to: Double = 1000.0): Double =
+fun superRound(d: Double, to: Double = 1000.0) =
     when {
         d < 1.0 -> round(d * to) / to
         d > to -> round(d)

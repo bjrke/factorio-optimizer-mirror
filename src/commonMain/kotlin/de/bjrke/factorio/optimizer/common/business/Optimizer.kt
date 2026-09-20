@@ -1,26 +1,24 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
-import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.common.model.Subgroup
 
-fun optimize(
-    target: Material,
-    parsedRecipe: ParsedRecipe = parseRecipes(),
-    factories: Set<Factory> = defaultFactories,
-    cache: MutableMap<Material, OptimizationResult> = mutableMapOf(),
-    visited: MutableSet<Material> = mutableSetOf(),
-): OptimizationResult =
-    cache.getOrPut(target) {
+class Optimizer(
+    private val parsedRecipe: ParsedRecipe = parseRecipes(),
+    private val factories: Set<Factory> = defaultFactories,
+) {
+    private val visited = mutableSetOf<Material>()
+
+    private val cache = mutableMapOf<Material, OptimizationResult>()
+
+    private fun findFactory(recipe: Recipe) = factories.find {
+        it.categories.contains(recipe.category)
+    }
+
+    private fun uncached(target: Material): OptimizationResult {
         val recipe =
             parsedRecipe.recipes
-                .filter { findFactory(factories, it) != null }
+                .filter { findFactory(it) != null }
                 .firstOrNull { it.result.containsKey(target) }
                 ?: Recipe(
                     name = target.name,
@@ -31,9 +29,10 @@ fun optimize(
                     category = Category.NO_CATEGORY,
                 )
 
-        val factory = findFactory(factories, recipe) ?: Factory.NO_FACTORY
+        val factory = findFactory(recipe) ?: Factory.NO_FACTORY
 
         val factoryProductions = mutableMapOf<Material, FactoryProduction>()
+
         fun addFactory(
             material: Material,
             recipe: Recipe,
@@ -41,10 +40,9 @@ fun optimize(
             amount: Double,
             level: Int,
         ) {
-            factoryProductions[material] =
-                (factoryProductions[material]
-                    ?: FactoryProduction(recipe = recipe, factory = factory, level = level)) +
-                    amount
+            val current =
+                factoryProductions[material] ?: FactoryProduction(recipe, factory, 0.0, level)
+            factoryProductions[material] = current + amount
         }
 
         val add = visited.add(target)
@@ -55,7 +53,7 @@ fun optimize(
         if (add) { // cycle protection
             recipe.ingredients.forEach { (material, amount) ->
                 val requirement = amount / outputAmount
-                val nested = optimize(material, parsedRecipe, factories, cache, visited)
+                val nested = this[material]
 
                 nested.factories.forEach { (nestedMaterial, nestedFactories) ->
                     addFactory(
@@ -85,6 +83,8 @@ fun optimize(
         )
     }
 
-private fun findFactory(factories: Set<Factory>, recipe: Recipe) = factories.find {
-    it.categories.contains(recipe.category)
+    operator fun get(target: Material) =
+        cache.getOrPut(target) {
+            uncached(target)
+        }
 }

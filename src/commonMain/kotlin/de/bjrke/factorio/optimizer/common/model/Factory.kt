@@ -28,7 +28,7 @@ enum class Factory(
 
 object Factories {
 
-    private val allFactories = Factory.values().toSet()
+    private val allFactories = Factory.entries.toSet()
     private val smelters = allFactories.filter { it.categories == smelterCategories }.toSet()
     private val assemblers =
         allFactories.filter { it.categories.contains(Category.CRAFTING) }.toSet()
@@ -38,9 +38,8 @@ object Factories {
         setOf(Factory.ASSEMBLING_MACHINE_3, Factory.ELECTRIC_FURNACE) +
             alwaysEnabledFactories +
             tech
-    val selectableFactories = Factory.values().toList() - alwaysEnabledFactories
-    private val factoriesByCode =
-        Factory.values().filter { it.code != null }.associateBy { it.code }
+    val selectableFactories = Factory.entries - alwaysEnabledFactories
+    private val factoriesByCode = Factory.entries.filter { it.code != null }.associateBy { it.code }
 
     fun Set<Factory>.removeFactory(factory: Factory) =
         when (factory) {

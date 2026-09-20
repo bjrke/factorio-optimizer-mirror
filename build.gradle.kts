@@ -23,6 +23,7 @@ kotlin {
         compilations {
             val main = getByName("main")
             tasks.register<Jar>("buildFatJar") {
+                description = "builds the fat jar containing the CLI version of the optimizer"
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 dependsOn(main.compileAllTaskName)
                 manifest {
@@ -43,7 +44,7 @@ kotlin {
     sourceSets {
         commonTest { dependencies { implementation(kotlin("test")) } }
 
-        getByName("jsMain") {
+        jsMain {
             dependencies {
                 implementation(dependencies.platform(libs.kotlin.wrappers.bom))
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled-next
@@ -53,9 +54,9 @@ kotlin {
             }
         }
 
-        getByName("jsTest") { dependencies { implementation(kotlin("test-js")) } }
+        jsTest { dependencies { implementation(kotlin("test-js")) } }
 
-        getByName("jvmTest") { dependencies { implementation(kotlin("test")) } }
+        jvmTest { dependencies { implementation(kotlin("test")) } }
     }
 }
 
@@ -66,6 +67,7 @@ tasks.named<Test>("jvmTest") {
 }
 
 tasks.register<JavaExec>("run") {
+    description = "run the CLI version of the factorio optimizer"
     mainClass.set("de.bjrke.factorio.optimizer.jvm.CliOptimizerKt")
     kotlin {
         val main = targets["jvm"].compilations["main"]
@@ -89,6 +91,7 @@ val factorioDir by lazy {
 
 val copyImages =
     tasks.register<Copy>("copyImages") {
+        description = "copies the images from the factorio steam installation"
         from(fileTree("$factorioDir/data/base/graphics") { include("icons/**/*.png") }.files)
 
         duplicatesStrategy = DuplicatesStrategy.WARN
@@ -102,6 +105,7 @@ val copyImages =
     }
 
 tasks.register<Exec>("optimizeImages") {
+    description = "optimzes the freshly copied images"
     dependsOn(copyImages)
     commandLine = listOf("sh")
 
@@ -118,6 +122,7 @@ tasks.register<Exec>("optimizeImages") {
 }
 
 tasks.register<Copy>("copyRecipes") {
+    description = "copies the reciepes from the factorio steam installation"
     from(file("$factorioDir/data/base/prototypes/recipe.lua"))
     into("src/commonMain/resources/recipes")
 }

@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.business.optimize
+import de.bjrke.factorio.optimizer.common.business.Optimizer
 import de.bjrke.factorio.optimizer.common.business.parseRecipes
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
@@ -37,7 +37,7 @@ class FactorioOptimizerProps {
     var factories = params["factories"]?.let { factorySetFromUrl(it) } ?: defaultFactories
 
     val parsedRecipes = defaultRecipes
-    val optimizationResult: OptimizationResult = optimize(target, parsedRecipes, factories)
+    val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
 
     private fun createNewUrl(): String =
         "/${superRound(normalizeTarget, 1000000.0)}/${target.name}/${factories.toUrlParam()}"
