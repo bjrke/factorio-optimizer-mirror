@@ -7,4 +7,4 @@ spotless = { id = "com.diffplug.spotless", version = "8.10.2" }
 kotlin = "2.4.20"
 [libraries]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
-kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "2026.2.18" }
+kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "2026.9.2" }

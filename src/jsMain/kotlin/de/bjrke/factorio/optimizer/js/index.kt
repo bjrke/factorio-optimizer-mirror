@@ -12,11 +12,11 @@ import de.bjrke.factorio.optimizer.common.model.toUrlParam
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
 import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
+import react.FC
 import react.Props
-import react.createElement
+import react.create
 import react.dom.client.createRoot
-import react.dom.div
-import react.fc
+import react.dom.html.ReactHTML.div
 import tanstack.history.createHashHistory
 import tanstack.react.router.RouteOptions
 import tanstack.react.router.RouterOptions
@@ -57,7 +57,7 @@ class FactorioOptimizerProps {
 }
 
 val RouterBasedParams =
-    fc<Props> {
+    FC<Props> {
         val props = FactorioOptimizerProps()
         div {
             div { urlMaterialSelector(props) }
@@ -94,7 +94,7 @@ fun main() {
 
         rootRoute.addChildren(arrayOf(indexRoute, catchAllRoute))
 
-        val router =
+        val appRouter =
             createRouter(
                 RouterOptions(
                     routeTree = rootRoute,
@@ -102,8 +102,8 @@ fun main() {
                 )
             )
 
-        val app = fc<Props> { RouterProvider { attrs.router = router } }
+        val app = FC { RouterProvider { router = appRouter } }
 
-        createRoot(root).render(createElement<Props> { app() })
+        createRoot(root).render(app.create())
     }
 }

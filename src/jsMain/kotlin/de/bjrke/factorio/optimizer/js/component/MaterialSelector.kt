@@ -2,13 +2,11 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
-import kotlinx.html.js.onChangeFunction
-import org.w3c.dom.HTMLSelectElement
+import react.ChildrenBuilder
+import react.FC
 import react.Props
-import react.RBuilder
-import react.dom.option
-import react.dom.select
-import react.fc
+import react.dom.html.ReactHTML.option
+import react.dom.html.ReactHTML.select
 
 external interface MaterialSelectorStateProps : Props {
     var material: Material
@@ -21,27 +19,26 @@ external interface MaterialSelectorDispatchProps : Props {
 
 external interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
-private fun RBuilder.materialSelector(props: MaterialSelectorProps) {
-    select {
-        attrs.onChangeFunction = { event ->
-            props.changeMaterial(Material.of((event.target as HTMLSelectElement).value))
-        }
-        attrs.value = props.material.name
-        for (m in props.availableMaterials) {
-            option {
-                attrs.value = m.name
-                +m.name
+private val materialSelector =
+    FC<MaterialSelectorProps>("materialSelector") { props ->
+        select {
+            value = props.material.name
+            onChange = {
+                props.changeMaterial(Material.of(it.target.value))
+            }
+            for (m in props.availableMaterials) {
+                option {
+                    value = m.name
+                    +m.name
+                }
             }
         }
     }
-}
 
-fun RBuilder.urlMaterialSelector(props: FactorioOptimizerProps) {
-    child(fc(RBuilder::materialSelector)) {
-        attrs {
-            availableMaterials = props.parsedRecipes.materials
-            material = props.target
-            changeMaterial = { props.changeUrl { target = it } }
-        }
+fun ChildrenBuilder.urlMaterialSelector(props: FactorioOptimizerProps) {
+    materialSelector {
+        availableMaterials = props.parsedRecipes.materials
+        material = props.target
+        changeMaterial = { props.changeUrl { target = it } }
     }
 }

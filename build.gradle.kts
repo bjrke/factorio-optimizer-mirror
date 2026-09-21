@@ -47,12 +47,10 @@ kotlin {
         jsMain {
             dependencies {
                 implementation(dependencies.platform(libs.kotlin.wrappers.bom))
-                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-styled-next
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-styled-next")
+                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-emotion-react
+                implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion-react")
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-tanstack-react-router
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-tanstack-react-router")
-                // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-tanstack-history
-                implementation("org.jetbrains.kotlin-wrappers:kotlin-tanstack-history")
             }
         }
 
