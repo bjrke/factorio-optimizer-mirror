@@ -6,13 +6,13 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 
 - `./gradlew jsBrowserDevelopmentRun --continuous` / `jsBrowserProductionRun --continuous` — dev server for the web UI
 - `./gradlew jvmTest` — run kotlin-test suites (commonTest + jvmTest); add `--tests "*RecipeParserTest*"` to filter
-- `./gradlew check` — formatting check + all tests. CI runs `gradle --no-daemon clean check jsBrowserDistribution -x jsBrowserTest` (jsBrowserTest is excluded; it needs a browser)
+- `./gradlew check` — formatting check + all tests. CI runs `gradle --no-daemon clean check jsBrowserDistribution`, which includes `jsBrowserTest` (the JS web tests run in a real headless Chrome)
 - `./gradlew spotlessApply` — fix formatting (Spotless/ktfmt `kotlinlangStyle`; covers `src/**/*.kt` and `build.gradle.kts`)
 - `./gradlew run` — run the CLI (`CliOptimizerKt`); `./gradlew buildFatJar` produces a runnable fat jar
 
 ## Prerequisites
 
-- JDK 25 is required. `gradle.properties` sets `org.gradle.java.installations.auto-download=false`, so a local JDK 25 must exist; otherwise the build fails with a cryptic error (just the installed version string). CI uses the `gradle:9.7.1-jdk25` image.
+- JDK 25 is required. `gradle.properties` sets `org.gradle.java.installations.auto-download=false`, so a local JDK 25 must exist; otherwise the build fails with a cryptic error (just the installed version string). CI uses a custom image built from `ci/Dockerfile` (based on `gradle:9.7.1-jdk25` + Google Chrome for `jsBrowserTest`), pushed to the project's GitLab Container Registry.
 
 ## Code layout (Kotlin Multiplatform)
 
