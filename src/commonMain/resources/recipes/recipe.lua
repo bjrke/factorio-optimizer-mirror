@@ -309,6 +309,7 @@ data:extend
     category = "chemistry",
     energy_required = 1,
     enabled = false,
+    auto_recycle = false,
     ingredients =
     {
       {type = "fluid", name = "petroleum-gas", amount = 20},
@@ -415,6 +416,7 @@ data:extend
     category = "chemistry",
     energy_required = 1,
     enabled = false,
+    auto_recycle = false,
     ingredients =
     {
       {type = "fluid", name = "water", amount = 30},
@@ -1174,14 +1176,14 @@ data:extend
     type = "recipe",
     name = "piercing-rounds-magazine",
     enabled = false,
-    energy_required = 3,
+    energy_required = 6,
     ingredients =
     {
-      {type = "item", name = "firearm-magazine", amount = 1},
+      {type = "item", name = "firearm-magazine", amount = 2},
       {type = "item", name = "steel-plate", amount = 1},
-      {type = "item", name = "copper-plate", amount = 5}
+      {type = "item", name = "copper-plate", amount = 2}
     },
-    results = {{type="item", name="piercing-rounds-magazine", amount=1}}
+    results = {{type="item", name="piercing-rounds-magazine", amount = 2}}
   },
   {
     type = "recipe",
@@ -1308,6 +1310,7 @@ data:extend
     name = "landfill",
     energy_required = 0.5,
     enabled = false,
+    auto_recycle = false,
     category = "crafting",
     ingredients =
     {
@@ -1416,6 +1419,7 @@ data:extend
     type = "recipe",
     name = "copper-plate",
     category = "smelting",
+    auto_recycle = false,
     energy_required = 3.2,
     ingredients = {{type = "item", name = "copper-ore", amount = 1}},
     results = {{type="item", name="copper-plate", amount=1}},
@@ -1425,6 +1429,7 @@ data:extend
     type = "recipe",
     name = "iron-plate",
     category = "smelting",
+    auto_recycle = false,
     energy_required = 3.2,
     ingredients = {{type = "item", name = "iron-ore", amount = 1}},
     results = {{type="item", name="iron-plate", amount=1}},
@@ -2440,6 +2445,7 @@ data:extend
     energy_required = 3,
     enabled = false,
     hide_from_player_crafting = true,
+    auto_recycle = false,
     category = "rocket-building",
     ingredients =
     {
@@ -2503,6 +2509,7 @@ data:extend
     name = "uranium-processing",
     energy_required = 12,
     enabled = false,
+    auto_recycle = false,
     category = "centrifuging",
     ingredients = {{type = "item", name = "uranium-ore", amount = 10}},
     icon = "__base__/graphics/icons/uranium-processing.png",
@@ -2530,6 +2537,7 @@ data:extend
     name = "kovarex-enrichment-process",
     energy_required = 60,
     enabled = false,
+    auto_recycle = false,
     category = "centrifuging",
     icon = "__base__/graphics/icons/kovarex-enrichment-process.png",
     subgroup = "uranium-processing",
@@ -2566,6 +2574,7 @@ data:extend
     name = "nuclear-fuel-reprocessing",
     energy_required = 60,
     enabled = false,
+    auto_recycle = false,
     category = "centrifuging",
     ingredients = {{type = "item", name = "depleted-uranium-fuel-cell", amount = 5}},
     icon = "__base__/graphics/icons/nuclear-fuel-reprocessing.png",
@@ -2581,6 +2590,7 @@ data:extend
     name = "uranium-fuel-cell",
     energy_required = 10,
     enabled = false,
+    auto_recycle = false,
     ingredients =
     {
       {type = "item", name = "iron-plate", amount = 10},
