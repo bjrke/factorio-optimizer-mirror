@@ -2,52 +2,17 @@ cache:
   paths:
     - .gradle
 
-build-ci-image:
-  stage: build
-  image: docker:27
-  services:
-    - docker:27-dind
-  variables:
-    DOCKER_TLS_CERTDIR: /certs
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  script:
-    - docker build --pull -t $CI_REGISTRY_IMAGE:latest ci/
-    - docker push $CI_REGISTRY_IMAGE:latest
-  after_script:
-    - docker logout $CI_REGISTRY
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      changes:
-        - ci/Dockerfile
-    - when: manual
-      allow_failure: true
-
-.test-base:
+test:
   stage: test
-  image: $CI_REGISTRY_IMAGE:latest
+  image: registry.gitlab.com/bjrke/docker-gradle-chrome:latest
   variables:
     GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   script:
-    - gradle --no-daemon clean check jsBrowserDistribution -x jsBrowserTest
+    - gradle --no-daemon clean check jsBrowserDistribution
   artifacts:
     expire_in: 1 week
     paths:
       - build/dist/js/productionExecutable
-
-test:main:
-  extends: .test-base
-  needs:
-    - job: build-ci-image
-      optional: true
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-test:branch:
-  extends: .test-base
-  needs: []
-  rules:
-    - if: '$CI_COMMIT_BRANCH != "main"'
 
 pages:
   stage: deploy
