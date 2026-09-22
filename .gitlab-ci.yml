@@ -20,8 +20,7 @@ build-ci-image:
     - if: '$CI_COMMIT_BRANCH == "main"'
       changes:
         - ci/Dockerfile
-    - if: '$CI_COMMIT_BRANCH != "main"'
-      when: manual
+    - when: manual
       allow_failure: true
 
 .test-base:
