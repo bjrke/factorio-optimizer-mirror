@@ -23,6 +23,7 @@ kotlin {
         compilations {
             val main = getByName("main")
             tasks.register<Jar>("buildFatJar") {
+                group = "build"
                 description = "builds the fat jar containing the CLI version of the optimizer"
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 dependsOn(main.compileAllTaskName)
@@ -67,6 +68,7 @@ tasks.named<Test>("jvmTest") {
 }
 
 tasks.register<JavaExec>("run") {
+    group = "run"
     description = "run the CLI version of the factorio optimizer"
     mainClass.set("de.bjrke.factorio.optimizer.jvm.CliOptimizerKt")
     kotlin {
@@ -91,6 +93,7 @@ val factorioDir by lazy {
 
 val copyImages =
     tasks.register<Copy>("copyImages") {
+        group = "factorio"
         description = "copies the images from the factorio steam installation"
         from(fileTree("$factorioDir/data/base/graphics") { include("icons/**/*.png") }.files)
 
@@ -105,7 +108,8 @@ val copyImages =
     }
 
 tasks.register<Exec>("optimizeImages") {
-    description = "optimzes the freshly copied images"
+    group = "factorio"
+    description = "optimizes the freshly copied images"
     dependsOn(copyImages)
     commandLine = listOf("sh")
 
@@ -122,7 +126,8 @@ tasks.register<Exec>("optimizeImages") {
 }
 
 tasks.register<Copy>("copyRecipes") {
-    description = "copies the reciepes from the factorio steam installation"
+    group = "factorio"
+    description = "copies the recipes from the factorio steam installation"
     from(file("$factorioDir/data/base/prototypes/recipe.lua"))
     into("src/commonMain/resources/recipes")
 }
