@@ -25,10 +25,12 @@ The same `commonMain` code compiles to both targets, so keep it platform-neutral
 
 ## Git workflow
 
-- When on `main`, branch off before making changes.
+- Before making changes, always ensure you are on a feature branch: if the
+  current branch is `main` (or not already a feature branch), branch off from
+  `main` first.
 - Branch names contain the author, e.g. `<author>/<topic>`.
-- Commit after the work is done. Headline is limited to 50 chars; the body
-  is wrapped at 72 chars.
+- Commit after the work is done (no explicit user request needed). Headline is
+  limited to 50 chars; the body is wrapped at 72 chars.
 
 ## Generated data — do not hand-edit
 

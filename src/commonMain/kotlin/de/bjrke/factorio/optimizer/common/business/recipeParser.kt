@@ -35,6 +35,11 @@ private open class WrappedTable(val table: LuaTable) {
     fun getTableList(field: String) =
         getAs(field) { table: LuaTable -> WrappedTable(table).getElementsAsTables() } ?: listOf()
 
+    fun getStringList(field: String) =
+        getAs(field) { table: LuaTable ->
+            table.elements.filterIsInstance<LuaString>().map(LuaString::s)
+        } ?: listOf()
+
     private inline fun <reified L, R> getAs(index: Int, f: (L) -> R) =
         this[index]?.let { it as? L }?.let(f)
 
@@ -82,7 +87,12 @@ private class NestedRecipe(val table: WrappedTable) {
                 RecipeResult(
                     name = result.getString("name") ?: continue,
                     amount = result.getNumber("amount") ?: DEFAULT_AMOUNT,
-                    probability = result.getNumber("probability") ?: DEFAULT_PROBABILITY,
+                    probability =
+                        result.getNumber("probability")
+                            ?: result.getTable("shared_probability")?.let {
+                                (it.getNumber("max") ?: 1.0) - (it.getNumber("min") ?: 0.0)
+                            }
+                            ?: DEFAULT_PROBABILITY,
                 )
             )
         }
@@ -136,7 +146,8 @@ fun parseRecipes(
         fun getEnergyRequired() =
             nestedRecipe?.getEnergyRequired() ?: thisRecipe.getEnergyRequired()
 
-        fun getCategory() = table.getString("category")
+        fun getCategory() =
+            table.getString("category") ?: table.getStringList("categories").firstOrNull()
     }
 
     val materialsBuilder = mutableMapOf<String, Material>()
@@ -155,6 +166,7 @@ fun parseRecipes(
                 for (luaRecipe in
                     WrappedTable(parseLua(s)).getElementsAsTables().map(::LuaRecipe)) {
                     if (luaRecipe.getType() != "recipe") continue
+                    if (luaRecipe.table.getBoolean("parameter") == true) continue
 
                     val subgroupName = luaRecipe.getSubgroup()
                     when (subgroupName) {

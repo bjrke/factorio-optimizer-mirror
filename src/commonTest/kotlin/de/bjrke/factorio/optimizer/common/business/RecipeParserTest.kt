@@ -115,6 +115,63 @@ class RecipeParserTest {
         )
 
     @Test
+    fun parseUraniumProcessingNewFormat() =
+        assertEquals(
+            listOf(
+                Recipe(
+                    name = "uranium-processing",
+                    ingredients = mapOf(Material("uranium-ore") to 10.0),
+                    result =
+                        mapOf(Material("uranium-235") to 0.007, Material("uranium-238") to 0.993),
+                    time = 12.0,
+                    category = Category.CENTRIFUGING,
+                    subgroup = Subgroup("uranium-processing"),
+                )
+            ),
+            parse(
+                """
+                {{
+                type = "recipe",
+                name = "uranium-processing",
+                energy_required = 12,
+                enabled = false,
+                categories = {"centrifuging"},
+                ingredients = {{type = "item", name = "uranium-ore", amount = 10}},
+                results =
+                {
+                  {
+                    type = "item",
+                    name = "uranium-235",
+                    shared_probability = { min = 0, max = 0.007 },
+                    amount = 1
+                  },
+                  {
+                    type = "item",
+                    name = "uranium-238",
+                    shared_probability = { min = 0.007, max = 1 },
+                    amount = 1
+                  }
+                },
+                subgroup = "uranium-processing"
+                }}
+                """
+            ),
+        )
+
+    @Test
+    fun parseParameterRecipeIsSkipped() =
+        assertTrue(
+            parse(
+                    """
+                    {
+                    {type = "recipe", name = "parameter-0", parameter = true, categories = {"parameters"}}
+                    }
+                    """
+                )
+                .isEmpty()
+        )
+
+    @Test
     fun parseIronGearWheelNormal() =
         assertEquals(
             listOf(
