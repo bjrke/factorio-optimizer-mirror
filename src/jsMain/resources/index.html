@@ -4,10 +4,19 @@
     <meta charset="UTF-8">
     <title>Factorio Optimizer</title>
     <link rel="icon" type="image/png" href="icons/assembling-machine-3.png">
+    <style>
+        html, body { height: 100%; margin: 0; }
+        body { display: flex; flex-direction: column; }
+        .app-root { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+        .app-layout { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+        .app-header { display: flex; align-items: center; flex-shrink: 0; }
+        .app-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+        .footer { flex-shrink: 0; }
+    </style>
 </head>
 <body>
     <script src="factorio-optimizer.js"></script>
-    <div>
+    <div class="footer">
         Open-Source: <a href="https://gitlab.com/bjrke/factorio-optimizer" target="_blank">gitlab.com/bjrke/factorio-optimizer</a> |
         License: <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache 2.0</a> |
         Icons and Recipes: ©<a href="https://www.factorio.com/game/about" target="_blank">Wube Software</a>

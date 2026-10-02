@@ -28,6 +28,7 @@ import tanstack.react.router.useNavigate
 import tanstack.react.router.useParams
 import tanstack.router.core.ParamName
 import tanstack.router.core.RoutePath
+import web.cssom.ClassName
 import web.dom.document
 import web.events.EventHandler
 import web.window.window
@@ -60,9 +61,16 @@ val RouterBasedParams =
     FC<Props> {
         val props = FactorioOptimizerProps()
         div {
-            div { urlMaterialSelector(props) }
-            div { urlFactorySelector(props) }
-            div { urlOptimizationResultPresenter(props) }
+            className = ClassName("app-layout")
+            div {
+                className = ClassName("app-header")
+                div { urlMaterialSelector(props) }
+                div { urlFactorySelector(props) }
+            }
+            div {
+                className = ClassName("app-content")
+                urlOptimizationResultPresenter(props)
+            }
         }
     }
 
@@ -70,6 +78,7 @@ fun main() {
 
     window.onload = EventHandler {
         val root = document.createElement("div")
+        root.className = ClassName("app-root")
         document.body.prepend(root)
 
         val rootRoute = createRootRoute()
