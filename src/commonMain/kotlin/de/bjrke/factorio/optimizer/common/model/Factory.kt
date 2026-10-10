@@ -15,9 +15,9 @@ enum class Factory(
     ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
     ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
     ASSEMBLING_MACHINE_3('3', "assembling-machine-3", assembler2Categories, 1.25),
-    OIL_REFINERY('o', "oil-refinery", setOf(Category.OIL_PROCESSING)),
-    CHEMICAL_PLANT('c', "chemical-plant", setOf(Category.CHEMISTRY)),
-    CENTRIFUGE('u', "centrifuge", setOf(Category.CENTRIFUGING)),
+    OIL_REFINERY(null, "oil-refinery", setOf(Category.OIL_PROCESSING)),
+    CHEMICAL_PLANT(null, "chemical-plant", setOf(Category.CHEMISTRY)),
+    CENTRIFUGE(null, "centrifuge", setOf(Category.CENTRIFUGING)),
     ROCKET_SILO('R', "rocket-silo", setOf(Category.ROCKET_BUILDING)),
     STONE_FURNACE('f', "stone-furnace", smelterCategories),
     STEEL_FURNACE('s', "steel-furnace", smelterCategories, 2.0),
@@ -26,9 +26,9 @@ enum class Factory(
     FOUNDRY('F', "foundry", setOf(Category.METALLURGY, Category.SMELTING), 2.0),
     CRYOGENIC_PLANT('C', "cryogenic-plant", setOf(Category.CRYOGENICS)),
     ELECTROMAGNETIC_PLANT('m', "electromagnetic-plant", setOf(Category.ELECTROMAGNETICS)),
-    CRUSHER('h', "crusher", setOf(Category.CRUSHING)),
+    CRUSHER(null, "crusher", setOf(Category.CRUSHING)),
     RECYCLER('r', "recycler", setOf(Category.RECYCLING)),
-    CAPTIVE_BITER_SPAWNER('p', "captive-biter-spawner", setOf(Category.CAPTIVE_SPAWNER_PROCESS)),
+    CAPTIVE_BITER_SPAWNER(null, "captive-biter-spawner", setOf(Category.CAPTIVE_SPAWNER_PROCESS)),
     BURNER_MINING_DRILL('B', "burner-mining-drill", setOf(Category.MINING_BASIC_SOLID), 0.25),
     ELECTRIC_MINING_DRILL('E', "electric-mining-drill", setOf(Category.MINING_BASIC_SOLID), 0.5),
     BIG_MINING_DRILL(
@@ -40,8 +40,10 @@ enum class Factory(
     PUMPJACK(null, "pumpjack", setOf(Category.MINING_FLUID), 1.0),
     OFFSHORE_PUMP(null, "offshore-pump", setOf(Category.OFFSHORE_PUMPING), 1200.0),
     // speed is the number of trees a tower tends; one tree yields 50 fruit per 5 minute growth
-    AGRICULTURAL_TOWER('A', "agricultural-tower", setOf(Category.HARVESTING), 48.0),
+    AGRICULTURAL_TOWER(null, "agricultural-tower", setOf(Category.HARVESTING), 48.0),
     SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
+    // spoilage happens passively anywhere; represented by the spoilage icon
+    ROTTING(null, "spoilage", setOf(Category.ROTTING)),
     NO_FACTORY(null, "infinity-chest", setOf()),
 }
 
@@ -58,7 +60,19 @@ object Factories {
             Factory.BIG_MINING_DRILL,
         )
     private val alwaysEnabledFactories =
-        setOf(Factory.NO_FACTORY, Factory.SCIENCE_LAB, Factory.PUMPJACK, Factory.OFFSHORE_PUMP)
+        setOf(
+            Factory.NO_FACTORY,
+            Factory.SCIENCE_LAB,
+            Factory.PUMPJACK,
+            Factory.OFFSHORE_PUMP,
+            Factory.ROTTING,
+            Factory.OIL_REFINERY,
+            Factory.CHEMICAL_PLANT,
+            Factory.CRUSHER,
+            Factory.CENTRIFUGE,
+            Factory.CAPTIVE_BITER_SPAWNER,
+            Factory.AGRICULTURAL_TOWER,
+        )
     private val tech = allFactories - smelters - assemblers - miners - alwaysEnabledFactories
     val defaultFactories =
         setOf(

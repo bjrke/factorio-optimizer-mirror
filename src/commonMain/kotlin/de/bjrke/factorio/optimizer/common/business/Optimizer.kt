@@ -17,6 +17,17 @@ class Optimizer(
             .filter { findFactory(it) != null }
             .flatMapTo(mutableSetOf()) { it.result.keys }
 
+    /**
+     * Materials an enabled extraction recipe (drill/pump/tower) produces directly, i.e. the
+     * cheapest inputs. Recipes built from these are preferred over ones needing processed
+     * intermediates, e.g. spoilage rots from yumako/jellynut rather than from agricultural science
+     * packs.
+     */
+    private val rawMaterials: Set<Material> =
+        parsedRecipe.recipes
+            .filter { it.category in extractionCategories && findFactory(it) != null }
+            .flatMapTo(mutableSetOf()) { it.result.keys }
+
     private fun findFactory(recipe: Recipe) = factories.find {
         it.categories.contains(recipe.category)
     }
@@ -32,6 +43,9 @@ class Optimizer(
                     // e.g. prefer lava -> molten-iron over chest iron-ore -> molten-iron on
                     // Vulcanus
                     { recipe -> recipe.ingredients.keys.count { it !in producibleMaterials } },
+                    // then build from raw resources (drill/pump/pumpjack/tower) instead of
+                    // processing chains, e.g. spoilage from jellynut rather than science packs
+                    { recipe -> recipe.ingredients.keys.count { it !in rawMaterials } },
                     // then prefer the raw source (drill/pump/pumpjack) over processing recipes
                     { recipe -> if (recipe.category in extractionCategories) 0 else 1 },
                     { it.name },

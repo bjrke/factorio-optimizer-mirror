@@ -175,6 +175,8 @@ enum class Category(val identifier: String) {
     MINING_FLUID("mining-fluid"),
     OFFSHORE_PUMPING("offshore-pumping"),
     HARVESTING("harvesting"),
+    // custom category for spoilable items rotting into another item
+    ROTTING("rotting"),
 }
 
 /**

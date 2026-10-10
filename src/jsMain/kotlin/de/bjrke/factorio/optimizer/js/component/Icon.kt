@@ -13,8 +13,10 @@ external interface IconProps : Props {
 }
 
 private fun correctName(s: String) =
-    when (s) {
-        "stone-wall" -> "wall"
+    when {
+        s == "stone-wall" -> "wall"
+        s == "raw-fish" -> "fish"
+        s.endsWith("-rotting") -> s.removeSuffix("-rotting")
         else -> s
     }
 

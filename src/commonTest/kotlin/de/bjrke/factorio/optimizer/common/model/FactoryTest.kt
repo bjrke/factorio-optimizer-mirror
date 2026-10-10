@@ -66,6 +66,35 @@ class FactoryTest {
     }
 
     @Test
+    fun rottingIsAlwaysEnabled() {
+        assertTrue(Factory.ROTTING in defaultFactories)
+        assertFalse(Factory.ROTTING in selectableFactories)
+        assertEquals(
+            defaultFactories,
+            defaultFactories.removeFactory(Factory.ROTTING),
+        )
+    }
+
+    @Test
+    fun singleMachineFactoriesAreAlwaysEnabled() {
+        val alwaysOn =
+            listOf(
+                Factory.OIL_REFINERY,
+                Factory.CHEMICAL_PLANT,
+                Factory.CRUSHER,
+                Factory.CENTRIFUGE,
+                Factory.CAPTIVE_BITER_SPAWNER,
+                Factory.AGRICULTURAL_TOWER,
+            )
+        for (factory in alwaysOn) {
+            assertTrue(factory in defaultFactories, "$factory")
+            assertFalse(factory in selectableFactories, "$factory")
+            assertFalse(factory in singleFactories, "$factory")
+            assertEquals(defaultFactories, defaultFactories.removeFactory(factory), "$factory")
+        }
+    }
+
+    @Test
     fun groupsHaveExactlyOneSelected() {
         factoryGroups.forEach { group ->
             assertEquals(1, group.count { it in defaultFactories }, "group $group")

@@ -170,17 +170,49 @@ class OptimizerTest {
     }
 
     @Test
-    fun glebaIronAndCopperOreComeFromBoxesNotBiochamber() {
-        // Gleba has no ore patches and no recipe turning bacteria into ore, so iron/copper ore
-        // must resolve to a free source (box), never a biochamber recipe.
+    fun glebaIronAndCopperOreRotFromBacteria() {
+        // Gleba has no ore patches, but iron/copper bacteria rot into their ore, so the ore must
+        // resolve to the rotting machine instead of a free source (box).
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
 
-        for (ore in listOf("iron-ore", "copper-ore")) {
+        val expected = mapOf("iron-ore" to "iron-bacteria", "copper-ore" to "copper-bacteria")
+        for ((ore, bacteria) in expected) {
             val material = Material(ore)
             val production = optimizer[material].factories.getValue(material)
-            assertEquals(Factory.NO_FACTORY, production.factory, ore)
+            assertEquals(Factory.ROTTING, production.factory, ore)
+            assertEquals("$bacteria-rotting", production.recipe.name, ore)
         }
+    }
+
+    @Test
+    fun nauvisOreStillComesFromMiningDrill() {
+        // the rotting recipe must not shadow mining where ore patches exist
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
+
+        val material = Material("iron-ore")
+        val production = optimizer[material].factories.getValue(material)
+        assertEquals(Factory.ELECTRIC_MINING_DRILL, production.factory)
+        assertEquals("iron-ore", production.recipe.name)
+    }
+
+    @Test
+    fun glebaSpoilageComesFromRawFruitNotScience() {
+        // spoilage is cheapest by letting raw harvested fruit rot, not by spoiling expensive
+        // Gleba science packs.
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+
+        val spoilage = Material("spoilage")
+        val production = optimizer[spoilage].factories.getValue(spoilage)
+        assertEquals(Factory.ROTTING, production.factory)
+        assertEquals("jellynut-rotting", production.recipe.name)
+        assertTrue(
+            optimizer[spoilage].factories.values.none {
+                it.recipe.name == "agricultural-science-pack-rotting"
+            }
+        )
     }
 
     @Test
