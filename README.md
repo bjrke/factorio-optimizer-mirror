@@ -8,10 +8,15 @@
 `./gradlew jsBrowserDevelopmentRun --continuous`
 
 #### recipe.lua
-The recipes have to be copied from `data/base/prototypes/recipe.lua` in the factorio folder into the recipes directory `src/commonMain/resources/recipes`.
+The recipes are scraped from **all** mods in the factorio data folder (`base`, `core`, `quality`,
+`recycler`, `elevated-rails`, `space-age`, ...) into `src/commonMain/resources/recipes/<mod>/...`.
+Each mod keeps its own recipe file(s), plus a generated `mods.txt` that records mod dependencies.
 Luckily there is a gradle task for it.
 
 `./gradlew copyRecipes`
+
+At runtime the web UI and the CLI let you pick which mods are active (dependencies are resolved
+automatically, e.g. `space-age` enables `recycler` and `base`).
 
 #### Updating Icons
 
@@ -23,4 +28,4 @@ You also need some tools installed:
 sudo apt install imagemagick optipng pngquant 
 ```
 
-run `./gradlew optimizeImages` to copy and optimize resource and recipe icons into the resource folder.
+run `./gradlew optimizeImages` to copy and optimize resource and recipe icons from all mods into the resource folder.

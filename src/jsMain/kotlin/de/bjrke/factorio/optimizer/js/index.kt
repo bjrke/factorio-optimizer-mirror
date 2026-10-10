@@ -2,7 +2,7 @@ package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.Optimizer
-import de.bjrke.factorio.optimizer.common.business.parseRecipes
+import de.bjrke.factorio.optimizer.common.business.RecipeProvider
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
 import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
+import de.bjrke.factorio.optimizer.js.component.urlModSelector
 import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
 import react.FC
 import react.Props
@@ -18,14 +19,7 @@ import react.create
 import react.dom.client.createRoot
 import react.dom.html.ReactHTML.div
 import tanstack.history.createHashHistory
-import tanstack.react.router.RouteOptions
-import tanstack.react.router.RouterOptions
-import tanstack.react.router.RouterProvider
-import tanstack.react.router.createRootRoute
-import tanstack.react.router.createRoute
-import tanstack.react.router.createRouter
-import tanstack.react.router.useNavigate
-import tanstack.react.router.useParams
+import tanstack.react.router.*
 import tanstack.router.core.ParamName
 import tanstack.router.core.RoutePath
 import web.cssom.ClassName
@@ -33,7 +27,7 @@ import web.dom.document
 import web.events.EventHandler
 import web.window.window
 
-val defaultRecipes = parseRecipes()
+const val BASE_MOD = "base"
 
 class FactorioOptimizerProps {
     private val params = useParams()
@@ -43,12 +37,15 @@ class FactorioOptimizerProps {
     var target = Material.of(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
     var factories =
         params[ParamName("factories")]?.let { factorySetFromUrl(it) } ?: defaultFactories
+    var mods =
+        params[ParamName("mods")]?.split(",")?.filter { it.isNotBlank() }?.toSet()
+            ?: setOf(BASE_MOD)
 
-    val parsedRecipes = defaultRecipes
+    val parsedRecipes = RecipeProvider.forActiveMods(mods)
     val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
 
     private fun createNewUrl(): String =
-        "/${superRound(normalizeTarget, 1000000.0)}/${target.name}/${factories.toUrlParam()}"
+        "/${superRound(normalizeTarget, 1000000.0)}/${target.name}/${factories.toUrlParam()}/${mods.sorted().joinToString(",")}"
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         navigate {
@@ -66,6 +63,7 @@ val RouterBasedParams =
                 className = ClassName("app-header")
                 div { urlMaterialSelector(props) }
                 div { urlFactorySelector(props) }
+                div { urlModSelector(props) }
             }
             div {
                 className = ClassName("app-content")
@@ -87,7 +85,7 @@ fun main() {
             createRoute(
                 RouteOptions(
                     getParentRoute = { rootRoute },
-                    path = RoutePath("/\$normalizeTarget/\$target/\$factories"),
+                    path = RoutePath("/\$normalizeTarget/\$target/\$factories/\$mods"),
                     component = RouterBasedParams,
                 )
             )

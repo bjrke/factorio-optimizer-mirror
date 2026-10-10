@@ -11,7 +11,13 @@ import kotlin.test.assertTrue
 class RecipeParserTest {
 
     private fun parse(s: String, mode: Mode = Mode.NORMAL) =
-        parseRecipes(s = s, mode = mode, defaultRecipesProvider = { listOf() }).recipes
+        parseRecipes(
+                files = mapOf("test/recipe.lua" to s),
+                activeMods = setOf("test"),
+                mode = mode,
+                defaultRecipesProvider = { listOf() },
+            )
+            .recipes
 
     @Test fun emptyTableShouldReturnEmptyRecipeList() = assertTrue(parse("{}").isEmpty())
 
@@ -238,5 +244,5 @@ class RecipeParserTest {
             ),
         )
 
-    @Test fun parseAllRecipes() = assertTrue(parse(loadRecipe()).isNotEmpty())
+    @Test fun parseAllRecipes() = assertTrue(parseRecipes().recipes.isNotEmpty())
 }

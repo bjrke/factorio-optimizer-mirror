@@ -1,7 +1,10 @@
 package de.bjrke.factorio.optimizer.common.business
 
-actual fun loadRecipe(): String {
-    return recipeLua
-}
+actual fun loadMods() = parseModsTxt(modsTxt)
 
-@JsModule("./recipes/recipe.lua") @JsNonModule private external val recipeLua: dynamic
+actual fun loadRecipeFiles() =
+    recipeFiles.unsafeCast<Array<Array<String>>>().associate { it[0] to it[1] }
+
+@JsModule("./recipes/mods.txt") @JsNonModule private external val modsTxt: String
+
+@JsModule("./recipes/loader.js") @JsNonModule private external val recipeFiles: dynamic

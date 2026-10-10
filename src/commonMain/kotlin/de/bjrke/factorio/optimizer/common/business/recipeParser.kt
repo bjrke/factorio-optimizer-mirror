@@ -114,10 +114,9 @@ private class NestedRecipe(val table: WrappedTable) {
     fun getEnergyRequired() = table.getNumber("energy_required")
 }
 
-expect fun loadRecipe(): String
-
 fun parseRecipes(
-    s: String = loadRecipe(),
+    files: Map<String, String> = loadRecipeFiles(),
+    activeMods: Set<String> = files.keys.map { it.substringBefore('/') }.toSet(),
     mode: Mode = Mode.NORMAL,
     defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = ::defaultRecipes,
 ): ParsedRecipe {
@@ -163,36 +162,42 @@ fun parseRecipes(
 
     val recipes =
         sequence {
-                for (luaRecipe in
-                    WrappedTable(parseLua(s)).getElementsAsTables().map(::LuaRecipe)) {
-                    if (luaRecipe.getType() != "recipe") continue
-                    if (luaRecipe.table.getBoolean("parameter") == true) continue
+                for (content in files.filterKeys { it.substringBefore('/') in activeMods }.values) {
+                    for (luaRecipe in
+                        WrappedTable(parseLua(content)).getElementsAsTables().map(::LuaRecipe)) {
+                        if (luaRecipe.getType() != "recipe") continue
+                        if (luaRecipe.table.getBoolean("parameter") == true) continue
 
-                    val subgroupName = luaRecipe.getSubgroup()
-                    when (subgroupName) {
-                        "fill-barrel",
-                        "empty-barrel" -> continue
-                    }
+                        val subgroupName = luaRecipe.getSubgroup()
+                        when (subgroupName) {
+                            "fill-barrel",
+                            "empty-barrel" -> continue
+                        }
 
-                    val result =
-                        luaRecipe
-                            .getResults()
-                            .map { material(it.name) to it.amount * it.probability }
-                            .toMap()
+                        val result =
+                            luaRecipe
+                                .getResults()
+                                .map { material(it.name) to it.amount * it.probability }
+                                .toMap()
+                        if (result.isEmpty()) continue
 
-                    val ingredients =
-                        luaRecipe.getIngredients().map { material(it.name) to it.amount }.toMap()
+                        val ingredients =
+                            luaRecipe
+                                .getIngredients()
+                                .map { material(it.name) to it.amount }
+                                .toMap()
 
-                    yield(
-                        Recipe(
-                            name = luaRecipe.getName()!!,
-                            ingredients = ingredients,
-                            result = result,
-                            time = luaRecipe.getEnergyRequired() ?: 0.5,
-                            subgroup = subGroup(subgroupName),
-                            category = category(luaRecipe.getCategory() ?: "crafting")!!,
+                        yield(
+                            Recipe(
+                                name = luaRecipe.getName()!!,
+                                ingredients = ingredients,
+                                result = result,
+                                time = luaRecipe.getEnergyRequired() ?: 0.5,
+                                subgroup = subGroup(subgroupName),
+                                category = category(luaRecipe.getCategory() ?: "crafting")!!,
+                            )
                         )
-                    )
+                    }
                 }
 
                 yieldAll(defaultRecipesProvider(::material))

@@ -83,7 +83,7 @@ private data class Wrapper(val complete: String) {
         private fun errorContextStr() =
             complete.substring(offset until min(complete.length, offset + 100))
 
-        override fun <T> Position.unexpectedToken(): T =
+        override fun <T> Position.unexpectedToken() =
             throw UnexpectedTokenException(errorContextStr(), offset)
     }
 }

@@ -34,5 +34,5 @@ The same `commonMain` code compiles to both targets, so keep it platform-neutral
 
 ## Generated data — do not hand-edit
 
-- `src/commonMain/resources/recipes/recipe.lua` is a Lua dump from a Factorio install (base + DLC). Regenerate with `./gradlew copyRecipes`, which copies `~/.steam/steam/steamapps/common/Factorio/data/base/prototypes/recipe.lua` (path is hardcoded in `build.gradle.kts`).
+- `src/commonMain/resources/recipes/mods.txt` and `src/commonMain/resources/recipes/<mod>/...` are scraped from a Factorio install (base + DLC mods). Regenerate with `./gradlew copyRecipes`, which walks `~/.steam/steam/steamapps/common/Factorio/data/<mod>` and copies every `.lua` containing `type = "recipe"` (skipping `**/script/**` and `data-updates.lua`/`data-final-fixes.lua`). `mods.txt` records each mod's `info.json` dependencies. The web UI and CLI let the user pick active mods (dependencies resolved automatically); per-mod parsed results are cached in `RecipeProvider`.
 - `src/jsMain/resources/icons/*.png` are extracted from a Linux Factorio Steam install (120x64 crops) and optimized. `./gradlew optimizeImages` requires `imagemagick optipng pngquant` installed. Don't add icons manually.

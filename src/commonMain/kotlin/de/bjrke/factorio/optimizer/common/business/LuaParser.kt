@@ -79,28 +79,27 @@ private fun Position.luaNumber(): Pair<Position, LuaNumber>? {
     }
 }
 
+private fun Position.luaKeyValue(): Pair<Position, LuaTableEntry>? {
+    if (!isLetter()) return null
+
+    val sb = StringBuilder()
+
+    tailrec fun Position.appendMoreLettersAndDigits(): Position =
+        when {
+            isLetter() || isDigit() || isChar('_') -> appendTo(sb).appendMoreLettersAndDigits()
+            else -> skipWhitespace().expect('=')
+        }
+
+    val (pos, luaObject) =
+        appendTo(sb).appendMoreLettersAndDigits().skipWhitespace().luaValue() ?: unexpectedToken()
+    return pos to LuaTableEntry(sb.toString(), luaObject)
+}
+
 private fun Position.luaTable(): Pair<Position, LuaTable>? {
-
-    fun Position.keyValue(): Pair<Position, LuaTableEntry>? {
-        if (!isLetter()) return null
-
-        val sb = StringBuilder()
-
-        tailrec fun Position.appendMoreLettersAndDigits(): Position =
-            when {
-                isLetter() || isDigit() || isChar('_') -> appendTo(sb).appendMoreLettersAndDigits()
-                else -> skipWhitespace().expect('=')
-            }
-
-        val (pos, luaObject) =
-            appendTo(sb).appendMoreLettersAndDigits().skipWhitespace().luaObject()
-                ?: unexpectedToken()
-        return pos to LuaTableEntry(sb.toString(), luaObject)
-    }
 
     tailrec fun Position.tableElements(elements: List<LuaTableElement>): Pair<Position, LuaTable> {
         if (isChar('}')) return next to LuaTable(elements)
-        val (p, node) = (luaObject() ?: keyValue() ?: unexpectedToken())
+        val (p, node) = luaTableElement() ?: unexpectedToken()
         val pos = p.skipWhitespace()
         return when {
             pos.isChar('}') -> pos.next to LuaTable(elements + node)
@@ -123,6 +122,53 @@ private fun Position.luaBoolean() =
     }
 
 private fun Position.luaObject() = luaTable() ?: luaString() ?: luaNumber() ?: luaBoolean()
+
+private fun Position.luaValue(): Pair<Position, LuaObject>? {
+    val simple = luaObject()
+    if (simple != null) {
+        val after = simple.first.skipWhitespace()
+        if (after.isChar(',') || after.isChar('}')) return simple
+    }
+    return skipLuaExpression()
+}
+
+private fun Position.skipString(quote: Char): Position {
+    tailrec fun scan(p: Position): Position =
+        when {
+            p.isChar('\\') -> scan(p.next.next)
+            p.isChar(quote) -> p.next
+            else -> scan(p.next)
+        }
+    return scan(next)
+}
+
+private tailrec fun Position.skipLuaExpression(
+    depth: Int = 0,
+    consumed: Boolean = false,
+): Pair<Position, LuaString>? =
+    when {
+        isWhitespace() -> next.skipLuaExpression(depth, consumed)
+        isString("--") -> advanceUntil('\n').skipLuaExpression(depth, consumed)
+        isChar('"') || isChar('\'') -> skipString(current).skipLuaExpression(depth, true)
+        isChar('(') || isChar('[') || isChar('{') -> next.skipLuaExpression(depth + 1, true)
+        isChar(')') || isChar(']') -> next.skipLuaExpression(depth - 1, true)
+        isChar('}') ->
+            when {
+                depth != 0 -> next.skipLuaExpression(depth - 1, true)
+                consumed -> this to LuaString("")
+                else -> null
+            }
+        isChar(',') ->
+            when {
+                depth != 0 -> next.skipLuaExpression(depth, true)
+                consumed -> this to LuaString("")
+                else -> null
+            }
+
+        else -> next.skipLuaExpression(depth, true)
+    }
+
+private fun Position.luaTableElement() = luaObject() ?: luaKeyValue() ?: skipLuaExpression()
 
 fun findLastCurlyBlock(s: String): Int? {
     var result: Int? = null

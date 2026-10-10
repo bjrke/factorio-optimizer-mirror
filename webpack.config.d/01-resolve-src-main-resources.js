@@ -4,7 +4,7 @@
 
     config.module.rules.push(
         {
-            test: /\.(lua)$/i,
+            test: /\.(lua|txt)$/i,
             type: 'asset/source'
         }
     );
