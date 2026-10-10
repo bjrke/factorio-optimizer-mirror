@@ -36,4 +36,4 @@ private fun spaceSciencePack(material: (String) -> Material) =
     )
 
 fun defaultRecipes(material: (String) -> Material) =
-    listOf(spaceSciencePack(material), allSciencePacks(material))
+    listOf(spaceSciencePack(material), allSciencePacks(material)) + resourceRecipes(material)

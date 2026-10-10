@@ -83,6 +83,9 @@ enum class Surface(
             Category.CRUSHING -> this == SPACE
             else -> true
         }
+
+    /** Extraction recipes (mining, pumping) only exist where their resource spawns. */
+    fun acceptsResource(name: String) = resourceSurfaces[name]?.let { this in it } ?: true
 }
 
 /**
@@ -102,6 +105,33 @@ private val subgroupSurfaces =
 
 fun subgroupSurface(subgroup: String) = subgroupSurfaces[subgroup]
 
+/**
+ * Which surface(s) an extraction recipe (= its resource) can be built on. Keyed by recipe name so
+ * resources like `sulfuric-acid-geyser` or `fluorine-vent` don't collide with the chemical recipes
+ * producing the same fluid. Unknown names are available on every surface.
+ */
+private val resourceSurfaces =
+    mapOf(
+        "iron-ore" to setOf(Surface.NAUVIS),
+        "copper-ore" to setOf(Surface.NAUVIS),
+        "coal" to setOf(Surface.NAUVIS, Surface.VULCANUS),
+        "stone" to setOf(Surface.NAUVIS, Surface.GLEBA),
+        "uranium-ore" to setOf(Surface.NAUVIS),
+        "crude-oil" to setOf(Surface.NAUVIS, Surface.AQUILO),
+        "calcite" to setOf(Surface.VULCANUS),
+        "tungsten-ore" to setOf(Surface.VULCANUS),
+        "sulfuric-acid-geyser" to setOf(Surface.VULCANUS),
+        "scrap" to setOf(Surface.FULGORA),
+        "lithium-brine" to setOf(Surface.AQUILO),
+        "fluorine-vent" to setOf(Surface.AQUILO),
+        "water" to setOf(Surface.NAUVIS, Surface.GLEBA),
+        "heavy-oil" to setOf(Surface.FULGORA),
+        "lava" to setOf(Surface.VULCANUS),
+        "ammoniacal-solution" to setOf(Surface.AQUILO),
+        "yumako" to setOf(Surface.GLEBA),
+        "jellynut" to setOf(Surface.GLEBA),
+    )
+
 private val surfacesByCode = Surface.entries.associateBy { it.code }
 
 fun surfaceFromUrl(s: String) = s.firstOrNull()?.let { surfacesByCode[it] }
@@ -114,7 +144,8 @@ fun ParsedRecipe.forSurface(surface: Surface) =
             recipes.filter {
                 surface.accepts(it.surfaceConditions) &&
                     surface.accepts(it.subgroup) &&
-                    surface.accepts(it.category)
+                    surface.accepts(it.category) &&
+                    (it.category !in extractionCategories || surface.acceptsResource(it.name))
             }
     )
 
@@ -136,9 +167,28 @@ enum class Category(val identifier: String) {
     CAPTIVE_SPAWNER_PROCESS("captive-spawner-process"),
     HAND_CRAFTING("hand-crafting"),
     NO_CATEGORY("no-category"),
-    /** custom category for dummy recipe to consume all science-packs */
+    // custom category for dummy recipe to consume all science-packs
     SCIENCE_LAB("science-lab"),
+    // custom categories for extraction recipes (resources, offshore pump fluids)
+    MINING_BASIC_SOLID("mining-basic-solid"),
+    MINING_HARD_SOLID("mining-hard-solid"),
+    MINING_FLUID("mining-fluid"),
+    OFFSHORE_PUMPING("offshore-pumping"),
+    HARVESTING("harvesting"),
 }
+
+/**
+ * Recipes representing a raw resource extracted from the map. They have no ingredients and are
+ * preferred over processing recipes when the responsible machine is selected.
+ */
+val extractionCategories =
+    setOf(
+        Category.MINING_BASIC_SOLID,
+        Category.MINING_HARD_SOLID,
+        Category.MINING_FLUID,
+        Category.OFFSHORE_PUMPING,
+        Category.HARVESTING,
+    )
 
 private val categoryMap = Category.entries.associateBy { it.identifier }
 

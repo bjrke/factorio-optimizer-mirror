@@ -11,15 +11,32 @@ class Optimizer(
 
     private val cache = mutableMapOf<Material, OptimizationResult>()
 
+    /** Materials that at least one enabled recipe can produce, i.e. not a free "chest" source. */
+    private val producibleMaterials: Set<Material> =
+        parsedRecipe.recipes
+            .filter { findFactory(it) != null }
+            .flatMapTo(mutableSetOf()) { it.result.keys }
+
     private fun findFactory(recipe: Recipe) = factories.find {
         it.categories.contains(recipe.category)
     }
 
     private fun uncached(target: Material): OptimizationResult {
+        val candidates =
+            parsedRecipe.recipes.filter { findFactory(it) != null && it.result.containsKey(target) }
+
         val recipe =
-            parsedRecipe.recipes
-                .filter { findFactory(it) != null }
-                .firstOrNull { it.result.containsKey(target) }
+            candidates.minWithOrNull(
+                compareBy(
+                    // avoid recipes that would pull an ingredient from a free "chest" source,
+                    // e.g. prefer lava -> molten-iron over chest iron-ore -> molten-iron on
+                    // Vulcanus
+                    { recipe -> recipe.ingredients.keys.count { it !in producibleMaterials } },
+                    // then prefer the raw source (drill/pump/pumpjack) over processing recipes
+                    { recipe -> if (recipe.category in extractionCategories) 0 else 1 },
+                    { it.name },
+                )
+            )
                 ?: Recipe(
                     name = target.name,
                     ingredients = mapOf(),

@@ -107,6 +107,78 @@ class SurfaceTest {
         )
     }
 
+    private fun extraction(name: String, category: Category) =
+        Recipe(
+            name = name,
+            ingredients = emptyMap(),
+            result = mapOf(Material(name) to 1.0),
+            time = 1.0,
+            category = category,
+        )
+
+    @Test
+    fun miningResourceIsGatedBySurface() {
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes =
+                    listOf(
+                        extraction("iron-ore", Category.MINING_BASIC_SOLID),
+                        extraction("tungsten-ore", Category.MINING_HARD_SOLID),
+                        extraction("coal", Category.MINING_BASIC_SOLID),
+                        extraction("stone", Category.MINING_BASIC_SOLID),
+                    ),
+            )
+
+        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name).toSet()
+
+        assertEquals(setOf("iron-ore", "coal", "stone"), names(Surface.NAUVIS))
+        assertEquals(setOf("tungsten-ore", "coal"), names(Surface.VULCANUS))
+        assertEquals(setOf("stone"), names(Surface.GLEBA))
+        assertEquals(emptySet(), names(Surface.FULGORA))
+    }
+
+    @Test
+    fun offshorePumpFluidsAreGatedBySurface() {
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes =
+                    listOf(
+                        extraction("water", Category.OFFSHORE_PUMPING),
+                        extraction("heavy-oil", Category.OFFSHORE_PUMPING),
+                        extraction("lava", Category.OFFSHORE_PUMPING),
+                        extraction("ammoniacal-solution", Category.OFFSHORE_PUMPING),
+                    ),
+            )
+
+        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name).toSet()
+
+        assertEquals(setOf("water"), names(Surface.NAUVIS))
+        assertEquals(setOf("water"), names(Surface.GLEBA))
+        assertEquals(setOf("heavy-oil"), names(Surface.FULGORA))
+        assertEquals(setOf("lava"), names(Surface.VULCANUS))
+        assertEquals(setOf("ammoniacal-solution"), names(Surface.AQUILO))
+    }
+
+    @Test
+    fun harvestedFruitIsGatedToGleba() {
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes =
+                    listOf(
+                        extraction("yumako", Category.HARVESTING),
+                        extraction("jellynut", Category.HARVESTING),
+                    ),
+            )
+
+        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name).toSet()
+
+        assertEquals(setOf("yumako", "jellynut"), names(Surface.GLEBA))
+        assertEquals(emptySet(), names(Surface.NAUVIS))
+    }
+
     @Test
     fun urlRoundTrip() =
         Surface.entries.forEach {

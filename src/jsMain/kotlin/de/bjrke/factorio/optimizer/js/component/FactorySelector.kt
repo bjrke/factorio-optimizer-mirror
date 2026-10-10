@@ -1,7 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.model.Factories.factoryGroups
 import de.bjrke.factorio.optimizer.common.model.Factories.removeFactory
-import de.bjrke.factorio.optimizer.common.model.Factories.selectableFactories
+import de.bjrke.factorio.optimizer.common.model.Factories.singleFactories
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.addFactory
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
@@ -12,10 +13,12 @@ import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.label
 import web.html.InputType
 import web.html.checkbox
+import web.html.radio
 
 external interface FactorySelectorStateProps : Props {
     var selectedFactories: Set<Factory>
-    var availableFactories: List<Factory>
+    var groups: List<List<Factory>>
+    var singles: List<Factory>
 }
 
 external interface FactorySelectorDispatchProps : Props {
@@ -26,7 +29,25 @@ external interface FactorySelectorProps : FactorySelectorStateProps, FactorySele
 
 private val factorySelector =
     FC<FactorySelectorProps>("factorySelector") { props ->
-        for (factory in props.availableFactories) {
+        // mutually exclusive groups: radio buttons, one option always stays selected
+        for (group in props.groups) {
+            val groupName = group.joinToString("-") { it.name }
+            for (factory in group) {
+                label {
+                    input {
+                        type = InputType.Companion.radio
+                        name = groupName
+                        checked = props.selectedFactories.contains(factory)
+                        onChange = { _ ->
+                            props.selectFactory(props.selectedFactories.addFactory(factory))
+                        }
+                    }
+                    icon(factory.identifier)
+                }
+            }
+        }
+        // independently toggled machines: checkboxes
+        for (factory in props.singles) {
             label {
                 val enabled = props.selectedFactories.contains(factory)
                 input {
@@ -49,7 +70,8 @@ private val factorySelector =
 
 fun ChildrenBuilder.urlFactorySelector(props: FactorioOptimizerProps) {
     factorySelector {
-        availableFactories = selectableFactories
+        groups = factoryGroups
+        singles = singleFactories
         selectedFactories = props.factories
         selectFactory = { props.changeUrl { factories = it } }
     }
