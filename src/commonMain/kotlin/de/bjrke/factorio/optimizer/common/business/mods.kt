@@ -1,5 +1,10 @@
 package de.bjrke.factorio.optimizer.common.business
 
+const val BASE_MOD = "base"
+const val SPACE_AGE_MOD = "space-age"
+
+val defaultMods = setOf(BASE_MOD, SPACE_AGE_MOD)
+
 data class ModInfo(val name: String, val dependencies: List<String>, val files: List<String>)
 
 fun parseModsTxt(s: String) =

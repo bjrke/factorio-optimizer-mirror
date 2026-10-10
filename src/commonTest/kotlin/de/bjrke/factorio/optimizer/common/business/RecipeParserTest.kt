@@ -4,6 +4,8 @@ import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
 import de.bjrke.factorio.optimizer.common.model.Subgroup
+import de.bjrke.factorio.optimizer.common.model.SurfaceCondition
+import de.bjrke.factorio.optimizer.common.model.SurfaceProperty
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -241,6 +243,46 @@ class RecipeParserTest {
                 }}
                 """,
                 mode = Mode.EXPENSINVE,
+            ),
+        )
+
+    @Test
+    fun parseSurfaceConditions() =
+        assertEquals(
+            listOf(
+                Recipe(
+                    name = "copper-bacteria",
+                    ingredients = mapOf(Material("copper-ore") to 1.0),
+                    result = mapOf(Material("copper-bacteria") to 1.0),
+                    time = 0.5,
+                    category = Category.ORGANIC,
+                    subgroup = Subgroup(),
+                    surfaceConditions =
+                        listOf(
+                            SurfaceCondition(
+                                property = SurfaceProperty.PRESSURE,
+                                range = 2000..2000,
+                            ),
+                            SurfaceCondition(property = SurfaceProperty.GRAVITY),
+                        ),
+                )
+            ),
+            parse(
+                """
+                {{
+                type = "recipe",
+                name = "copper-bacteria",
+                categories = {"organic", "crafting"},
+                ingredients = {{ "copper-ore", 1}},
+                result = "copper-bacteria",
+                surface_conditions =
+                {
+                  { property = "pressure", min = 2000, max = 2000 },
+                  { property = "gravity" },
+                  { property = "unknown", min = 1 }
+                }
+                }}
+                """
             ),
         )
 

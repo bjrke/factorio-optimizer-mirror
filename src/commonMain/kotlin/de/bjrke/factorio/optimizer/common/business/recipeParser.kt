@@ -147,6 +147,16 @@ fun parseRecipes(
 
         fun getCategory() =
             table.getString("category") ?: table.getStringList("categories").firstOrNull()
+
+        fun getSurfaceConditions() =
+            table.getTableList("surface_conditions").mapNotNull { condition ->
+                val property =
+                    condition.getString("property")?.let(::surfaceProperty)
+                        ?: return@mapNotNull null
+                val min = condition.getNumber("min")?.toInt() ?: Int.MIN_VALUE
+                val max = condition.getNumber("max")?.toInt() ?: Int.MAX_VALUE
+                SurfaceCondition(property = property, range = min..max)
+            }
     }
 
     val materialsBuilder = mutableMapOf<String, Material>()
@@ -195,6 +205,7 @@ fun parseRecipes(
                                 time = luaRecipe.getEnergyRequired() ?: 0.5,
                                 subgroup = subGroup(subgroupName),
                                 category = category(luaRecipe.getCategory() ?: "crafting")!!,
+                                surfaceConditions = luaRecipe.getSurfaceConditions(),
                             )
                         )
                     }

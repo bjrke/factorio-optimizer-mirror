@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.business.BASE_MOD
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
-import de.bjrke.factorio.optimizer.js.BASE_MOD
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import react.ChildrenBuilder
 import react.FC

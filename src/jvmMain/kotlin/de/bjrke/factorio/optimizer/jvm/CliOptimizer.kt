@@ -3,11 +3,13 @@ package de.bjrke.factorio.optimizer.jvm
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.Optimizer
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
+import de.bjrke.factorio.optimizer.common.business.defaultMods
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
-
-private const val DEFAULT_MODS = "base"
+import de.bjrke.factorio.optimizer.common.model.forSurface
+import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
 
 fun main(args: Array<String>) {
     val material = Material.of(args.firstOrNull { !it.startsWith("--") } ?: ALL_SCIENCE_PACKS)
@@ -17,8 +19,13 @@ fun main(args: Array<String>) {
             ?.removePrefix("--mods=")
             ?.split(",")
             ?.filter { it.isNotBlank() }
-            ?.toSet() ?: setOf(DEFAULT_MODS)
-    val result = Optimizer(RecipeProvider.forActiveMods(mods))[material]
+            ?.toSet() ?: defaultMods
+    val surface =
+        args
+            .firstOrNull { it.startsWith("--planet=") }
+            ?.removePrefix("--planet=")
+            ?.let { surfaceFromUrl(it) } ?: Surface.NAUVIS
+    val result = Optimizer(RecipeProvider.forActiveMods(mods).forSurface(surface))[material]
 
     result.factories.entries
         .sortedWith(factoryProductionComparator)
