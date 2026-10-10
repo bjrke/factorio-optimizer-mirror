@@ -30,7 +30,7 @@ enum class Factory(
     RECYCLER('r', "recycler", setOf(Category.RECYCLING)),
     CAPTIVE_BITER_SPAWNER('p', "captive-biter-spawner", setOf(Category.CAPTIVE_SPAWNER_PROCESS)),
     SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
-    NO_FACTORY(null, "compilatron-chest", setOf()),
+    NO_FACTORY(null, "infinity-chest", setOf()),
 }
 
 object Factories {
