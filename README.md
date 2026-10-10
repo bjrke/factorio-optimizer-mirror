@@ -28,4 +28,4 @@ You also need some tools installed:
 sudo apt install imagemagick optipng pngquant 
 ```
 
-run `./gradlew optimizeImages` to copy and optimize resource and recipe icons from all mods into the resource folder.
+run `./gradlew updateImages` to copy and optimize new or significantly changed resource and recipe icons from all mods into the resource folder.

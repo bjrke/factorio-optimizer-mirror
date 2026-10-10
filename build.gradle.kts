@@ -1,4 +1,6 @@
+import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
+import kotlin.math.abs
 
 plugins {
     kotlin("multiplatform") version libs.versions.kotlin
@@ -87,42 +89,96 @@ spotless {
 }
 
 val imgDir = "src/jsMain/resources/icons"
+val imageChangedThreshold = 200000
 val factorioDir by lazy {
     "${System.getProperty("user.home")}/.steam/steam/steamapps/common/Factorio"
 }
 
-val copyImages =
-    tasks.register<Copy>("copyImages") {
-        group = "factorio"
-        description = "copies the icon images from all mods of the factorio steam installation"
-        from(fileTree("$factorioDir/data") { include("**/graphics/icons/**/*.png") }.files)
-
-        duplicatesStrategy = DuplicatesStrategy.WARN
-        into(imgDir)
-        eachFile {
-            val img = ImageIO.read(file)
-            if (img.width != 120 || img.height != 64) {
-                exclude()
-            }
-        }
-    }
-
-tasks.register<Exec>("optimizeImages") {
+tasks.register<Exec>("updateImages") {
     group = "factorio"
-    description = "optimizes the freshly copied images"
-    dependsOn(copyImages)
+    description =
+        "copies and optimizes new or significantly changed icons from the factorio steam installation"
     commandLine = listOf("sh")
 
-    workingDir = rootDir.resolve(imgDir)
-    standardInput =
-        """
-        mogrify -crop 64x64+0+0 *
-        chmod 664 *
-        pngquant --strip --speed 1 --ext=.png --force --skip-if-larger *
-        optipng -o7 -zm1-9 *
-        """
-            .trimIndent()
-            .byteInputStream()
+    val iconsDir = rootDir.resolve(imgDir)
+    workingDir = iconsDir
+    val sources = fileTree("$factorioDir/data") { include("**/graphics/icons/**/*.png") }
+
+    doFirst {
+        iconsDir.mkdirs()
+
+        fun significantlyChanged(img: BufferedImage, target: File): Boolean {
+            if (!target.exists()) return true
+            val old = ImageIO.read(target) ?: return true
+            if (old.width != 64 || old.height != 64) return true
+            var difference = 0
+            for (y in 0 until 64) {
+                for (x in 0 until 64) {
+                    val a = img.getRGB(x, y)
+                    val b = old.getRGB(x, y)
+                    val aAlpha = a ushr 24
+                    val bAlpha = b ushr 24
+                    difference +=
+                        maxOf(
+                            abs(
+                                (a shr 16 and 0xff) * aAlpha / 255 -
+                                    (b shr 16 and 0xff) * bAlpha / 255
+                            ),
+                            abs(
+                                (a shr 8 and 0xff) * aAlpha / 255 -
+                                    (b shr 8 and 0xff) * bAlpha / 255
+                            ),
+                            abs((a and 0xff) * aAlpha / 255 - (b and 0xff) * bAlpha / 255),
+                            abs(aAlpha - bAlpha),
+                        )
+                }
+            }
+            return difference > imageChangedThreshold
+        }
+
+        val chosen = LinkedHashMap<String, Pair<File, BufferedImage>>()
+        sources.files
+            .sortedBy { it.path }
+            .forEach { source ->
+                val img = ImageIO.read(source)
+                if (img == null || img.width != 120 || img.height != 64) return@forEach
+                val previous = chosen.putIfAbsent(source.name, source to img)
+                if (previous != null) {
+                    logger.warn(
+                        "Duplicate icon name '${source.name}': using ${previous.first.path}, ignoring ${source.path}"
+                    )
+                }
+            }
+
+        val changedNames =
+            chosen
+                .filter { (name, image) ->
+                    significantlyChanged(image.second, File(iconsDir, name))
+                }
+                .keys
+                .toList()
+        changedNames.forEach { name ->
+            chosen.getValue(name).first.copyTo(File(iconsDir, name), overwrite = true)
+        }
+        if (changedNames.isEmpty()) {
+            logger.lifecycle("No significantly changed icons found")
+        }
+
+        val files = changedNames.joinToString(" ") { "'$it'" }
+        standardInput =
+            if (changedNames.isEmpty()) {
+                "".byteInputStream()
+            } else {
+                """
+                mogrify -crop 64x64+0+0 $files
+                chmod 664 $files
+                pngquant --strip --speed 1 --ext=.png --force --skip-if-larger $files
+                optipng -o7 -zm1-9 $files
+                """
+                    .trimIndent()
+                    .byteInputStream()
+            }
+    }
 }
 
 tasks.register("copyRecipes") {
