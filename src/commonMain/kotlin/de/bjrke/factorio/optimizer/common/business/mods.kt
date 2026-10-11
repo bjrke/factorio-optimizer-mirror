@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 const val BASE_MOD = "base"
 const val SPACE_AGE_MOD = "space-age"
+const val RECYCLER_MOD = "recycler"
 
 val defaultMods = setOf(BASE_MOD, SPACE_AGE_MOD)
 

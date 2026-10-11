@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.FactoryConfig
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.model.Recipe
@@ -239,5 +240,84 @@ class OptimizerTest {
             )[moltenIron]
 
         assertEquals("iron-ore-melting", result.recipe.name)
+    }
+
+    @Test
+    fun baseGameSpaceScienceComesFromRocketSilo() {
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(setOf(BASE_MOD)).forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = false, recycler = false).defaults,
+            )
+
+        val space = Material("space-science-pack")
+        assertEquals(Factory.ROCKET_SILO, optimizer[space].factories.getValue(space).factory)
+    }
+
+    @Test
+    fun spaceAgeSpaceScienceIsImportedOnNauvis() {
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = true, recycler = true).defaults,
+            )
+
+        val space = Material("space-science-pack")
+        assertEquals(Factory.NO_FACTORY, optimizer[space].factories.getValue(space).factory)
+    }
+
+    @Test
+    fun spaceAgeSpaceScienceIsAssembledInSpace() {
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                FactoryConfig(spaceAge = true, recycler = true).defaults,
+            )
+
+        val space = Material("space-science-pack")
+        assertEquals(
+            Factory.ASSEMBLING_MACHINE_3,
+            optimizer[space].factories.getValue(space).factory,
+        )
+    }
+
+    @Test
+    fun spaceAgeQuantumProcessorIsAssembledInSpace() {
+        // quantum-processor lives in the Aquilo subgroup, but its low-pressure condition also holds
+        // on space platforms; the fluoroketone it needs is imported (barrels) there
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                FactoryConfig(spaceAge = true, recycler = true).defaults,
+            )
+
+        val quantum = Material("quantum-processor")
+        assertEquals(
+            Factory.ELECTROMAGNETIC_PLANT,
+            optimizer[quantum].factories.getValue(quantum).factory,
+        )
+    }
+
+    @Test
+    fun biterEggsAreImportedInSpace() {
+        // the captive biter spawner can only be built on Nauvis, so the biter eggs needed for
+        // promethium science must be imported on space platforms
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE))
+
+        val eggs = Material("biter-egg")
+        assertEquals(Factory.NO_FACTORY, optimizer[eggs].factories.getValue(eggs).factory)
+    }
+
+    @Test
+    fun biterEggsAreBredOnNauvis() {
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
+
+        val eggs = Material("biter-egg")
+        assertEquals(
+            Factory.CAPTIVE_BITER_SPAWNER,
+            optimizer[eggs].factories.getValue(eggs).factory,
+        )
     }
 }

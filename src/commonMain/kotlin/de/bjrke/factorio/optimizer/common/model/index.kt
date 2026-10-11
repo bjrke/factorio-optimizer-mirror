@@ -77,10 +77,15 @@ enum class Surface(
 
     fun accepts(subgroup: Subgroup) = subgroupSurface(subgroup.name)?.let { it == this } ?: true
 
-    /** Asteroid crushing only happens in space, its recipes carry no surface conditions. */
+    /**
+     * Some recipe categories only run on one surface: asteroid crushing happens in space, and the
+     * captive biter spawner (biter eggs) can only be built on Nauvis, so its product is imported
+     * everywhere else.
+     */
     fun accepts(category: Category) =
         when (category) {
             Category.CRUSHING -> this == SPACE
+            Category.CAPTIVE_SPAWNER_PROCESS -> this == NAUVIS
             else -> true
         }
 
@@ -143,7 +148,10 @@ fun ParsedRecipe.forSurface(surface: Surface) =
         recipes =
             recipes.filter {
                 surface.accepts(it.surfaceConditions) &&
-                    surface.accepts(it.subgroup) &&
+                    // the planet-labelled subgroup is only a fallback for recipes without explicit
+                    // surface conditions: some of those fit several surfaces, e.g. the
+                    // quantum-processor (low pressure) is also assembled on space platforms
+                    (it.surfaceConditions.isNotEmpty() || surface.accepts(it.subgroup)) &&
                     surface.accepts(it.category) &&
                     (it.category !in extractionCategories || surface.acceptsResource(it.name))
             }

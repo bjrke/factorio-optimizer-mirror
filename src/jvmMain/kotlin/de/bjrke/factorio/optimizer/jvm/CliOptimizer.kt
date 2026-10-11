@@ -2,9 +2,12 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.Optimizer
+import de.bjrke.factorio.optimizer.common.business.RECYCLER_MOD
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
+import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
 import de.bjrke.factorio.optimizer.common.business.defaultMods
 import de.bjrke.factorio.optimizer.common.business.superRound
+import de.bjrke.factorio.optimizer.common.model.FactoryConfig
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
@@ -25,7 +28,10 @@ fun main(args: Array<String>) {
             .firstOrNull { it.startsWith("--planet=") }
             ?.removePrefix("--planet=")
             ?.let { surfaceFromUrl(it) } ?: Surface.NAUVIS
-    val result = Optimizer(RecipeProvider.forActiveMods(mods).forSurface(surface))[material]
+    val activeMods = RecipeProvider.resolveMods(mods)
+    val factories = FactoryConfig(SPACE_AGE_MOD in activeMods, RECYCLER_MOD in activeMods).defaults
+    val result =
+        Optimizer(RecipeProvider.forActiveMods(mods).forSurface(surface), factories)[material]
 
     result.factories.entries
         .sortedWith(factoryProductionComparator)

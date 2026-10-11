@@ -107,6 +107,30 @@ class SurfaceTest {
         )
     }
 
+    @Test
+    fun explicitConditionsOverridePlanetSubgroup() {
+        // quantum-processor is in the Aquilo subgroup but its pressure condition also allows space
+        val quantumProcessor =
+            Recipe(
+                name = "quantum-processor",
+                ingredients = emptyMap(),
+                result = mapOf(Material("quantum-processor") to 1.0),
+                time = 1.0,
+                category = Category.ELECTROMAGNETICS,
+                subgroup = Subgroup("aquilo-processes"),
+                surfaceConditions =
+                    listOf(SurfaceCondition(SurfaceProperty.PRESSURE, Int.MIN_VALUE..600)),
+            )
+        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(quantumProcessor))
+
+        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name)
+
+        assertEquals(listOf("quantum-processor"), names(Surface.AQUILO))
+        assertEquals(listOf("quantum-processor"), names(Surface.SPACE))
+        assertTrue(names(Surface.NAUVIS).isEmpty())
+        assertTrue(names(Surface.VULCANUS).isEmpty())
+    }
+
     private fun extraction(name: String, category: Category) =
         Recipe(
             name = name,

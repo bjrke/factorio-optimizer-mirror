@@ -118,7 +118,9 @@ fun parseRecipes(
     files: Map<String, String> = loadRecipeFiles(),
     activeMods: Set<String> = files.keys.map { it.substringBefore('/') }.toSet(),
     mode: Mode = Mode.NORMAL,
-    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = ::defaultRecipes,
+    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = { material ->
+        defaultRecipes(material, SPACE_AGE_MOD in activeMods)
+    },
 ): ParsedRecipe {
 
     class LuaRecipe(val table: WrappedTable) {

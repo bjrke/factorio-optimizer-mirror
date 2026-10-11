@@ -8,24 +8,43 @@ private const val SPACE_SCIENCE_PACK = "space-science-pack"
 
 const val ALL_SCIENCE_PACKS = "all-science-packs"
 
-private fun allSciencePacks(material: (String) -> Material) =
+private val baseSciencePacks =
+    listOf(
+        "automation-science-pack",
+        "chemical-science-pack",
+        "logistic-science-pack",
+        "military-science-pack",
+        "production-science-pack",
+        SPACE_SCIENCE_PACK,
+        "utility-science-pack",
+    )
+
+private val spaceAgeSciencePacks =
+    baseSciencePacks +
+        listOf(
+            "agricultural-science-pack",
+            "cryogenic-science-pack",
+            "electromagnetic-science-pack",
+            "metallurgic-science-pack",
+            "promethium-science-pack",
+        )
+
+private fun allSciencePacks(material: (String) -> Material, spaceAge: Boolean) =
     Recipe(
         name = ALL_SCIENCE_PACKS,
         ingredients =
-            mapOf(
-                material("automation-science-pack") to 1.0,
-                material("chemical-science-pack") to 1.0,
-                material("logistic-science-pack") to 1.0,
-                material("military-science-pack") to 1.0,
-                material("production-science-pack") to 1.0,
-                material(SPACE_SCIENCE_PACK) to 1.0,
-                material("utility-science-pack") to 1.0,
-            ),
+            (if (spaceAge) spaceAgeSciencePacks else baseSciencePacks).associate {
+                material(it) to 1.0
+            },
         result = mapOf(material(ALL_SCIENCE_PACKS) to 1.0),
         time = 1.0,
         category = Category.SCIENCE_LAB,
     )
 
+/**
+ * The base game produces space science in the rocket silo. In Space Age the mod ships its own
+ * recipe (assembled from asteroids in space), so this fallback must not be added then.
+ */
 private fun spaceSciencePack(material: (String) -> Material) =
     Recipe(
         name = SPACE_SCIENCE_PACK,
@@ -35,7 +54,8 @@ private fun spaceSciencePack(material: (String) -> Material) =
         category = Category.ROCKET_BUILDING,
     )
 
-fun defaultRecipes(material: (String) -> Material) =
-    listOf(spaceSciencePack(material), allSciencePacks(material)) +
+fun defaultRecipes(material: (String) -> Material, spaceAge: Boolean) =
+    (if (spaceAge) emptyList() else listOf(spaceSciencePack(material))) +
+        listOf(allSciencePacks(material, spaceAge)) +
         resourceRecipes(material) +
         spoilageRecipes(material)

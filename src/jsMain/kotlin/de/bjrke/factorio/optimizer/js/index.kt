@@ -2,12 +2,12 @@ package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.Optimizer
+import de.bjrke.factorio.optimizer.common.business.RECYCLER_MOD
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
 import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
 import de.bjrke.factorio.optimizer.common.business.defaultMods
 import de.bjrke.factorio.optimizer.common.business.superRound
-import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
-import de.bjrke.factorio.optimizer.common.model.Factories.factorySetFromUrl
+import de.bjrke.factorio.optimizer.common.model.FactoryConfig
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.Surface
@@ -39,11 +39,13 @@ class FactorioOptimizerProps {
 
     var normalizeTarget = params[ParamName("normalizeTarget")]?.toDouble() ?: 1.0
     var target = Material.of(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
-    var factories =
-        params[ParamName("factories")]?.let { factorySetFromUrl(it) } ?: defaultFactories
     var mods =
         params[ParamName("mods")]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: defaultMods
-    val spaceAgeEnabled = SPACE_AGE_MOD in RecipeProvider.resolveMods(mods)
+    val activeMods = RecipeProvider.resolveMods(mods)
+    val spaceAgeEnabled = SPACE_AGE_MOD in activeMods
+    val factoryConfig = FactoryConfig(spaceAgeEnabled, RECYCLER_MOD in activeMods)
+    var factories =
+        params[ParamName("factories")]?.let { factoryConfig.fromUrl(it) } ?: factoryConfig.defaults
     var surface =
         if (spaceAgeEnabled) {
             params[ParamName("surface")]?.let { surfaceFromUrl(it) } ?: Surface.NAUVIS

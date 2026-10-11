@@ -46,7 +46,7 @@ object RecipeProvider {
             recipes += parsed.recipes
         }
 
-        recipes += defaultRecipes(Material::of)
+        recipes += defaultRecipes(Material::of, SPACE_AGE_MOD in activeMods)
         recipes.forEach { recipe ->
             materials += recipe.ingredients.keys
             materials += recipe.result.keys

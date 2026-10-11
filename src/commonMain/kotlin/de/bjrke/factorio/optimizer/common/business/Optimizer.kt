@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.Factories.defaultFactories
+import de.bjrke.factorio.optimizer.common.model.defaultFactories
 
 class Optimizer(
     private val parsedRecipe: ParsedRecipe = parseRecipes(),
