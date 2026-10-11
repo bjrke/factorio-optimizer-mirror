@@ -45,6 +45,12 @@ enum class Factory(
         spaceAgeOnly = true,
     ),
     CRUSHER(null, "crusher", setOf(Category.CRUSHING), spaceAgeOnly = true),
+    ASTEROID_COLLECTOR(
+        null,
+        "asteroid-collector",
+        setOf(Category.ASTEROID_COLLECTION),
+        spaceAgeOnly = true,
+    ),
     RECYCLER('r', "recycler", setOf(Category.RECYCLING), requiresRecycler = true),
     CAPTIVE_BITER_SPAWNER(
         null,
@@ -160,6 +166,7 @@ class FactoryConfig(val spaceAge: Boolean = true, val recycler: Boolean = true) 
                 Factory.OIL_REFINERY,
                 Factory.CHEMICAL_PLANT,
                 Factory.CRUSHER,
+                Factory.ASTEROID_COLLECTOR,
                 Factory.CENTRIFUGE,
                 Factory.CAPTIVE_BITER_SPAWNER,
                 Factory.AGRICULTURAL_TOWER,

@@ -70,6 +70,16 @@ class SurfaceTest {
     }
 
     @Test
+    fun asteroidCollectionOnlyInSpace() {
+        assertTrue(Surface.SPACE.accepts(Category.ASTEROID_COLLECTION))
+        Surface.entries
+            .filter { it != Surface.SPACE }
+            .forEach {
+                assertFalse(it.accepts(Category.ASTEROID_COLLECTION), "$it")
+            }
+    }
+
+    @Test
     fun forSurfaceFiltersRecipes() {
         val global =
             Recipe(

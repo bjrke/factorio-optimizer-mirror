@@ -55,6 +55,31 @@ private val resourceSources =
 /** The offshore pump extracts the fluid of its "ocean" tile: water, heavy oil, lava or solution. */
 private val offshorePumpFluids = listOf("water", "heavy-oil", "lava", "ammoniacal-solution")
 
+/**
+ * Asteroid chunks are collected by the asteroid collector in space. The collector prototype has a
+ * 0.2s mining time; the in-game chunk mix depends on where the platform is, so all chunk types are
+ * assumed to drop at the same rate. Modelled as one recipe so a single collector serves every
+ * chunk.
+ */
+private val asteroidChunks =
+    listOf(
+        "metallic-asteroid-chunk",
+        "carbonic-asteroid-chunk",
+        "oxide-asteroid-chunk",
+        "promethium-asteroid-chunk",
+    )
+
+private fun asteroidCollectionRecipes(material: (String) -> Material) =
+    listOf(
+        Recipe(
+            name = "asteroid-collection",
+            ingredients = emptyMap(),
+            result = asteroidChunks.associate { material(it) to 1.0 },
+            time = 0.2,
+            category = Category.ASTEROID_COLLECTION,
+        )
+    )
+
 private fun extractionRecipe(
     name: String,
     result: Material,
@@ -91,4 +116,5 @@ fun resourceRecipes(material: (String) -> Material): List<Recipe> =
                 category = Category.OFFSHORE_PUMPING,
                 time = 1.0,
             )
-        }
+        } +
+        asteroidCollectionRecipes(material)

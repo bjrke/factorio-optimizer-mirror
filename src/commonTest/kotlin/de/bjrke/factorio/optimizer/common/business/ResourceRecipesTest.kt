@@ -67,4 +67,21 @@ class ResourceRecipesTest {
             assertTrue(recipe.ingredients.isEmpty())
         }
     }
+
+    @Test
+    fun asteroidCollectorYieldsEveryChunk() {
+        val recipe = recipes.getValue("asteroid-collection")
+        assertEquals(Category.ASTEROID_COLLECTION, recipe.category)
+        assertEquals(0.2, recipe.time)
+        assertTrue(recipe.ingredients.isEmpty())
+        assertEquals(
+            setOf(
+                Material("metallic-asteroid-chunk"),
+                Material("carbonic-asteroid-chunk"),
+                Material("oxide-asteroid-chunk"),
+                Material("promethium-asteroid-chunk"),
+            ),
+            recipe.result.keys,
+        )
+    }
 }

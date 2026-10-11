@@ -16,6 +16,7 @@ private fun correctName(s: String) =
     when {
         s == "stone-wall" -> "wall"
         s == "raw-fish" -> "fish"
+        s == "asteroid-collection" -> "asteroid-collector"
         s.endsWith("-rotting") -> s.removeSuffix("-rotting")
         else -> s
     }

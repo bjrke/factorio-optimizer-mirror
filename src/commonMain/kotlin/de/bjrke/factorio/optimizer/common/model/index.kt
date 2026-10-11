@@ -78,13 +78,14 @@ enum class Surface(
     fun accepts(subgroup: Subgroup) = subgroupSurface(subgroup.name)?.let { it == this } ?: true
 
     /**
-     * Some recipe categories only run on one surface: asteroid crushing happens in space, and the
-     * captive biter spawner (biter eggs) can only be built on Nauvis, so its product is imported
-     * everywhere else.
+     * Some recipe categories only run on one surface: asteroid collection and crushing happen in
+     * space, and the captive biter spawner (biter eggs) can only be built on Nauvis, so its product
+     * is imported everywhere else.
      */
     fun accepts(category: Category) =
         when (category) {
             Category.CRUSHING -> this == SPACE
+            Category.ASTEROID_COLLECTION -> this == SPACE
             Category.CAPTIVE_SPAWNER_PROCESS -> this == NAUVIS
             else -> true
         }
@@ -171,6 +172,7 @@ enum class Category(val identifier: String) {
     CRYOGENICS("cryogenics"),
     ELECTROMAGNETICS("electromagnetics"),
     CRUSHING("crushing"),
+    ASTEROID_COLLECTION("asteroid-collection"),
     RECYCLING("recycling"),
     CAPTIVE_SPAWNER_PROCESS("captive-spawner-process"),
     HAND_CRAFTING("hand-crafting"),
@@ -198,6 +200,7 @@ val extractionCategories =
         Category.MINING_FLUID,
         Category.OFFSHORE_PUMPING,
         Category.HARVESTING,
+        Category.ASTEROID_COLLECTION,
     )
 
 private val categoryMap = Category.entries.associateBy { it.identifier }

@@ -79,6 +79,7 @@ class FactoryTest {
                 Factory.ELECTROMAGNETIC_PLANT,
                 Factory.BIOCHAMBER,
                 Factory.CRUSHER,
+                Factory.ASTEROID_COLLECTOR,
                 Factory.CAPTIVE_BITER_SPAWNER,
                 Factory.BIG_MINING_DRILL,
                 Factory.AGRICULTURAL_TOWER,
@@ -121,6 +122,7 @@ class FactoryTest {
         val alwaysOn =
             listOf(
                 Factory.CRUSHER,
+                Factory.ASTEROID_COLLECTOR,
                 Factory.CENTRIFUGE,
                 Factory.CAPTIVE_BITER_SPAWNER,
                 Factory.AGRICULTURAL_TOWER,
