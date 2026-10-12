@@ -10,6 +10,56 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 - `./gradlew spotlessApply` — fix formatting (Spotless/ktfmt `kotlinlangStyle`; covers `src/**/*.kt` and `build.gradle.kts`)
 - `./gradlew run` — run the CLI (`CliOptimizerKt`); `./gradlew buildFatJar` produces a runnable fat jar
 
+## Testing
+
+- Tests are expected by default: every behavior change or new logic gets tests
+  **without being asked**, regardless of source set (`commonMain`, `jsMain`,
+  `jvmMain`). Treat a missing test as an incomplete task; the only exception is
+  pure formatting or docs-only changes.
+- Tests use `kotlin.test` (`@Test`, `assertEquals`, `assertTrue`, ...) and live
+  in the matching test source set (`src/commonTest`, `src/jvmTest`,
+  `src/jsTest`) under `.../de/bjrke/factorio/optimizer/...`.
+- When a test makes multiple assertions that do not depend on each other, they
+  MUST be combined with the `de.bjrke.test` helpers — `assertAll` for a list of
+  independent checks, and `assertTable` / `assertTableOf` for table-driven
+  cases. Prefer descriptive names that state the expected behavior (e.g.
+  `vulcanusSteelUsesLavaNotChestOre`).
+- `commonTest` runs on both JVM and JS (the JS suite runs in headless Chrome via
+  `jsBrowserTest`), so keep it platform-neutral; target-specific tests belong in
+  `src/jvmTest` / `src/jsTest`.
+- Iterate quickly with `./gradlew jvmTest`; before finishing run
+  `./gradlew check` and `./gradlew spotlessApply`.
+
+## Sandbox environment (`sbx run opencode`)
+
+- This agent runs inside a `sbx run opencode` sandbox: network access is
+  restricted and many URLs are blocked.
+- A one-off workaround for a blocked URL is acceptable. But if you hit the same
+  block repeatedly, or you believe the URL is safe and would help you
+  significantly, **stop the loop** and tell the user exactly which URL(s) to
+  allow, so they can stop the sandbox and unblock them.
+- Some resources are simply not available in the sandbox (for example the local
+  Factorio installation needed by `dumpPrototypes` / `updateImages`). Do not go
+  searching for them; stop and ask the user for help instead.
+
+## Host Gradle locks
+
+- The user also runs Gradle on the host and sometimes forgets to stop it.
+  Symptoms: `./gradlew clean` fails, or the `build/` directory cannot be deleted
+  because files are locked. Do not keep retrying — **stop the loop** and ask the
+  user to stop the host Gradle build/daemon.
+
+## Asking the user for help
+
+- Never paste commands into chat for the user to run. Instead write a short,
+  reviewable, Ubuntu-compatible shell script under `tmp/` (repo root).
+- Name it `<topic>.sh` and have it write its results next to itself as
+  `<topic>.out` (or `.log`) file(s). Both directions are painful in the sandbox:
+  moving content out of it, and getting content in, so keep everything you need
+  side by side in `tmp/`.
+- `tmp/` is intentionally not gitignored: keep the scripts uncommitted, and
+  delete the `tmp/` files once they are no longer needed.
+
 ## Prerequisites
 
 - JDK 25 is required. `gradle.properties` sets `org.gradle.java.installations.auto-download=false`, so a local JDK 25 must exist; otherwise the build fails with a cryptic error (just the installed version string). CI uses the external image `registry.gitlab.com/bjrke/docker-gradle-chrome:latest` (gradle JDK 25 + Google Chrome for `jsBrowserTest`).
