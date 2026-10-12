@@ -2,6 +2,10 @@
 
 Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app that optimizes Factorio factory layouts. It compiles to a React web app (JS) and a CLI (JVM).
 
+> Agent-loop discipline: when a network request or a resource is blocked, stop
+> after the retry budget in "Sandbox environment" and ask the user directly —
+> do not loop or route around it.
+
 ## Commands
 
 - `./gradlew jsBrowserDevelopmentRun --continuous` / `jsBrowserProductionRun --continuous` — dev server for the web UI
@@ -33,14 +37,18 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 ## Sandbox environment (`sbx run opencode`)
 
 - This agent runs inside a `sbx run opencode` sandbox: network access is
-  restricted and many URLs are blocked.
-- A one-off workaround for a blocked URL is acceptable. But if you hit the same
-  block repeatedly, or you believe the URL is safe and would help you
-  significantly, **stop the loop** and tell the user exactly which URL(s) to
-  allow, so they can stop the sandbox and unblock them.
+  restricted. Treat every external host as **blocked** unless it is listed
+  under "Reachable hosts" below — do not probe unknown URLs.
+- Reachable hosts: none known yet — add them here as they are discovered.
+- Retry budget: at most **2 distinct URLs/approaches per blocked resource**.
+  After that, **stop the loop** — no proxies, mirrors, or alternate URLs — and
+  ask the user one direct question naming the exact URL(s) to allow. Waiting for
+  the answer is the correct next step; do not continue the task around it.
 - Some resources are simply not available in the sandbox (for example the local
   Factorio installation needed by `dumpPrototypes` / `updateImages`). Do not go
   searching for them; stop and ask the user for help instead.
+- Prefer your built-in knowledge and this repository's own files. Do not
+  `webfetch` speculatively.
 
 ## Host Gradle locks
 
@@ -51,8 +59,13 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 
 ## Asking the user for help
 
-- Never paste commands into chat for the user to run. Instead write a short,
-  reviewable, Ubuntu-compatible shell script under `tmp/` (repo root).
+- Distinguish the two cases: a **question** (a blocked URL, a missing resource,
+  or a decision you cannot make) must be asked directly and the task stopped —
+  do not turn it into a script. A **host command** (something that must run
+  outside the sandbox) is handled with a `tmp/` script below.
+- For host commands, never paste the command into chat for the user to run.
+  Instead write a short, reviewable, Ubuntu-compatible shell script under `tmp/`
+  (repo root).
 - Name it `<topic>.sh` and have it write its results next to itself as
   `<topic>.out` (or `.log`) file(s). Both directions are painful in the sandbox:
   moving content out of it, and getting content in, so keep everything you need
