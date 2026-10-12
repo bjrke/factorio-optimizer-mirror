@@ -107,7 +107,7 @@ enum class Surface(
         }
 
     /** Extraction recipes (mining, pumping) only exist where their resource spawns. */
-    fun acceptsResource(name: String) = resourceSurfaces[name]?.let { this in it } ?: true
+    fun acceptsResource(name: String) = resourceSurfaces[name]?.contains(this) ?: true
 }
 
 /**
@@ -160,20 +160,36 @@ fun surfaceFromUrl(s: String) = s.firstOrNull()?.let { surfacesByCode[it] }
 
 fun Surface.toUrlParam() = code.toString()
 
-fun ParsedRecipe.forSurface(surface: Surface) =
-    copy(
+fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
+    val kept = recipes.filter {
+        surface.accepts(it.surfaceConditions) &&
+            // the planet-labeled subgroup is only a fallback for recipes without explicit
+            // surface conditions: some of those fit several surfaces, e.g. the
+            // quantum-processor (low pressure) is also assembled on space platforms
+            (it.surfaceConditions.isNotEmpty() || surface.accepts(it.subgroup)) &&
+            it.categories.any(surface::accepts) &&
+            (it.categories.none(extractionCategories::contains) ||
+                surface.acceptsResource(it.name)) &&
+            // the auto-generated recycling recipes only exist where scrap is collected
+            (Category.RECYCLING !in it.categories || surface == Surface.FULGORA)
+    }
+
+    // A rotting recipe only makes sense where the spoiling item is actually produced. This keeps
+    // bacteria (a free chest import on Fulgora) from being "imported only to be rotted" into ore.
+    val produced = buildSet {
+        kept.forEach {
+            if (Category.ROTTING !in it.categories) addAll(it.result.keys)
+        }
+    }
+
+    return copy(
         recipes =
-            recipes.filter {
-                surface.accepts(it.surfaceConditions) &&
-                    // the planet-labelled subgroup is only a fallback for recipes without explicit
-                    // surface conditions: some of those fit several surfaces, e.g. the
-                    // quantum-processor (low pressure) is also assembled on space platforms
-                    (it.surfaceConditions.isNotEmpty() || surface.accepts(it.subgroup)) &&
-                    it.categories.any { category -> surface.accepts(category) } &&
-                    (it.categories.none { category -> category in extractionCategories } ||
-                        surface.acceptsResource(it.name))
+            kept.filter { recipe ->
+                Category.ROTTING !in recipe.categories ||
+                    produced.containsAll(recipe.ingredients.keys)
             }
     )
+}
 
 enum class Category(val identifier: String) {
     ADVANCED_CRAFTING("advanced-crafting"),

@@ -228,6 +228,62 @@ class SurfaceTest {
     }
 
     @Test
+    fun recyclingRecipesOnlySurviveOnFulgora() {
+        val recycling =
+            Recipe(
+                name = "scrap-recycling",
+                ingredients = mapOf(Material("scrap") to 1.0),
+                result = mapOf(Material("iron-gear-wheel") to 1.0),
+                time = 1.0,
+                categories = setOf(Category.RECYCLING),
+            )
+        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(recycling))
+
+        assertAll(
+            {
+                assertTrue(
+                    parsed.forSurface(Surface.FULGORA).recipes.any { it.name == "scrap-recycling" }
+                )
+            },
+            {
+                assertFalse(
+                    parsed.forSurface(Surface.NAUVIS).recipes.any { it.name == "scrap-recycling" }
+                )
+            },
+        )
+    }
+
+    @Test
+    fun rottingRecipesNeedTheirSourceToBeProduced() {
+        val bacteria =
+            Recipe(
+                name = "iron-bacteria",
+                ingredients = mapOf(Material("yumako-mash") to 1.0),
+                result = mapOf(Material("iron-bacteria") to 1.0),
+                time = 1.0,
+                categories = setOf(Category.CRAFTING),
+                surfaceConditions = listOf(pressure(2000, 2000)),
+            )
+        val rotting =
+            Recipe(
+                name = "iron-bacteria-rotting",
+                ingredients = mapOf(Material("iron-bacteria") to 1.0),
+                result = mapOf(Material("iron-ore") to 1.0),
+                time = 1.0,
+                categories = setOf(Category.ROTTING),
+            )
+        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(bacteria, rotting))
+
+        assertTableOf(
+            Surface.GLEBA to setOf("iron-bacteria", "iron-bacteria-rotting"),
+            Surface.FULGORA to emptySet<String>(),
+            Surface.NAUVIS to emptySet<String>(),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
+        }
+    }
+
+    @Test
     fun urlRoundTrip() =
         assertTable(Surface.entries) { surface ->
             assertEquals(surface, surfaceFromUrl(surface.toUrlParam()), "$surface")

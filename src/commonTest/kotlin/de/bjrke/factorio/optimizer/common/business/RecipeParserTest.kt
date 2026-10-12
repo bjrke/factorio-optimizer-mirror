@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -107,6 +108,100 @@ class RecipeParserTest {
                 .single()
                 .categories,
         )
+
+    @Test
+    fun parseHiddenRecyclingRecipe() {
+        val recipes =
+            parse(
+                    """
+                    {"recipe":{
+                      "scrap-recycling":{
+                        "type":"recipe","name":"scrap-recycling","categories":["recycling"],
+                        "ingredients":[{"type":"item","name":"scrap","amount":1}],
+                        "results":[{"type":"item","name":"iron-gear-wheel","amount":1}]
+                      },
+                      "iron-gear-wheel-recycling":{
+                        "type":"recipe","name":"iron-gear-wheel-recycling","hidden":true,
+                        "categories":["recycling"],
+                        "ingredients":[{"type":"item","name":"iron-gear-wheel","amount":1}],
+                        "results":[
+                          {"type":"item","name":"iron-plate","amount":0,"extra_count_fraction":0.5}
+                        ]
+                      }
+                    }}
+                    """
+                )
+                .associateBy(Recipe::name)
+
+        assertAll(
+            { assertTrue(recipes.containsKey("iron-gear-wheel-recycling")) },
+            // amount (0) + extra_count_fraction (0.5) is the expected yield
+            {
+                assertEquals(
+                    mapOf(Material("iron-plate") to 0.5),
+                    recipes.getValue("iron-gear-wheel-recycling").result,
+                )
+            },
+        )
+    }
+
+    @Test
+    fun parseSkipsSelfRecyclingRecipe() {
+        val recipes =
+            parse(
+                """
+                {"recipe":{
+                  "scrap-recycling":{
+                    "type":"recipe","name":"scrap-recycling","categories":["recycling"],
+                    "ingredients":[{"type":"item","name":"scrap","amount":1}],
+                    "results":[{"type":"item","name":"iron-gear-wheel","amount":1}]
+                  },
+                  "iron-ore-recycling":{
+                    "type":"recipe","name":"iron-ore-recycling","hidden":true,
+                    "categories":["recycling"],
+                    "ingredients":[{"type":"item","name":"iron-ore","amount":1}],
+                    "results":[
+                      {"type":"item","name":"iron-ore","amount":1,"independent_probability":0.25}
+                    ]
+                  }
+                }}
+                """
+            )
+
+        assertAll(
+            { assertTrue(recipes.any { it.name == "scrap-recycling" }) },
+            { assertTrue(recipes.none { it.name == "iron-ore-recycling" }) },
+        )
+    }
+
+    @Test
+    fun parseSkipsRecyclingNotReachableFromScrap() {
+        val recipes =
+            parse(
+                """
+                {"recipe":{
+                  "scrap-recycling":{
+                    "type":"recipe","name":"scrap-recycling","categories":["recycling"],
+                    "ingredients":[{"type":"item","name":"scrap","amount":1}],
+                    "results":[{"type":"item","name":"iron-gear-wheel","amount":1}]
+                  },
+                  "accumulator-recycling":{
+                    "type":"recipe","name":"accumulator-recycling","hidden":true,
+                    "categories":["recycling"],
+                    "ingredients":[{"type":"item","name":"accumulator","amount":1}],
+                    "results":[
+                      {"type":"item","name":"battery","amount":0,"extra_count_fraction":0.2}
+                    ]
+                  }
+                }}
+                """
+            )
+
+        assertAll(
+            { assertTrue(recipes.any { it.name == "scrap-recycling" }) },
+            { assertTrue(recipes.none { it.name == "accumulator-recycling" }) },
+        )
+    }
 
     @Test
     fun parseSurfaceConditionsAndIndependentProbability() =

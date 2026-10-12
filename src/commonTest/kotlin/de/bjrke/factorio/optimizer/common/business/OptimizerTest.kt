@@ -231,6 +231,56 @@ class OptimizerTest {
     }
 
     @Test
+    fun fulgoraIronOreComesFromRecyclingNotBacteria() {
+        // Fulgora has no ore patches and no bacteria: iron ore is recovered by recycling concrete,
+        // which is one of the scrap-recycling outputs
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+
+        val material = Material("iron-ore")
+        val result = optimizer[material]
+        val production = result.factories.getValue(material)
+        assertAll(
+            { assertEquals(Factory.RECYCLER, production.factory) },
+            { assertEquals("concrete-recycling", production.recipe.name) },
+            {
+                assertTrue(
+                    result.factories.values.none {
+                        it.factory == Factory.ROTTING || it.factory == Factory.NO_FACTORY
+                    }
+                )
+            },
+        )
+    }
+
+    @Test
+    fun fulgoraCopperOreIsImported() {
+        // nothing on Fulgora recycles into copper ore, so it is imported instead of being rotted
+        // from imported bacteria
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+
+        val material = Material("copper-ore")
+        val production = optimizer[material].factories.getValue(material)
+        assertAll(
+            { assertEquals(Factory.NO_FACTORY, production.factory) },
+            { assertEquals("copper-ore", production.recipe.name) },
+        )
+    }
+
+    @Test
+    fun fulgoraScienceNeverRotsBacteria() {
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+
+        val result = optimizer[Material(ALL_SCIENCE_PACKS)]
+        assertAll(
+            { assertTrue(result.factories.values.none { it.factory == Factory.ROTTING }) },
+            { assertTrue(result.factories.values.none { it.recipe.name.endsWith("-rotting") }) },
+        )
+    }
+
+    @Test
     fun glebaSpoilageComesFromRawFruitNotScience() {
         // spoilage is cheapest by letting raw harvested fruit rot, not by spoiling expensive
         // Gleba science packs.

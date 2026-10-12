@@ -57,15 +57,11 @@ fun parsePrototypes(
             else -> subgroups.getOrPut(name) { Subgroup(name) }
         }
 
-    val recipes =
+    val parsedRecipes =
         sequence {
                 for ((name, element) in root.table("recipe") ?: JsonObject(emptyMap())) {
                     val prototype = element as? JsonObject ?: continue
                     if (prototype.boolean("parameter") == true) continue
-                    // hidden recipes are internal/cheat prototypes (the auto-generated lossy
-                    // `*-recycling` recipes, loaders, infinity chests, ...); only `scrap-recycling`
-                    // is a real production recipe, and it is not hidden.
-                    if (prototype.boolean("hidden") == true) continue
 
                     val subgroupName = prototype.string("subgroup")
                     when (subgroupName) {
@@ -79,10 +75,17 @@ fun parsePrototypes(
                         }
                         for (entry in prototype.array("results")?.objects().orEmpty()) {
                             val resultName = entry.string("name") ?: continue
+
+                            // recycling recipes express fractional yields via
+                            // `extra_count_fraction`
+                            val extraCountFraction = entry.number("extra_count_fraction") ?: 0.0
+
+                            // on top of `amount` (usually 0), so they must be added, not replaced
+                            val amount = entry.number("amount") ?: DEFAULT_AMOUNT
+
                             put(
                                 material(resultName),
-                                (entry.number("amount") ?: DEFAULT_AMOUNT) *
-                                    resultProbability(entry),
+                                (amount + extraCountFraction) * resultProbability(entry),
                             )
                         }
                     }
@@ -91,10 +94,7 @@ fun parsePrototypes(
                     val ingredients = buildMap {
                         for (entry in prototype.array("ingredients")?.objects().orEmpty()) {
                             val ingredientName = entry.string("name") ?: continue
-                            put(
-                                material(ingredientName),
-                                entry.number("amount") ?: DEFAULT_AMOUNT,
-                            )
+                            put(material(ingredientName), entry.number("amount") ?: DEFAULT_AMOUNT)
                         }
                     }
 
@@ -107,6 +107,15 @@ fun parsePrototypes(
                             .mapNotNull(::category)
                             .toSet()
                     if (categories.isEmpty()) continue
+
+                    val recycling = Category.RECYCLING in categories
+                    // hidden recipes are internal/cheat prototypes (loaders, infinity chests, ...);
+                    // the auto-generated lossy `*-recycling` recipes are hidden too, but they are
+                    // the recycler's real production recipes and must be kept.
+                    if (prototype.boolean("hidden") == true && !recycling) continue
+                    // a self-recycling recipe (an ingredient is also a result) is a lossy raw->raw
+                    // conversion that would let any resource "produce itself"; drop it.
+                    if (recycling && ingredients.keys.intersect(result.keys).isNotEmpty()) continue
 
                     yield(
                         Recipe(
@@ -125,8 +134,25 @@ fun parsePrototypes(
                 yieldAll(spoilageRecipes(root, ::material))
                 yieldAll(defaultRecipesProvider(::material))
             }
+            .associateBy { it.name }
+
+    // Only scrap and what scrap-recycling yields may enter the recycler. Keeping recycling recipes
+    // one step past scrap avoids reverse chains (e.g. an accumulator recycling back into the
+    // circuits that used to make it) that would otherwise beat the forward recipes.
+    val scrapReach = buildSet {
+        add(material("scrap"))
+        parsedRecipes["scrap-recycling"]?.run {
+            addAll(result.keys)
+        }
+    }
+
+    val recipes =
+        parsedRecipes.values
+            .filter { recipe ->
+                Category.RECYCLING !in recipe.categories ||
+                    scrapReach.containsAll(recipe.ingredients.keys)
+            }
             .sortedBy(Recipe::name)
-            .toList()
 
     return ParsedRecipe(
         materials = materialsBuilder.values.sortedBy(Material::name),
