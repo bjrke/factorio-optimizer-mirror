@@ -1,6 +1,9 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.assertAll
+import de.bjrke.test.assertTable
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -12,62 +15,77 @@ class SurfaceTest {
 
     @Test
     fun nowhereRestrictedRecipeIsAvailableEverywhere() =
-        Surface.entries.forEach { assertTrue(it.accepts(emptyList())) }
+        assertTable(Surface.entries) { assertTrue(it.accepts(emptyList()), "$it") }
 
     @Test
     fun pressureSelectsPlanet() {
         val vulcanusOnly = listOf(pressure(4000, 4000))
-        assertTrue(Surface.VULCANUS.accepts(vulcanusOnly))
-        assertFalse(Surface.NAUVIS.accepts(vulcanusOnly))
-        assertFalse(Surface.GLEBA.accepts(vulcanusOnly))
+        assertAll(
+            { assertTrue(Surface.VULCANUS.accepts(vulcanusOnly)) },
+            { assertFalse(Surface.NAUVIS.accepts(vulcanusOnly)) },
+            { assertFalse(Surface.GLEBA.accepts(vulcanusOnly)) },
+        )
     }
 
     @Test
     fun pressureRangeAcceptsAquilo() {
         val aquilo = listOf(pressure(100, 600))
-        assertTrue(Surface.AQUILO.accepts(aquilo))
-        assertFalse(Surface.NAUVIS.accepts(aquilo))
+        assertAll(
+            { assertTrue(Surface.AQUILO.accepts(aquilo)) },
+            { assertFalse(Surface.NAUVIS.accepts(aquilo)) },
+        )
     }
 
     @Test
     fun missingPropertyIsRejected() {
         val magnetic = listOf(SurfaceCondition(SurfaceProperty.MAGNETIC_FIELD, 99..Int.MAX_VALUE))
-        assertTrue(Surface.FULGORA.accepts(magnetic))
-        assertFalse(Surface.NAUVIS.accepts(magnetic))
+        assertAll(
+            { assertTrue(Surface.FULGORA.accepts(magnetic)) },
+            { assertFalse(Surface.NAUVIS.accepts(magnetic)) },
+        )
     }
 
     @Test
     fun spaceAcceptsZeroGravity() {
         val zeroGravity = listOf(SurfaceCondition(SurfaceProperty.GRAVITY, 0..0))
-        assertTrue(Surface.SPACE.accepts(zeroGravity))
-        assertFalse(Surface.NAUVIS.accepts(zeroGravity))
+        assertAll(
+            { assertTrue(Surface.SPACE.accepts(zeroGravity)) },
+            { assertFalse(Surface.NAUVIS.accepts(zeroGravity)) },
+        )
     }
 
     @Test
-    fun subgroupSelectsPlanet() {
-        assertTrue(Surface.VULCANUS.accepts(Subgroup("vulcanus-processes")))
-        assertFalse(Surface.NAUVIS.accepts(Subgroup("vulcanus-processes")))
-        assertTrue(Surface.GLEBA.accepts(Subgroup("agriculture-products")))
-        assertTrue(Surface.SPACE.accepts(Subgroup("space-processing")))
-        Surface.entries.forEach { assertTrue(it.accepts(Subgroup("fluid-recipes"))) }
-    }
+    fun subgroupSelectsPlanet() =
+        assertAll(
+            { assertTrue(Surface.VULCANUS.accepts(Subgroup("vulcanus-processes"))) },
+            { assertFalse(Surface.NAUVIS.accepts(Subgroup("vulcanus-processes"))) },
+            { assertTrue(Surface.GLEBA.accepts(Subgroup("agriculture-products"))) },
+            { assertTrue(Surface.SPACE.accepts(Subgroup("space-processing"))) },
+        )
 
     @Test
-    fun crushingOnlyInSpace() {
-        assertTrue(Surface.SPACE.accepts(Category.CRUSHING))
-        assertFalse(Surface.NAUVIS.accepts(Category.CRUSHING))
-        assertFalse(Surface.VULCANUS.accepts(Category.CRUSHING))
-    }
+    fun fluidRecipesAreAvailableOnEverySurface() =
+        assertTable(Surface.entries) { surface ->
+            assertTrue(surface.accepts(Subgroup("fluid-recipes")), "$surface")
+        }
 
     @Test
-    fun asteroidCollectionOnlyInSpace() {
+    fun crushingOnlyInSpace() =
+        assertAll(
+            { assertTrue(Surface.SPACE.accepts(Category.CRUSHING)) },
+            { assertFalse(Surface.NAUVIS.accepts(Category.CRUSHING)) },
+            { assertFalse(Surface.VULCANUS.accepts(Category.CRUSHING)) },
+        )
+
+    @Test
+    fun asteroidCollectionIsAvailableInSpace() =
         assertTrue(Surface.SPACE.accepts(Category.ASTEROID_COLLECTION))
-        Surface.entries
-            .filter { it != Surface.SPACE }
-            .forEach {
-                assertFalse(it.accepts(Category.ASTEROID_COLLECTION), "$it")
-            }
-    }
+
+    @Test
+    fun asteroidCollectionIsNotAvailableOnPlanets() =
+        assertTable(Surface.entries.filter { it != Surface.SPACE }) { surface ->
+            assertFalse(surface.accepts(Category.ASTEROID_COLLECTION), "$surface")
+        }
 
     @Test
     fun forSurfaceFiltersRecipes() {
@@ -97,14 +115,12 @@ class SurfaceTest {
                 recipes = listOf(global, conditioned, subgroupOnly),
             )
 
-        assertEquals(
-            listOf("copper-plate"),
-            parsed.forSurface(Surface.NAUVIS).recipes.map(Recipe::name),
-        )
-        assertEquals(
-            listOf("copper-plate", "foundry", "molten-iron-from-lava"),
-            parsed.forSurface(Surface.VULCANUS).recipes.map(Recipe::name),
-        )
+        assertTableOf(
+            Surface.NAUVIS to listOf("copper-plate"),
+            Surface.VULCANUS to listOf("copper-plate", "foundry", "molten-iron-from-lava"),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name))
+        }
     }
 
     @Test
@@ -123,12 +139,14 @@ class SurfaceTest {
             )
         val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(quantumProcessor))
 
-        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name)
-
-        assertEquals(listOf("quantum-processor"), names(Surface.AQUILO))
-        assertEquals(listOf("quantum-processor"), names(Surface.SPACE))
-        assertTrue(names(Surface.NAUVIS).isEmpty())
-        assertTrue(names(Surface.VULCANUS).isEmpty())
+        assertTableOf(
+            Surface.AQUILO to listOf("quantum-processor"),
+            Surface.SPACE to listOf("quantum-processor"),
+            Surface.NAUVIS to emptyList<String>(),
+            Surface.VULCANUS to emptyList<String>(),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name))
+        }
     }
 
     private fun extraction(name: String, category: Category) =
@@ -154,12 +172,14 @@ class SurfaceTest {
                     ),
             )
 
-        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name).toSet()
-
-        assertEquals(setOf("iron-ore", "coal", "stone"), names(Surface.NAUVIS))
-        assertEquals(setOf("tungsten-ore", "coal"), names(Surface.VULCANUS))
-        assertEquals(setOf("stone"), names(Surface.GLEBA))
-        assertEquals(emptySet(), names(Surface.FULGORA))
+        assertTableOf(
+            Surface.NAUVIS to setOf("iron-ore", "coal", "stone"),
+            Surface.VULCANUS to setOf("tungsten-ore", "coal"),
+            Surface.GLEBA to setOf("stone"),
+            Surface.FULGORA to emptySet<String>(),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
+        }
     }
 
     @Test
@@ -176,13 +196,15 @@ class SurfaceTest {
                     ),
             )
 
-        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name).toSet()
-
-        assertEquals(setOf("water"), names(Surface.NAUVIS))
-        assertEquals(setOf("water"), names(Surface.GLEBA))
-        assertEquals(setOf("heavy-oil"), names(Surface.FULGORA))
-        assertEquals(setOf("lava"), names(Surface.VULCANUS))
-        assertEquals(setOf("ammoniacal-solution"), names(Surface.AQUILO))
+        assertTableOf(
+            Surface.NAUVIS to setOf("water"),
+            Surface.GLEBA to setOf("water"),
+            Surface.FULGORA to setOf("heavy-oil"),
+            Surface.VULCANUS to setOf("lava"),
+            Surface.AQUILO to setOf("ammoniacal-solution"),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
+        }
     }
 
     @Test
@@ -197,17 +219,23 @@ class SurfaceTest {
                     ),
             )
 
-        fun names(surface: Surface) = parsed.forSurface(surface).recipes.map(Recipe::name).toSet()
-
-        assertEquals(setOf("yumako", "jellynut"), names(Surface.GLEBA))
-        assertEquals(emptySet(), names(Surface.NAUVIS))
+        assertTableOf(
+            Surface.GLEBA to setOf("yumako", "jellynut"),
+            Surface.NAUVIS to emptySet<String>(),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
+        }
     }
 
     @Test
     fun urlRoundTrip() =
-        Surface.entries.forEach {
-            val url = it.toUrlParam()
-            assertEquals(it, surfaceFromUrl(url))
-            assertEquals(it, surfaceFromUrl(it.identifier))
+        assertTable(Surface.entries) { surface ->
+            assertEquals(surface, surfaceFromUrl(surface.toUrlParam()), "$surface")
+        }
+
+    @Test
+    fun identifierRoundTrip() =
+        assertTable(Surface.entries) { surface ->
+            assertEquals(surface, surfaceFromUrl(surface.identifier), "$surface")
         }
 }

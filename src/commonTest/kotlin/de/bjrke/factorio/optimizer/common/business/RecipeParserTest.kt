@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -189,21 +190,26 @@ class RecipeParserTest {
                 )
                 .machineStats
 
-        assertEquals(
-            MachineStats(
-                setOf(Category.CRAFTING, Category.ADVANCED_CRAFTING, Category.CRAFTING_WITH_FLUID),
-                1.25,
-                0.0,
-            ),
-            stats.getValue("assembling-machine-3"),
-        )
-        assertEquals(
-            MachineStats(setOf(Category.METALLURGY), 4.0, 0.5),
-            stats.getValue("foundry"),
-        )
-        assertEquals(
-            MachineStats(setOf(Category.MINING_BASIC_SOLID, Category.MINING_HARD_SOLID), 2.5, 0.0),
-            stats.getValue("big-mining-drill"),
-        )
+        assertTableOf(
+            "assembling-machine-3" to
+                MachineStats(
+                    setOf(
+                        Category.CRAFTING,
+                        Category.ADVANCED_CRAFTING,
+                        Category.CRAFTING_WITH_FLUID,
+                    ),
+                    1.25,
+                    0.0,
+                ),
+            "foundry" to MachineStats(setOf(Category.METALLURGY), 4.0, 0.5),
+            "big-mining-drill" to
+                MachineStats(
+                    setOf(Category.MINING_BASIC_SOLID, Category.MINING_HARD_SOLID),
+                    2.5,
+                    0.0,
+                ),
+        ) { (name, expected) ->
+            assertEquals(expected, stats.getValue(name))
+        }
     }
 }

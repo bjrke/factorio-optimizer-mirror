@@ -3,6 +3,9 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.test.assertAll
+import de.bjrke.test.assertTable
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
@@ -36,57 +39,63 @@ class SpoilageRecipesTest {
 
     private val recipes = spoilageRecipes(dump, Material::of).associateBy(Recipe::name)
 
-    @Test
-    fun bacteriaRotIntoOre() {
-        assertEquals(
-            Recipe(
-                name = "iron-bacteria-rotting",
-                ingredients = mapOf(Material("iron-bacteria") to 1.0),
-                result = mapOf(Material("iron-ore") to 1.0),
-                time = 60.0,
-                categories = setOf(Category.ROTTING),
-            ),
-            recipes.getValue("iron-bacteria-rotting"),
+    private val spoilTimes =
+        mapOf(
+            "raw-fish-rotting" to 7550.0,
+            "bioflux-rotting" to 7200.0,
+            "jellynut-rotting" to 3600.0,
+            "yumako-rotting" to 3600.0,
+            "agricultural-science-pack-rotting" to 3600.0,
+            "nutrients-rotting" to 300.0,
+            "jelly-rotting" to 240.0,
+            "yumako-mash-rotting" to 180.0,
         )
-        assertEquals(
-            Recipe(
-                name = "copper-bacteria-rotting",
-                ingredients = mapOf(Material("copper-bacteria") to 1.0),
-                result = mapOf(Material("copper-ore") to 1.0),
-                time = 60.0,
-                categories = setOf(Category.ROTTING),
-            ),
-            recipes.getValue("copper-bacteria-rotting"),
-        )
-    }
 
     @Test
-    fun otherItemsRotIntoSpoilage() {
-        val expected =
-            mapOf(
-                "raw-fish-rotting" to 7550.0,
-                "bioflux-rotting" to 7200.0,
-                "jellynut-rotting" to 3600.0,
-                "yumako-rotting" to 3600.0,
-                "agricultural-science-pack-rotting" to 3600.0,
-                "nutrients-rotting" to 300.0,
-                "jelly-rotting" to 240.0,
-                "yumako-mash-rotting" to 180.0,
+    fun bacteriaRotIntoOre() =
+        assertTableOf("iron-bacteria" to "iron-ore", "copper-bacteria" to "copper-ore") {
+            (bacteria, ore) ->
+            assertEquals(
+                Recipe(
+                    name = "$bacteria-rotting",
+                    ingredients = mapOf(Material(bacteria) to 1.0),
+                    result = mapOf(Material(ore) to 1.0),
+                    time = 60.0,
+                    categories = setOf(Category.ROTTING),
+                ),
+                recipes.getValue("$bacteria-rotting"),
             )
-
-        expected.forEach { (name, time) ->
-            val recipe = recipes.getValue(name)
-            val source = name.removeSuffix("-rotting")
-            assertEquals(setOf(Category.ROTTING), recipe.categories, name)
-            assertEquals(time, recipe.time, name)
-            assertEquals(mapOf(Material(source) to 1.0), recipe.ingredients, name)
-            assertEquals(mapOf(Material("spoilage") to 1.0), recipe.result, name)
         }
-    }
 
     @Test
-    fun everyRecipeRots() {
-        assertEquals(10, recipes.size)
-        assertEquals(10, recipes.values.count { it.categories.contains(Category.ROTTING) })
-    }
+    fun otherItemsHaveRottingCategory() =
+        assertTable(spoilTimes.keys) { name ->
+            assertEquals(setOf(Category.ROTTING), recipes.getValue(name).categories, name)
+        }
+
+    @Test
+    fun otherItemsRotAfterTheirSpoilTime() =
+        assertTable(spoilTimes.entries) { (name, time) ->
+            assertEquals(time, recipes.getValue(name).time, name)
+        }
+
+    @Test
+    fun otherItemsRotFromThemselves() =
+        assertTable(spoilTimes.keys) { name ->
+            val source = name.removeSuffix("-rotting")
+            assertEquals(mapOf(Material(source) to 1.0), recipes.getValue(name).ingredients, name)
+        }
+
+    @Test
+    fun otherItemsRotIntoSpoilage() =
+        assertTable(spoilTimes.keys) { name ->
+            assertEquals(mapOf(Material("spoilage") to 1.0), recipes.getValue(name).result, name)
+        }
+
+    @Test
+    fun everyRecipeRots() =
+        assertAll(
+            { assertEquals(10, recipes.size) },
+            { assertEquals(10, recipes.values.count { it.categories.contains(Category.ROTTING) }) },
+        )
 }

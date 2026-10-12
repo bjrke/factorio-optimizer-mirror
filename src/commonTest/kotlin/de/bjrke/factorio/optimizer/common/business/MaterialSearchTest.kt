@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -22,10 +23,10 @@ class MaterialSearchTest {
             .map { Material.of(it) }
 
     @Test
-    fun blankQueryReturnsEverythingInOrder() {
-        assertEquals(materials, searchMaterials(materials, ""))
-        assertEquals(materials, searchMaterials(materials, "   "))
-    }
+    fun blankQueryReturnsEverythingInOrder() =
+        assertTableOf("" to materials, "   " to materials) { (query, expected) ->
+            assertEquals(expected, searchMaterials(materials, query))
+        }
 
     @Test
     fun matchingIsCaseInsensitive() {
@@ -44,16 +45,22 @@ class MaterialSearchTest {
     }
 
     @Test
-    fun requiresEveryQueryTokenToMatch() {
-        assertEquals(listOf(Material.of("iron-plate")), searchMaterials(materials, "iron plate"))
-        assertEquals(emptyList<Material>(), searchMaterials(materials, "iron zzz"))
-    }
+    fun requiresEveryQueryTokenToMatch() =
+        assertTableOf(
+            "iron plate" to listOf(Material.of("iron-plate")),
+            "iron zzz" to emptyList<Material>(),
+        ) { (query, expected) ->
+            assertEquals(expected, searchMaterials(materials, query))
+        }
 
     @Test
-    fun matchesQueryWithSeparators() {
-        assertEquals(listOf(Material.of("iron-plate")), searchMaterials(materials, "iron-plate"))
-        assertEquals(listOf(Material.of("iron-plate")), searchMaterials(materials, "ironplate"))
-    }
+    fun matchesQueryWithSeparators() =
+        assertTableOf(
+            "iron-plate" to listOf(Material.of("iron-plate")),
+            "ironplate" to listOf(Material.of("iron-plate")),
+        ) { (query, expected) ->
+            assertEquals(expected, searchMaterials(materials, query))
+        }
 
     @Test
     fun ranksExactAndPrefixBeforeSubstringAndFuzzy() {

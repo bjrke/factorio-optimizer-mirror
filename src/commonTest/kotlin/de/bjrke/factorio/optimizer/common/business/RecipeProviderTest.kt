@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.extractionCategories
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -38,8 +39,11 @@ class RecipeProviderTest {
         )
 
     @Test
-    fun activeModsKeepBaseAlways() {
-        assertEquals(setOf(BASE_MOD), activeMods(emptySet()))
-        assertEquals(setOf(BASE_MOD, SPACE_AGE_MOD), activeMods(setOf(SPACE_AGE_MOD)))
-    }
+    fun activeModsKeepBaseAlways() =
+        assertTableOf(
+            emptySet<String>() to setOf(BASE_MOD),
+            setOf(SPACE_AGE_MOD) to setOf(BASE_MOD, SPACE_AGE_MOD),
+        ) { (mods, expected) ->
+            assertEquals(expected, activeMods(mods))
+        }
 }

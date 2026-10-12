@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.assertAll
+import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -10,6 +12,19 @@ class OptimizerTest {
     private val ironOre = Material("iron-ore")
     private val water = Material("water")
     private val ice = Material("ice")
+
+    private val oreRottingBacteria =
+        mapOf("iron-ore" to "iron-bacteria", "copper-ore" to "copper-bacteria")
+
+    private val harvestedFruits = listOf("yumako", "jellynut")
+
+    private val asteroidChunks =
+        listOf(
+            "metallic-asteroid-chunk",
+            "carbonic-asteroid-chunk",
+            "oxide-asteroid-chunk",
+            "promethium-asteroid-chunk",
+        )
 
     private fun recipe(
         name: String,
@@ -158,9 +173,15 @@ class OptimizerTest {
                 vulcanusFactories,
             )[steelPlate]
 
-        assertEquals("casting-steel", result.recipe.name)
-        assertTrue(result.factories.values.none { it.factory == Factory.NO_FACTORY })
-        assertTrue(result.factories.values.any { it.recipe.name == "molten-iron-from-lava" })
+        assertAll(
+            { assertEquals("casting-steel", result.recipe.name) },
+            { assertTrue(result.factories.values.none { it.factory == Factory.NO_FACTORY }) },
+            {
+                assertTrue(
+                    result.factories.values.any { it.recipe.name == "molten-iron-from-lava" }
+                )
+            },
+        )
     }
 
     @Test
@@ -170,12 +191,28 @@ class OptimizerTest {
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
 
-        val expected = mapOf("iron-ore" to "iron-bacteria", "copper-ore" to "copper-bacteria")
-        for ((ore, bacteria) in expected) {
+        assertTable(oreRottingBacteria.keys) { ore ->
             val material = Material(ore)
-            val production = optimizer[material].factories.getValue(material)
-            assertEquals(Factory.ROTTING, production.factory, ore)
-            assertEquals("$bacteria-rotting", production.recipe.name, ore)
+            assertEquals(
+                Factory.ROTTING,
+                optimizer[material].factories.getValue(material).factory,
+                ore,
+            )
+        }
+    }
+
+    @Test
+    fun glebaIronAndCopperOreUseBacteriaRottingRecipe() {
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+
+        assertTable(oreRottingBacteria.entries) { (ore, bacteria) ->
+            val material = Material(ore)
+            assertEquals(
+                "$bacteria-rotting",
+                optimizer[material].factories.getValue(material).recipe.name,
+                ore,
+            )
         }
     }
 
@@ -187,8 +224,10 @@ class OptimizerTest {
 
         val material = Material("iron-ore")
         val production = optimizer[material].factories.getValue(material)
-        assertEquals(Factory.BIG_MINING_DRILL, production.factory)
-        assertEquals("iron-ore", production.recipe.name)
+        assertAll(
+            { assertEquals(Factory.BIG_MINING_DRILL, production.factory) },
+            { assertEquals("iron-ore", production.recipe.name) },
+        )
     }
 
     @Test
@@ -200,12 +239,16 @@ class OptimizerTest {
 
         val spoilage = Material("spoilage")
         val production = optimizer[spoilage].factories.getValue(spoilage)
-        assertEquals(Factory.ROTTING, production.factory)
-        assertEquals("jellynut-rotting", production.recipe.name)
-        assertTrue(
-            optimizer[spoilage].factories.values.none {
-                it.recipe.name == "agricultural-science-pack-rotting"
-            }
+        assertAll(
+            { assertEquals(Factory.ROTTING, production.factory) },
+            { assertEquals("jellynut-rotting", production.recipe.name) },
+            {
+                assertTrue(
+                    optimizer[spoilage].factories.values.none {
+                        it.recipe.name == "agricultural-science-pack-rotting"
+                    }
+                )
+            },
         )
     }
 
@@ -215,10 +258,24 @@ class OptimizerTest {
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
 
-        for (fruit in listOf("yumako", "jellynut")) {
+        assertTable(harvestedFruits) { fruit ->
+            val material = Material(fruit)
+            assertEquals(
+                Factory.AGRICULTURAL_TOWER,
+                optimizer[material].factories.getValue(material).factory,
+                fruit,
+            )
+        }
+    }
+
+    @Test
+    fun glebaFruitHarvestYieldsFifty() {
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+
+        assertTable(harvestedFruits) { fruit ->
             val material = Material(fruit)
             val production = optimizer[material].factories.getValue(material)
-            assertEquals(Factory.AGRICULTURAL_TOWER, production.factory, fruit)
             assertEquals(50.0, production.recipe.result.getValue(material), fruit)
         }
     }
@@ -370,8 +427,10 @@ class OptimizerTest {
 
         val sulfur = Material("sulfur")
         val production = optimizer[sulfur].factories.getValue(sulfur)
-        assertEquals("biosulfur", production.recipe.name)
-        assertEquals(Factory.BIOCHAMBER, production.factory)
+        assertAll(
+            { assertEquals("biosulfur", production.recipe.name) },
+            { assertEquals(Factory.BIOCHAMBER, production.factory) },
+        )
     }
 
     @Test
@@ -405,18 +464,32 @@ class OptimizerTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        listOf(
-                "metallic-asteroid-chunk",
-                "carbonic-asteroid-chunk",
-                "oxide-asteroid-chunk",
-                "promethium-asteroid-chunk",
+        assertTable(asteroidChunks) { chunk ->
+            val material = Material(chunk)
+            assertEquals(
+                Factory.ASTEROID_COLLECTOR,
+                optimizer[material].factories.getValue(material).factory,
+                chunk,
             )
-            .forEach { chunk ->
-                val material = Material(chunk)
-                val production = optimizer[material].factories.getValue(material)
-                assertEquals(Factory.ASTEROID_COLLECTOR, production.factory, chunk)
-                assertEquals("asteroid-collection", production.recipe.name, chunk)
-            }
+        }
+    }
+
+    @Test
+    fun spaceAsteroidChunksUseCollectionRecipe() {
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        assertTable(asteroidChunks) { chunk ->
+            val material = Material(chunk)
+            assertEquals(
+                "asteroid-collection",
+                optimizer[material].factories.getValue(material).recipe.name,
+                chunk,
+            )
+        }
     }
 
     @Test
@@ -488,9 +561,11 @@ class OptimizerTest {
         val result = optimizer[product]
 
         val byproducts = result.factories.values.filter { it.recipe.name == "byproduct" }
-        assertEquals(1, byproducts.size)
-        // one machine covers both outputs: max, not sum
-        assertEquals(0.8, byproducts.single().amount)
+        assertAll(
+            { assertEquals(1, byproducts.size) },
+            // one machine covers both outputs: max, not sum
+            { assertEquals(0.8, byproducts.single().amount) },
+        )
     }
 
     @Test
@@ -661,11 +736,13 @@ class OptimizerTest {
             )
 
         val production = optimizer[plate].factories.getValue(plate)
-        assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory)
-        // one machine produces 2 * 1.5 = 3/s, so 1/s needs 1/3 of a machine
-        assertEquals(1.0 / 3.0, production.amount, 1e-9)
-        assertEquals(1.0, production.production(plate), 1e-9)
-        // the bonus does not change the input consumption
-        assertEquals(2.0 / 3.0, production.consumption(ore), 1e-9)
+        assertAll(
+            { assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory) },
+            // one machine produces 2 * 1.5 = 3/s, so 1/s needs 1/3 of a machine
+            { assertEquals(1.0 / 3.0, production.amount, 1e-9) },
+            { assertEquals(1.0, production.production(plate), 1e-9) },
+            // the bonus does not change the input consumption
+            { assertEquals(2.0 / 3.0, production.consumption(ore), 1e-9) },
+        )
     }
 }
