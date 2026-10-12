@@ -5,6 +5,9 @@ spotless = { id = "com.diffplug.spotless", version = "8.10.2" }
 [versions]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
 kotlin = "2.4.20"
+
 [libraries]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
 kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "2026.9.2" }
+#https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-serialization-json
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.9.0" }

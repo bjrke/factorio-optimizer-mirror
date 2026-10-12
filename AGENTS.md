@@ -16,8 +16,8 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 
 ## Code layout (Kotlin Multiplatform)
 
-- `src/commonMain` — shared logic: Lua parser (`LuaParser.kt`), recipe parser (`recipeParser.kt`), the optimizer (`optimizer.kt`), model, and `recipes/recipe.lua` data
-- `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`, `react-router-dom`); entry point `js/index.kt`; `js/business/loadRecipe.kt` pulls recipes via `@JsModule` + webpack config in `webpack.config.d/`
+- `src/commonMain` — shared logic: recipe parser (`recipeParser.kt`), the optimizer (`optimizer.kt`), model, and the dumped `prototypes/` data
+- `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`, `react-router-dom`); entry point `js/index.kt`; `js/business/loadRecipe.kt` pulls the prototype dumps via `@JsModule` + webpack config in `webpack.config.d/`
 - `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`; `jvm/business/loadRecipe.kt` loads recipes from the classpath resource
 - `src/commonTest` — shared kotlin-test suites run by both JVM and JS test tasks
 
@@ -34,5 +34,5 @@ The same `commonMain` code compiles to both targets, so keep it platform-neutral
 
 ## Generated data — do not hand-edit
 
-- `src/commonMain/resources/recipes/mods.txt` and `src/commonMain/resources/recipes/<mod>/...` are scraped from a Factorio install (base + DLC mods). Regenerate with `./gradlew copyRecipes`, which walks `~/.steam/steam/steamapps/common/Factorio/data/<mod>` and copies every `.lua` containing `type = "recipe"` (skipping `**/script/**` and `data-updates.lua`/`data-final-fixes.lua`). `mods.txt` records each mod's `info.json` dependencies. The web UI and CLI let the user pick active mods (dependencies resolved automatically); per-mod parsed results are cached in `RecipeProvider`.
+- `src/commonMain/resources/prototypes/{base,space-age}.json` are the `data.raw` dumps produced by `factorio --dump-data` for the base game and for base + the Space Age DLC mods. Regenerate with `./gradlew dumpPrototypes`, which runs the Factorio data stage with an isolated config/mod-list (requires a Factorio Steam install). The dump is resolved by the game itself, so it already includes all `data-updates.lua`/`data-final-fixes.lua` changes; the parser reads only the prototype types it needs and ignores the rest. The web UI and CLI use the base dump, or the Space Age dump when Space Age is active; parsed results are cached in `RecipeProvider`.
 - `src/jsMain/resources/icons/*.png` are extracted from a Linux Factorio Steam install (120x64 crops) and optimized. `./gradlew updateImages` requires `imagemagick optipng pngquant` installed; it only copies and optimizes icons whose top-left 64x64 region changed significantly. Don't add icons manually.

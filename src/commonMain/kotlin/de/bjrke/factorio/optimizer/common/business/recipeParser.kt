@@ -1,165 +1,56 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 
-private open class WrappedTable(val table: LuaTable) {
-
-    val map by lazy {
-        table.elements.filterIsInstance<LuaTableEntry>().associate { it.key to it.value }
-    }
-
-    operator fun get(field: String) = map[field]
-
-    operator fun get(index: Int) = if (index < table.elements.size) table.elements[index] else null
-
-    fun getElementsAsTables(): List<WrappedTable> =
-        table.elements.filterIsInstance<LuaTable>().map(::WrappedTable)
-
-    fun listToPair(): Pair<String, Double>? {
-        val name = getString(0) ?: return null
-        val amount = getNumber(1) ?: return null
-        return name to amount
-    }
-
-    private inline fun <reified L, R> getAs(field: String, f: (L) -> R) =
-        this[field]?.let { it as? L }?.let(f)
-
-    fun getString(field: String) = getAs(field, LuaString::s)
-
-    fun getBoolean(field: String) = getAs(field, LuaBoolean::b)
-
-    fun getNumber(field: String) = getAs(field, LuaNumber::n)
-
-    fun getTable(field: String) = getAs(field, ::WrappedTable)
-
-    fun getTableList(field: String) =
-        getAs(field) { table: LuaTable -> WrappedTable(table).getElementsAsTables() } ?: listOf()
-
-    fun getStringList(field: String) =
-        getAs(field) { table: LuaTable ->
-            table.elements.filterIsInstance<LuaString>().map(LuaString::s)
-        } ?: listOf()
-
-    private inline fun <reified L, R> getAs(index: Int, f: (L) -> R) =
-        this[index]?.let { it as? L }?.let(f)
-
-    fun getString(index: Int) = getAs(index, LuaString::s)
-
-    fun getBoolean(index: Int) = getAs(index, LuaBoolean::b)
-
-    fun getNumber(index: Int) = getAs(index, LuaNumber::n)
-
-    fun getTable(index: Int) = getAs(index, ::WrappedTable)
-}
-
-enum class Mode(val fieldName: String) {
-    NORMAL("normal"),
-    EXPENSINVE("expensive"),
-}
-
-private const val DEFAULT_PROBABILITY = 1.0
 private const val DEFAULT_AMOUNT = 1.0
-private const val DEFAULT_TYPE = "item"
+private const val DEFAULT_PROBABILITY = 1.0
+private const val DEFAULT_CATEGORY = "crafting"
 
-private data class RecipeResult(
-    val name: String,
-    val amount: Double = DEFAULT_AMOUNT,
-    val probability: Double = DEFAULT_PROBABILITY,
-)
+internal fun JsonObject.string(name: String) = (this[name] as? JsonPrimitive)?.contentOrNull
 
-private data class RecipeIngredient(
-    val name: String,
-    val amount: Double,
-    val type: String = DEFAULT_TYPE,
-)
+internal fun JsonObject.number(name: String) = (this[name] as? JsonPrimitive)?.doubleOrNull
 
-private class NestedRecipe(val table: WrappedTable) {
+internal fun JsonObject.boolean(name: String) = (this[name] as? JsonPrimitive)?.booleanOrNull
 
-    fun getResults() = sequence {
-        table.getString("result")?.also {
-            yield(
-                RecipeResult(name = it, amount = table.getNumber("result_count") ?: DEFAULT_AMOUNT)
-            )
+internal fun JsonObject.table(name: String) = this[name] as? JsonObject
+
+internal fun JsonObject.array(name: String) = this[name] as? JsonArray
+
+internal fun JsonArray.strings() = mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+
+internal fun JsonArray.objects() = mapNotNull { it as? JsonObject }
+
+/**
+ * The probability that a result is produced, from `probability`, `shared_probability` or
+ * `independent_probability`.
+ */
+private fun resultProbability(result: JsonObject): Double =
+    result.number("probability")
+        ?: result.table("shared_probability")?.let {
+            (it.number("max") ?: 1.0) - (it.number("min") ?: 0.0)
         }
-        for (result in table.getTableList("results")) {
-            result.listToPair()?.also { (name, amount) -> yield(RecipeResult(name, amount)) }
-            yield(
-                RecipeResult(
-                    name = result.getString("name") ?: continue,
-                    amount = result.getNumber("amount") ?: DEFAULT_AMOUNT,
-                    probability =
-                        result.getNumber("probability")
-                            ?: result.getTable("shared_probability")?.let {
-                                (it.getNumber("max") ?: 1.0) - (it.getNumber("min") ?: 0.0)
-                            }
-                            ?: DEFAULT_PROBABILITY,
-                )
-            )
-        }
-    }
+        ?: result.number("independent_probability")
+        ?: DEFAULT_PROBABILITY
 
-    fun getIngredients() = sequence {
-        for (result in table.getTableList("ingredients")) {
-            result.listToPair()?.also { (name, amount) -> yield(RecipeIngredient(name, amount)) }
-            yield(
-                RecipeIngredient(
-                    name = result.getString("name") ?: continue,
-                    amount = result.getNumber("amount") ?: DEFAULT_AMOUNT,
-                    type = result.getString("type") ?: DEFAULT_TYPE,
-                )
-            )
-        }
-    }
-
-    fun getEnergyRequired() = table.getNumber("energy_required")
-}
-
-fun parseRecipes(
-    files: Map<String, String> = loadRecipeFiles(),
-    activeMods: Set<String> = files.keys.map { it.substringBefore('/') }.toSet(),
-    mode: Mode = Mode.NORMAL,
-    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = { material ->
-        defaultRecipes(material, SPACE_AGE_MOD in activeMods)
-    },
+/**
+ * Parses the `data.raw` JSON dumped by `factorio --dump-data` (see the `dumpPrototypes` gradle
+ * task) into the optimizer's model. Only the prototype types the optimizer needs are read;
+ * everything else in the dump is ignored.
+ */
+fun parsePrototypes(
+    json: String,
+    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = { listOf() },
 ): ParsedRecipe {
-
-    class LuaRecipe(val table: WrappedTable) {
-
-        fun getSubgroup() = table.getString("subgroup")
-
-        fun getType() = table.getString("type")
-
-        fun getResults() = getNested(NestedRecipe::getResults)
-
-        fun getIngredients() = getNested(NestedRecipe::getIngredients)
-
-        private val thisRecipe = NestedRecipe(table)
-
-        private val nestedRecipe = table.getTable(mode.fieldName)?.let(::NestedRecipe)
-
-        private fun <T> getNested(f: (NestedRecipe) -> Sequence<T>) = sequence {
-            yieldAll(f(thisRecipe))
-            nestedRecipe?.also { yieldAll(f(it)) }
-        }
-
-        fun getName() = table.getString("name")
-
-        fun getEnergyRequired() =
-            nestedRecipe?.getEnergyRequired() ?: thisRecipe.getEnergyRequired()
-
-        fun getCategory() =
-            table.getString("category") ?: table.getStringList("categories").firstOrNull()
-
-        fun getSurfaceConditions() =
-            table.getTableList("surface_conditions").mapNotNull { condition ->
-                val property =
-                    condition.getString("property")?.let(::surfaceProperty)
-                        ?: return@mapNotNull null
-                val min = condition.getNumber("min")?.toInt() ?: Int.MIN_VALUE
-                val max = condition.getNumber("max")?.toInt() ?: Int.MAX_VALUE
-                SurfaceCondition(property = property, range = min..max)
-            }
-    }
+    val root =
+        Json.parseToJsonElement(json) as? JsonObject
+            ?: return ParsedRecipe(emptyList(), emptyList())
 
     val materialsBuilder = mutableMapOf<String, Material>()
     fun material(name: String) = materialsBuilder.getOrPut(name) { Material.of(name) }
@@ -174,50 +65,134 @@ fun parseRecipes(
 
     val recipes =
         sequence {
-                for (content in files.filterKeys { it.substringBefore('/') in activeMods }.values) {
-                    for (luaRecipe in
-                        WrappedTable(parseLua(content)).getElementsAsTables().map(::LuaRecipe)) {
-                        if (luaRecipe.getType() != "recipe") continue
-                        if (luaRecipe.table.getBoolean("parameter") == true) continue
+                for ((name, element) in root.table("recipe") ?: JsonObject(emptyMap())) {
+                    val prototype = element as? JsonObject ?: continue
+                    if (prototype.boolean("parameter") == true) continue
+                    // hidden recipes are internal/cheat prototypes (the auto-generated lossy
+                    // `*-recycling` recipes, loaders, infinity chests, ...); only `scrap-recycling`
+                    // is a real production recipe, and it is not hidden.
+                    if (prototype.boolean("hidden") == true) continue
 
-                        val subgroupName = luaRecipe.getSubgroup()
-                        when (subgroupName) {
-                            "fill-barrel",
-                            "empty-barrel" -> continue
-                        }
-
-                        val result =
-                            luaRecipe
-                                .getResults()
-                                .map { material(it.name) to it.amount * it.probability }
-                                .toMap()
-                        if (result.isEmpty()) continue
-
-                        val ingredients =
-                            luaRecipe
-                                .getIngredients()
-                                .map { material(it.name) to it.amount }
-                                .toMap()
-
-                        yield(
-                            Recipe(
-                                name = luaRecipe.getName()!!,
-                                ingredients = ingredients,
-                                result = result,
-                                time = luaRecipe.getEnergyRequired() ?: 0.5,
-                                subgroup = subGroup(subgroupName),
-                                category = category(luaRecipe.getCategory() ?: "crafting")!!,
-                                surfaceConditions = luaRecipe.getSurfaceConditions(),
-                            )
-                        )
+                    val subgroupName = prototype.string("subgroup")
+                    when (subgroupName) {
+                        "fill-barrel",
+                        "empty-barrel" -> continue
                     }
+
+                    val result = buildMap {
+                        prototype.string("result")?.also {
+                            put(material(it), (prototype.number("result_count") ?: DEFAULT_AMOUNT))
+                        }
+                        for (entry in prototype.array("results")?.objects().orEmpty()) {
+                            val resultName = entry.string("name") ?: continue
+                            put(
+                                material(resultName),
+                                (entry.number("amount") ?: DEFAULT_AMOUNT) *
+                                    resultProbability(entry),
+                            )
+                        }
+                    }
+                    if (result.isEmpty()) continue
+
+                    val ingredients = buildMap {
+                        for (entry in prototype.array("ingredients")?.objects().orEmpty()) {
+                            val ingredientName = entry.string("name") ?: continue
+                            put(
+                                material(ingredientName),
+                                entry.number("amount") ?: DEFAULT_AMOUNT,
+                            )
+                        }
+                    }
+
+                    val categories =
+                        prototype
+                            .array("categories")
+                            ?.strings()
+                            .orEmpty()
+                            .ifEmpty { listOf(DEFAULT_CATEGORY) }
+                            .mapNotNull(::category)
+                            .distinct()
+                    if (categories.isEmpty()) continue
+
+                    yield(
+                        Recipe(
+                            name = name,
+                            ingredients = ingredients,
+                            result = result,
+                            time = prototype.number("energy_required") ?: 0.5,
+                            subgroup = subGroup(subgroupName),
+                            category = categories.first(),
+                            additionalCategories = categories.drop(1).toSet(),
+                            surfaceConditions = prototype.surfaceConditions(),
+                        )
+                    )
                 }
 
+                yieldAll(resourceRecipes(root, ::material))
+                yieldAll(spoilageRecipes(root, ::material))
                 yieldAll(defaultRecipesProvider(::material))
             }
             .sortedBy(Recipe::name)
             .toList()
 
-    val materials = materialsBuilder.values.sortedBy(Material::name).toList()
-    return ParsedRecipe(materials, recipes)
+    return ParsedRecipe(
+        materials = materialsBuilder.values.sortedBy(Material::name),
+        recipes = recipes,
+        machineStats = machineStats(root),
+    )
 }
+
+/**
+ * Machine crafting categories, speed and built-in productivity, derived from the crafting machines
+ * in the dump. Mining drills use `resource_categories`/`mining_speed` instead of
+ * `crafting_categories`/`crafting_speed`.
+ */
+fun machineStats(root: JsonObject): Map<String, MachineStats> {
+    val stats = mutableMapOf<String, MachineStats>()
+
+    fun add(kind: String, categoriesKey: String, speedKey: String) {
+        root.table(kind)?.forEach { (name, element) ->
+            val prototype = element as? JsonObject ?: return@forEach
+            val categories =
+                prototype
+                    .array(categoriesKey)
+                    ?.strings()
+                    .orEmpty()
+                    .mapNotNull { miningCategory(it) ?: category(it) }
+                    .toSet()
+            if (categories.isEmpty()) return@forEach
+            stats[name] =
+                MachineStats(
+                    categories = categories,
+                    speed = prototype.number(speedKey) ?: 1.0,
+                    productivity =
+                        prototype
+                            .table("effect_receiver")
+                            ?.table("base_effect")
+                            ?.number("productivity") ?: 0.0,
+                )
+        }
+    }
+
+    add("assembling-machine", "crafting_categories", "crafting_speed")
+    add("furnace", "crafting_categories", "crafting_speed")
+    add("rocket-silo", "crafting_categories", "crafting_speed")
+    add("mining-drill", "resource_categories", "mining_speed")
+    return stats
+}
+
+private fun miningCategory(identifier: String) =
+    when (identifier) {
+        "basic-solid" -> Category.MINING_BASIC_SOLID
+        "hard-solid" -> Category.MINING_HARD_SOLID
+        "basic-fluid" -> Category.MINING_FLUID
+        else -> null
+    }
+
+private fun JsonObject.surfaceConditions(): List<SurfaceCondition> =
+    array("surface_conditions")?.objects().orEmpty().mapNotNull { table ->
+        val property = table.string("property")?.let(::surfaceProperty) ?: return@mapNotNull null
+        val min = table.number("min")?.toInt() ?: Int.MIN_VALUE
+        val max = table.number("max")?.toInt() ?: Int.MAX_VALUE
+        SurfaceCondition(property = property, range = min..max)
+    }

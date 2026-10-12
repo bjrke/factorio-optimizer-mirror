@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.Optimizer
-import de.bjrke.factorio.optimizer.common.business.RECYCLER_MOD
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
 import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
 import de.bjrke.factorio.optimizer.common.business.defaultMods
@@ -29,7 +28,8 @@ fun main(args: Array<String>) {
             ?.removePrefix("--planet=")
             ?.let { surfaceFromUrl(it) } ?: Surface.NAUVIS
     val activeMods = RecipeProvider.resolveMods(mods)
-    val factories = FactoryConfig(SPACE_AGE_MOD in activeMods, RECYCLER_MOD in activeMods).defaults
+    val spaceAge = SPACE_AGE_MOD in activeMods
+    val factories = FactoryConfig(spaceAge).defaults
     val result =
         Optimizer(RecipeProvider.forActiveMods(mods).forSurface(surface), factories)[material]
 

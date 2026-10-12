@@ -1,3 +1,4 @@
+import de.bjrke.factorio.optimizer.build.sanitizePrototypeDump
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import kotlin.math.abs
@@ -45,6 +46,8 @@ kotlin {
     }
 
     sourceSets {
+        commonMain { dependencies { implementation(libs.kotlinx.serialization.json) } }
+
         commonTest { dependencies { implementation(kotlin("test")) } }
 
         jsMain {
@@ -82,7 +85,7 @@ tasks.register<JavaExec>("run") {
 
 spotless {
     kotlin {
-        target("src/**/*.kt")
+        target("src/**/*.kt", "buildSrc/**/*.kt")
         ktfmt().kotlinlangStyle()
     }
     kotlinGradle { ktfmt().kotlinlangStyle() }
@@ -181,77 +184,87 @@ tasks.register<Exec>("updateImages") {
     }
 }
 
-tasks.register("copyRecipes") {
+tasks.register("dumpPrototypes") {
     group = "factorio"
-    description = "scrapes recipe files from all mods of the factorio steam installation"
+    description =
+        "dumps data.raw for the base game and the Space Age DLC mods from the factorio steam installation"
+
+    val outputDir = rootDir.resolve("src/commonMain/resources/prototypes")
+    val workDir = layout.buildDirectory.dir("prototype-dump")
 
     doLast {
-        val recipeDir = file("src/commonMain/resources/recipes")
-        recipeDir.listFiles()?.forEach {
-            if (it.isDirectory || it.name != "loader.js") it.deleteRecursively()
-        }
+        val binary = file("$factorioDir/bin/x64/factorio")
+        check(binary.exists()) { "factorio executable not found at $binary" }
 
-        val recipePattern = Regex("""type\s*=\s*"recipe"""")
-        val dataDir = file("$factorioDir/data")
+        val work = workDir.get().asFile
+        work.deleteRecursively()
+        outputDir.mkdirs()
 
-        val mods =
-            dataDir.listFiles { it.isDirectory }?.filter { it.name != "core" }?.sortedBy { it.name }
-                ?: emptyList()
-
-        val modRecipeFiles =
-            mods
-                .associateWith { mod ->
-                    mod.walkTopDown()
-                        .filter {
-                            it.isFile &&
-                                it.extension == "lua" &&
-                                !it.path.contains("/script/") &&
-                                it.name != "data-updates.lua" &&
-                                it.name != "data-final-fixes.lua" &&
-                                it.readText().contains(recipePattern)
-                        }
-                        .toList()
+        fun dump(variant: String) {
+            val spaceAge = variant == "space-age"
+            val dir = work.resolve(variant).also { it.mkdirs() }
+            val modsDir = dir.resolve("mods").also { it.mkdirs() }
+            val configIni = dir.resolve("config.ini")
+            configIni.writeText(
+                """
+                |[path]
+                |read-data=__PATH__executable__/../../data
+                |write-data=${dir.absolutePath}
+                """
+                    .trimMargin()
+            )
+            val modList = buildString {
+                append("""{"mods":[{"name":"base","enabled":true}""")
+                for (mod in listOf("elevated-rails", "quality", "recycler", "space-age")) {
+                    append(""",{"name":"$mod","enabled":$spaceAge}""")
                 }
-                .filterValues { it.isNotEmpty() }
-                .entries
-                .sortedBy { (mod, recipeFiles) -> mod }
-
-        for ((mod, recipeFiles) in modRecipeFiles) {
-            val modDir = recipeDir.resolve(mod.name).also { it.mkdirs() }
-            for (recipeFile in recipeFiles) {
-                recipeFile.copyTo(modDir.resolve(recipeFile.relativeTo(mod)))
+                append("]}")
             }
+            modsDir.resolve("mod-list.json").writeText(modList)
+
+            val exitCode =
+                ProcessBuilder(
+                        binary.absolutePath,
+                        "--config",
+                        configIni.absolutePath,
+                        "--mod-directory",
+                        modsDir.absolutePath,
+                        "--disable-audio",
+                        "--dump-data",
+                    )
+                    .inheritIO()
+                    .start()
+                    .waitFor()
+            check(exitCode == 0) { "factorio --dump-data failed for '$variant' (exit $exitCode)" }
+
+            val dumpFile = dir.resolve("script-output/data-raw-dump.json")
+            check(dumpFile.exists()) { "expected dump at $dumpFile" }
+            val target = outputDir.resolve("$variant.json")
+            dumpFile.copyTo(target, overwrite = true)
+            sanitizePrototypeDump(target)
+            logger.lifecycle("Wrote $target (${target.length()} bytes)")
         }
 
-        val modsTxtContent = buildString {
-            for ((mod, recipeFiles) in modRecipeFiles) {
-                append(mod.name).append("\t")
+        dump("base")
+        dump("space-age")
+    }
+}
 
-                Regex(""""dependencies"\s*:\s*\[(.*?)\]""", RegexOption.DOT_MATCHES_ALL)
-                    .findAll(mod.resolve("info.json").takeIf { it.exists() }?.readText() ?: "")
-                    .take(1)
-                    .flatMap { Regex(""""([^"]+)"""").findAll(it.groupValues[1]) }
-                    .map { it.groupValues[1].trim() }
-                    .mapNotNull {
-                        when {
-                            it.isEmpty() -> null
-                            it.startsWith("!") -> null // conflict
-                            it.startsWith("?") -> null // optional / load order
-                            it.startsWith("(") -> null // optional / load order
-                            it.startsWith("~") -> null // optional / load order
-                            it.startsWith("+") -> null // optional / load order
-                            else -> it.substringBefore(" ")
-                        }
-                    }
-                    .joinTo(this, ",")
+tasks.register("sanitizePrototypes") {
+    group = "factorio"
+    description = "strips the prototype dumps down to the data the optimizer uses"
 
-                append("\t")
-                recipeFiles.joinTo(this, ";") {
-                    it.relativeTo(dataDir).invariantSeparatorsPath
-                }
-                append("\n")
+    val outputDir = rootDir.resolve("src/commonMain/resources/prototypes")
+
+    doLast {
+        for (variant in listOf("base", "space-age")) {
+            val target = outputDir.resolve("$variant.json")
+            if (!target.exists()) {
+                logger.warn("Skipping missing $target")
+                continue
             }
+            sanitizePrototypeDump(target)
+            logger.lifecycle("Sanitized $target (${target.length()} bytes)")
         }
-        recipeDir.resolve("mods.txt").writeText(modsTxtContent)
     }
 }

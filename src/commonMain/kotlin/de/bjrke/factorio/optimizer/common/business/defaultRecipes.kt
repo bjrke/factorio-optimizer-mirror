@@ -54,8 +54,11 @@ private fun spaceSciencePack(material: (String) -> Material) =
         category = Category.ROCKET_BUILDING,
     )
 
+/**
+ * Recipes the optimizer synthesises on top of the game's prototypes: the dummy recipe that consumes
+ * every science pack (the default optimisation target) and, for the base game, the space science
+ * recipe the rocket silo runs (Space Age ships its own recipe instead).
+ */
 fun defaultRecipes(material: (String) -> Material, spaceAge: Boolean) =
     (if (spaceAge) emptyList() else listOf(spaceSciencePack(material))) +
-        listOf(allSciencePacks(material, spaceAge)) +
-        resourceRecipes(material) +
-        spoilageRecipes(material)
+        listOf(allSciencePacks(material, spaceAge))

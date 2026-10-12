@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.business.Optimizer
-import de.bjrke.factorio.optimizer.common.business.RECYCLER_MOD
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
 import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
 import de.bjrke.factorio.optimizer.common.business.defaultMods
@@ -43,7 +42,7 @@ class FactorioOptimizerProps {
         params[ParamName("mods")]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: defaultMods
     val activeMods = RecipeProvider.resolveMods(mods)
     val spaceAgeEnabled = SPACE_AGE_MOD in activeMods
-    val factoryConfig = FactoryConfig(spaceAgeEnabled, RECYCLER_MOD in activeMods)
+    val factoryConfig = FactoryConfig(spaceAgeEnabled)
     var factories =
         params[ParamName("factories")]?.let { factoryConfig.fromUrl(it) } ?: factoryConfig.defaults
     var surface =

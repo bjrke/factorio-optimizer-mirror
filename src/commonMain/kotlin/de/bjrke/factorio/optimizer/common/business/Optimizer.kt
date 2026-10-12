@@ -4,18 +4,12 @@ import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.defaultFactories
 
 class Optimizer(
-    private val parsedRecipe: ParsedRecipe = parseRecipes(),
+    private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(defaultMods),
     private val factories: Set<Factory> = defaultFactories,
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()
 
     private val selectedRecipes = mutableMapOf<Material, Recipe>()
-
-    /** Materials that at least one enabled recipe can produce, i.e. not a free "chest" source. */
-    private val producibleMaterials: Set<Material> =
-        parsedRecipe.recipes
-            .filter { findFactory(it) != null }
-            .flatMapTo(mutableSetOf()) { it.result.keys }
 
     /**
      * Materials an enabled extraction recipe (drill/pump/tower) produces directly, i.e. the
@@ -25,17 +19,77 @@ class Optimizer(
      */
     private val rawMaterials: Set<Material> =
         parsedRecipe.recipes
-            .filter { it.category in extractionCategories && findFactory(it) != null }
+            .filter { it.categories.any { category -> category in extractionCategories } }
+            .filter { findFactory(it) != null }
             .flatMapTo(mutableSetOf()) { it.result.keys }
 
-    private fun findFactory(recipe: Recipe) = factories.find {
-        it.categories.contains(recipe.category)
+    /**
+     * Materials that can be produced from the available raw resources by following recipes through
+     * to their inputs. Unlike a one-step lookup this accounts for the whole production chain, so an
+     * intermediate is only producible when its own ingredients are: on Gleba petroleum gas counts
+     * as unavailable because it would need crude oil, which does not spawn there.
+     */
+    private val producibleMaterials: Set<Material> = buildSet {
+        val enabledRecipes = parsedRecipe.recipes.filter { findFactory(it) != null }
+        addAll(rawMaterials)
+        var changed = true
+        while (changed) {
+            changed = false
+            for (recipe in enabledRecipes) {
+                if (recipe.ingredients.keys.all { it in this }) {
+                    changed = addAll(recipe.result.keys) || changed
+                }
+            }
+        }
     }
 
-    private fun speedOf(recipe: Recipe) = findFactory(recipe)?.speed ?: 1.0
+    /**
+     * The machine's categories, from the dump when present, otherwise the curated [Factory]
+     * fallback.
+     */
+    private fun categoriesOf(factory: Factory) =
+        parsedRecipe.machineStats[factory.identifier]?.categories ?: factory.categories
 
-    /** Units of [amount] of an item per second, for one machine running [recipe]. */
-    private fun rate(amount: Double, recipe: Recipe) = speedOf(recipe) * amount / recipe.time
+    private fun speedOfFactory(factory: Factory) =
+        parsedRecipe.machineStats[factory.identifier]?.speed ?: factory.speed
+
+    private fun productivityOfFactory(factory: Factory) =
+        parsedRecipe.machineStats[factory.identifier]?.productivity ?: factory.productivity
+
+    /**
+     * The machine that runs [recipe]: of all selected machines that accept any of the recipe's
+     * categories, prefer the Space Age speciality machines, then the one with the highest
+     * productivity, then speed. The identifier keeps the choice deterministic.
+     */
+    private fun findFactory(recipe: Recipe) =
+        factories
+            .filter { factory -> categoriesOf(factory).any { it in recipe.categories } }
+            .maxWithOrNull(
+                compareBy(
+                    { it.preferred },
+                    { productivityOfFactory(it) },
+                    { speedOfFactory(it) },
+                    { it.identifier },
+                )
+            )
+
+    private fun speedOf(recipe: Recipe) = findFactory(recipe)?.let(::speedOfFactory) ?: 1.0
+
+    private fun productivityOf(recipe: Recipe) =
+        findFactory(recipe)?.let(::productivityOfFactory) ?: 0.0
+
+    /** Units of [amount] consumed per second by one machine running [recipe]. */
+    private fun inputRate(amount: Double, recipe: Recipe) = speedOf(recipe) * amount / recipe.time
+
+    /**
+     * Units of [amount] produced per second by one machine running [recipe]; the machine's built-in
+     * productivity bonus increases the output without increasing the inputs.
+     */
+    private fun outputRate(amount: Double, recipe: Recipe) =
+        speedOf(recipe) * (1.0 + productivityOf(recipe)) * amount / recipe.time
+
+    /** Whether [recipe] can be run by a preferred Space Age speciality machine. */
+    private fun usesPreferredFactory(recipe: Recipe) = findFactory(recipe)?.preferred == true
 
     /**
      * The cheapest recipe producing [target], or a free "chest" source when nothing can make it.
@@ -56,7 +110,12 @@ class Optimizer(
                         // processing chains, e.g. spoilage from jellynut rather than science packs
                         { recipe -> recipe.ingredients.keys.count { it !in rawMaterials } },
                         // then prefer the raw source (drill/pump/pumpjack) over processing recipes
-                        { recipe -> if (recipe.category in extractionCategories) 0 else 1 },
+                        { recipe ->
+                            if (recipe.categories.any { it in extractionCategories }) 0 else 1
+                        },
+                        // then, as a tie-breaker, prefer a recipe the selected Space Age speciality
+                        // machine can run (foundry/electromagnetic/cryogenic plant, biochamber)
+                        { recipe -> if (usesPreferredFactory(recipe)) 0 else 1 },
                         { it.name },
                     )
                 )
@@ -117,14 +176,14 @@ class Optimizer(
                 kept.forEach { ingredient ->
                     demand[ingredient] =
                         (demand[ingredient] ?: 0.0) +
-                            running * rate(recipe.ingredients.getValue(ingredient), recipe)
+                            running * inputRate(recipe.ingredients.getValue(ingredient), recipe)
                 }
             }
             changed = false
             ingredients.keys.forEach { recipe ->
                 val wanted =
                     outputs[recipe]?.maxOfOrNull {
-                        (demand[it] ?: 0.0) / rate(recipe.result.getValue(it), recipe)
+                        (demand[it] ?: 0.0) / outputRate(recipe.result.getValue(it), recipe)
                     } ?: 0.0
                 if (wanted != machines.getValue(recipe)) {
                     machines[recipe] = wanted

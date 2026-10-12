@@ -8,7 +8,23 @@ data class Material(val name: String) {
     }
 }
 
-data class ParsedRecipe(val materials: List<Material>, val recipes: List<Recipe>)
+data class ParsedRecipe(
+    val materials: List<Material>,
+    val recipes: List<Recipe>,
+    /**
+     * Crafting categories, speed and built-in productivity of the machines, derived from the
+     * `data.raw` dump and keyed by the machine prototype name. [Factory] carries curated fallbacks
+     * for synthetic tests that build a [ParsedRecipe] without a dump.
+     */
+    val machineStats: Map<String, MachineStats> = emptyMap(),
+)
+
+/** The crafting-relevant stats of a machine prototype. */
+data class MachineStats(
+    val categories: Set<Category>,
+    val speed: Double,
+    val productivity: Double,
+)
 
 data class Recipe(
     val name: String,
@@ -18,7 +34,16 @@ data class Recipe(
     val category: Category,
     val subgroup: Subgroup = Subgroup(),
     val surfaceConditions: List<SurfaceCondition> = emptyList(),
-)
+    /**
+     * Further categories a recipe can be crafted in besides [category], e.g. the Space Age
+     * `copper-bacteria` is `{organic, crafting}`. A machine can run a recipe when any of
+     * [categories] is one of its [Factory.categories].
+     */
+    val additionalCategories: Set<Category> = emptySet(),
+) {
+    val categories: Set<Category>
+        get() = additionalCategories + category
+}
 
 data class Subgroup(val name: String = "no subgroup")
 
@@ -153,8 +178,9 @@ fun ParsedRecipe.forSurface(surface: Surface) =
                     // surface conditions: some of those fit several surfaces, e.g. the
                     // quantum-processor (low pressure) is also assembled on space platforms
                     (it.surfaceConditions.isNotEmpty() || surface.accepts(it.subgroup)) &&
-                    surface.accepts(it.category) &&
-                    (it.category !in extractionCategories || surface.acceptsResource(it.name))
+                    it.categories.any { category -> surface.accepts(category) } &&
+                    (it.categories.none { category -> category in extractionCategories } ||
+                        surface.acceptsResource(it.name))
             }
     )
 

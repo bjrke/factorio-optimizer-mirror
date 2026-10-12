@@ -1,5 +1,0 @@
-base		base/prototypes/recipe.lua
-elevated-rails	base	elevated-rails/prototypes/recipe/elevated-rails.lua
-quality	base,recycler	quality/prototypes/recipe.lua
-recycler	base	recycler/data.lua;recycler/recycling.lua
-space-age	base,elevated-rails,recycler	space-age/prototypes/recipe.lua

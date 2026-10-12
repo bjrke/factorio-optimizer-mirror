@@ -5,10 +5,36 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 class SpoilageRecipesTest {
 
-    private val recipes = spoilageRecipes(Material::of).associateBy(Recipe::name)
+    private val dump =
+        Json.parseToJsonElement(
+                """
+                {
+                  "item": {
+                    "iron-bacteria": {"spoil_ticks": 3600, "spoil_result": "iron-ore"},
+                    "copper-bacteria": {"spoil_ticks": 3600, "spoil_result": "copper-ore"},
+                    "agricultural-science-pack": {"spoil_ticks": 216000, "spoil_result": "spoilage"},
+                    "nutrients": {"spoil_ticks": 18000, "spoil_result": "spoilage"},
+                    "biter-egg": {"spoil_ticks": 108000}
+                  },
+                  "capsule": {
+                    "raw-fish": {"spoil_ticks": 453000, "spoil_result": "spoilage"},
+                    "bioflux": {"spoil_ticks": 432000, "spoil_result": "spoilage"},
+                    "jellynut": {"spoil_ticks": 216000, "spoil_result": "spoilage"},
+                    "yumako": {"spoil_ticks": 216000, "spoil_result": "spoilage"},
+                    "jelly": {"spoil_ticks": 14400, "spoil_result": "spoilage"},
+                    "yumako-mash": {"spoil_ticks": 10800, "spoil_result": "spoilage"}
+                  }
+                }
+                """
+            )
+            .let { it as JsonObject }
+
+    private val recipes = spoilageRecipes(dump, Material::of).associateBy(Recipe::name)
 
     @Test
     fun bacteriaRotIntoOre() {

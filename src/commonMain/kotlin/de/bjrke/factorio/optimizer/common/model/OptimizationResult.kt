@@ -12,7 +12,8 @@ data class FactoryProduction(
         FactoryProduction(recipe, factory, this.amount + amount, this.level)
 
     fun production(material: Material) =
-        factory.speed * amount * recipe.result[material]!! / recipe.time
+        factory.speed * (1.0 + factory.productivity) * amount * recipe.result[material]!! /
+            recipe.time
 
     fun consumption(material: Material) =
         factory.speed * amount * recipe.ingredients[material]!! / recipe.time

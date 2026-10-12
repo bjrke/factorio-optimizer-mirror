@@ -6,17 +6,23 @@ private val smelterCategories = setOf(Category.SMELTING)
 
 /**
  * A machine that can run recipes. Some machines only exist with a certain mod active
- * ([spaceAgeOnly], [baseOnly], [requiresRecycler]), which [FactoryConfig] uses to gate what the
- * user can pick.
+ * ([spaceAgeOnly], [baseOnly]), which [FactoryConfig] uses to gate what the user can pick.
+ *
+ * [productivity] is the machine's built-in productivity bonus (its output is multiplied by `1 +
+ * productivity` without consuming more ingredients). [preferred] marks the Space Age speciality
+ * machines that should be used whenever they can run a recipe, even without a bonus (the cryogenic
+ * plant). These values are curated fallbacks; the optimizer prefers the stats derived from the
+ * prototype dump (see [MachineStats]).
  */
 enum class Factory(
     val code: Char?,
     val identifier: String,
     val categories: Set<Category>,
     val speed: Double = 1.0,
+    val productivity: Double = 0.0,
+    val preferred: Boolean = false,
     val spaceAgeOnly: Boolean = false,
     val baseOnly: Boolean = false,
-    val requiresRecycler: Boolean = false,
 ) {
     ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
     ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
@@ -29,19 +35,39 @@ enum class Factory(
     STONE_FURNACE('f', "stone-furnace", smelterCategories),
     STEEL_FURNACE('s', "steel-furnace", smelterCategories, 2.0),
     ELECTRIC_FURNACE('e', "electric-furnace", smelterCategories, 2.0),
-    BIOCHAMBER('b', "biochamber", setOf(Category.ORGANIC), spaceAgeOnly = true),
+    BIOCHAMBER(
+        'b',
+        "biochamber",
+        setOf(Category.ORGANIC),
+        2.0,
+        productivity = 0.5,
+        preferred = true,
+        spaceAgeOnly = true,
+    ),
     FOUNDRY(
         'F',
         "foundry",
-        setOf(Category.METALLURGY, Category.SMELTING),
-        2.0,
+        setOf(Category.METALLURGY),
+        4.0,
+        productivity = 0.5,
+        preferred = true,
         spaceAgeOnly = true,
     ),
-    CRYOGENIC_PLANT('C', "cryogenic-plant", setOf(Category.CRYOGENICS), spaceAgeOnly = true),
+    CRYOGENIC_PLANT(
+        'C',
+        "cryogenic-plant",
+        setOf(Category.CRYOGENICS),
+        2.0,
+        preferred = true,
+        spaceAgeOnly = true,
+    ),
     ELECTROMAGNETIC_PLANT(
         'm',
         "electromagnetic-plant",
         setOf(Category.ELECTROMAGNETICS),
+        2.0,
+        productivity = 0.5,
+        preferred = true,
         spaceAgeOnly = true,
     ),
     CRUSHER(null, "crusher", setOf(Category.CRUSHING), spaceAgeOnly = true),
@@ -51,7 +77,7 @@ enum class Factory(
         setOf(Category.ASTEROID_COLLECTION),
         spaceAgeOnly = true,
     ),
-    RECYCLER('r', "recycler", setOf(Category.RECYCLING), requiresRecycler = true),
+    RECYCLER('r', "recycler", setOf(Category.RECYCLING), spaceAgeOnly = true),
     CAPTIVE_BITER_SPAWNER(
         null,
         "captive-biter-spawner",
@@ -84,10 +110,10 @@ enum class Factory(
 }
 
 /**
- * The machines that can be selected for a given mod set. Space-Age-only machines are hidden without
- * Space Age, the rocket silo is hidden with it, and the recycler needs the recycler mod.
+ * The machines that can be selected for a given mod set. Without Space Age the DLC-only machines
+ * are hidden and the rocket silo stays; with it the silo is replaced by the Space Age recipes.
  */
-class FactoryConfig(val spaceAge: Boolean = true, val recycler: Boolean = true) {
+class FactoryConfig(val spaceAge: Boolean = true) {
 
     val available: Set<Factory> =
         Factory.entries
@@ -95,7 +121,6 @@ class FactoryConfig(val spaceAge: Boolean = true, val recycler: Boolean = true) 
                 when {
                     it.baseOnly -> !spaceAge
                     it.spaceAgeOnly -> spaceAge
-                    it.requiresRecycler -> recycler
                     else -> true
                 }
             }

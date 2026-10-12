@@ -2,24 +2,19 @@ package de.bjrke.factorio.optimizer.common.business
 
 const val BASE_MOD = "base"
 const val SPACE_AGE_MOD = "space-age"
-const val RECYCLER_MOD = "recycler"
 
 val defaultMods = setOf(BASE_MOD, SPACE_AGE_MOD)
 
-data class ModInfo(val name: String, val dependencies: List<String>, val files: List<String>)
+/**
+ * The mods the UI offers. Data is dumped for exactly two configurations (see `dumpPrototypes`), so
+ * selecting Space Age switches to the dump with the DLC mods enabled and everything else uses the
+ * base game dump.
+ */
+val selectableMods = listOf(BASE_MOD, SPACE_AGE_MOD)
 
-fun parseModsTxt(s: String) =
-    s.lines()
-        .filter { it.isNotBlank() }
-        .map { line ->
-            val parts = line.split("\t")
-            ModInfo(
-                name = parts[0],
-                dependencies = parts.getOrElse(1) { "" }.split(",").filter { it.isNotBlank() },
-                files = parts.getOrElse(2) { "" }.split(";").filter { it.isNotBlank() },
-            )
-        }
+/** Adds the mods implied by a selection: Space Age always needs the base game. */
+fun activeMods(selected: Set<String>) =
+    if (SPACE_AGE_MOD in selected) setOf(BASE_MOD, SPACE_AGE_MOD) else setOf(BASE_MOD)
 
-expect fun loadMods(): List<ModInfo>
-
-expect fun loadRecipeFiles(): Map<String, String>
+/** The `data.raw` dump (JSON) for the base game or for base plus the Space Age DLC mods. */
+expect fun loadPrototypeDump(spaceAge: Boolean): String

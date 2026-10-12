@@ -6,6 +6,11 @@
         {
             test: /\.(lua|txt)$/i,
             type: 'asset/source'
+        },
+        {
+            test: /\.json$/i,
+            include: /prototypes/,
+            type: 'asset/source'
         }
     );
 

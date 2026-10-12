@@ -7,8 +7,8 @@ import kotlin.test.assertTrue
 
 class FactoryTest {
 
-    private val base = FactoryConfig(spaceAge = false, recycler = false)
-    private val spaceAge = FactoryConfig(spaceAge = true, recycler = true)
+    private val base = FactoryConfig(spaceAge = false)
+    private val spaceAge = FactoryConfig(spaceAge = true)
 
     @Test
     fun defaultSelectsElectricMiningDrillOnly() {
@@ -92,10 +92,9 @@ class FactoryTest {
     }
 
     @Test
-    fun recyclerRequiresRecyclerMod() {
+    fun recyclerIsSpaceAgeOnly() {
         assertFalse(Factory.RECYCLER in base.available)
-        assertTrue(Factory.RECYCLER in FactoryConfig(spaceAge = true, recycler = true).available)
-        assertTrue(Factory.RECYCLER in FactoryConfig(spaceAge = false, recycler = true).available)
+        assertTrue(Factory.RECYCLER in spaceAge.available)
     }
 
     @Test
@@ -150,5 +149,36 @@ class FactoryTest {
             assertTrue(config.groups.flatten().none { it in config.singles })
             assertTrue(config.singles.none { config.groups.flatten().contains(it) })
         }
+    }
+
+    @Test
+    fun specialtyMachinesHaveProductivityAndArePreferred() {
+        val bonuses =
+            mapOf(
+                Factory.FOUNDRY to 0.5,
+                Factory.ELECTROMAGNETIC_PLANT to 0.5,
+                Factory.BIOCHAMBER to 0.5,
+                // the cryogenic plant has no bonus but should still be preferred
+                Factory.CRYOGENIC_PLANT to 0.0,
+            )
+        for ((factory, productivity) in bonuses) {
+            assertEquals(productivity, factory.productivity, "$factory")
+            assertTrue(factory.preferred, "$factory")
+        }
+        assertFalse(Factory.ELECTRIC_FURNACE.preferred)
+        assertFalse(Factory.ASSEMBLING_MACHINE_3.preferred)
+        assertEquals(0.0, Factory.ELECTRIC_FURNACE.productivity)
+    }
+
+    @Test
+    fun specialtyMachinesMatchGameCategoriesAndSpeeds() {
+        assertEquals(setOf(Category.METALLURGY), Factory.FOUNDRY.categories)
+        assertEquals(setOf(Category.ELECTROMAGNETICS), Factory.ELECTROMAGNETIC_PLANT.categories)
+        assertEquals(setOf(Category.CRYOGENICS), Factory.CRYOGENIC_PLANT.categories)
+        assertEquals(setOf(Category.ORGANIC), Factory.BIOCHAMBER.categories)
+        assertEquals(4.0, Factory.FOUNDRY.speed)
+        assertEquals(2.0, Factory.ELECTROMAGNETIC_PLANT.speed)
+        assertEquals(2.0, Factory.CRYOGENIC_PLANT.speed)
+        assertEquals(2.0, Factory.BIOCHAMBER.speed)
     }
 }

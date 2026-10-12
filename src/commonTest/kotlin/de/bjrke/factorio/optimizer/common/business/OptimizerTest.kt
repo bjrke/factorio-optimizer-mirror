@@ -247,7 +247,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(setOf(BASE_MOD)).forSurface(Surface.NAUVIS),
-                FactoryConfig(spaceAge = false, recycler = false).defaults,
+                FactoryConfig(spaceAge = false).defaults,
             )
 
         val space = Material("space-science-pack")
@@ -259,7 +259,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         val space = Material("space-science-pack")
@@ -271,10 +271,11 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         val space = Material("space-science-pack")
+        // space science is a plain crafting recipe, so it uses the assembling machine
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
             optimizer[space].factories.getValue(space).factory,
@@ -288,7 +289,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         val quantum = Material("quantum-processor")
@@ -296,6 +297,88 @@ class OptimizerTest {
             Factory.ELECTROMAGNETIC_PLANT,
             optimizer[quantum].factories.getValue(quantum).factory,
         )
+    }
+
+    @Test
+    fun spaceAgeElectronicCircuitUsesElectromagneticPlant() {
+        // the data-updates add the electromagnetics category to electronic circuits, so the
+        // electromagnetic plant (with its built-in productivity) is preferred over an assembler
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        val circuit = Material("electronic-circuit")
+        assertEquals(
+            Factory.ELECTROMAGNETIC_PLANT,
+            optimizer[circuit].factories.getValue(circuit).factory,
+        )
+    }
+
+    @Test
+    fun spaceAgeIronGearWheelStaysInAssembler() {
+        // plain crafting recipes have no electromagnetics category, so the electromagnetic plant
+        // must not be used for them
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        val gear = Material("iron-gear-wheel")
+        assertEquals(
+            Factory.ASSEMBLING_MACHINE_3,
+            optimizer[gear].factories.getValue(gear).factory,
+        )
+    }
+
+    @Test
+    fun spaceAgePlasticUsesCryogenicPlant() {
+        // plastic gains the cryogenics category, so the cryogenic plant can run it
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        val plastic = Material("plastic-bar")
+        assertEquals(
+            Factory.CRYOGENIC_PLANT,
+            optimizer[plastic].factories.getValue(plastic).factory,
+        )
+    }
+
+    @Test
+    fun spaceAgeLubricantStaysInChemicalPlant() {
+        // lubricant is pure chemistry, so the cryogenic plant must not be used for it
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        val lubricant = Material("lubricant")
+        assertEquals(
+            Factory.CHEMICAL_PLANT,
+            optimizer[lubricant].factories.getValue(lubricant).factory,
+        )
+    }
+
+    @Test
+    fun glebaSulfurUsesBiosulfur() {
+        // crude oil does not exist on Gleba, so sulfur must come from the biosulfur recipe rather
+        // than the petroleum-based chemical one
+        val optimizer =
+            Optimizer(
+                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        val sulfur = Material("sulfur")
+        val production = optimizer[sulfur].factories.getValue(sulfur)
+        assertEquals("biosulfur", production.recipe.name)
+        assertEquals(Factory.BIOCHAMBER, production.factory)
     }
 
     @Test
@@ -326,7 +409,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         listOf(
@@ -350,7 +433,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         val result = optimizer[Material("space-science-pack")]
@@ -365,7 +448,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         val result = optimizer[Material("solar-panel")]
@@ -383,7 +466,7 @@ class OptimizerTest {
         val optimizer =
             Optimizer(
                 RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
-                FactoryConfig(spaceAge = true, recycler = true).defaults,
+                FactoryConfig(spaceAge = true).defaults,
             )
 
         val chunk = Material("metallic-asteroid-chunk")
@@ -455,5 +538,139 @@ class OptimizerTest {
         val smelting = result.factories.values.single { it.recipe.name == "smelt" }
         // demand(plate) = 2 * make-x + 3 * make-y, not the max of the two consumers
         assertEquals(2.5, smelting.amount)
+    }
+
+    private fun multiCategoryRecipe(
+        name: String,
+        category: Category,
+        additional: Category,
+        result: Material,
+    ) =
+        Recipe(
+            name = name,
+            ingredients = emptyMap(),
+            result = mapOf(result to 1.0),
+            time = 1.0,
+            category = category,
+            additionalCategories = setOf(additional),
+        )
+
+    @Test
+    fun biochamberIsPreferredOverAssembler() {
+        val product = Material("synthetic-organic-product")
+        assertEquals(
+            Factory.BIOCHAMBER,
+            factoryOf(
+                product,
+                listOf(
+                    multiCategoryRecipe(
+                        "organic-recipe",
+                        Category.ORGANIC,
+                        Category.CRAFTING,
+                        product,
+                    )
+                ),
+                setOf(
+                    Factory.BIOCHAMBER,
+                    Factory.ASSEMBLING_MACHINE_3,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun cryogenicPlantIsPreferredOverChemicalPlant() {
+        val product = Material("synthetic-cold-product")
+        assertEquals(
+            Factory.CRYOGENIC_PLANT,
+            factoryOf(
+                product,
+                listOf(
+                    multiCategoryRecipe(
+                        "cold-recipe",
+                        Category.CHEMISTRY,
+                        Category.CRYOGENICS,
+                        product,
+                    )
+                ),
+                setOf(
+                    Factory.CRYOGENIC_PLANT,
+                    Factory.CHEMICAL_PLANT,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun electromagneticPlantIsNotUsedForCrafting() {
+        // the electromagnetic plant only runs electromagnetics recipes, not plain crafting ones
+        val product = Material("synthetic-circuit")
+        assertEquals(
+            Factory.ASSEMBLING_MACHINE_3,
+            factoryOf(
+                product,
+                listOf(recipe("circuit", Category.CRAFTING, mapOf(product to 1.0))),
+                setOf(
+                    Factory.ELECTROMAGNETIC_PLANT,
+                    Factory.ASSEMBLING_MACHINE_3,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun cryogenicPlantIsNotUsedForChemistry() {
+        // the cryogenic plant only runs cryogenics recipes, not plain chemistry ones (e.g. plastic)
+        val product = Material("synthetic-plastic")
+        assertEquals(
+            Factory.CHEMICAL_PLANT,
+            factoryOf(
+                product,
+                listOf(recipe("plastic", Category.CHEMISTRY, mapOf(product to 1.0))),
+                setOf(
+                    Factory.CRYOGENIC_PLANT,
+                    Factory.CHEMICAL_PLANT,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun builtInProductivityBoostsOutputWithoutExtraInput() {
+        val ore = Material("synthetic-em-ore")
+        val plate = Material("synthetic-em-plate")
+        val emRecipe =
+            Recipe(
+                name = "em-recipe",
+                ingredients = mapOf(ore to 1.0),
+                result = mapOf(plate to 1.0),
+                time = 1.0,
+                category = Category.ELECTROMAGNETICS,
+            )
+        val optimizer =
+            Optimizer(
+                ParsedRecipe(emptyList(), listOf(emRecipe)),
+                setOf(
+                    Factory.ELECTROMAGNETIC_PLANT,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
+            )
+
+        val production = optimizer[plate].factories.getValue(plate)
+        assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory)
+        // one machine produces 2 * 1.5 = 3/s, so 1/s needs 1/3 of a machine
+        assertEquals(1.0 / 3.0, production.amount, 1e-9)
+        assertEquals(1.0, production.production(plate), 1e-9)
+        // the bonus does not change the input consumption
+        assertEquals(2.0 / 3.0, production.consumption(ore), 1e-9)
     }
 }
