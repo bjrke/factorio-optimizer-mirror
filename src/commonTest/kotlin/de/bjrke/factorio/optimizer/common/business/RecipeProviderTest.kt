@@ -29,7 +29,10 @@ class RecipeProviderTest {
             setOf("copper-plate", "tungsten-plate"),
             parsePrototypes(dump, defaultRecipesProvider = { listOf() })
                 .recipes
-                .filter { it.category !in extractionCategories && it.category != Category.ROTTING }
+                .filter {
+                    it.categories.none(extractionCategories::contains) &&
+                        Category.ROTTING !in it.categories
+                }
                 .map { it.name }
                 .toSet(),
         )

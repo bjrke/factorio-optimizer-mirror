@@ -1,13 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Category
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.forSurface
+import de.bjrke.factorio.optimizer.common.model.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -30,7 +23,7 @@ class OptimizerTest {
             ingredients = ingredients,
             result = result,
             time = time,
-            category = category,
+            categories = setOf(category),
         )
 
     private val miningIron = recipe("iron-ore", Category.MINING_BASIC_SOLID, mapOf(ironOre to 1.0))
@@ -194,7 +187,7 @@ class OptimizerTest {
 
         val material = Material("iron-ore")
         val production = optimizer[material].factories.getValue(material)
-        assertEquals(Factory.ELECTRIC_MINING_DRILL, production.factory)
+        assertEquals(Factory.BIG_MINING_DRILL, production.factory)
         assertEquals("iron-ore", production.recipe.name)
     }
 
@@ -542,8 +535,7 @@ class OptimizerTest {
 
     private fun multiCategoryRecipe(
         name: String,
-        category: Category,
-        additional: Category,
+        categories: Set<Category>,
         result: Material,
     ) =
         Recipe(
@@ -551,8 +543,7 @@ class OptimizerTest {
             ingredients = emptyMap(),
             result = mapOf(result to 1.0),
             time = 1.0,
-            category = category,
-            additionalCategories = setOf(additional),
+            categories = categories,
         )
 
     @Test
@@ -565,8 +556,10 @@ class OptimizerTest {
                 listOf(
                     multiCategoryRecipe(
                         "organic-recipe",
-                        Category.ORGANIC,
-                        Category.CRAFTING,
+                        setOf(
+                            Category.ORGANIC,
+                            Category.CRAFTING,
+                        ),
                         product,
                     )
                 ),
@@ -590,8 +583,10 @@ class OptimizerTest {
                 listOf(
                     multiCategoryRecipe(
                         "cold-recipe",
-                        Category.CHEMISTRY,
-                        Category.CRYOGENICS,
+                        setOf(
+                            Category.CHEMISTRY,
+                            Category.CRYOGENICS,
+                        ),
                         product,
                     )
                 ),
@@ -653,7 +648,7 @@ class OptimizerTest {
                 ingredients = mapOf(ore to 1.0),
                 result = mapOf(plate to 1.0),
                 time = 1.0,
-                category = Category.ELECTROMAGNETICS,
+                categories = setOf(Category.ELECTROMAGNETICS),
             )
         val optimizer =
             Optimizer(

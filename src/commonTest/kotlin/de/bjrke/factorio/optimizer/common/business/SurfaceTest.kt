@@ -1,16 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Category
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.common.model.Subgroup
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.SurfaceCondition
-import de.bjrke.factorio.optimizer.common.model.SurfaceProperty
-import de.bjrke.factorio.optimizer.common.model.forSurface
-import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
-import de.bjrke.factorio.optimizer.common.model.toUrlParam
+import de.bjrke.factorio.optimizer.common.model.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -87,7 +77,7 @@ class SurfaceTest {
                 ingredients = mapOf(Material("copper-ore") to 1.0),
                 result = mapOf(Material("copper-plate") to 1.0),
                 time = 1.0,
-                category = Category.SMELTING,
+                categories = setOf(Category.SMELTING),
             )
         val conditioned =
             global.copy(
@@ -126,7 +116,7 @@ class SurfaceTest {
                 ingredients = emptyMap(),
                 result = mapOf(Material("quantum-processor") to 1.0),
                 time = 1.0,
-                category = Category.ELECTROMAGNETICS,
+                categories = setOf(Category.ELECTROMAGNETICS),
                 subgroup = Subgroup("aquilo-processes"),
                 surfaceConditions =
                     listOf(SurfaceCondition(SurfaceProperty.PRESSURE, Int.MIN_VALUE..600)),
@@ -147,7 +137,7 @@ class SurfaceTest {
             ingredients = emptyMap(),
             result = mapOf(Material(name) to 1.0),
             time = 1.0,
-            category = category,
+            categories = setOf(category),
         )
 
     @Test

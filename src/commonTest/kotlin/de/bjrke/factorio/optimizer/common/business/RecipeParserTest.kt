@@ -1,13 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Category
-import de.bjrke.factorio.optimizer.common.model.MachineStats
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.common.model.Subgroup
-import de.bjrke.factorio.optimizer.common.model.SurfaceCondition
-import de.bjrke.factorio.optimizer.common.model.SurfaceProperty
-import de.bjrke.factorio.optimizer.common.model.extractionCategories
+import de.bjrke.factorio.optimizer.common.model.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,7 +11,10 @@ class RecipeParserTest {
         parsePrototypes(s, defaultRecipesProvider = { listOf() })
             .recipes
             // resource, harvesting, asteroid and spoilage recipes are derived separately
-            .filter { it.category !in extractionCategories && it.category != Category.ROTTING }
+            .filter {
+                it.categories.none(extractionCategories::contains) &&
+                    Category.ROTTING !in it.categories
+            }
 
     @Test fun emptyDumpShouldReturnEmptyRecipeList() = assertTrue(parse("{}").isEmpty())
 
@@ -31,7 +27,7 @@ class RecipeParserTest {
                     ingredients = mapOf(Material("copper-ore") to 1.0),
                     result = mapOf(Material("copper-plate") to 1.0),
                     time = 3.2,
-                    category = Category.SMELTING,
+                    categories = setOf(Category.SMELTING),
                     subgroup = Subgroup(),
                 )
             ),
@@ -59,7 +55,7 @@ class RecipeParserTest {
                     result =
                         mapOf(Material("uranium-235") to 0.007, Material("uranium-238") to 0.993),
                     time = 12.0,
-                    category = Category.CENTRIFUGING,
+                    categories = setOf(Category.CENTRIFUGING),
                     subgroup = Subgroup("uranium-processing"),
                 )
             ),
@@ -97,7 +93,7 @@ class RecipeParserTest {
     @Test
     fun parseRecipeWithoutCategoriesDefaultsToCrafting() =
         assertEquals(
-            Category.CRAFTING,
+            setOf(Category.CRAFTING),
             parse(
                     """
                     {"recipe":{"iron-gear-wheel":{
@@ -108,7 +104,7 @@ class RecipeParserTest {
                     """
                 )
                 .single()
-                .category,
+                .categories,
         )
 
     @Test
@@ -120,8 +116,7 @@ class RecipeParserTest {
                     ingredients = mapOf(Material("yumako-mash") to 3.0),
                     result = mapOf(Material("copper-bacteria") to 0.1, Material("spoilage") to 1.0),
                     time = 1.0,
-                    category = Category.ORGANIC,
-                    additionalCategories = setOf(Category.CRAFTING),
+                    categories = setOf(Category.CRAFTING, Category.ORGANIC),
                     subgroup = Subgroup("agriculture-processes"),
                     surfaceConditions =
                         listOf(
@@ -172,7 +167,6 @@ class RecipeParserTest {
                 )
                 .single()
 
-        assertEquals(Category.CHEMISTRY, recipe.category)
         assertEquals(setOf(Category.CHEMISTRY, Category.CRYOGENICS), recipe.categories)
     }
 

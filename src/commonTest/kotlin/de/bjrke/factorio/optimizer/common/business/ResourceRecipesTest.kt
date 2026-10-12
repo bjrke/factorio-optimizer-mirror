@@ -39,7 +39,7 @@ class ResourceRecipesTest {
     @Test
     fun basicSolidResource() {
         val iron = recipes.getValue("iron-ore")
-        assertEquals(Category.MINING_BASIC_SOLID, iron.category)
+        assertEquals(setOf(Category.MINING_BASIC_SOLID), iron.categories)
         assertEquals(1.0, iron.time)
         assertEquals(mapOf(Material("iron-ore") to 1.0), iron.result)
         assertTrue(iron.ingredients.isEmpty())
@@ -48,14 +48,14 @@ class ResourceRecipesTest {
     @Test
     fun hardSolidResource() {
         val tungsten = recipes.getValue("tungsten-ore")
-        assertEquals(Category.MINING_HARD_SOLID, tungsten.category)
+        assertEquals(setOf(Category.MINING_HARD_SOLID), tungsten.categories)
         assertEquals(5.0, tungsten.time)
     }
 
     @Test
     fun fluidResourceUsesPumpjackAmount() {
         val oil = recipes.getValue("crude-oil")
-        assertEquals(Category.MINING_FLUID, oil.category)
+        assertEquals(setOf(Category.MINING_FLUID), oil.categories)
         assertEquals(mapOf(Material("crude-oil") to 10.0), oil.result)
     }
 
@@ -78,7 +78,7 @@ class ResourceRecipesTest {
     @Test
     fun offshorePumpFluids() {
         listOf("water", "heavy-oil", "lava", "ammoniacal-solution").forEach {
-            assertEquals(Category.OFFSHORE_PUMPING, recipes.getValue(it).category)
+            assertEquals(setOf(Category.OFFSHORE_PUMPING), recipes.getValue(it).categories)
         }
     }
 
@@ -86,7 +86,7 @@ class ResourceRecipesTest {
     fun harvestedFruit() {
         listOf("yumako", "jellynut").forEach { fruit ->
             val recipe = recipes.getValue(fruit)
-            assertEquals(Category.HARVESTING, recipe.category)
+            assertEquals(setOf(Category.HARVESTING), recipe.categories)
             assertEquals(300.0, recipe.time)
             assertEquals(mapOf(Material(fruit) to 50.0), recipe.result)
             assertTrue(recipe.ingredients.isEmpty())
@@ -96,7 +96,7 @@ class ResourceRecipesTest {
     @Test
     fun asteroidCollectorYieldsEveryChunk() {
         val recipe = recipes.getValue("asteroid-collection")
-        assertEquals(Category.ASTEROID_COLLECTION, recipe.category)
+        assertEquals(setOf(Category.ASTEROID_COLLECTION), recipe.categories)
         assertEquals(0.2, recipe.time)
         assertTrue(recipe.ingredients.isEmpty())
         assertEquals(

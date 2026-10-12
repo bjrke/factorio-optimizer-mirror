@@ -51,7 +51,7 @@ private fun minedResourceRecipes(root: JsonObject, material: (String) -> Materia
             ingredients = ingredients,
             result = result,
             time = minable.number("mining_time") ?: 1.0,
-            category = category,
+            categories = setOf(category),
         )
     }
 
@@ -72,7 +72,7 @@ private fun offshorePumpFluids(root: JsonObject, material: (String) -> Material)
                 ingredients = emptyMap(),
                 result = mapOf(material(fluid) to 1.0),
                 time = 1.0,
-                category = Category.OFFSHORE_PUMPING,
+                categories = setOf(Category.OFFSHORE_PUMPING),
             )
         }
 
@@ -84,7 +84,7 @@ private fun harvestedFruit(material: (String) -> Material): List<Recipe> =
             ingredients = emptyMap(),
             result = mapOf(material(fruit) to 50.0),
             time = 300.0,
-            category = Category.HARVESTING,
+            categories = setOf(Category.HARVESTING),
         )
     }
 
@@ -108,6 +108,6 @@ private fun asteroidCollectionRecipes(material: (String) -> Material) =
                     )
                     .associate { material(it) to 1.0 },
             time = 0.2,
-            category = Category.ASTEROID_COLLECTION,
+            categories = setOf(Category.ASTEROID_COLLECTION),
         )
     )

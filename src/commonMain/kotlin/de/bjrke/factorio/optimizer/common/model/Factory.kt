@@ -115,7 +115,7 @@ enum class Factory(
  */
 class FactoryConfig(val spaceAge: Boolean = true) {
 
-    val available: Set<Factory> =
+    val available =
         Factory.entries
             .filter {
                 when {
@@ -130,7 +130,7 @@ class FactoryConfig(val spaceAge: Boolean = true) {
     private val assemblers = available.filter { it.categories.contains(Category.CRAFTING) }.toSet()
     private val miners = available.filter { it in minerFactories }.toSet()
 
-    val alwaysEnabled: Set<Factory> = alwaysEnabledFactories intersect available
+    val alwaysEnabled = alwaysEnabledFactories intersect available
 
     private val tech = available - smelters - assemblers - miners - alwaysEnabled
 
@@ -139,14 +139,13 @@ class FactoryConfig(val spaceAge: Boolean = true) {
         listOf(assemblers, smelters, miners).filter { it.isNotEmpty() }.map { it.sorted() }
 
     private val groupDefaults =
-        listOf(
-                Factory.ASSEMBLING_MACHINE_3,
-                Factory.ELECTRIC_FURNACE,
-                Factory.ELECTRIC_MINING_DRILL,
-            )
-            .filter { it in available }
+        setOf(
+            Factory.ASSEMBLING_MACHINE_3,
+            Factory.ELECTRIC_FURNACE,
+            if (spaceAge) Factory.BIG_MINING_DRILL else Factory.ELECTRIC_MINING_DRILL,
+        ) intersect available
 
-    val defaults: Set<Factory> = groupDefaults.toSet() + alwaysEnabled + tech
+    val defaults = groupDefaults.toSet() + alwaysEnabled + tech
 
     /** Independently toggled machines; rendered as checkboxes. */
     val singles: List<Factory> =
@@ -203,7 +202,10 @@ class FactoryConfig(val spaceAge: Boolean = true) {
     }
 }
 
-/** Defaults for all machines (all mods active); used by the [Optimizer]'s default. */
+/**
+ * Defaults for all machines (all mods active); used by the
+ * [de.bjrke.factorio.optimizer.common.business.Optimizer]'s default.
+ */
 val defaultFactories: Set<Factory>
     get() = FactoryConfig().defaults
 

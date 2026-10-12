@@ -44,7 +44,7 @@ class SpoilageRecipesTest {
                 ingredients = mapOf(Material("iron-bacteria") to 1.0),
                 result = mapOf(Material("iron-ore") to 1.0),
                 time = 60.0,
-                category = Category.ROTTING,
+                categories = setOf(Category.ROTTING),
             ),
             recipes.getValue("iron-bacteria-rotting"),
         )
@@ -54,7 +54,7 @@ class SpoilageRecipesTest {
                 ingredients = mapOf(Material("copper-bacteria") to 1.0),
                 result = mapOf(Material("copper-ore") to 1.0),
                 time = 60.0,
-                category = Category.ROTTING,
+                categories = setOf(Category.ROTTING),
             ),
             recipes.getValue("copper-bacteria-rotting"),
         )
@@ -77,7 +77,7 @@ class SpoilageRecipesTest {
         expected.forEach { (name, time) ->
             val recipe = recipes.getValue(name)
             val source = name.removeSuffix("-rotting")
-            assertEquals(Category.ROTTING, recipe.category, name)
+            assertEquals(setOf(Category.ROTTING), recipe.categories, name)
             assertEquals(time, recipe.time, name)
             assertEquals(mapOf(Material(source) to 1.0), recipe.ingredients, name)
             assertEquals(mapOf(Material("spoilage") to 1.0), recipe.result, name)
@@ -87,6 +87,6 @@ class SpoilageRecipesTest {
     @Test
     fun everyRecipeRots() {
         assertEquals(10, recipes.size)
-        assertEquals(10, recipes.values.count { it.category == Category.ROTTING })
+        assertEquals(10, recipes.values.count { it.categories.contains(Category.ROTTING) })
     }
 }

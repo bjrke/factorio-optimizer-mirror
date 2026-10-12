@@ -26,7 +26,7 @@ fun spoilageRecipes(root: JsonObject, material: (String) -> Material): List<Reci
                 ingredients = mapOf(material(name) to 1.0),
                 result = mapOf(material(result) to 1.0),
                 time = ticks / 60.0,
-                category = Category.ROTTING,
+                categories = setOf(Category.ROTTING),
             )
         }
     }

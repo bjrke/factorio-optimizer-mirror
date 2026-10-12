@@ -1,13 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.*
 
 private const val DEFAULT_AMOUNT = 1.0
 private const val DEFAULT_PROBABILITY = 1.0
@@ -111,7 +105,7 @@ fun parsePrototypes(
                             .orEmpty()
                             .ifEmpty { listOf(DEFAULT_CATEGORY) }
                             .mapNotNull(::category)
-                            .distinct()
+                            .toSet()
                     if (categories.isEmpty()) continue
 
                     yield(
@@ -121,8 +115,7 @@ fun parsePrototypes(
                             result = result,
                             time = prototype.number("energy_required") ?: 0.5,
                             subgroup = subGroup(subgroupName),
-                            category = categories.first(),
-                            additionalCategories = categories.drop(1).toSet(),
+                            categories = categories,
                             surfaceConditions = prototype.surfaceConditions(),
                         )
                     )

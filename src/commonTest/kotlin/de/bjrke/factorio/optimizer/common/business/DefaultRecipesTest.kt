@@ -48,7 +48,7 @@ class DefaultRecipesTest {
     @Test
     fun baseGameSpaceScienceComesFromRocketSilo() {
         val space = recipes(spaceAge = false).getValue("space-science-pack")
-        assertEquals(Category.ROCKET_BUILDING, space.category)
+        assertEquals(setOf(Category.ROCKET_BUILDING), space.categories)
     }
 
     @Test

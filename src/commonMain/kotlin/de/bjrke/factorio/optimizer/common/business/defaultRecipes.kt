@@ -38,7 +38,7 @@ private fun allSciencePacks(material: (String) -> Material, spaceAge: Boolean) =
             },
         result = mapOf(material(ALL_SCIENCE_PACKS) to 1.0),
         time = 1.0,
-        category = Category.SCIENCE_LAB,
+        categories = setOf(Category.SCIENCE_LAB),
     )
 
 /**
@@ -51,7 +51,7 @@ private fun spaceSciencePack(material: (String) -> Material) =
         ingredients = mapOf(material("satellite") to 1.0, material("rocket-part") to 100.0),
         result = mapOf(material(SPACE_SCIENCE_PACK) to 1000.0),
         time = 1.0,
-        category = Category.ROCKET_BUILDING,
+        categories = setOf(Category.ROCKET_BUILDING),
     )
 
 /**

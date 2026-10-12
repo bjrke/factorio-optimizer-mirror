@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.defaultFactories
 
 class Optimizer(
     private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(defaultMods),
@@ -125,7 +124,7 @@ class Optimizer(
                     result = mapOf(target to 1.0),
                     time = 1.0,
                     subgroup = Subgroup(),
-                    category = Category.NO_CATEGORY,
+                    categories = setOf(Category.NO_CATEGORY),
                 )
         }
 

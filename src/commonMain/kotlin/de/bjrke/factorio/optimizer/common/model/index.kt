@@ -31,19 +31,10 @@ data class Recipe(
     val ingredients: Map<Material, Double>,
     val result: Map<Material, Double>,
     val time: Double,
-    val category: Category,
+    val categories: Set<Category>,
     val subgroup: Subgroup = Subgroup(),
     val surfaceConditions: List<SurfaceCondition> = emptyList(),
-    /**
-     * Further categories a recipe can be crafted in besides [category], e.g. the Space Age
-     * `copper-bacteria` is `{organic, crafting}`. A machine can run a recipe when any of
-     * [categories] is one of its [Factory.categories].
-     */
-    val additionalCategories: Set<Category> = emptySet(),
-) {
-    val categories: Set<Category>
-        get() = additionalCategories + category
-}
+)
 
 data class Subgroup(val name: String = "no subgroup")
 
