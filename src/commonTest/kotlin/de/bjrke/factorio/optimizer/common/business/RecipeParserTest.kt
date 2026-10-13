@@ -15,7 +15,7 @@ class RecipeParserTest {
             // resource, harvesting, asteroid and spoilage recipes are derived separately
             .filter {
                 it.categories.none(extractionCategories::contains) &&
-                    Category.ROTTING !in it.categories
+                    Category.SPOILING !in it.categories
             }
 
     @Test fun emptyDumpShouldReturnEmptyRecipeList() = assertTrue(parse("{}").isEmpty())

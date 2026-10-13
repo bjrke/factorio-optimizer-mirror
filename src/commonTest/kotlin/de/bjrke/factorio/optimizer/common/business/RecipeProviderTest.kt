@@ -32,7 +32,7 @@ class RecipeProviderTest {
                 .recipes
                 .filter {
                     it.categories.none(extractionCategories::contains) &&
-                        Category.ROTTING !in it.categories
+                        Category.SPOILING !in it.categories
                 }
                 .map { it.name }
                 .toSet(),

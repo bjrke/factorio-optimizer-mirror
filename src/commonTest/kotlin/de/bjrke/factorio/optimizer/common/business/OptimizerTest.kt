@@ -13,7 +13,7 @@ class OptimizerTest {
     private val water = Material("water")
     private val ice = Material("ice")
 
-    private val oreRottingBacteria =
+    private val oreSpoilingBacteria =
         mapOf("iron-ore" to "iron-bacteria", "copper-ore" to "copper-bacteria")
 
     private val harvestedFruits = listOf("yumako", "jellynut")
@@ -185,16 +185,16 @@ class OptimizerTest {
     }
 
     @Test
-    fun glebaIronAndCopperOreRotFromBacteria() {
-        // Gleba has no ore patches, but iron/copper bacteria rot into their ore, so the ore must
-        // resolve to the rotting machine instead of a free source (box).
+    fun glebaIronAndCopperOreSpoilFromBacteria() {
+        // Gleba has no ore patches, but iron/copper bacteria spoil into their ore, so the ore must
+        // resolve to the spoiling machine instead of a free source (box).
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
 
-        assertTable(oreRottingBacteria.keys) { ore ->
+        assertTable(oreSpoilingBacteria.keys) { ore ->
             val material = Material(ore)
             assertEquals(
-                Factory.ROTTING,
+                Factory.SPOILING,
                 optimizer[material].factories.getValue(material).factory,
                 ore,
             )
@@ -202,14 +202,14 @@ class OptimizerTest {
     }
 
     @Test
-    fun glebaIronAndCopperOreUseBacteriaRottingRecipe() {
+    fun glebaIronAndCopperOreUseBacteriaSpoilingRecipe() {
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
 
-        assertTable(oreRottingBacteria.entries) { (ore, bacteria) ->
+        assertTable(oreSpoilingBacteria.entries) { (ore, bacteria) ->
             val material = Material(ore)
             assertEquals(
-                "$bacteria-rotting",
+                "$bacteria-spoiling",
                 optimizer[material].factories.getValue(material).recipe.name,
                 ore,
             )
@@ -218,7 +218,7 @@ class OptimizerTest {
 
     @Test
     fun nauvisOreStillComesFromMiningDrill() {
-        // the rotting recipe must not shadow mining where ore patches exist
+        // the spoiling recipe must not shadow mining where ore patches exist
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
 
@@ -246,7 +246,7 @@ class OptimizerTest {
             {
                 assertTrue(
                     result.factories.values.none {
-                        it.factory == Factory.ROTTING || it.factory == Factory.NO_FACTORY
+                        it.factory == Factory.SPOILING || it.factory == Factory.NO_FACTORY
                     }
                 )
             },
@@ -255,7 +255,7 @@ class OptimizerTest {
 
     @Test
     fun fulgoraCopperOreIsImported() {
-        // nothing on Fulgora recycles into copper ore, so it is imported instead of being rotted
+        // nothing on Fulgora recycles into copper ore, so it is imported instead of being spoiled
         // from imported bacteria
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
@@ -269,14 +269,14 @@ class OptimizerTest {
     }
 
     @Test
-    fun fulgoraScienceNeverRotsBacteria() {
+    fun fulgoraScienceNeverSpoilsBacteria() {
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
 
         val result = optimizer[Material(ALL_SCIENCE_PACKS)]
         assertAll(
-            { assertTrue(result.factories.values.none { it.factory == Factory.ROTTING }) },
-            { assertTrue(result.factories.values.none { it.recipe.name.endsWith("-rotting") }) },
+            { assertTrue(result.factories.values.none { it.factory == Factory.SPOILING }) },
+            { assertTrue(result.factories.values.none { it.recipe.name.endsWith("-spoiling") }) },
         )
     }
 
@@ -299,7 +299,7 @@ class OptimizerTest {
 
     @Test
     fun glebaSpoilageComesFromRawFruitNotScience() {
-        // spoilage is cheapest by letting raw harvested fruit rot, not by spoiling expensive
+        // spoilage is cheapest by letting raw harvested fruit spoil, not by spoiling expensive
         // Gleba science packs.
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
@@ -307,12 +307,12 @@ class OptimizerTest {
         val spoilage = Material("spoilage")
         val production = optimizer[spoilage].factories.getValue(spoilage)
         assertAll(
-            { assertEquals(Factory.ROTTING, production.factory) },
-            { assertEquals("jellynut-rotting", production.recipe.name) },
+            { assertEquals(Factory.SPOILING, production.factory) },
+            { assertEquals("jellynut-spoiling", production.recipe.name) },
             {
                 assertTrue(
                     optimizer[spoilage].factories.values.none {
-                        it.recipe.name == "agricultural-science-pack-rotting"
+                        it.recipe.name == "agricultural-science-pack-spoiling"
                     }
                 )
             },

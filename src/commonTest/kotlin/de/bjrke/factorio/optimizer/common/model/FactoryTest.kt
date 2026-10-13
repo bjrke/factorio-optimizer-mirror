@@ -24,7 +24,7 @@ class FactoryTest {
             Factory.CAPTIVE_BITER_SPAWNER,
             Factory.BIG_MINING_DRILL,
             Factory.AGRICULTURAL_TOWER,
-            Factory.ROTTING,
+            Factory.SPOILING,
         )
 
     private val baseAlwaysOnFactories =
@@ -45,7 +45,7 @@ class FactoryTest {
             Factory.CENTRIFUGE,
             Factory.CAPTIVE_BITER_SPAWNER,
             Factory.AGRICULTURAL_TOWER,
-            Factory.ROTTING,
+            Factory.SPOILING,
         )
 
     private val specialtyBonuses =

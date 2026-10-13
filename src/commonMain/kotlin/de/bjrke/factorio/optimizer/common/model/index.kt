@@ -174,18 +174,18 @@ fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
             (Category.RECYCLING !in it.categories || surface == Surface.FULGORA)
     }
 
-    // A rotting recipe only makes sense where the spoiling item is actually produced. This keeps
-    // bacteria (a free chest import on Fulgora) from being "imported only to be rotted" into ore.
+    // A spoiling recipe only makes sense where the spoiling item is actually produced. This keeps
+    // bacteria (a free chest import on Fulgora) from being "imported only to be spoiled" into ore.
     val produced = buildSet {
         kept.forEach {
-            if (Category.ROTTING !in it.categories) addAll(it.result.keys)
+            if (Category.SPOILING !in it.categories) addAll(it.result.keys)
         }
     }
 
     return copy(
         recipes =
             kept.filter { recipe ->
-                Category.ROTTING !in recipe.categories ||
+                Category.SPOILING !in recipe.categories ||
                     produced.containsAll(recipe.ingredients.keys)
             }
     )
@@ -218,8 +218,8 @@ enum class Category(val identifier: String) {
     MINING_FLUID("mining-fluid"),
     OFFSHORE_PUMPING("offshore-pumping"),
     HARVESTING("harvesting"),
-    // custom category for spoilable items rotting into another item
-    ROTTING("rotting"),
+    // custom category for spoilable items spoiling into another item
+    SPOILING("spoiling"),
 }
 
 /**

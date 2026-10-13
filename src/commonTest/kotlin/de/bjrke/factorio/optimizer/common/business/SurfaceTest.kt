@@ -254,7 +254,7 @@ class SurfaceTest {
     }
 
     @Test
-    fun rottingRecipesNeedTheirSourceToBeProduced() {
+    fun spoilingRecipesNeedTheirSourceToBeProduced() {
         val bacteria =
             Recipe(
                 name = "iron-bacteria",
@@ -264,18 +264,18 @@ class SurfaceTest {
                 categories = setOf(Category.CRAFTING),
                 surfaceConditions = listOf(pressure(2000, 2000)),
             )
-        val rotting =
+        val spoiling =
             Recipe(
-                name = "iron-bacteria-rotting",
+                name = "iron-bacteria-spoiling",
                 ingredients = mapOf(Material("iron-bacteria") to 1.0),
                 result = mapOf(Material("iron-ore") to 1.0),
                 time = 1.0,
-                categories = setOf(Category.ROTTING),
+                categories = setOf(Category.SPOILING),
             )
-        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(bacteria, rotting))
+        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(bacteria, spoiling))
 
         assertTableOf(
-            Surface.GLEBA to setOf("iron-bacteria", "iron-bacteria-rotting"),
+            Surface.GLEBA to setOf("iron-bacteria", "iron-bacteria-spoiling"),
             Surface.FULGORA to emptySet<String>(),
             Surface.NAUVIS to emptySet<String>(),
         ) { (surface, expected) ->

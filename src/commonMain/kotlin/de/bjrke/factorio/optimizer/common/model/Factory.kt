@@ -105,7 +105,7 @@ enum class Factory(
     ),
     SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
     // spoilage only exists in Space Age
-    ROTTING(null, "spoilage", setOf(Category.ROTTING), spaceAgeOnly = true),
+    SPOILING(null, "spoilage", setOf(Category.SPOILING), spaceAgeOnly = true),
     NO_FACTORY(null, "infinity-chest", setOf()),
 }
 
@@ -186,7 +186,7 @@ class FactoryConfig(val spaceAge: Boolean = true) {
                 Factory.NO_FACTORY,
                 Factory.PUMPJACK,
                 Factory.OFFSHORE_PUMP,
-                Factory.ROTTING,
+                Factory.SPOILING,
                 Factory.OIL_REFINERY,
                 Factory.CHEMICAL_PLANT,
                 Factory.CRUSHER,

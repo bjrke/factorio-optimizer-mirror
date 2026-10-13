@@ -6,12 +6,12 @@ import de.bjrke.factorio.optimizer.common.model.Recipe
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Recipes for spoilable prototypes rotting into another item, derived from the `spoil_ticks` /
+ * Recipes for spoilable prototypes spoiling into another item, derived from the `spoil_ticks` /
  * `spoil_result` fields the item and capsule prototypes carry. Spoil times are in ticks (60 per
  * second). Items that spoil into an entity rather than an item (`spoil_result` unset, e.g.
  * `biter-egg`) cannot be modelled as a recipe and are skipped.
  *
- * Recipes are named `<source>-rotting` so they don't collide with the recipe that produces the
+ * Recipes are named `<source>-spoiling` so they don't collide with the recipe that produces the
  * source item; the icon component maps that suffix back to the source icon.
  */
 fun spoilageRecipes(root: JsonObject, material: (String) -> Material): List<Recipe> =
@@ -22,11 +22,11 @@ fun spoilageRecipes(root: JsonObject, material: (String) -> Material): List<Reci
             val result = prototype.string("spoil_result") ?: return@mapNotNull null
 
             Recipe(
-                name = "$name-rotting",
+                name = "$name-spoiling",
                 ingredients = mapOf(material(name) to 1.0),
                 result = mapOf(material(result) to 1.0),
                 time = ticks / 60.0,
-                categories = setOf(Category.ROTTING),
+                categories = setOf(Category.SPOILING),
             )
         }
     }

@@ -17,7 +17,7 @@ private fun correctName(s: String) =
         s == "stone-wall" -> "wall"
         s == "raw-fish" -> "fish"
         s == "asteroid-collection" -> "asteroid-collector"
-        s.endsWith("-rotting") -> s.removeSuffix("-rotting")
+        s.endsWith("-spoiling") -> s.removeSuffix("-spoiling")
         else -> s
     }
 

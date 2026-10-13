@@ -13,8 +13,8 @@ class Optimizer(
     /**
      * Materials an enabled extraction recipe (drill/pump/tower) produces directly, i.e. the
      * cheapest inputs. Recipes built from these are preferred over ones needing processed
-     * intermediates, e.g. spoilage rots from yumako/jellynut rather than from agricultural science
-     * packs.
+     * intermediates, e.g. spoilage spoils from yumako/jellynut rather than from agricultural
+     * science packs.
      */
     private val rawMaterials: Set<Material> =
         parsedRecipe.recipes
