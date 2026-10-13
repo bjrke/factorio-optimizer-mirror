@@ -1,5 +1,8 @@
 package de.bjrke.factorio.optimizer.common.model
 
+// AM1's only real limitation is fluids, expressed by omitting `crafting-with-fluid`. Since Factorio
+// 0.17 every assembling machine accepts an unlimited number of ingredients (the old 2/4/6 slots
+// were removed), so no ingredient cap is modelled.
 private val assembler1Categories = setOf(Category.CRAFTING, Category.ADVANCED_CRAFTING)
 private val assembler2Categories = assembler1Categories.plus(Category.CRAFTING_WITH_FLUID)
 private val smelterCategories = setOf(Category.SMELTING)

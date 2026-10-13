@@ -804,6 +804,63 @@ class OptimizerTest {
     }
 
     @Test
+    fun assemblingMachine1IsNotUsedForFluidRecipes() {
+        // AM1 lacks the crafting-with-fluid category, so a fluid recipe cannot run on it and its
+        // product is imported instead. Fluid handling is AM1's only restriction; ingredient slots
+        // are unlimited on every assembling machine since Factorio 0.17.
+        val concrete = Material("synthetic-concrete")
+        val water = Material("synthetic-water")
+        val fluidRecipe =
+            recipe(
+                "concrete",
+                Category.CRAFTING_WITH_FLUID,
+                mapOf(concrete to 1.0),
+                ingredients = mapOf(water to 5.0),
+            )
+        val pumpWater = recipe("water", Category.OFFSHORE_PUMPING, mapOf(water to 1.0))
+
+        val result =
+            Optimizer(
+                ParsedRecipe(emptyList(), listOf(fluidRecipe, pumpWater)),
+                setOf(
+                    Factory.ASSEMBLING_MACHINE_1,
+                    Factory.OFFSHORE_PUMP,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
+            )[concrete]
+
+        assertAll(
+            { assertEquals(Factory.NO_FACTORY, result.production(concrete).factory) },
+            {
+                assertTrue(
+                    result.factories.values.none { it.factory == Factory.ASSEMBLING_MACHINE_1 }
+                )
+            },
+        )
+    }
+
+    @Test
+    fun assemblingMachine1HasNoIngredientLimit() {
+        // Regression: the pre-0.17 caps (AM1 = 2, AM2 = 4 ingredients) were removed, so all
+        // assemblers accept any number of ingredients; a six-ingredient crafting recipe runs on
+        // AM1.
+        val product = Material("synthetic-composite")
+        val ingredients = (1..6).associate { Material("synthetic-part-$it") to 1.0 }
+        val manyIngredients =
+            recipe("composite", Category.CRAFTING, mapOf(product to 1.0), ingredients = ingredients)
+
+        assertEquals(
+            Factory.ASSEMBLING_MACHINE_1,
+            factoryOf(
+                product,
+                listOf(manyIngredients),
+                setOf(Factory.ASSEMBLING_MACHINE_1, Factory.NO_FACTORY, Factory.SCIENCE_LAB),
+            ),
+        )
+    }
+
+    @Test
     fun builtInProductivityBoostsOutputWithoutExtraInput() {
         val ore = Material("synthetic-em-ore")
         val plate = Material("synthetic-em-plate")
