@@ -34,15 +34,40 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 - Iterate quickly with `./gradlew jvmTest`; before finishing run
   `./gradlew check` and `./gradlew spotlessApply`.
 
+### Component tests (jsTest)
+
+- React components are tested in `src/jsTest` with
+  [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
+  (`@testing-library/react`), which runs in the real headless-Chrome karma browser
+  used by `jsBrowserTest`.
+- The Kotlin facade and the `ComponentTest` base class live in
+  `src/jsTest/kotlin/de/bjrke/test/ReactTestingLibrary.kt`: `render(...)`,
+  `screen`, `fireEvent`, `within(...)`, the `changeTo(...)` / `key(...)` event
+  helpers, and per-test `IS_REACT_ACT_ENVIRONMENT` setup + RTL `cleanup()`.
+  Component tests extend `ComponentTest`.
+- Inner component `FC`s are `internal` so tests render them directly with
+  `component.create { ... }`, instead of going through the `url...` wrappers
+  (which drag in router/recipe context).
+- Add npm test dependencies in the `jsTest` source set with
+  `implementation(npm("<pkg>", "<version>"))` and refresh the lock with
+  `./gradlew kotlinUpgradeYarnLock`; run the suite with
+  `./gradlew jsBrowserTest --tests "*MaterialSelectorTest*"`.
+
 ## Sandbox environment (`sbx run opencode`)
 
-- This agent runs inside a `sbx run opencode` sandbox: network access is
-  restricted. Treat every external host as **blocked** unless it is listed
-  under "Reachable hosts" below — do not probe unknown URLs.
-- Reachable hosts (via the `gateway.docker.internal:3128` proxy):
-  `dl.google.com`, `archive.ubuntu.com`. Chrome can be installed from
+- This agent runs inside a `sbx run opencode` sandbox where traffic goes through
+  the `gateway.docker.internal:3128` proxy. The proxy is **permissive**: most
+  hosts work, only a few are blocked. Don't assume a fetch is blocked — a quick
+  `curl -sS -m 8 -o /dev/null -w "%{http_code}" <url>` answers it in seconds.
+- Verified reachable (last checked 2026-10): `github.com`,
+  `raw.githubusercontent.com`, `gitlab.com`, `repo.maven.apache.org`,
+  `plugins.gradle.org`, `services.gradle.org`, `unpkg.com`, `dl.google.com`,
+  `archive.ubuntu.com`, and the npm/yarn registries `registry.npmjs.org`,
+  `registry.yarnpkg.com`, `yarnpkg.com`. Chrome can be installed from
   `https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`,
   which is needed to run `jsBrowserTest`.
+- Known blocked (proxy returns HTTP 403): `repo1.maven.org`,
+  `cdn.jsdelivr.net`. This list may drift, hence the curl check above.
 - Retry budget: at most **2 distinct URLs/approaches per blocked resource**.
   After that, **stop the loop** — no proxies, mirrors, or alternate URLs — and
   ask the user one direct question naming the exact URL(s) to allow. Waiting for

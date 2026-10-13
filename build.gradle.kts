@@ -59,7 +59,13 @@ kotlin {
             }
         }
 
-        jsTest { dependencies { implementation(kotlin("test-js")) } }
+        jsTest {
+            dependencies {
+                implementation(kotlin("test-js"))
+                implementation(npm("@testing-library/react", "16.3.3"))
+                implementation(npm("@testing-library/dom", "10.4.2"))
+            }
+        }
 
         jvmTest { dependencies { implementation(kotlin("test")) } }
     }

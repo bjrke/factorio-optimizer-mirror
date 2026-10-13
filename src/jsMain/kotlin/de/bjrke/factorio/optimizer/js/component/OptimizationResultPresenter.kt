@@ -72,7 +72,7 @@ private fun ChildrenBuilder.amountInputIcon(
     amountIcon(props, name, amount)
 }
 
-private val optimizationResult =
+internal val optimizationResult =
     FC<OptimizationResultPresenterProps>("optimizationResult") { props ->
         props.optimizationResult.factories.entries
             .sortedWith(factoryProductionComparator)

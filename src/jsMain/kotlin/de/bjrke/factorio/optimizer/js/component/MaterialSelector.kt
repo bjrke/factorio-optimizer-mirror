@@ -23,7 +23,7 @@ external interface MaterialSelectorDispatchProps : Props {
 
 external interface MaterialSelectorProps : MaterialSelectorStateProps, MaterialSelectorDispatchProps
 
-private val materialSelector =
+internal val materialSelector =
     FC<MaterialSelectorProps>("materialSelector") { props ->
         val (query, setQuery) = useState("")
         val (open, setOpen) = useState(false)
