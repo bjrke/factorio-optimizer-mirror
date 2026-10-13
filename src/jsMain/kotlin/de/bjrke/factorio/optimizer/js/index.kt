@@ -16,9 +16,9 @@ import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
-import de.bjrke.factorio.optimizer.js.component.urlModSelector
 import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
 import de.bjrke.factorio.optimizer.js.component.urlPlanetSelector
+import de.bjrke.factorio.optimizer.js.component.urlSpaceAgeToggle
 import react.FC
 import react.Props
 import react.create
@@ -76,7 +76,7 @@ val RouterBasedParams =
                 div { urlMaterialSelector(props) }
                 div { urlPlanetSelector(props) }
                 div { urlFactorySelector(props) }
-                div { urlModSelector(props) }
+                div { urlSpaceAgeToggle(props) }
             }
             div {
                 className = ClassName("app-content")

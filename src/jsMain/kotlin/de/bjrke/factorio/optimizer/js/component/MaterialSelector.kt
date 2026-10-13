@@ -9,6 +9,7 @@ import react.Key
 import react.Props
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
+import react.dom.html.ReactHTML.span
 import react.useState
 import web.cssom.ClassName
 
@@ -40,6 +41,10 @@ internal val materialSelector =
 
         div {
             className = ClassName("material-selector")
+            span {
+                className = ClassName("material-selector-icon")
+                icon(props.material.name)
+            }
             input {
                 className = ClassName("material-selector-input")
                 value = query

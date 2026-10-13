@@ -6,8 +6,6 @@ object RecipeProvider {
 
     private val cache = mutableMapOf<Boolean, ParsedRecipe>()
 
-    fun availableMods() = selectableMods
-
     fun resolveMods(selected: Set<String>) = activeMods(selected)
 
     /** Parses the base-game or Space-Age dump, depending on whether Space Age is active. */

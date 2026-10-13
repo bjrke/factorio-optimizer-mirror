@@ -15,11 +15,15 @@ import web.dom.Element
 private external interface IconHostProps : Props {
     var name: String
     var size: Int?
+    var alt: String?
 }
 
 private val iconHost =
     FC<IconHostProps>("iconHost") { props ->
-        icon(props.name) { size = props.size }
+        icon(props.name) {
+            size = props.size
+            alt = props.alt
+        }
     }
 
 private fun RenderResult.images(): List<Element> {
@@ -30,11 +34,12 @@ private fun RenderResult.images(): List<Element> {
 private fun RenderResult.sources() = images().map { it.getAttribute("src") }
 
 class IconTest : ComponentTest() {
-    private fun renderIcon(name: String, size: Int? = null) =
+    private fun renderIcon(name: String, size: Int? = null, alt: String? = null) =
         render(
             iconHost.create {
                 this.name = name
                 this.size = size
+                this.alt = alt
             }
         )
 
@@ -54,9 +59,20 @@ class IconTest : ComponentTest() {
             "stone-wall" to "wall",
             "raw-fish" to "fish",
             "asteroid-collection" to "asteroid-collector",
+            "space-age" to "factorio-space-age-logo-11tiles",
         ) { (name, file) ->
             assertEquals(listOf("icons/$file.png"), renderIcon(name).sources())
         }
+
+    @Test
+    fun theAltTextCanOverrideThePrototypeName() {
+        val image = renderIcon("space-age", alt = "Space Age").images().single()
+
+        assertAll(
+            { assertEquals("Space Age", image.getAttribute("alt")) },
+            { assertEquals("Space Age", image.getAttribute("title")) },
+        )
+    }
 
     @Test
     fun recyclingRecipeIsComposedOfTheRecyclingLayers() {

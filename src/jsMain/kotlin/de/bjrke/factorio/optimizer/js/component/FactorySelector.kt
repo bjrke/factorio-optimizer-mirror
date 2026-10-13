@@ -6,8 +6,6 @@ import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import react.ChildrenBuilder
 import react.FC
 import react.Props
-import react.dom.html.ReactHTML.input
-import react.dom.html.ReactHTML.label
 import web.html.InputType
 import web.html.checkbox
 import web.html.radio
@@ -23,44 +21,40 @@ external interface FactorySelectorDispatchProps : Props {
 
 external interface FactorySelectorProps : FactorySelectorStateProps, FactorySelectorDispatchProps
 
-private val factorySelector =
+internal val factorySelector =
     FC<FactorySelectorProps>("factorySelector") { props ->
-        // mutually exclusive groups: radio buttons, one option always stays selected
+        // mutually exclusive groups: a single icon option always stays selected
         for (group in props.config.groups) {
             val groupName = group.joinToString("-") { it.name }
             for (factory in group) {
-                label {
-                    input {
-                        type = InputType.Companion.radio
-                        name = groupName
-                        checked = props.selectedFactories.contains(factory)
-                        onChange = { _ ->
-                            props.selectFactory(props.config.add(props.selectedFactories, factory))
-                        }
-                    }
-                    icon(factory.identifier)
-                }
+                selectableIcon(
+                    name = factory.identifier,
+                    selected = props.selectedFactories.contains(factory),
+                    inputType = InputType.Companion.radio,
+                    groupName = groupName,
+                    onChange = {
+                        props.selectFactory(props.config.add(props.selectedFactories, factory))
+                    },
+                )
             }
         }
-        // independently toggled machines: checkboxes
+        // independently toggled machines
         for (factory in props.config.singles) {
-            label {
-                val enabled = props.selectedFactories.contains(factory)
-                input {
-                    type = InputType.Companion.checkbox
-                    checked = enabled
-                    onChange = { _ ->
-                        props.selectFactory(
-                            if (enabled) {
-                                props.config.remove(props.selectedFactories, factory)
-                            } else {
-                                props.config.add(props.selectedFactories, factory)
-                            }
-                        )
-                    }
-                }
-                icon(factory.identifier)
-            }
+            val enabled = props.selectedFactories.contains(factory)
+            selectableIcon(
+                name = factory.identifier,
+                selected = enabled,
+                inputType = InputType.Companion.checkbox,
+                onChange = {
+                    props.selectFactory(
+                        if (enabled) {
+                            props.config.remove(props.selectedFactories, factory)
+                        } else {
+                            props.config.add(props.selectedFactories, factory)
+                        }
+                    )
+                },
+            )
         }
     }
 

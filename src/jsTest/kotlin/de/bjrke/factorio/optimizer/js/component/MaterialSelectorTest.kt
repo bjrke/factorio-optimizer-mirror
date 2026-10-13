@@ -10,6 +10,7 @@ import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import react.create
 import web.html.HTMLInputElement
@@ -69,6 +70,18 @@ class MaterialSelectorTest : ComponentTest() {
         assertAll(
             { assertEquals(listOf(copperOre), selections) },
             { assertNull(screen.queryByText(copperOre.name)) },
+        )
+    }
+
+    @Test
+    fun theInputShowsTheSelectedMaterialIcon() {
+        val result = renderSelector()
+
+        val image = result.container.querySelector(".material-selector-icon img")
+
+        assertAll(
+            { assertNotNull(image) },
+            { assertEquals(ironOre.name, image?.getAttribute("alt")) },
         )
     }
 

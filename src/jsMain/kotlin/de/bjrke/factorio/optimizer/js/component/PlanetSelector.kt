@@ -5,8 +5,6 @@ import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import react.ChildrenBuilder
 import react.FC
 import react.Props
-import react.dom.html.ReactHTML.input
-import react.dom.html.ReactHTML.label
 import web.html.InputType
 import web.html.radio
 
@@ -22,19 +20,17 @@ external interface PlanetSelectorDispatchProps : Props {
 
 external interface PlanetSelectorProps : PlanetSelectorStateProps, PlanetSelectorDispatchProps
 
-private val planetSelector =
+internal val planetSelector =
     FC<PlanetSelectorProps>("planetSelector") { props ->
         for (surface in props.availableSurfaces) {
-            label {
-                input {
-                    type = InputType.Companion.radio
-                    name = "surface"
-                    checked = props.selectedSurface == surface
-                    disabled = !props.enabled
-                    onChange = { _ -> props.selectSurface(surface) }
-                }
-                icon(surface.identifier)
-            }
+            selectableIcon(
+                name = surface.identifier,
+                selected = props.selectedSurface == surface,
+                inputType = InputType.Companion.radio,
+                groupName = "surface",
+                disabled = !props.enabled,
+                onChange = { props.selectSurface(surface) },
+            )
         }
     }
 

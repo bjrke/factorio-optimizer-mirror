@@ -134,7 +134,7 @@ class FactoryConfig(val spaceAge: Boolean = true) {
 
     private val tech = available - smelters - assemblers - miners - alwaysEnabled
 
-    /** Mutually exclusive choices; rendered as radio buttons, exactly one stays selected. */
+    /** Mutually exclusive choices; rendered as icon options, exactly one stays selected. */
     val groups: List<List<Factory>> =
         listOf(assemblers, smelters, miners).filter { it.isNotEmpty() }.map { it.sorted() }
 
@@ -147,7 +147,7 @@ class FactoryConfig(val spaceAge: Boolean = true) {
 
     val defaults = groupDefaults.toSet() + alwaysEnabled + tech
 
-    /** Independently toggled machines; rendered as checkboxes. */
+    /** Independently toggled machines; rendered as icon options. */
     val singles: List<Factory> =
         (available - alwaysEnabled).filter { factory -> groups.none { factory in it } }.sorted()
 

@@ -117,6 +117,13 @@ fun changeTo(text: String): dynamic {
     return options
 }
 
+/** `{ name }` as used by RTL role queries to match an element's accessible name. */
+fun named(name: String): dynamic {
+    val options = js("({})")
+    options.name = name
+    return options
+}
+
 /** `{ key }` as expected by `fireEvent.keyDown`/`fireEvent.keyUp`. */
 fun key(keyName: String): dynamic {
     val options = js("({})")

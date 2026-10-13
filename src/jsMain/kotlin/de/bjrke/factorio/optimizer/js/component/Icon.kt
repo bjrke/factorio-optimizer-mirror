@@ -14,6 +14,7 @@ import web.cssom.px
 external interface IconProps : Props {
     var name: String
     var size: Int?
+    var alt: String?
 }
 
 /**
@@ -33,6 +34,7 @@ private fun iconName(s: String) =
         "stone-wall" -> "wall"
         "raw-fish" -> "fish"
         "asteroid-collection" -> "asteroid-collector"
+        "space-age" -> "factorio-space-age-logo-11tiles"
         else -> s
     }
 
@@ -61,19 +63,20 @@ private fun layersFor(name: String): List<IconLayer> =
 private val iconX =
     FC<IconProps>("icon") { props ->
         val size = props.size ?: 32
+        val label = props.alt ?: props.name
         val layers = layersFor(props.name)
         if (layers.size == 1) {
             img {
                 src = "icons/${layers.single().file}.png"
-                alt = props.name
-                title = props.name
+                alt = label
+                title = label
                 width = size.toDouble()
                 height = size.toDouble()
                 css { verticalAlign = VerticalAlign.middle }
             }
         } else {
             span {
-                title = props.name
+                title = label
                 css {
                     position = Position.relative
                     display = Display.inlineBlock
@@ -87,7 +90,7 @@ private val iconX =
                     val top = layer.top?.times(size) ?: (size - layerSize) / 2.0
                     img {
                         src = "icons/${layer.file}.png"
-                        alt = if (index == 0) props.name else ""
+                        alt = if (index == 0) label else ""
                         css {
                             position = Position.absolute
                             width = layerSize.px

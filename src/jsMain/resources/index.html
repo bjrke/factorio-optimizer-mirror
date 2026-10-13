@@ -9,11 +9,24 @@
         body { display: flex; flex-direction: column; }
         .app-root { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
         .app-layout { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-        .app-header { display: flex; align-items: center; flex-shrink: 0; }
+        .app-header {
+            display: flex; align-items: center; flex-shrink: 0; flex-wrap: wrap;
+            padding-left: 8px;
+        }
+        .app-header > div { display: contents; }
         .app-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
         .footer { flex-shrink: 0; }
-        .material-selector { position: relative; display: inline-block; }
-        .material-selector-input { width: 16rem; }
+        .material-selector { position: relative; display: inline-block; margin-right: 2px; }
+        .material-selector-input {
+            width: 16rem; height: 2.5rem; box-sizing: border-box;
+            padding-left: 2.5rem; font: inherit; color: inherit;
+            border: 1px solid #999; border-radius: 4px;
+        }
+        .material-selector-input::placeholder { color: inherit; opacity: 1; }
+        .material-selector .material-selector-icon {
+            position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+            margin: 0; pointer-events: none;
+        }
         .material-selector-dropdown {
             position: absolute; z-index: 10; top: 100%; left: 0; min-width: 100%;
             max-height: 20rem; overflow-y: auto;
@@ -24,7 +37,19 @@
             display: flex; align-items: center; gap: .35rem;
             padding: .2rem .4rem; white-space: nowrap; cursor: pointer;
         }
-        .material-selector-option.highlighted { background: #c8dcff; }
+        .material-selector-option.highlighted { background: #8fb8ff; }
+        .icon-option {
+            display: inline-flex; align-items: center;
+            padding: 6px; margin: 2px; border-radius: 6px; cursor: pointer;
+            user-select: none; background: transparent;
+        }
+        .icon-option.selected { background: #8fb8ff; }
+        .icon-option.disabled { opacity: .4; cursor: not-allowed; }
+        .visually-hidden {
+            position: absolute; width: 1px; height: 1px;
+            padding: 0; margin: -1px; overflow: hidden;
+            clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+        }
     </style>
 </head>
 <body>
