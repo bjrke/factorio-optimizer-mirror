@@ -213,6 +213,8 @@ class Optimizer(
                     factory = findFactory(recipe) ?: Factory.NO_FACTORY,
                     amount = running,
                     level = levelOf(representative),
+                    speed = speedOf(recipe),
+                    productivity = productivityOf(recipe),
                 )
         }
 

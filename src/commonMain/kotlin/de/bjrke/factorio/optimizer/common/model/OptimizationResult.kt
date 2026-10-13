@@ -7,16 +7,18 @@ data class FactoryProduction(
     val factory: Factory,
     val amount: Double = 0.0,
     val level: Int,
+    // the stats the optimizer actually sized the machine with, derived from the prototype dump
+    // when available; the curated [Factory] values are only the fallback
+    val speed: Double = factory.speed,
+    val productivity: Double = factory.productivity,
 ) {
-    operator fun plus(amount: Double) =
-        FactoryProduction(recipe, factory, this.amount + amount, this.level)
+    operator fun plus(amount: Double) = copy(amount = this.amount + amount)
 
     fun production(material: Material) =
-        factory.speed * (1.0 + factory.productivity) * amount * recipe.result[material]!! /
-            recipe.time
+        speed * (1.0 + productivity) * amount * recipe.result[material]!! / recipe.time
 
     fun consumption(material: Material) =
-        factory.speed * amount * recipe.ingredients[material]!! / recipe.time
+        speed * amount * recipe.ingredients[material]!! / recipe.time
 }
 
 data class OptimizationResult(

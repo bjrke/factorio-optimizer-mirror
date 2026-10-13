@@ -281,6 +281,23 @@ class OptimizerTest {
     }
 
     @Test
+    fun fulgoraScrapRecyclingConsumesWhatTheDrillProduces() {
+        // Regression: the recycler's display used the curated Factory speed (1.0) instead of the
+        // dump's crafting speed (0.5), so its scrap input showed twice the drill's scrap output.
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+
+        val result = optimizer[Material(ALL_SCIENCE_PACKS)]
+        val scrap = Material("scrap")
+        val drill = result.factories.values.single { it.recipe.name == "scrap" }
+        val recycler = result.factories.values.single { it.recipe.name == "scrap-recycling" }
+        assertAll(
+            { assertEquals(0.5, recycler.speed) },
+            { assertEquals(drill.production(scrap), recycler.consumption(scrap), 1e-9) },
+        )
+    }
+
+    @Test
     fun glebaSpoilageComesFromRawFruitNotScience() {
         // spoilage is cheapest by letting raw harvested fruit rot, not by spoiling expensive
         // Gleba science packs.
