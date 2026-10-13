@@ -3,5 +3,6 @@
 /build/
 /.kotlin/
 /buildSrc/.gradle/
+/buildSrc/.kotlin/
 /buildSrc/build/
 opencode.json

@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.build
+package de.bjrke.factorio.optimizer.buildlogic
 
 import java.io.File
 import kotlinx.serialization.json.Json
