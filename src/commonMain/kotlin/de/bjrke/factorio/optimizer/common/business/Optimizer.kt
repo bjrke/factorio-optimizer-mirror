@@ -2,44 +2,44 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 
+private const val EPSILON = 1e-7
+private const val SLACK = 1e-6
+private const val IMPORT_DISPLAY_EPSILON = 1e-4
+
+/**
+ * Works out how many machines of each recipe are needed to produce one unit per second of a target.
+ *
+ * Instead of picking a single "cheapest" recipe per material, the production network is modelled as
+ * a linear program: every recipe is a variable, every material a balance constraint (`production +
+ * imports >= consumption + demand`) and the objective minimizes, in order, (1) imported materials,
+ * (2) total machines. This lets several recipes serve the same material in parallel and credits the
+ * byproducts of multi-output recipes, which is how e.g. Fulgora actually works: scrap recycling
+ * yields gears, batteries and processing units, and all of them are recycled into the demanded
+ * intermediates.
+ */
 class Optimizer(
     private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(defaultMods),
     private val factories: Set<Factory> = defaultFactories,
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()
 
-    private val selectedRecipes = mutableMapOf<Material, Recipe>()
+    /** Recipes that run on this surface with one of the selected machines. */
+    private val enabledRecipes: List<Recipe> =
+        parsedRecipe.recipes.filter { findFactory(it) != null }
 
     /**
-     * Materials an enabled extraction recipe (drill/pump/tower) produces directly, i.e. the
-     * cheapest inputs. Recipes built from these are preferred over ones needing processed
-     * intermediates, e.g. spoilage spoils from yumako/jellynut rather than from agricultural
-     * science packs.
+     * Materials a recycling recipe yields. Crafting them would model production that does not
+     * happen: on Fulgora they are recovered by recycling, so a forward recipe for e.g. iron-plate
+     * or copper-cable is not allowed. Empty on surfaces without a recycler.
      */
-    private val rawMaterials: Set<Material> =
-        parsedRecipe.recipes
-            .filter { it.categories.any { category -> category in extractionCategories } }
-            .filter { findFactory(it) != null }
+    private val recyclingSupplied: Set<Material> =
+        enabledRecipes
+            .filter { Category.RECYCLING in it.categories }
             .flatMapTo(mutableSetOf()) { it.result.keys }
 
-    /**
-     * Materials that can be produced from the available raw resources by following recipes through
-     * to their inputs. Unlike a one-step lookup this accounts for the whole production chain, so an
-     * intermediate is only producible when its own ingredients are: on Gleba petroleum gas counts
-     * as unavailable because it would need crude oil, which does not spawn there.
-     */
-    private val producibleMaterials: Set<Material> = buildSet {
-        val enabledRecipes = parsedRecipe.recipes.filter { findFactory(it) != null }
-        addAll(rawMaterials)
-        var changed = true
-        while (changed) {
-            changed = false
-            for (recipe in enabledRecipes) {
-                if (recipe.ingredients.keys.all { it in this }) {
-                    changed = addAll(recipe.result.keys) || changed
-                }
-            }
-        }
+    private val allowedRecipes: List<Recipe> = enabledRecipes.filter { recipe ->
+        Category.RECYCLING in recipe.categories ||
+            recipe.result.keys.none { it in recyclingSupplied }
     }
 
     /**
@@ -87,146 +87,242 @@ class Optimizer(
     private fun outputRate(amount: Double, recipe: Recipe) =
         speedOf(recipe) * (1.0 + productivityOf(recipe)) * amount / recipe.time
 
-    /** Whether [recipe] can be run by a preferred Space Age speciality machine. */
-    private fun usesPreferredFactory(recipe: Recipe) = findFactory(recipe)?.preferred == true
-
     /**
-     * The cheapest recipe producing [target], or a free "chest" source when nothing can make it.
-     * The ranking only depends on the recipe and the enabled machines, never on amounts, so the
-     * choice can be cached across targets.
+     * Every material reachable from [target] by following recipes through to their inputs. Only
+     * [allowedRecipes] are considered, so forbidden forward recipes do not pull in their inputs.
      */
-    private fun selectRecipe(target: Material): Recipe =
-        selectedRecipes.getOrPut(target) {
-            parsedRecipe.recipes
-                .filter { findFactory(it) != null && it.result.containsKey(target) }
-                .minWithOrNull(
-                    compareBy(
-                        // avoid recipes that would pull an ingredient from a free "chest" source,
-                        // e.g. prefer lava -> molten-iron over chest iron-ore -> molten-iron on
-                        // Vulcanus
-                        { recipe -> recipe.ingredients.keys.count { it !in producibleMaterials } },
-                        // then build from raw resources (drill/pump/pumpjack/tower) instead of
-                        // processing chains, e.g. spoilage from jellynut rather than science packs
-                        { recipe -> recipe.ingredients.keys.count { it !in rawMaterials } },
-                        // then prefer the raw source (drill/pump/pumpjack) over processing recipes
-                        { recipe ->
-                            if (recipe.categories.any { it in extractionCategories }) 0 else 1
-                        },
-                        // then, as a tie-breaker, prefer a recipe the selected Space Age speciality
-                        // machine can run (foundry/electromagnetic/cryogenic plant, biochamber)
-                        { recipe -> if (usesPreferredFactory(recipe)) 0 else 1 },
-                        { it.name },
-                    )
-                )
-                ?: Recipe(
-                    name = target.name,
-                    ingredients = mapOf(),
-                    result = mapOf(target to 1.0),
-                    time = 1.0,
-                    subgroup = Subgroup(),
-                    categories = setOf(Category.NO_CATEGORY),
-                )
+    private fun reachableMaterials(target: Material): List<Material> {
+        val materials = mutableSetOf(target)
+        var changed = true
+        while (changed) {
+            changed = false
+            for (recipe in allowedRecipes) {
+                if (recipe.result.keys.none { it in materials }) continue
+                for (ingredient in recipe.ingredients.keys) {
+                    if (materials.add(ingredient)) changed = true
+                }
+            }
         }
+        return materials.toList()
+    }
 
     /**
-     * Computes the machine counts for [target] by solving the material flow over the selected
-     * recipes. Keying by recipe (not material) means a recipe that produces several needed outputs,
-     * e.g. advanced metallic asteroid crushing yielding iron and copper ore, runs once sized for
-     * the output that is needed most instead of appearing once per output.
+     * The materials that may be imported: those no recipe produces, plus any material caught in a
+     * production cycle (e.g. Fulgora's `coal-synthesis` <-> `carbon` loop) which would otherwise
+     * make the program infeasible. Materials downstream of a cycle stay producible once a cycle
+     * member may be imported.
+     */
+    private fun importableMaterials(
+        materials: List<Material>,
+        recipes: List<Recipe>,
+    ): List<Material> {
+        val dependency = materials.associateWithTo(mutableMapOf()) { mutableSetOf<Material>() }
+        for (recipe in recipes) {
+            for (result in recipe.result.keys) {
+                dependency.getOrPut(result) { mutableSetOf() }.addAll(recipe.ingredients.keys)
+            }
+        }
+        val inCycle =
+            materials.filterTo(mutableSetOf()) { start ->
+                val seen = mutableSetOf<Material>()
+                val stack = ArrayDeque(dependency.getValue(start))
+                while (stack.isNotEmpty()) {
+                    val material = stack.removeLast()
+                    if (!seen.add(material)) continue
+                    stack.addAll(dependency[material].orEmpty())
+                }
+                start in seen
+            }
+        return materials.filter { material ->
+            recipes.none { material in it.result.keys } || material in inCycle
+        }
+    }
+
+    /**
+     * Computes the machine counts for [target]. The material balance is a linear program solved in
+     * two lexicographic stages so the result is the true optimum and not just any vertex: first
+     * minimize imports, then total machines (which also removes the zero-cost cycling recipes the
+     * simplex would otherwise leave in the basis).
      */
     private fun compute(target: Material): OptimizationResult {
-        val rootRecipe = selectRecipe(target)
-
-        // Selected producer per reachable material.
-        val producers = mutableMapOf(target to rootRecipe)
-        fun producerOf(material: Material) = producers.getOrPut(material) { selectRecipe(material) }
-
-        // Ingredient edges per recipe, with back-edges dropped to break cycles (a recipe that
-        // transitively consumes its own output does not feed itself).
-        val ingredients = mutableMapOf<Recipe, List<Material>>()
-        val path = mutableSetOf<Recipe>()
-        val done = mutableSetOf<Recipe>()
-        fun visit(recipe: Recipe) {
-            if (recipe in done) return
-            path.add(recipe)
-            val kept = recipe.ingredients.keys.filter { producerOf(it) !in path }
-            ingredients[recipe] = kept
-            kept.forEach { visit(producerOf(it)) }
-            path.remove(recipe)
-            done.add(recipe)
+        val materials = reachableMaterials(target)
+        val recipes = allowedRecipes.filter {
+            it.result.keys.any { material -> material in materials }
         }
-        visit(rootRecipe)
 
-        // Materials each recipe is the selected producer of.
-        val outputs = producers.entries.groupBy({ it.value }, { it.key })
+        // An import is only allowed for materials no recipe produces (and for recipe cycles that
+        // have no base input): a producible material must be built, because importing a finished
+        // composite is always "cheaper" in raw units and would otherwise import the whole target.
+        val importMaterials = importableMaterials(materials, recipes)
+        val solution =
+            solve(target, materials, recipes, importMaterials)
+                ?: error("no feasible production plan for ${target.name}")
 
-        // Fixed-point: demand(m) is the rate m has to be supplied, and each recipe sizes itself for
-        // its most demanded output. The graph is acyclic, so this increases monotonically until it
-        // settles.
-        val machines = ingredients.keys.associateWithTo(mutableMapOf()) { 0.0 }
-        val demand = mutableMapOf<Material, Double>()
-        var changed: Boolean
-        var iterations = 0
-        do {
-            demand.clear()
-            demand[target] = 1.0
-            ingredients.forEach { (recipe, kept) ->
-                val running = machines.getValue(recipe)
-                kept.forEach { ingredient ->
-                    demand[ingredient] =
-                        (demand[ingredient] ?: 0.0) +
-                            running * inputRate(recipe.ingredients.getValue(ingredient), recipe)
+        return OptimizationResult(
+            target = target,
+            recipe =
+                recipes
+                    .filter { target in it.result.keys }
+                    .maxByOrNull { solution[recipes.indexOf(it)] } ?: freeSource(target),
+            factories = factoryProductions(target, materials, recipes, importMaterials, solution),
+        )
+    }
+
+    /**
+     * Solves the material balance as a linear program minimizing, in order, imported materials and
+     * total machines. Returns `null` if the program is infeasible.
+     *
+     * Each objective is a separate program: the next stage constrains the previous one to its
+     * optimum (plus [SLACK]) and minimizes the next. This lexicographic optimum removes the
+     * zero-cost cycling recipes the simplex would otherwise leave in the basis, and is numerically
+     * more robust than weighting the objectives together.
+     */
+    private fun solve(
+        target: Material,
+        materials: List<Material>,
+        recipes: List<Recipe>,
+        importMaterials: List<Material>,
+    ): DoubleArray? {
+        val recipeVariables = recipes.size
+        val variables = recipeVariables + importMaterials.size
+
+        val demandRows =
+            Array(materials.size) { row ->
+                val material = materials[row]
+                DoubleArray(variables) { column ->
+                    if (column < recipeVariables) {
+                        val recipe = recipes[column]
+                        val production =
+                            recipe.result[material]?.let { outputRate(it, recipe) } ?: 0.0
+                        val consumption =
+                            recipe.ingredients[material]?.let { inputRate(it, recipe) } ?: 0.0
+                        consumption - production
+                    } else if (importMaterials[column - recipeVariables] == material) {
+                        -1.0
+                    } else {
+                        0.0
+                    }
                 }
             }
-            changed = false
-            ingredients.keys.forEach { recipe ->
-                val wanted =
-                    outputs[recipe]?.maxOfOrNull {
-                        (demand[it] ?: 0.0) / outputRate(recipe.result.getValue(it), recipe)
-                    } ?: 0.0
-                if (wanted != machines.getValue(recipe)) {
-                    machines[recipe] = wanted
-                    changed = true
-                }
-            }
-        } while (changed && ++iterations <= ingredients.size + 2)
+        val demandBounds =
+            DoubleArray(materials.size) { if (materials[it] == target) -1.0 else 0.0 }
 
-        // Display level mirrors the old dependency-tree height: leaves are 1, the target is
-        // deepest.
-        val levels = mutableMapOf<Material, Int>()
-        fun levelOf(material: Material): Int =
-            levels.getOrPut(material) {
-                1 + (ingredients[producerOf(material)]?.maxOfOrNull(::levelOf) ?: 0)
-            }
+        val importRow = DoubleArray(variables) { if (it >= recipeVariables) 1.0 else 0.0 }
+        val machineRow = DoubleArray(variables) { if (it < recipeVariables) 1.0 else 0.0 }
 
-        val factoryProductions = mutableMapOf<Material, FactoryProduction>()
-        ingredients.keys.forEach { recipe ->
-            val running = machines.getValue(recipe)
-            if (running <= 0.0) return@forEach
-            val materials = outputs.getValue(recipe)
-            val representative =
-                materials.firstOrNull { it == target }
-                    ?: materials.maxByOrNull { demand[it] ?: 0.0 }!!
-            factoryProductions[representative] =
+        fun stage(
+            extraRows: List<DoubleArray>,
+            extraBounds: List<Double>,
+            cost: DoubleArray,
+        ): LinearProgramResult.Optimal? {
+            val result =
+                LinearProgram(
+                        (demandRows.toList() + extraRows).toTypedArray(),
+                        (demandBounds.toList() + extraBounds).toDoubleArray(),
+                        cost,
+                    )
+                    .minimize()
+            return result as? LinearProgramResult.Optimal
+        }
+
+        val imports = stage(emptyList(), emptyList(), importRow) ?: return null
+        val cheapest =
+            stage(listOf(importRow), listOf(imports.value + SLACK), machineRow) ?: return null
+        return cheapest.solution
+    }
+
+    /** Builds the per-recipe machine counts from the LP solution, one entry per running recipe. */
+    private fun factoryProductions(
+        target: Material,
+        materials: List<Material>,
+        recipes: List<Recipe>,
+        importMaterials: List<Material>,
+        solution: DoubleArray,
+    ): Map<Recipe, FactoryProduction> {
+        val recipeVariables = recipes.size
+
+        // total consumption per material in the LP solution, used to label multi-output recipes
+        val consumption = mutableMapOf<Material, Double>()
+        recipes.forEachIndexed { index, recipe ->
+            val amount = solution[index]
+            if (amount <= EPSILON) return@forEachIndexed
+            recipe.ingredients.forEach { (material, quantity) ->
+                consumption[material] =
+                    (consumption[material] ?: 0.0) + inputRate(quantity, recipe) * amount
+            }
+        }
+
+        fun representativeOf(recipe: Recipe): Material {
+            val outputs = recipe.result.keys.filter { it in materials }
+            if (target in outputs) return target
+            return outputs.maxWithOrNull(compareBy({ consumption[it] ?: 0.0 }, { it.name }))
+                ?: recipe.result.keys.first()
+        }
+
+        // depth of a material in the (byproduct-aware) production graph, used for display ordering
+        val effectiveProducer = mutableMapOf<Material, Recipe>()
+        recipes.forEachIndexed { index, recipe ->
+            if (solution[index] <= EPSILON) return@forEachIndexed
+            recipe.result.keys.forEach { result -> effectiveProducer.getOrPut(result) { recipe } }
+        }
+        val depths = mutableMapOf<Material, Int>()
+        fun depth(material: Material, path: MutableSet<Material>): Int {
+            depths[material]?.let {
+                return it
+            }
+            if (!path.add(material)) return 0
+            val producer = effectiveProducer[material]
+            val value =
+                if (producer == null) 1
+                else 1 + (producer.ingredients.keys.maxOfOrNull { depth(it, path) } ?: 0)
+            path.remove(material)
+            depths[material] = value
+            return value
+        }
+
+        val productions = mutableMapOf<Recipe, FactoryProduction>()
+        recipes.forEachIndexed { index, recipe ->
+            val amount = solution[index]
+            if (amount <= EPSILON) return@forEachIndexed
+            val representative = representativeOf(recipe)
+            productions[recipe] =
                 FactoryProduction(
+                    material = representative,
                     recipe = recipe,
                     factory = findFactory(recipe) ?: Factory.NO_FACTORY,
-                    amount = running,
-                    level = levelOf(representative),
+                    amount = amount,
+                    level = depth(representative, mutableSetOf()),
                     speed = speedOf(recipe),
                     productivity = productivityOf(recipe),
                 )
         }
-
-        return OptimizationResult(
-            target = target,
-            factories = factoryProductions,
-            recipe = rootRecipe,
-        )
+        importMaterials.forEachIndexed { index, material ->
+            val imported = solution[recipeVariables + index]
+            // the import optimization allows a small slack; only show a meaningful import
+            if (imported <= IMPORT_DISPLAY_EPSILON) return@forEachIndexed
+            val recipe = freeSource(material)
+            productions[recipe] =
+                FactoryProduction(
+                    material = material,
+                    recipe = recipe,
+                    factory = Factory.NO_FACTORY,
+                    amount = imported,
+                    level = depth(material, mutableSetOf()),
+                )
+        }
+        return productions
     }
 
-    operator fun get(target: Material) =
-        cache.getOrPut(target) {
-            compute(target)
-        }
+    /** A pseudo recipe representing an imported material (the old "chest" source). */
+    private fun freeSource(material: Material) =
+        Recipe(
+            name = material.name,
+            ingredients = mapOf(),
+            result = mapOf(material to 1.0),
+            time = 1.0,
+            subgroup = Subgroup(),
+            categories = setOf(Category.NO_CATEGORY),
+        )
+
+    operator fun get(target: Material) = cache.getOrPut(target) { compute(target) }
 }

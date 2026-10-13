@@ -3,6 +3,9 @@ package de.bjrke.factorio.optimizer.common.model
 import kotlin.math.max
 
 data class FactoryProduction(
+    // the demanded material this recipe entry is labeled with; a recipe producing several needed
+    // materials (e.g. scrap recycling) is labeled with the one it mostly supplies
+    val material: Material,
     val recipe: Recipe,
     val factory: Factory,
     val amount: Double = 0.0,
@@ -24,14 +27,22 @@ data class FactoryProduction(
 data class OptimizationResult(
     val target: Material,
     val recipe: Recipe,
-    // TODO key should be a recipe
-    val factories: Map<Material, FactoryProduction>,
-)
+    // keyed by recipe: several recipes can produce the same material and run in parallel
+    val factories: Map<Recipe, FactoryProduction>,
+) {
+    /** Every recipe that is labeled with [material]. */
+    fun producers(material: Material): List<FactoryProduction> =
+        factories.values.filter { it.material == material }
+
+    /** The recipe entry supplying the most of [material]. */
+    fun production(material: Material): FactoryProduction =
+        producers(material).maxByOrNull { it.amount } ?: error("no producer for ${material.name}")
+}
 
 val factoryProductionComparator =
-    compareBy<Map.Entry<Material, FactoryProduction>>(
-        { max(it.value.recipe.ingredients.size, it.value.recipe.result.size) },
-        { it.value.level },
-        { it.value.factory },
-        { it.value.recipe.name },
+    compareBy<FactoryProduction>(
+        { max(it.recipe.ingredients.size, it.recipe.result.size) },
+        { it.level },
+        { it.factory },
+        { it.recipe.name },
     )

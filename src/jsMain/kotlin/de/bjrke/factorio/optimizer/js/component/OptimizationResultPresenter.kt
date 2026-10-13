@@ -74,61 +74,60 @@ private fun ChildrenBuilder.amountInputIcon(
 
 internal val optimizationResult =
     FC<OptimizationResultPresenterProps>("optimizationResult") { props ->
-        props.optimizationResult.factories.entries
-            .sortedWith(factoryProductionComparator)
-            .forEach { (material, factoryProduction) ->
+        props.optimizationResult.factories.values.sortedWith(factoryProductionComparator).forEach {
+            factoryProduction ->
+            div {
+                css {
+                    display = Display.inlineBlock
+                    verticalAlign = VerticalAlign.middle
+                    padding = 0.5.rem
+                    backgroundColor = hashColor(factoryProduction.material.name, 0.75)
+                }
+                amountInputIcon(
+                    props,
+                    factoryProduction.factory.identifier,
+                    factoryProduction.amount,
+                )
+                amountIcon(props, factoryProduction.recipe.name, factoryProduction.amount)
+
                 div {
                     css {
                         display = Display.inlineBlock
                         verticalAlign = VerticalAlign.middle
-                        padding = 0.5.rem
-                        backgroundColor = hashColor(material.name, 0.75)
+                        // recipes without ingredients (mining, pumping, ...) still reserve a
+                        // cell here so every recipe block keeps the same width
+                        minWidth = 7.5.rem
                     }
-                    amountInputIcon(
-                        props,
-                        factoryProduction.factory.identifier,
-                        factoryProduction.amount,
-                    )
-                    amountIcon(props, factoryProduction.recipe.name, factoryProduction.amount)
-
-                    div {
-                        css {
-                            display = Display.inlineBlock
-                            verticalAlign = VerticalAlign.middle
-                            // recipes without ingredients (mining, pumping, ...) still reserve a
-                            // cell here so every recipe block keeps the same width
-                            minWidth = 7.5.rem
+                    factoryProduction.recipe.ingredients.keys.forEach {
+                        div {
+                            amountInputIcon(
+                                props,
+                                it.name,
+                                factoryProduction.consumption(it),
+                            )
                         }
-                        factoryProduction.recipe.ingredients.keys.forEach {
-                            div {
-                                amountInputIcon(
-                                    props,
-                                    it.name,
-                                    factoryProduction.consumption(it),
-                                )
-                            }
-                        }
-                    }
-
-                    div {
-                        css {
-                            display = Display.inlineBlock
-                            verticalAlign = VerticalAlign.middle
-                        }
-                        factoryProduction.recipe.result.keys.forEach {
-                            div {
-                                amountInputIcon(props, it.name, factoryProduction.production(it))
-                            }
-                        }
-                    }
-
-                    button {
-                        +">"
-                        onClick = { props.changeMaterial(material) }
-                        title = "select " + material.name
                     }
                 }
+
+                div {
+                    css {
+                        display = Display.inlineBlock
+                        verticalAlign = VerticalAlign.middle
+                    }
+                    factoryProduction.recipe.result.keys.forEach {
+                        div {
+                            amountInputIcon(props, it.name, factoryProduction.production(it))
+                        }
+                    }
+                }
+
+                button {
+                    +">"
+                    onClick = { props.changeMaterial(factoryProduction.material) }
+                    title = "select " + factoryProduction.material.name
+                }
             }
+        }
     }
 
 fun hashColor(s: String, alpha: Double = 1.0): Color {

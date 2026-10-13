@@ -42,8 +42,9 @@ private fun optimizationResult(recipe: Recipe, target: Material, factory: Factor
         recipe = recipe,
         factories =
             mapOf(
-                target to
+                recipe to
                     FactoryProduction(
+                        material = target,
                         recipe = recipe,
                         factory = factory,
                         amount = 1.0,

@@ -52,10 +52,7 @@ class OptimizerTest {
         )
 
     private fun factoryOf(target: Material, recipes: List<Recipe>, factories: Set<Factory>) =
-        Optimizer(ParsedRecipe(emptyList(), recipes), factories)[target]
-            .factories
-            .getValue(target)
-            .factory
+        Optimizer(ParsedRecipe(emptyList(), recipes), factories)[target].production(target).factory
 
     @Test
     fun miningDrillIsUsedForResource() =
@@ -195,7 +192,7 @@ class OptimizerTest {
             val material = Material(ore)
             assertEquals(
                 Factory.SPOILING,
-                optimizer[material].factories.getValue(material).factory,
+                optimizer[material].production(material).factory,
                 ore,
             )
         }
@@ -210,7 +207,7 @@ class OptimizerTest {
             val material = Material(ore)
             assertEquals(
                 "$bacteria-spoiling",
-                optimizer[material].factories.getValue(material).recipe.name,
+                optimizer[material].production(material).recipe.name,
                 ore,
             )
         }
@@ -223,7 +220,7 @@ class OptimizerTest {
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
 
         val material = Material("iron-ore")
-        val production = optimizer[material].factories.getValue(material)
+        val production = optimizer[material].production(material)
         assertAll(
             { assertEquals(Factory.BIG_MINING_DRILL, production.factory) },
             { assertEquals("iron-ore", production.recipe.name) },
@@ -239,7 +236,7 @@ class OptimizerTest {
 
         val material = Material("iron-ore")
         val result = optimizer[material]
-        val production = result.factories.getValue(material)
+        val production = result.production(material)
         assertAll(
             { assertEquals(Factory.RECYCLER, production.factory) },
             { assertEquals("concrete-recycling", production.recipe.name) },
@@ -261,7 +258,7 @@ class OptimizerTest {
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
 
         val material = Material("copper-ore")
-        val production = optimizer[material].factories.getValue(material)
+        val production = optimizer[material].production(material)
         assertAll(
             { assertEquals(Factory.NO_FACTORY, production.factory) },
             { assertEquals("copper-ore", production.recipe.name) },
@@ -298,20 +295,46 @@ class OptimizerTest {
     }
 
     @Test
-    fun glebaSpoilageComesFromRawFruitNotScience() {
-        // spoilage is cheapest by letting raw harvested fruit spoil, not by spoiling expensive
-        // Gleba science packs.
+    fun fulgoraAssemblingMachineRecyclesScrapOutputsInParallel() {
+        // scrap recycling yields gears, batteries and processing units; all of them are recycled:
+        // gear wheels and batteries into iron plates, processing units into electronic circuits.
+        // Crafting a material that recycling already supplies (iron-plate, electronic-circuit,
+        // copper-cable, ...) is not allowed.
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+
+        val result = optimizer[Material("assembling-machine-1")]
+        val recipes = result.factories.values.map { it.recipe.name }.toSet()
+        val scrap = result.factories.values.single { it.recipe.name == "scrap" }
+        assertAll(
+            { assertEquals(Factory.BIG_MINING_DRILL, scrap.factory) },
+            { assertTrue("iron-gear-wheel-recycling" in recipes) },
+            { assertTrue("battery-recycling" in recipes) },
+            { assertTrue("processing-unit-recycling" in recipes) },
+            { assertTrue("electronic-circuit" !in recipes) },
+            { assertTrue("iron-plate" !in recipes) },
+            { assertTrue("copper-cable" !in recipes) },
+            // far less scrap than the old single-recipe chain that needed 180 drills
+            { assertEquals(20.909, scrap.amount, 1e-3) },
+        )
+    }
+
+    @Test
+    fun glebaSpoilageComesFromCheapOrganicByproductNotScience() {
+        // spoilage is cheapest as a byproduct of the bacteria recipes, not by rotting raw fruit
+        // (jellynut itself takes an hour) nor by spoiling expensive Gleba science packs.
         val optimizer =
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
 
         val spoilage = Material("spoilage")
-        val production = optimizer[spoilage].factories.getValue(spoilage)
+        val result = optimizer[spoilage]
+        val production = result.production(spoilage)
         assertAll(
-            { assertEquals(Factory.SPOILING, production.factory) },
-            { assertEquals("jellynut-spoiling", production.recipe.name) },
+            { assertEquals("iron-bacteria", production.recipe.name) },
+            { assertEquals(Factory.BIOCHAMBER, production.factory) },
             {
                 assertTrue(
-                    optimizer[spoilage].factories.values.none {
+                    result.factories.values.none {
                         it.recipe.name == "agricultural-science-pack-spoiling"
                     }
                 )
@@ -329,7 +352,7 @@ class OptimizerTest {
             val material = Material(fruit)
             assertEquals(
                 Factory.AGRICULTURAL_TOWER,
-                optimizer[material].factories.getValue(material).factory,
+                optimizer[material].production(material).factory,
                 fruit,
             )
         }
@@ -342,7 +365,7 @@ class OptimizerTest {
 
         assertTable(harvestedFruits) { fruit ->
             val material = Material(fruit)
-            val production = optimizer[material].factories.getValue(material)
+            val production = optimizer[material].production(material)
             assertEquals(50.0, production.recipe.result.getValue(material), fruit)
         }
     }
@@ -368,7 +391,7 @@ class OptimizerTest {
             )
 
         val space = Material("space-science-pack")
-        assertEquals(Factory.ROCKET_SILO, optimizer[space].factories.getValue(space).factory)
+        assertEquals(Factory.ROCKET_SILO, optimizer[space].production(space).factory)
     }
 
     @Test
@@ -380,7 +403,7 @@ class OptimizerTest {
             )
 
         val space = Material("space-science-pack")
-        assertEquals(Factory.NO_FACTORY, optimizer[space].factories.getValue(space).factory)
+        assertEquals(Factory.NO_FACTORY, optimizer[space].production(space).factory)
     }
 
     @Test
@@ -395,7 +418,7 @@ class OptimizerTest {
         // space science is a plain crafting recipe, so it uses the assembling machine
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
-            optimizer[space].factories.getValue(space).factory,
+            optimizer[space].production(space).factory,
         )
     }
 
@@ -412,7 +435,7 @@ class OptimizerTest {
         val quantum = Material("quantum-processor")
         assertEquals(
             Factory.ELECTROMAGNETIC_PLANT,
-            optimizer[quantum].factories.getValue(quantum).factory,
+            optimizer[quantum].production(quantum).factory,
         )
     }
 
@@ -429,7 +452,7 @@ class OptimizerTest {
         val circuit = Material("electronic-circuit")
         assertEquals(
             Factory.ELECTROMAGNETIC_PLANT,
-            optimizer[circuit].factories.getValue(circuit).factory,
+            optimizer[circuit].production(circuit).factory,
         )
     }
 
@@ -446,7 +469,7 @@ class OptimizerTest {
         val gear = Material("iron-gear-wheel")
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
-            optimizer[gear].factories.getValue(gear).factory,
+            optimizer[gear].production(gear).factory,
         )
     }
 
@@ -462,7 +485,7 @@ class OptimizerTest {
         val plastic = Material("plastic-bar")
         assertEquals(
             Factory.CRYOGENIC_PLANT,
-            optimizer[plastic].factories.getValue(plastic).factory,
+            optimizer[plastic].production(plastic).factory,
         )
     }
 
@@ -478,7 +501,7 @@ class OptimizerTest {
         val lubricant = Material("lubricant")
         assertEquals(
             Factory.CHEMICAL_PLANT,
-            optimizer[lubricant].factories.getValue(lubricant).factory,
+            optimizer[lubricant].production(lubricant).factory,
         )
     }
 
@@ -493,7 +516,7 @@ class OptimizerTest {
             )
 
         val sulfur = Material("sulfur")
-        val production = optimizer[sulfur].factories.getValue(sulfur)
+        val production = optimizer[sulfur].production(sulfur)
         assertAll(
             { assertEquals("biosulfur", production.recipe.name) },
             { assertEquals(Factory.BIOCHAMBER, production.factory) },
@@ -508,7 +531,7 @@ class OptimizerTest {
             Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE))
 
         val eggs = Material("biter-egg")
-        assertEquals(Factory.NO_FACTORY, optimizer[eggs].factories.getValue(eggs).factory)
+        assertEquals(Factory.NO_FACTORY, optimizer[eggs].production(eggs).factory)
     }
 
     @Test
@@ -519,7 +542,7 @@ class OptimizerTest {
         val eggs = Material("biter-egg")
         assertEquals(
             Factory.CAPTIVE_BITER_SPAWNER,
-            optimizer[eggs].factories.getValue(eggs).factory,
+            optimizer[eggs].production(eggs).factory,
         )
     }
 
@@ -535,7 +558,7 @@ class OptimizerTest {
             val material = Material(chunk)
             assertEquals(
                 Factory.ASTEROID_COLLECTOR,
-                optimizer[material].factories.getValue(material).factory,
+                optimizer[material].production(material).factory,
                 chunk,
             )
         }
@@ -553,7 +576,7 @@ class OptimizerTest {
             val material = Material(chunk)
             assertEquals(
                 "asteroid-collection",
-                optimizer[material].factories.getValue(material).recipe.name,
+                optimizer[material].production(material).recipe.name,
                 chunk,
             )
         }
@@ -603,7 +626,7 @@ class OptimizerTest {
             )
 
         val chunk = Material("metallic-asteroid-chunk")
-        assertEquals(Factory.NO_FACTORY, optimizer[chunk].factories.getValue(chunk).factory)
+        assertEquals(Factory.NO_FACTORY, optimizer[chunk].production(chunk).factory)
     }
 
     @Test
@@ -631,7 +654,7 @@ class OptimizerTest {
         assertAll(
             { assertEquals(1, byproducts.size) },
             // one machine covers both outputs: max, not sum
-            { assertEquals(0.8, byproducts.single().amount) },
+            { assertEquals(0.8, byproducts.single().amount, 1e-9) },
         )
     }
 
@@ -672,7 +695,7 @@ class OptimizerTest {
 
         val smelting = result.factories.values.single { it.recipe.name == "smelt" }
         // demand(plate) = 2 * make-x + 3 * make-y, not the max of the two consumers
-        assertEquals(2.5, smelting.amount)
+        assertEquals(2.5, smelting.amount, 1e-9)
     }
 
     private fun multiCategoryRecipe(
@@ -802,7 +825,7 @@ class OptimizerTest {
                 ),
             )
 
-        val production = optimizer[plate].factories.getValue(plate)
+        val production = optimizer[plate].production(plate)
         assertAll(
             { assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory) },
             // one machine produces 2 * 1.5 = 3/s, so 1/s needs 1/3 of a machine

@@ -33,8 +33,7 @@ fun main(args: Array<String>) {
     val result =
         Optimizer(RecipeProvider.forActiveMods(mods).forSurface(surface), factories)[material]
 
-    result.factories.entries
-        .sortedWith(factoryProductionComparator)
-        .map { it.value }
-        .forEach { println("${superRound(it.amount)} x ${it.recipe.name} in ${it.factory.name}") }
+    result.factories.values.sortedWith(factoryProductionComparator).forEach {
+        println("${superRound(it.amount)} x ${it.recipe.name} in ${it.factory.name}")
+    }
 }
