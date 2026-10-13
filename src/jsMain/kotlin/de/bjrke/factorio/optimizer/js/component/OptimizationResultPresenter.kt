@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.superRound
+import de.bjrke.factorio.optimizer.common.business.validNormalizeTarget
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
@@ -36,13 +37,16 @@ private fun ChildrenBuilder.amountInput(
 ) {
     input {
         type = InputType.number
+        min = "0"
         css {
             width = 4.rem
             marginRight = 1.ch
         }
         value = superRound(amount * props.normalizeTarget).toString()
         onChange = {
-            props.changeNormalizeTo(amount / it.target.value.toDouble())
+            it.target.value.toDoubleOrNull()?.let { value ->
+                validNormalizeTarget(amount / value)?.let { props.changeNormalizeTo(it) }
+            }
         }
     }
 }

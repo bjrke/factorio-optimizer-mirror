@@ -39,7 +39,10 @@ Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app t
 - This agent runs inside a `sbx run opencode` sandbox: network access is
   restricted. Treat every external host as **blocked** unless it is listed
   under "Reachable hosts" below — do not probe unknown URLs.
-- Reachable hosts: none known yet — add them here as they are discovered.
+- Reachable hosts (via the `gateway.docker.internal:3128` proxy):
+  `dl.google.com`, `archive.ubuntu.com`. Chrome can be installed from
+  `https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`,
+  which is needed to run `jsBrowserTest`.
 - Retry budget: at most **2 distinct URLs/approaches per blocked resource**.
   After that, **stop the loop** — no proxies, mirrors, or alternate URLs — and
   ask the user one direct question naming the exact URL(s) to allow. Waiting for

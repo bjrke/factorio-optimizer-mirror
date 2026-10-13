@@ -5,7 +5,8 @@ import de.bjrke.factorio.optimizer.common.business.Optimizer
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
 import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
 import de.bjrke.factorio.optimizer.common.business.defaultMods
-import de.bjrke.factorio.optimizer.common.business.superRound
+import de.bjrke.factorio.optimizer.common.business.normalizeTargetFromUrl
+import de.bjrke.factorio.optimizer.common.business.normalizeTargetToUrl
 import de.bjrke.factorio.optimizer.common.model.FactoryConfig
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -36,7 +37,7 @@ class FactorioOptimizerProps {
     private val params = useParams()
     private val navigate = useNavigate()
 
-    var normalizeTarget = params[ParamName("normalizeTarget")]?.toDouble() ?: 1.0
+    var normalizeTarget = normalizeTargetFromUrl(params[ParamName("normalizeTarget")])
     var target = Material.of(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
     var mods =
         params[ParamName("mods")]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: defaultMods
@@ -56,7 +57,7 @@ class FactorioOptimizerProps {
     val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
 
     private fun createNewUrl(): String =
-        "/${superRound(normalizeTarget, 1000000.0)}/${target.name}/${factories.toUrlParam()}/${mods.sorted().joinToString(",")}/${surface.toUrlParam()}"
+        "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/${factories.toUrlParam()}/${mods.sorted().joinToString(",")}/${surface.toUrlParam()}"
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         navigate {
