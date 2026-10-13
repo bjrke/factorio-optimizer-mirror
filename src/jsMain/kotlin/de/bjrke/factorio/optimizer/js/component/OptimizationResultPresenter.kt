@@ -95,28 +95,17 @@ private val optimizationResult =
                         css {
                             display = Display.inlineBlock
                             verticalAlign = VerticalAlign.middle
+                            // recipes without ingredients (mining, pumping, ...) still reserve a
+                            // cell here so every recipe block keeps the same width
+                            minWidth = 7.5.rem
                         }
-                        val ingredients = factoryProduction.recipe.ingredients
-                        if (ingredients.isEmpty()) {
-                            // this is duplication of the recipe output to avoid breaking the layout
-                            factoryProduction.recipe.result.keys.forEach {
-                                div {
-                                    amountInputIcon(
-                                        props,
-                                        it.name,
-                                        factoryProduction.production(it),
-                                    )
-                                }
-                            }
-                        } else {
-                            ingredients.keys.forEach {
-                                div {
-                                    amountInputIcon(
-                                        props,
-                                        it.name,
-                                        factoryProduction.consumption(it),
-                                    )
-                                }
+                        factoryProduction.recipe.ingredients.keys.forEach {
+                            div {
+                                amountInputIcon(
+                                    props,
+                                    it.name,
+                                    factoryProduction.consumption(it),
+                                )
                             }
                         }
                     }
