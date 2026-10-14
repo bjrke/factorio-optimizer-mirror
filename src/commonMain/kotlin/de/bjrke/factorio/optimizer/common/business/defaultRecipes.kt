@@ -29,14 +29,14 @@ private val spaceAgeSciencePacks =
             "promethium-science-pack",
         )
 
-private fun allSciencePacks(material: (String) -> Material, spaceAge: Boolean) =
+private fun allSciencePacks(spaceAge: Boolean) =
     Recipe(
         name = ALL_SCIENCE_PACKS,
         ingredients =
             (if (spaceAge) spaceAgeSciencePacks else baseSciencePacks).associate {
-                material(it) to 1.0
+                Material(it) to 1.0
             },
-        result = mapOf(material(ALL_SCIENCE_PACKS) to 1.0),
+        result = mapOf(Material(ALL_SCIENCE_PACKS) to 1.0),
         time = 1.0,
         categories = setOf(Category.SCIENCE_LAB),
     )
@@ -45,11 +45,11 @@ private fun allSciencePacks(material: (String) -> Material, spaceAge: Boolean) =
  * The base game produces space science in the rocket silo. In Space Age the mod ships its own
  * recipe (assembled from asteroids in space), so this fallback must not be added then.
  */
-private fun spaceSciencePack(material: (String) -> Material) =
+private fun spaceSciencePack() =
     Recipe(
         name = SPACE_SCIENCE_PACK,
-        ingredients = mapOf(material("satellite") to 1.0, material("rocket-part") to 100.0),
-        result = mapOf(material(SPACE_SCIENCE_PACK) to 1000.0),
+        ingredients = mapOf(Material("satellite") to 1.0, Material("rocket-part") to 100.0),
+        result = mapOf(Material(SPACE_SCIENCE_PACK) to 1000.0),
         time = 1.0,
         categories = setOf(Category.ROCKET_BUILDING),
     )
@@ -59,6 +59,5 @@ private fun spaceSciencePack(material: (String) -> Material) =
  * every science pack (the default optimisation target) and, for the base game, the space science
  * recipe the rocket silo runs (Space Age ships its own recipe instead).
  */
-fun defaultRecipes(material: (String) -> Material, spaceAge: Boolean) =
-    (if (spaceAge) emptyList() else listOf(spaceSciencePack(material))) +
-        listOf(allSciencePacks(material, spaceAge))
+fun defaultRecipes(spaceAge: Boolean) =
+    (if (spaceAge) emptyList() else listOf(spaceSciencePack())) + listOf(allSciencePacks(spaceAge))

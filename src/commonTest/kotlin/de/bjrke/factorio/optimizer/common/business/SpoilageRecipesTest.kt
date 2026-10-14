@@ -37,7 +37,7 @@ class SpoilageRecipesTest {
             )
             .let { it as JsonObject }
 
-    private val recipes = spoilageRecipes(dump, Material::of).associateBy(Recipe::name)
+    private val recipes = spoilageRecipes(dump).associateBy(Recipe::name)
 
     private val spoilTimes =
         mapOf(

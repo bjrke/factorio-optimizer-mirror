@@ -14,7 +14,7 @@ import kotlinx.serialization.json.JsonObject
  * Recipes are named `<source>-spoiling` so they don't collide with the recipe that produces the
  * source item; the icon component maps that suffix back to the source icon.
  */
-fun spoilageRecipes(root: JsonObject, material: (String) -> Material): List<Recipe> =
+fun spoilageRecipes(root: JsonObject): List<Recipe> =
     listOf("item", "capsule").flatMap { kind ->
         root.table(kind).filterValueIsInstance<JsonObject>().mapNotNull { (name, element) ->
             val ticks = element.number("spoil_ticks") ?: return@mapNotNull null
@@ -22,8 +22,8 @@ fun spoilageRecipes(root: JsonObject, material: (String) -> Material): List<Reci
 
             Recipe(
                 name = "$name-spoiling",
-                ingredients = mapOf(material(name) to 1.0),
-                result = mapOf(material(result) to 1.0),
+                ingredients = mapOf(Material(name) to 1.0),
+                result = mapOf(Material(result) to 1.0),
                 time = ticks / 60.0,
                 categories = setOf(Category.SPOILING),
             )

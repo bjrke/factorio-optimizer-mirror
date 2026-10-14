@@ -15,8 +15,8 @@ import kotlin.test.assertNull
 import react.create
 import web.html.HTMLInputElement
 
-private val ironOre = Material.of("iron-ore")
-private val copperOre = Material.of("copper-ore")
+private val ironOre = Material("iron-ore")
+private val copperOre = Material("copper-ore")
 private val materials = listOf(ironOre, copperOre)
 
 class MaterialSelectorTest : ComponentTest() {

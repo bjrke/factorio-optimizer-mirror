@@ -18,6 +18,9 @@ class ResourceRecipesTest {
         Json.parseToJsonElement(
                 """
                 {
+                  "recipe": {
+                    "tree-seed": {}
+                  },
                   "resource": {
                     "iron-ore": {"minable": {"mining_time": 1, "result": "iron-ore"}},
                     "tungsten-ore": {"category": "hard-solid", "minable": {"mining_time": 5, "result": "tungsten-ore"}},
@@ -37,7 +40,7 @@ class ResourceRecipesTest {
             )
             .let { it as JsonObject }
 
-    private val recipes = resourceRecipes(dump, Material::of).associateBy(Recipe::name)
+    private val recipes = resourceRecipes(dump).associateBy(Recipe::name)
 
     private val harvestedFruits = listOf("yumako", "jellynut")
 
@@ -125,6 +128,28 @@ class ResourceRecipesTest {
         assertTable(harvestedFruits) { fruit ->
             assertTrue(recipes.getValue(fruit).ingredients.isEmpty(), fruit)
         }
+
+    @Test
+    fun harvestedWoodIsAHarvestingRecipe() {
+        val wood = recipes.getValue("wood")
+        assertAll(
+            { assertEquals(setOf(Category.HARVESTING), wood.categories) },
+            // a tree yields the 4 wood a hand-mined tree gives
+            { assertEquals(mapOf(Material("wood") to 4.0), wood.result) },
+            { assertEquals(600.0, wood.time) },
+            { assertTrue(wood.ingredients.isEmpty()) },
+        )
+    }
+
+    /** The base game has no agricultural tower, so no wood recipe; `tree-seed` marks Space Age. */
+    @Test
+    fun woodIsOnlyHarvestedWithTreeSeeding() {
+        val baseDump = Json.parseToJsonElement("{}") as JsonObject
+        assertAll(
+            { assertTrue(resourceRecipes(baseDump).none { it.name == "wood" }) },
+            { assertTrue(recipes.containsKey("wood")) },
+        )
+    }
 
     @Test
     fun asteroidCollectorYieldsEveryChunk() {

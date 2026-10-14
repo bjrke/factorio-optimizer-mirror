@@ -11,15 +11,17 @@ import kotlinx.serialization.json.JsonObject
  * that carry a `fluid`); only the two special extraction mechanics that have no prototype recipe
  * are hardcoded below (harvesting trees and collecting asteroid chunks).
  */
-fun resourceRecipes(root: JsonObject, material: (String) -> Material): List<Recipe> =
-    minedResourceRecipes(root, material) +
-        offshorePumpFluids(root, material) +
-        harvestedFruit(material) +
-        asteroidCollectionRecipes(material)
+fun resourceRecipes(root: JsonObject) = buildList {
+    minedResourceRecipes(root)
+    offshorePumpFluids(root)
+    harvestedFruit()
+    harvestedWood(root)
+    asteroidCollectionRecipes()
+}
 
 /** `data.raw.resource`: the resource the drill/pumpjack extracts and how long a unit takes. */
-private fun minedResourceRecipes(root: JsonObject, material: (String) -> Material): List<Recipe> =
-    root.table("resource").filterValueIsInstance<JsonObject>().mapNotNull { (name, element) ->
+private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {
+    for ((name, element) in root.table("resource").filterValueIsInstance<JsonObject>()) {
         val minable = element.table("minable")
         val category =
             when (element.string("category")) {
@@ -27,64 +29,89 @@ private fun minedResourceRecipes(root: JsonObject, material: (String) -> Materia
                 "basic-solid" -> Category.MINING_BASIC_SOLID
                 "hard-solid" -> Category.MINING_HARD_SOLID
                 "basic-fluid" -> Category.MINING_FLUID
-                else -> return@mapNotNull null
+                else -> continue
             }
         val result = buildMap {
             minable.string("result")?.also {
-                put(material(it), minable.number("count") ?: 1.0)
+                put(Material(it), minable.number("count") ?: 1.0)
             }
             for (entry in minable.objects("results")) {
                 val resultName = entry.string("name") ?: continue
-                put(material(resultName), entry.number("amount") ?: 1.0)
+                put(Material(resultName), entry.number("amount") ?: 1.0)
             }
         }
-        if (result.isEmpty()) return@mapNotNull null
+        if (result.isEmpty()) continue
 
         val ingredients =
             minable.string("required_fluid")?.let {
-                mapOf(material(it) to (minable.number("fluid_amount") ?: 1.0))
+                mapOf(Material(it) to (minable.number("fluid_amount") ?: 1.0))
             } ?: emptyMap()
 
-        Recipe(
-            name = name,
-            ingredients = ingredients,
-            result = result,
-            time = minable.number("mining_time") ?: 1.0,
-            categories = setOf(category),
+        add(
+            Recipe(
+                name = name,
+                ingredients = ingredients,
+                result = result,
+                time = minable.number("mining_time") ?: 1.0,
+                categories = setOf(category),
+            )
         )
     }
+}
 
 /**
  * The offshore pump extracts whatever fluid the tile it is placed on carries. The dump's tiles
  * reference water, heavy oil, lava and ammoniacal solution.
  */
-private fun offshorePumpFluids(root: JsonObject, material: (String) -> Material): List<Recipe> =
-    root
-        .table("tile")
-        .values
-        .mapNotNull { (it as? JsonObject)?.string("fluid") }
-        .distinct()
-        .map { fluid ->
+private fun MutableList<Recipe>.offshorePumpFluids(root: JsonObject) {
+    val fluids =
+        root.table("tile").values.mapNotNull { (it as? JsonObject)?.string("fluid") }.distinct()
+    for (fluid in fluids) {
+        add(
             Recipe(
                 name = fluid,
                 ingredients = emptyMap(),
-                result = mapOf(material(fluid) to 1.0),
+                result = mapOf(Material(fluid) to 1.0),
                 time = 1.0,
                 categories = setOf(Category.OFFSHORE_PUMPING),
             )
-        }
-
-/** Trees tend to a fruit every 5 minutes; the agricultural tower harvests 50 fruit per tree. */
-private fun harvestedFruit(material: (String) -> Material): List<Recipe> =
-    listOf("yumako", "jellynut").map { fruit ->
-        Recipe(
-            name = fruit,
-            ingredients = emptyMap(),
-            result = mapOf(material(fruit) to 50.0),
-            time = 300.0,
-            categories = setOf(Category.HARVESTING),
         )
     }
+}
+
+/** Trees tend to a fruit every 5 minutes; the agricultural tower harvests 50 fruit per tree. */
+private fun MutableList<Recipe>.harvestedFruit() {
+    for (fruit in listOf("yumako", "jellynut")) {
+        add(
+            Recipe(
+                name = fruit,
+                ingredients = emptyMap(),
+                result = mapOf(Material(fruit) to 50.0),
+                time = 300.0,
+                categories = setOf(Category.HARVESTING),
+            )
+        )
+    }
+}
+
+/**
+ * On Nauvis the agricultural tower plants tree seeds and harvests the grown trees for wood. A tree
+ * takes 10 minutes to reach full maturity and yields the 4 wood a hand-mined tree gives. Only Space
+ * Age ships the tower, marked by the `tree-seed` recipe being present in the dump; the base game
+ * has no way to produce wood, so it must not be offered as producible there.
+ */
+private fun MutableList<Recipe>.harvestedWood(root: JsonObject) {
+    if (root.table("recipe").containsKey("tree-seed"))
+        add(
+            Recipe(
+                name = "wood",
+                ingredients = emptyMap(),
+                result = mapOf(Material("wood") to 4.0),
+                time = 600.0,
+                categories = setOf(Category.HARVESTING),
+            )
+        )
+}
 
 /**
  * Asteroid chunks are collected by the asteroid collector in space. The collector prototype has a
@@ -92,8 +119,8 @@ private fun harvestedFruit(material: (String) -> Material): List<Recipe> =
  * assumed to drop at the same rate. Modelled as one recipe so a single collector serves every
  * chunk.
  */
-private fun asteroidCollectionRecipes(material: (String) -> Material) =
-    listOf(
+private fun MutableList<Recipe>.asteroidCollectionRecipes() {
+    add(
         Recipe(
             name = "asteroid-collection",
             ingredients = emptyMap(),
@@ -104,8 +131,9 @@ private fun asteroidCollectionRecipes(material: (String) -> Material) =
                         "oxide-asteroid-chunk",
                         "promethium-asteroid-chunk",
                     )
-                    .associate { material(it) to 1.0 },
+                    .associate { Material(it) to 1.0 },
             time = 0.2,
             categories = setOf(Category.ASTEROID_COLLECTION),
         )
     )
+}

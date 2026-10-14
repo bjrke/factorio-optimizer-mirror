@@ -42,7 +42,7 @@ class FactorioOptimizerProps {
     private val navigate = useNavigate()
 
     var normalizeTarget = normalizeTargetFromUrl(params[ParamName("normalizeTarget")])
-    var target = Material.of(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
+    var target = Material(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
     var mods =
         params[ParamName("mods")]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: defaultMods
     val activeMods = RecipeProvider.resolveMods(mods)

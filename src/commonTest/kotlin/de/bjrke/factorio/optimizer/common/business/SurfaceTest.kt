@@ -228,6 +228,22 @@ class SurfaceTest {
     }
 
     @Test
+    fun harvestedWoodIsGatedToNauvis() {
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes = listOf(extraction("wood", Category.HARVESTING)),
+            )
+
+        assertTableOf(
+            Surface.NAUVIS to setOf("wood"),
+            Surface.GLEBA to emptySet<String>(),
+        ) { (surface, expected) ->
+            assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
+        }
+    }
+
+    @Test
     fun recyclingRecipesOnlySurviveOnFulgora() {
         val recycling =
             Recipe(

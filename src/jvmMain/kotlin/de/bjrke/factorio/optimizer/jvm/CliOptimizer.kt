@@ -17,7 +17,7 @@ import de.bjrke.factorio.optimizer.common.model.forSurface
 import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
 
 fun main(args: Array<String>) {
-    val material = Material.of(args.firstOrNull { !it.startsWith("--") } ?: ALL_SCIENCE_PACKS)
+    val material = Material(args.firstOrNull { !it.startsWith("--") } ?: ALL_SCIENCE_PACKS)
     val mods =
         args
             .firstOrNull { it.startsWith("--mods=") }

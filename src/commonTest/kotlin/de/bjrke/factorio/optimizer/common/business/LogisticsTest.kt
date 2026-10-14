@@ -376,8 +376,8 @@ class LogisticsTest {
 
     @Test
     fun fluidsAreDetectedFromTheDump() {
-        val water = Material.of("water")
-        val plate = Material.of("iron-plate")
+        val water = Material("water")
+        val plate = Material("iron-plate")
         val calculator = calculator(logistics = Logistics(fluids = setOf(water)))
 
         assertAll(

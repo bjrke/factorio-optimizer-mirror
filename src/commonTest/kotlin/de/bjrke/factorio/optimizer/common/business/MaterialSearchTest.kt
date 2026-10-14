@@ -20,7 +20,7 @@ class MaterialSearchTest {
                 "circuitry",
                 "mycircuit",
             )
-            .map { Material.of(it) }
+            .map { Material(it) }
 
     @Test
     fun blankQueryReturnsEverythingInOrder() =
@@ -31,7 +31,7 @@ class MaterialSearchTest {
     @Test
     fun matchingIsCaseInsensitive() {
         assertEquals(
-            listOf(Material.of("iron-ore"), Material.of("iron-plate")),
+            listOf(Material("iron-ore"), Material("iron-plate")),
             searchMaterials(materials, "IRON"),
         )
     }
@@ -39,7 +39,7 @@ class MaterialSearchTest {
     @Test
     fun matchesPrefixAcrossWords() {
         assertEquals(
-            listOf(Material.of("copper-ore"), Material.of("copper-plate")),
+            listOf(Material("copper-ore"), Material("copper-plate")),
             searchMaterials(materials, "copp"),
         )
     }
@@ -47,7 +47,7 @@ class MaterialSearchTest {
     @Test
     fun requiresEveryQueryTokenToMatch() =
         assertTableOf(
-            "iron plate" to listOf(Material.of("iron-plate")),
+            "iron plate" to listOf(Material("iron-plate")),
             "iron zzz" to emptyList<Material>(),
         ) { (query, expected) ->
             assertEquals(expected, searchMaterials(materials, query))
@@ -56,8 +56,8 @@ class MaterialSearchTest {
     @Test
     fun matchesQueryWithSeparators() =
         assertTableOf(
-            "iron-plate" to listOf(Material.of("iron-plate")),
-            "ironplate" to listOf(Material.of("iron-plate")),
+            "iron-plate" to listOf(Material("iron-plate")),
+            "ironplate" to listOf(Material("iron-plate")),
         ) { (query, expected) ->
             assertEquals(expected, searchMaterials(materials, query))
         }
@@ -72,14 +72,14 @@ class MaterialSearchTest {
                     "circuitry",
                     "mycircuit",
                 )
-                .map { Material.of(it) },
+                .map { Material(it) },
             searchMaterials(materials, "circuit"),
         )
     }
 
     @Test
     fun matchesFuzzySubsequence() {
-        assertEquals(listOf(Material.of("iron-plate")), searchMaterials(materials, "irnplt"))
+        assertEquals(listOf(Material("iron-plate")), searchMaterials(materials, "irnplt"))
     }
 
     @Test

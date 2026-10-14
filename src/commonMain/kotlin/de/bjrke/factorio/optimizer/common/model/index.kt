@@ -1,10 +1,12 @@
 package de.bjrke.factorio.optimizer.common.model
 
-data class Material(val name: String) {
-    companion object {
-        private val materialsBuilder = mutableMapOf<String, Material>()
+@ConsistentCopyVisibility
+data class Material private constructor(val name: String) {
 
-        fun of(name: String) = materialsBuilder.getOrPut(name) { Material(name) }
+    companion object {
+        private val materialsCache = mutableMapOf<String, Material>()
+
+        operator fun invoke(name: String) = materialsCache.getOrPut(name) { Material(name) }
     }
 }
 
@@ -152,6 +154,7 @@ private val resourceSurfaces =
         "heavy-oil" to setOf(Surface.FULGORA),
         "lava" to setOf(Surface.VULCANUS),
         "ammoniacal-solution" to setOf(Surface.AQUILO),
+        "wood" to setOf(Surface.NAUVIS),
         "yumako" to setOf(Surface.GLEBA),
         "jellynut" to setOf(Surface.GLEBA),
     )

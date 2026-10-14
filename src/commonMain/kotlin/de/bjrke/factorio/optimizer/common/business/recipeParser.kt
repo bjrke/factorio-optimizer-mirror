@@ -50,14 +50,11 @@ private fun resultProbability(result: JsonObject): Double =
  */
 fun parsePrototypes(
     json: String,
-    defaultRecipesProvider: ((String) -> Material) -> List<Recipe> = { listOf() },
+    defaultRecipesProvider: () -> List<Recipe> = { listOf() },
 ): ParsedRecipe {
     val root =
         Json.parseToJsonElement(json) as? JsonObject
             ?: return ParsedRecipe(emptyList(), emptyList())
-
-    val materialsBuilder = mutableMapOf<String, Material>()
-    fun material(name: String) = materialsBuilder.getOrPut(name) { Material.of(name) }
 
     val subgroups = mutableMapOf<String, Subgroup>()
     val noSubGroup = Subgroup()
@@ -80,7 +77,7 @@ fun parsePrototypes(
 
                     val result = buildMap {
                         element.string("result")?.also {
-                            put(material(it), (element.number("result_count") ?: DEFAULT_AMOUNT))
+                            put(Material(it), (element.number("result_count") ?: DEFAULT_AMOUNT))
                         }
                         for (entry in element.objects("results")) {
                             val resultName = entry.string("name") ?: continue
@@ -93,7 +90,7 @@ fun parsePrototypes(
                             val amount = entry.number("amount") ?: DEFAULT_AMOUNT
 
                             put(
-                                material(resultName),
+                                Material(resultName),
                                 (amount + extraCountFraction) * resultProbability(entry),
                             )
                         }
@@ -103,7 +100,7 @@ fun parsePrototypes(
                     val ingredients = buildMap {
                         for (entry in element.objects("ingredients")) {
                             entry.string("name")?.also {
-                                put(material(it), entry.number("amount") ?: DEFAULT_AMOUNT)
+                                put(Material(it), entry.number("amount") ?: DEFAULT_AMOUNT)
                             }
                         }
                     }
@@ -138,9 +135,9 @@ fun parsePrototypes(
                     )
                 }
 
-                yieldAll(resourceRecipes(root, ::material))
-                yieldAll(spoilageRecipes(root, ::material))
-                yieldAll(defaultRecipesProvider(::material))
+                yieldAll(resourceRecipes(root))
+                yieldAll(spoilageRecipes(root))
+                yieldAll(defaultRecipesProvider())
             }
             .associateBy { it.name }
 
@@ -148,7 +145,7 @@ fun parsePrototypes(
     // one step past scrap avoids reverse chains (e.g. an accumulator recycling back into the
     // circuits that used to make it) that would otherwise beat the forward recipes.
     val scrapReach = buildSet {
-        add(material("scrap"))
+        add(Material("scrap"))
         parsedRecipes["scrap-recycling"]?.run {
             addAll(result.keys)
         }
@@ -163,7 +160,15 @@ fun parsePrototypes(
             .sortedBy(Recipe::name)
 
     return ParsedRecipe(
-        materials = materialsBuilder.values.sortedBy(Material::name),
+        // Only materials a kept recipe produces: a hidden recipe's items (loaders, cheat entities,
+        // ...) are dropped above but would otherwise leak in, and a material that merely appears as
+        // an ingredient (with no recipe yielding it) has no surface or factory to be produced on.
+        materials =
+            recipes
+                .flatMapTo(mutableSetOf()) {
+                    it.result.keys
+                }
+                .sortedBy(Material::name),
         recipes = recipes,
         machineStats = machineStats(root),
         logistics = logisticsStats(root),
@@ -228,7 +233,7 @@ fun logisticsStats(root: JsonObject): Logistics {
             .maxOrNull()
             ?.times(60.0)
 
-    val fluids = root.table("fluid").keys.mapTo(mutableSetOf(), Material::of)
+    val fluids = root.table("fluid").keys.mapTo(mutableSetOf()) { Material(it) }
 
     return Logistics(
         belts = belts,

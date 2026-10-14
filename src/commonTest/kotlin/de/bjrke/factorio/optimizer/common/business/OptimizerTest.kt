@@ -371,6 +371,15 @@ class OptimizerTest {
     }
 
     @Test
+    fun nauvisWoodIsHarvestedByAgriculturalTower() {
+        val optimizer =
+            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
+        val wood = Material("wood")
+        val actual = optimizer[wood].production(wood).factory
+        assertEquals(Factory.AGRICULTURAL_TOWER, actual)
+    }
+
+    @Test
     fun oreBasedRecipeWinsWhenOreIsProducible() {
         // on Nauvis-like surface: iron-ore is mined, lava is not available (free source)
         val result =

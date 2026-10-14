@@ -26,9 +26,9 @@ import react.create
 import web.dom.Element
 import web.html.HTMLInputElement
 
-private val ore = Material.of("iron-ore")
-private val plate = Material.of("iron-plate")
-private val gear = Material.of("iron-gear-wheel")
+private val ore = Material("iron-ore")
+private val plate = Material("iron-plate")
+private val gear = Material("iron-gear-wheel")
 
 private val miningRecipe =
     Recipe(
@@ -374,7 +374,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
 
     @Test
     fun fluidIngredientsShowAPumpAndAPipeMarker() {
-        val water = Material.of("water")
+        val water = Material("water")
         val fluidRecipe =
             Recipe(
                 name = "chemical-plant-recipe",
@@ -556,7 +556,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
 
     @Test
     fun solidAndFluidRowsHaveTheSameWidth() {
-        val water = Material.of("water")
+        val water = Material("water")
         val fluidRecipe =
             Recipe(
                 name = "fluid-recipe",
