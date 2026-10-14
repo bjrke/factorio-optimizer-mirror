@@ -19,11 +19,10 @@ fun resourceRecipes(root: JsonObject, material: (String) -> Material): List<Reci
 
 /** `data.raw.resource`: the resource the drill/pumpjack extracts and how long a unit takes. */
 private fun minedResourceRecipes(root: JsonObject, material: (String) -> Material): List<Recipe> =
-    root.table("resource")?.entries.orEmpty().mapNotNull { (name, element) ->
-        val prototype = element as? JsonObject ?: return@mapNotNull null
-        val minable = prototype.table("minable") ?: return@mapNotNull null
+    root.table("resource").filterValueIsInstance<JsonObject>().mapNotNull { (name, element) ->
+        val minable = element.table("minable")
         val category =
-            when (prototype.string("category")) {
+            when (element.string("category")) {
                 null,
                 "basic-solid" -> Category.MINING_BASIC_SOLID
                 "hard-solid" -> Category.MINING_HARD_SOLID
@@ -34,7 +33,7 @@ private fun minedResourceRecipes(root: JsonObject, material: (String) -> Materia
             minable.string("result")?.also {
                 put(material(it), minable.number("count") ?: 1.0)
             }
-            for (entry in minable.array("results")?.objects().orEmpty()) {
+            for (entry in minable.objects("results")) {
                 val resultName = entry.string("name") ?: continue
                 put(material(resultName), entry.number("amount") ?: 1.0)
             }
@@ -62,8 +61,7 @@ private fun minedResourceRecipes(root: JsonObject, material: (String) -> Materia
 private fun offshorePumpFluids(root: JsonObject, material: (String) -> Material): List<Recipe> =
     root
         .table("tile")
-        ?.values
-        .orEmpty()
+        .values
         .mapNotNull { (it as? JsonObject)?.string("fluid") }
         .distinct()
         .map { fluid ->

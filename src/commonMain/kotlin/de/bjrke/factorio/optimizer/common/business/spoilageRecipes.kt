@@ -16,10 +16,9 @@ import kotlinx.serialization.json.JsonObject
  */
 fun spoilageRecipes(root: JsonObject, material: (String) -> Material): List<Recipe> =
     listOf("item", "capsule").flatMap { kind ->
-        root.table(kind)?.entries.orEmpty().mapNotNull { (name, element) ->
-            val prototype = element as? JsonObject ?: return@mapNotNull null
-            val ticks = prototype.number("spoil_ticks") ?: return@mapNotNull null
-            val result = prototype.string("spoil_result") ?: return@mapNotNull null
+        root.table(kind).filterValueIsInstance<JsonObject>().mapNotNull { (name, element) ->
+            val ticks = element.number("spoil_ticks") ?: return@mapNotNull null
+            val result = element.string("spoil_result") ?: return@mapNotNull null
 
             Recipe(
                 name = "$name-spoiling",

@@ -16,6 +16,8 @@ private external interface IconHostProps : Props {
     var name: String
     var size: Int?
     var alt: String?
+    var rotation: Int?
+    var flipHorizontal: Boolean?
 }
 
 private val iconHost =
@@ -23,6 +25,8 @@ private val iconHost =
         icon(props.name) {
             size = props.size
             alt = props.alt
+            rotation = props.rotation
+            flipHorizontal = props.flipHorizontal
         }
     }
 
@@ -34,12 +38,20 @@ private fun RenderResult.images(): List<Element> {
 private fun RenderResult.sources() = images().map { it.getAttribute("src") }
 
 class IconTest : ComponentTest() {
-    private fun renderIcon(name: String, size: Int? = null, alt: String? = null) =
+    private fun renderIcon(
+        name: String,
+        size: Int? = null,
+        alt: String? = null,
+        rotation: Int? = null,
+        flipHorizontal: Boolean? = null,
+    ) =
         render(
             iconHost.create {
                 this.name = name
                 this.size = size
                 this.alt = alt
+                this.rotation = rotation
+                this.flipHorizontal = flipHorizontal
             }
         )
 
@@ -130,4 +142,28 @@ class IconTest : ComponentTest() {
 
     private fun computedWidth(element: Element?) =
         js("(function (el) { return getComputedStyle(el).width; })")(element)
+
+    private fun computedTransform(element: Element?) =
+        js("(function (el) { return getComputedStyle(el).transform; })")(element)
+
+    @Test
+    fun rotationTurnsTheIconClockwise() {
+        val rotated = renderIcon("transport-belt", rotation = 90)
+
+        assertEquals("matrix(0, 1, -1, 0, 0, 0)", computedTransform(rotated.images().single()))
+    }
+
+    @Test
+    fun flipHorizontalMirrorsTheIconAcrossTheVerticalAxis() {
+        val mirrored = renderIcon("inserter", flipHorizontal = true)
+
+        assertEquals("matrix(-1, 0, 0, 1, 0, 0)", computedTransform(mirrored.images().single()))
+    }
+
+    @Test
+    fun anUprightIconIsNotTransformed() {
+        val plain = renderIcon("transport-belt")
+
+        assertEquals("none", computedTransform(plain.images().single()))
+    }
 }

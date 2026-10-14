@@ -8,14 +8,32 @@ import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
 import web.cssom.Display
 import web.cssom.Position
+import web.cssom.Transform
 import web.cssom.VerticalAlign
+import web.cssom.deg
 import web.cssom.px
+import web.cssom.rotate
+import web.cssom.scalex
 
 external interface IconProps : Props {
     var name: String
     var size: Int?
     var alt: String?
+
+    /** Rotates the icon this many degrees clockwise, e.g. to turn a belt into a machine. */
+    var rotation: Int?
+
+    /** Mirrors the icon across the vertical axis, e.g. to point an inserter out of a machine. */
+    var flipHorizontal: Boolean?
 }
+
+/** The CSS transform that turns an upright icon into the [rotation]/[flipHorizontal] variant. */
+private fun iconTransform(rotation: Int?, flipHorizontal: Boolean?): Transform? =
+    when {
+        rotation != null -> rotate(rotation.deg)
+        flipHorizontal == true -> scalex(-1)
+        else -> null
+    }
 
 /**
  * A single image layer of an icon. [scale] and the optional [left]/[top] (fractions of the icon
@@ -64,6 +82,7 @@ private val iconX =
     FC<IconProps>("icon") { props ->
         val size = props.size ?: 32
         val label = props.alt ?: props.name
+        val transform = iconTransform(props.rotation, props.flipHorizontal)
         val layers = layersFor(props.name)
         if (layers.size == 1) {
             img {
@@ -72,7 +91,10 @@ private val iconX =
                 title = label
                 width = size.toDouble()
                 height = size.toDouble()
-                css { verticalAlign = VerticalAlign.middle }
+                css {
+                    verticalAlign = VerticalAlign.middle
+                    transform?.let { this.transform = it }
+                }
             }
         } else {
             span {
@@ -83,6 +105,7 @@ private val iconX =
                     width = size.px
                     height = size.px
                     verticalAlign = VerticalAlign.middle
+                    transform?.let { this.transform = it }
                 }
                 for ((index, layer) in layers.withIndex()) {
                     val layerSize = size * layer.scale

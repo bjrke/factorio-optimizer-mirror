@@ -16,6 +16,9 @@ private val smelterCategories = setOf(Category.SMELTING)
  * machines that should be used whenever they can run a recipe, even without a bonus (the cryogenic
  * plant). These values are curated fallbacks; the optimizer prefers the stats derived from the
  * prototype dump (see [MachineStats]).
+ *
+ * [outputsDirectly] marks machines that place their product straight onto a belt (mining drills and
+ * the recycler): they need no output inserter and stack the belt themselves.
  */
 enum class Factory(
     val code: Char?,
@@ -26,6 +29,7 @@ enum class Factory(
     val preferred: Boolean = false,
     val spaceAgeOnly: Boolean = false,
     val baseOnly: Boolean = false,
+    val outputsDirectly: Boolean = false,
 ) {
     ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
     ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
@@ -80,21 +84,40 @@ enum class Factory(
         setOf(Category.ASTEROID_COLLECTION),
         spaceAgeOnly = true,
     ),
-    RECYCLER('r', "recycler", setOf(Category.RECYCLING), spaceAgeOnly = true),
+    RECYCLER(
+        'r',
+        "recycler",
+        setOf(Category.RECYCLING),
+        spaceAgeOnly = true,
+        outputsDirectly = true,
+    ),
     CAPTIVE_BITER_SPAWNER(
         null,
         "captive-biter-spawner",
         setOf(Category.CAPTIVE_SPAWNER_PROCESS),
         spaceAgeOnly = true,
     ),
-    BURNER_MINING_DRILL('B', "burner-mining-drill", setOf(Category.MINING_BASIC_SOLID), 0.25),
-    ELECTRIC_MINING_DRILL('E', "electric-mining-drill", setOf(Category.MINING_BASIC_SOLID), 0.5),
+    BURNER_MINING_DRILL(
+        'B',
+        "burner-mining-drill",
+        setOf(Category.MINING_BASIC_SOLID),
+        0.25,
+        outputsDirectly = true,
+    ),
+    ELECTRIC_MINING_DRILL(
+        'E',
+        "electric-mining-drill",
+        setOf(Category.MINING_BASIC_SOLID),
+        0.5,
+        outputsDirectly = true,
+    ),
     BIG_MINING_DRILL(
         'G',
         "big-mining-drill",
         setOf(Category.MINING_BASIC_SOLID, Category.MINING_HARD_SOLID),
         2.5,
         spaceAgeOnly = true,
+        outputsDirectly = true,
     ),
     PUMPJACK(null, "pumpjack", setOf(Category.MINING_FLUID), 1.0),
     OFFSHORE_PUMP(null, "offshore-pump", setOf(Category.OFFSHORE_PUMPING), 1200.0),

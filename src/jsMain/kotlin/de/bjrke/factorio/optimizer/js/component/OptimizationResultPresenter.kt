@@ -1,7 +1,9 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.business.superRound
 import de.bjrke.factorio.optimizer.common.business.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
@@ -11,15 +13,18 @@ import react.ChildrenBuilder
 import react.FC
 import react.Props
 import react.dom.html.ReactHTML.a
-import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
+import react.dom.html.ReactHTML.span
 import web.cssom.*
 import web.html.InputType
 import web.html.number
+import web.mouse.AUXILIARY
+import web.mouse.MouseButton
 
 external interface OptimizationResultPresenterStateProps : Props {
     var optimizationResult: OptimizationResult
+    var logistics: LogisticsCalculator
     var normalizeTarget: Double
 }
 
@@ -30,6 +35,9 @@ external interface OptimizationResultPresenterDispatchProps : Props {
 
 external interface OptimizationResultPresenterProps :
     OptimizationResultPresenterStateProps, OptimizationResultPresenterDispatchProps
+
+/** `MouseEvent.button` value of the middle mouse button. */
+private val MIDDLE_BUTTON = MouseButton.AUXILIARY
 
 private fun ChildrenBuilder.amountInput(
     props: OptimizationResultPresenterProps,
@@ -51,14 +59,28 @@ private fun ChildrenBuilder.amountInput(
     }
 }
 
+/**
+ * A clickable icon for an amount: a left click pins the amount, a middle click (when the icon
+ * stands for a [material]) selects that material as the new target.
+ */
 private fun ChildrenBuilder.amountIcon(
     props: OptimizationResultPresenterProps,
     name: String,
     amount: Double,
+    material: Material? = null,
 ) {
     a {
         css { marginRight = 1.ch }
         onClick = { props.changeNormalizeTo(amount) }
+        if (material != null) {
+            // a middle click selects the material and must not start the browser's autoscroll
+            onMouseDown = {
+                if (it.button == MIDDLE_BUTTON) {
+                    it.preventDefault()
+                    props.changeMaterial(material)
+                }
+            }
+        }
         icon(name)
     }
 }
@@ -67,9 +89,154 @@ private fun ChildrenBuilder.amountInputIcon(
     props: OptimizationResultPresenterProps,
     name: String,
     amount: Double,
+    material: Material? = null,
 ) {
     amountInput(props, amount)
-    amountIcon(props, name, amount)
+    amountIcon(props, name, amount, material)
+}
+
+// fixed widths so a row is exactly as wide no matter whether it carries a belt+inserter, a
+// pump+pipe or (for recipes without ingredients) nothing at all
+private val LOGISTICS_INPUT_WIDTH = 4.rem
+private val LOGISTICS_ITEM_WIDTH = 6.75.rem
+
+/** Fixed input/output column width; empty and fluid columns are padded to match. */
+private val COLUMN_WIDTH = 24.rem
+
+/**
+ * A bordered box around a group of input fields that belong together. [inline] boxes hug their
+ * content and sit in the row (the factory), while the default boxes fill their column (materials).
+ */
+private fun ChildrenBuilder.groupBox(inline: Boolean = false, content: ChildrenBuilder.() -> Unit) {
+    div {
+        css {
+            border = Border(1.px, LineStyle.solid, rgb(120, 120, 120))
+            borderRadius = 0.25.rem
+            padding = 0.25.rem
+            marginBottom = 0.25.rem
+            marginRight = 0.25.rem
+            if (inline) {
+                display = Display.inlineBlock
+                verticalAlign = VerticalAlign.middle
+            }
+        }
+        content()
+    }
+}
+
+/** A material's amount plus its belt and inserter counts, boxed together. */
+private fun ChildrenBuilder.materialGroup(
+    props: OptimizationResultPresenterProps,
+    factory: Factory,
+    material: Material,
+    amount: Double,
+    isOutput: Boolean,
+) {
+    groupBox {
+        amountInputIcon(props, material.name, amount, material)
+        materialLogistics(props, factory, material, amount, isOutput)
+    }
+}
+
+/**
+ * A derived logistics count (belt, inserter, pump) as an editable field next to its clickable icon.
+ * Editing it or clicking the icon scales the whole plan through the normalize target, exactly like
+ * the material amounts, so e.g. a belt can be pinned to one.
+ */
+private fun ChildrenBuilder.logisticsInputIcon(
+    props: OptimizationResultPresenterProps,
+    name: String,
+    unit: String,
+    amount: Double,
+    rotation: Int? = null,
+    flipHorizontal: Boolean = false,
+) {
+    input {
+        type = InputType.number
+        min = "0"
+        title = unit
+        css {
+            width = LOGISTICS_INPUT_WIDTH
+            marginRight = 0.25.rem
+        }
+        value = superRound(amount * props.normalizeTarget).toString()
+        onChange = {
+            it.target.value.toDoubleOrNull()?.let { value ->
+                validNormalizeTarget(amount / value)?.let { scale ->
+                    props.changeNormalizeTo(scale)
+                }
+            }
+        }
+    }
+    a {
+        css { marginRight = 0.5.rem }
+        if (amount > 0.0) {
+            onClick = { props.changeNormalizeTo(amount) }
+        }
+        icon(name) {
+            this.rotation = rotation
+            this.flipHorizontal = flipHorizontal
+        }
+    }
+}
+
+private fun ChildrenBuilder.pipeMarker() {
+    span {
+        css {
+            display = Display.inlineBlock
+            width = LOGISTICS_ITEM_WIDTH
+        }
+        // the icon carries the "pipe" title used as the marker
+        icon("pipe")
+    }
+}
+
+/**
+ * The logistics needed to move [material] at [rate] items/fluid per second: a belt and an inserter
+ * for solids, a pump plus a pipe marker for fluids. The counts are editable like the material
+ * amounts.
+ *
+ * Mines and the recycler drop their output straight onto the belt, so an output of such a machine
+ * needs no inserter and the belt stacking always applies. Every other output is loaded by the
+ * selected inserter, so belt stacking only applies when that inserter can stack, and the output
+ * inserter count uses the slower belt-limited placing rate.
+ */
+private fun ChildrenBuilder.materialLogistics(
+    props: OptimizationResultPresenterProps,
+    factory: Factory,
+    material: Material,
+    rate: Double,
+    isOutput: Boolean,
+) {
+    val calculator = props.logistics
+    if (calculator.isFluid(material)) {
+        calculator.pumpCount(rate)?.let { logisticsInputIcon(props, "pump", "pumps", it) }
+        pipeMarker()
+        return
+    }
+
+    val directOutput = isOutput && factory.outputsDirectly
+    val stack =
+        if (isOutput && !directOutput && !calculator.stacksOnBelt()) 1 else calculator.beltStack
+    logisticsInputIcon(
+        props,
+        calculator.belt.identifier,
+        "belts",
+        calculator.beltCount(rate, stack),
+        // an input belt feeds the machine (clockwise), an output belt carries the product away
+        rotation = if (isOutput) -90 else 90,
+    )
+    if (!directOutput) {
+        logisticsInputIcon(
+            props,
+            calculator.inserter.identifier,
+            "inserters",
+            // an output inserter drops onto the belt, an input inserter into the machine
+            calculator.inserterCount(rate, ontoBelt = isOutput),
+            // the output inserter points the other way, so mirror it
+            flipHorizontal = isOutput,
+        )
+    }
 }
 
 internal val optimizationResult =
@@ -83,48 +250,56 @@ internal val optimizationResult =
                     padding = 0.5.rem
                     backgroundColor = hashColor(factoryProduction.material.name, 0.75)
                 }
-                amountInputIcon(
-                    props,
-                    factoryProduction.factory.identifier,
-                    factoryProduction.amount,
-                )
-                amountIcon(props, factoryProduction.recipe.name, factoryProduction.amount)
-
                 div {
                     css {
                         display = Display.inlineBlock
                         verticalAlign = VerticalAlign.middle
-                        // recipes without ingredients (mining, pumping, ...) still reserve a
-                        // cell here so every recipe block keeps the same width
-                        minWidth = 7.5.rem
+                        // recipes without ingredients (mining, pumping, ...) still reserve the
+                        // full column so every recipe block keeps the same width
+                        width = COLUMN_WIDTH
                     }
                     factoryProduction.recipe.ingredients.keys.forEach {
-                        div {
-                            amountInputIcon(
-                                props,
-                                it.name,
-                                factoryProduction.consumption(it),
-                            )
-                        }
+                        materialGroup(
+                            props,
+                            factoryProduction.factory,
+                            it,
+                            factoryProduction.consumption(it),
+                            isOutput = false,
+                        )
                     }
+                }
+
+                groupBox(inline = true) {
+                    amountInputIcon(
+                        props,
+                        factoryProduction.factory.identifier,
+                        factoryProduction.amount,
+                    )
+                    // middle-clicking the recipe icon picks the produced material as the target
+                    amountIcon(
+                        props,
+                        factoryProduction.recipe.name,
+                        factoryProduction.amount,
+                        factoryProduction.material,
+                    )
                 }
 
                 div {
                     css {
                         display = Display.inlineBlock
                         verticalAlign = VerticalAlign.middle
+                        // the fixed width keeps the output column aligned with the input column
+                        width = COLUMN_WIDTH
                     }
                     factoryProduction.recipe.result.keys.forEach {
-                        div {
-                            amountInputIcon(props, it.name, factoryProduction.production(it))
-                        }
+                        materialGroup(
+                            props,
+                            factoryProduction.factory,
+                            it,
+                            factoryProduction.production(it),
+                            isOutput = true,
+                        )
                     }
-                }
-
-                button {
-                    +">"
-                    onClick = { props.changeMaterial(factoryProduction.material) }
-                    title = "select " + factoryProduction.material.name
                 }
             }
         }
@@ -142,6 +317,7 @@ fun hashColor(s: String, alpha: Double = 1.0): Color {
 fun ChildrenBuilder.urlOptimizationResultPresenter(props: FactorioOptimizerProps) {
     optimizationResult {
         optimizationResult = props.optimizationResult
+        logistics = props.logistics
         normalizeTarget = props.normalizeTarget
         changeMaterial = { props.changeUrl { target = it } }
         changeNormalizeTo = { props.changeUrl { normalizeTarget = 1 / it } }

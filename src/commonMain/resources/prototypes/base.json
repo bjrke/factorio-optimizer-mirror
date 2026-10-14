@@ -9296,6 +9296,65 @@
             "module_slots": 2
         }
     },
+    "transport-belt": {
+        "transport-belt": {
+            "type": "transport-belt",
+            "name": "transport-belt",
+            "speed": 0.03125
+        },
+        "fast-transport-belt": {
+            "type": "transport-belt",
+            "name": "fast-transport-belt",
+            "speed": 0.0625
+        },
+        "express-transport-belt": {
+            "type": "transport-belt",
+            "name": "express-transport-belt",
+            "speed": 0.09375
+        }
+    },
+    "inserter": {
+        "inserter": {
+            "type": "inserter",
+            "name": "inserter",
+            "rotation_speed": 0.014000000000000002
+        },
+        "fast-inserter": {
+            "type": "inserter",
+            "name": "fast-inserter",
+            "rotation_speed": 0.04
+        },
+        "long-handed-inserter": {
+            "type": "inserter",
+            "name": "long-handed-inserter",
+            "rotation_speed": 0.02
+        },
+        "burner-inserter": {
+            "type": "inserter",
+            "name": "burner-inserter",
+            "rotation_speed": 0.013000000000000001
+        },
+        "bulk-inserter": {
+            "type": "inserter",
+            "name": "bulk-inserter",
+            "bulk": true,
+            "rotation_speed": 0.04
+        }
+    },
+    "pump": {
+        "pump": {
+            "type": "pump",
+            "name": "pump",
+            "pumping_speed": 20
+        }
+    },
+    "offshore-pump": {
+        "offshore-pump": {
+            "type": "offshore-pump",
+            "name": "offshore-pump",
+            "pumping_speed": 20
+        }
+    },
     "fluid": {
         "fluid-unknown": {
             "type": "fluid",

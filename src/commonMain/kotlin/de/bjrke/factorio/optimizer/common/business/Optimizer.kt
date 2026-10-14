@@ -165,6 +165,7 @@ class Optimizer(
                     .filter { target in it.result.keys }
                     .maxByOrNull { solution[recipes.indexOf(it)] } ?: freeSource(target),
             factories = factoryProductions(target, materials, recipes, importMaterials, solution),
+            logistics = parsedRecipe.logistics,
         )
     }
 

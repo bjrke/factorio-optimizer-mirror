@@ -135,6 +135,18 @@ private val prototypeFields =
                 "vector_to_place_result",
                 "mining_area",
             ),
+        "transport-belt" to setOf("type", "name", "speed"),
+        "inserter" to
+            setOf(
+                "type",
+                "name",
+                "rotation_speed",
+                "bulk",
+                "max_belt_stack_size",
+                "stack_size_bonus",
+            ),
+        "pump" to setOf("type", "name", "pumping_speed"),
+        "offshore-pump" to setOf("type", "name", "pumping_speed"),
         "fluid" to
             setOf(
                 "type",

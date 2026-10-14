@@ -17,6 +17,8 @@ data class ParsedRecipe(
      * for synthetic tests that build a [ParsedRecipe] without a dump.
      */
     val machineStats: Map<String, MachineStats> = emptyMap(),
+    /** Belt/inserter/pump throughput and the set of fluid materials, derived from the dump. */
+    val logistics: Logistics = Logistics(),
 )
 
 /** The crafting-relevant stats of a machine prototype. */

@@ -244,4 +244,17 @@ class FactoryTest {
         ) { (factory, speed) ->
             assertEquals(speed, factory.speed, "$factory")
         }
+
+    @Test
+    fun drillsAndRecyclerOutputDirectly() =
+        assertTable(
+            listOf(
+                Factory.BURNER_MINING_DRILL,
+                Factory.ELECTRIC_MINING_DRILL,
+                Factory.BIG_MINING_DRILL,
+                Factory.RECYCLER,
+            )
+        ) { factory ->
+            assertTrue(factory.outputsDirectly, "$factory")
+        }
 }

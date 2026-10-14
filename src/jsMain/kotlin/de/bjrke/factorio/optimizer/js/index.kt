@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.business.Optimizer
 import de.bjrke.factorio.optimizer.common.business.RecipeProvider
 import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
@@ -8,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.business.defaultMods
 import de.bjrke.factorio.optimizer.common.business.normalizeTargetFromUrl
 import de.bjrke.factorio.optimizer.common.business.normalizeTargetToUrl
 import de.bjrke.factorio.optimizer.common.model.FactoryConfig
+import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.Surface
@@ -15,6 +17,7 @@ import de.bjrke.factorio.optimizer.common.model.forSurface
 import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
+import de.bjrke.factorio.optimizer.js.component.urlLogisticsSelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
 import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
 import de.bjrke.factorio.optimizer.js.component.urlPlanetSelector
@@ -56,8 +59,24 @@ class FactorioOptimizerProps {
     val parsedRecipes = RecipeProvider.forActiveMods(mods).forSurface(surface)
     val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
 
+    val logisticsConfig = LogisticsConfig(parsedRecipes.logistics, spaceAgeEnabled)
+    var belt = logisticsConfig.belt(params[ParamName("belt")])
+    var inserter = logisticsConfig.inserter(params[ParamName("inserter")])
+    var beltLanes = logisticsConfig.beltLanes(params[ParamName("lanes")])
+    var beltStack = logisticsConfig.beltStack(params[ParamName("beltStack")])
+    var inserterStack = logisticsConfig.inserterStack(params[ParamName("inserterStack")], inserter)
+    val logistics =
+        LogisticsCalculator(
+            parsedRecipes.logistics,
+            belt,
+            inserter,
+            beltLanes,
+            beltStack,
+            inserterStack,
+        )
+
     private fun createNewUrl(): String =
-        "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/${factories.toUrlParam()}/${mods.sorted().joinToString(",")}/${surface.toUrlParam()}"
+        "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/${factories.toUrlParam()}/${mods.sorted().joinToString(",")}/${surface.toUrlParam()}/${belt.code}/${inserter.code}/$beltLanes/$beltStack/$inserterStack"
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         navigate {
@@ -76,6 +95,7 @@ val RouterBasedParams =
                 div { urlMaterialSelector(props) }
                 div { urlPlanetSelector(props) }
                 div { urlFactorySelector(props) }
+                div { urlLogisticsSelector(props) }
                 div { urlSpaceAgeToggle(props) }
             }
             div {
@@ -95,6 +115,20 @@ fun main() {
         val rootRoute = createRootRoute()
 
         val indexRoute =
+            createRoute(
+                RouteOptions(
+                    getParentRoute = { rootRoute },
+                    path =
+                        RoutePath(
+                            "/\$normalizeTarget/\$target/\$factories/\$mods/\$surface" +
+                                "/\$belt/\$inserter/\$lanes/\$beltStack/\$inserterStack"
+                        ),
+                    component = RouterBasedParams,
+                )
+            )
+
+        // legacy route without the logistics segment, defaults to the fastest belt/inserter
+        val surfaceRoute =
             createRoute(
                 RouteOptions(
                     getParentRoute = { rootRoute },
@@ -122,7 +156,7 @@ fun main() {
                 )
             )
 
-        rootRoute.addChildren(arrayOf(indexRoute, legacyRoute, catchAllRoute))
+        rootRoute.addChildren(arrayOf(indexRoute, surfaceRoute, legacyRoute, catchAllRoute))
 
         val appRouter =
             createRouter(

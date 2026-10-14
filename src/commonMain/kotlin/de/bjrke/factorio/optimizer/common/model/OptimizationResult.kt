@@ -29,6 +29,8 @@ data class OptimizationResult(
     val recipe: Recipe,
     // keyed by recipe: several recipes can produce the same material and run in parallel
     val factories: Map<Recipe, FactoryProduction>,
+    // the logistics prototypes the calculator uses to turn rates into belts/inserters/pumps
+    val logistics: Logistics = Logistics(),
 ) {
     /** Every recipe that is labeled with [material]. */
     fun producers(material: Material): List<FactoryProduction> =

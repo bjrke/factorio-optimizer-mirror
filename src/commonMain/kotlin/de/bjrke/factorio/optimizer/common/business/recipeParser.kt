@@ -7,19 +7,29 @@ private const val DEFAULT_AMOUNT = 1.0
 private const val DEFAULT_PROBABILITY = 1.0
 private const val DEFAULT_CATEGORY = "crafting"
 
-internal fun JsonObject.string(name: String) = (this[name] as? JsonPrimitive)?.contentOrNull
+internal fun JsonObject?.primitive(name: String) = this?.get(name) as? JsonPrimitive
 
-internal fun JsonObject.number(name: String) = (this[name] as? JsonPrimitive)?.doubleOrNull
+internal fun JsonObject?.string(name: String) = primitive(name)?.contentOrNull
 
-internal fun JsonObject.boolean(name: String) = (this[name] as? JsonPrimitive)?.booleanOrNull
+internal fun JsonObject?.number(name: String) = primitive(name)?.doubleOrNull
 
-internal fun JsonObject.table(name: String) = this[name] as? JsonObject
+internal fun JsonObject?.boolean(name: String) = primitive(name)?.booleanOrNull
 
-internal fun JsonObject.array(name: String) = this[name] as? JsonArray
+internal fun JsonObject?.table(name: String) =
+    (this?.get(name) as? JsonObject) ?: JsonObject(emptyMap())
 
-internal fun JsonArray.strings() = mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+internal fun JsonObject?.array(name: String) =
+    (this?.get(name) as? JsonArray) ?: JsonArray(emptyList())
 
-internal fun JsonArray.objects() = mapNotNull { it as? JsonObject }
+internal fun JsonObject?.objects(name: String) = array(name).filterIsInstance<JsonObject>()
+
+internal fun JsonObject?.strings(name: String) =
+    array(name).filterIsInstance<JsonPrimitive>().mapNotNull(JsonPrimitive::contentOrNull)
+
+inline fun <reified R> JsonObject.filterValueIsInstance(): List<Pair<String, R>> =
+    mapNotNull { (k, v) ->
+        if (v is R) (k to v) else null
+    }
 
 /**
  * The probability that a result is produced, from `probability`, `shared_probability` or
@@ -27,8 +37,8 @@ internal fun JsonArray.objects() = mapNotNull { it as? JsonObject }
  */
 private fun resultProbability(result: JsonObject): Double =
     result.number("probability")
-        ?: result.table("shared_probability")?.let {
-            (it.number("max") ?: 1.0) - (it.number("min") ?: 0.0)
+        ?: result.table("shared_probability").let {
+            if (it.isEmpty()) null else (it.number("max") ?: 1.0) - (it.number("min") ?: 0.0)
         }
         ?: result.number("independent_probability")
         ?: DEFAULT_PROBABILITY
@@ -59,21 +69,20 @@ fun parsePrototypes(
 
     val parsedRecipes =
         sequence {
-                for ((name, element) in root.table("recipe") ?: JsonObject(emptyMap())) {
-                    val prototype = element as? JsonObject ?: continue
-                    if (prototype.boolean("parameter") == true) continue
+                for ((name, element) in root.table("recipe").filterValueIsInstance<JsonObject>()) {
+                    if (element.boolean("parameter") == true) continue
 
-                    val subgroupName = prototype.string("subgroup")
+                    val subgroupName = element.string("subgroup")
                     when (subgroupName) {
                         "fill-barrel",
                         "empty-barrel" -> continue
                     }
 
                     val result = buildMap {
-                        prototype.string("result")?.also {
-                            put(material(it), (prototype.number("result_count") ?: DEFAULT_AMOUNT))
+                        element.string("result")?.also {
+                            put(material(it), (element.number("result_count") ?: DEFAULT_AMOUNT))
                         }
-                        for (entry in prototype.array("results")?.objects().orEmpty()) {
+                        for (entry in element.objects("results")) {
                             val resultName = entry.string("name") ?: continue
 
                             // recycling recipes express fractional yields via
@@ -92,17 +101,16 @@ fun parsePrototypes(
                     if (result.isEmpty()) continue
 
                     val ingredients = buildMap {
-                        for (entry in prototype.array("ingredients")?.objects().orEmpty()) {
-                            val ingredientName = entry.string("name") ?: continue
-                            put(material(ingredientName), entry.number("amount") ?: DEFAULT_AMOUNT)
+                        for (entry in element.objects("ingredients")) {
+                            entry.string("name")?.also {
+                                put(material(it), entry.number("amount") ?: DEFAULT_AMOUNT)
+                            }
                         }
                     }
 
                     val categories =
-                        prototype
-                            .array("categories")
-                            ?.strings()
-                            .orEmpty()
+                        element
+                            .strings("categories")
                             .ifEmpty { listOf(DEFAULT_CATEGORY) }
                             .mapNotNull(::category)
                             .toSet()
@@ -112,7 +120,7 @@ fun parsePrototypes(
                     // hidden recipes are internal/cheat prototypes (loaders, infinity chests, ...);
                     // the auto-generated lossy `*-recycling` recipes are hidden too, but they are
                     // the recycler's real production recipes and must be kept.
-                    if (prototype.boolean("hidden") == true && !recycling) continue
+                    if (element.boolean("hidden") == true && !recycling) continue
                     // a self-recycling recipe (an ingredient is also a result) is a lossy raw->raw
                     // conversion that would let any resource "produce itself"; drop it.
                     if (recycling && ingredients.keys.intersect(result.keys).isNotEmpty()) continue
@@ -122,10 +130,10 @@ fun parsePrototypes(
                             name = name,
                             ingredients = ingredients,
                             result = result,
-                            time = prototype.number("energy_required") ?: 0.5,
+                            time = element.number("energy_required") ?: 0.5,
                             subgroup = subGroup(subgroupName),
                             categories = categories,
-                            surfaceConditions = prototype.surfaceConditions(),
+                            surfaceConditions = element.surfaceConditions(),
                         )
                     )
                 }
@@ -158,6 +166,75 @@ fun parsePrototypes(
         materials = materialsBuilder.values.sortedBy(Material::name),
         recipes = recipes,
         machineStats = machineStats(root),
+        logistics = logisticsStats(root),
+    )
+}
+
+/**
+ * Belt speeds (tiles per tick), inserter stats, the fastest pump rate (fluid per second) and the
+ * set of fluid materials, all derived from the dump.
+ */
+fun logisticsStats(root: JsonObject): Logistics {
+    val belts =
+        root
+            .table("transport-belt")
+            .filterValueIsInstance<JsonObject>()
+            .mapNotNull { (name, element) ->
+                element.number("speed")?.let { name to it }
+            }
+            .toMap()
+
+    // The inserter capacity bonus research tops up the hand size. A bulk inserter (and the stack
+    // inserter, which is a bulk inserter) also gets the bulk inserter capacity bonus, a plain
+    // inserter the generic stack size bonus.
+    val capacityTechs =
+        root
+            .table("technology")
+            .filterValueIsInstance<JsonObject>()
+            .filter { (name, _) -> name.startsWith("inserter-capacity-bonus") }
+            .map { (_, tech) -> tech }
+    val bulkCapacityBonus = capacityTechs.sumOf { it.effectTotal("bulk-inserter-capacity-bonus") }
+    val stackSizeBonus = capacityTechs.sumOf { it.effectTotal("inserter-stack-size-bonus") }
+
+    val inserters =
+        root
+            .table("inserter")
+            .filterValueIsInstance<JsonObject>()
+            .mapNotNull { (name, element) ->
+                val rotationSpeed = element.number("rotation_speed") ?: return@mapNotNull null
+                val bulk = element.boolean("bulk") ?: false
+                // a bulk inserter starts at two items, the stack inserter adds its prototype
+                // stack_size_bonus on top; every other inserter carries a single item
+                val minStack =
+                    (if (bulk) 2 else 1) + (element.number("stack_size_bonus")?.toInt() ?: 0)
+                name to
+                    InserterStats(
+                        rotationSpeed = rotationSpeed,
+                        bulk = bulk,
+                        minStack = minStack,
+                        maxStack = minStack + if (bulk) bulkCapacityBonus else stackSizeBonus,
+                        // only the stack inserter carries max_belt_stack_size; the bulk inserter
+                        // cannot stack items on a belt
+                        stacksOnBelt = element.number("max_belt_stack_size") != null,
+                    )
+            }
+            .toMap()
+
+    // the fluid system is limited by the fastest pump, not by the pipes; both pumps are 1200/s
+    val pumpRate =
+        listOf("pump", "offshore-pump")
+            .flatMap { root.table(it).values.filterIsInstance<JsonObject>() }
+            .mapNotNull { it.number("pumping_speed") }
+            .maxOrNull()
+            ?.times(60.0)
+
+    val fluids = root.table("fluid").keys.mapTo(mutableSetOf(), Material::of)
+
+    return Logistics(
+        belts = belts,
+        inserters = inserters,
+        pumpRate = pumpRate,
+        fluids = fluids,
     )
 }
 
@@ -166,39 +243,42 @@ fun parsePrototypes(
  * in the dump. Mining drills use `resource_categories`/`mining_speed` instead of
  * `crafting_categories`/`crafting_speed`.
  */
-fun machineStats(root: JsonObject): Map<String, MachineStats> {
-    val stats = mutableMapOf<String, MachineStats>()
-
-    fun add(kind: String, categoriesKey: String, speedKey: String) {
-        root.table(kind)?.forEach { (name, element) ->
-            val prototype = element as? JsonObject ?: return@forEach
+fun machineStats(root: JsonObject) = buildMap {
+    fun addKind(kind: String, categoriesKey: String, speedKey: String) {
+        root.table(kind).filterValueIsInstance<JsonObject>().forEach { (name, element) ->
             val categories =
-                prototype
-                    .array(categoriesKey)
-                    ?.strings()
-                    .orEmpty()
+                element
+                    .strings(categoriesKey)
                     .mapNotNull { miningCategory(it) ?: category(it) }
                     .toSet()
-            if (categories.isEmpty()) return@forEach
-            stats[name] =
-                MachineStats(
-                    categories = categories,
-                    speed = prototype.number(speedKey) ?: 1.0,
-                    productivity =
-                        prototype
-                            .table("effect_receiver")
-                            ?.table("base_effect")
-                            ?.number("productivity") ?: 0.0,
+            if (categories.isNotEmpty()) {
+                put(
+                    name,
+                    MachineStats(
+                        categories = categories,
+                        speed = element.number(speedKey) ?: 1.0,
+                        productivity =
+                            element
+                                .table("effect_receiver")
+                                .table("base_effect")
+                                .number("productivity") ?: 0.0,
+                    ),
                 )
+            }
         }
     }
 
-    add("assembling-machine", "crafting_categories", "crafting_speed")
-    add("furnace", "crafting_categories", "crafting_speed")
-    add("rocket-silo", "crafting_categories", "crafting_speed")
-    add("mining-drill", "resource_categories", "mining_speed")
-    return stats
+    addKind("assembling-machine", "crafting_categories", "crafting_speed")
+    addKind("furnace", "crafting_categories", "crafting_speed")
+    addKind("rocket-silo", "crafting_categories", "crafting_speed")
+    addKind("mining-drill", "resource_categories", "mining_speed")
 }
+
+/** The summed `modifier` of every [effectType] effect of a technology. */
+private fun JsonObject.effectTotal(effectType: String) =
+    objects("effects")
+        .filter { it.string("type") == effectType }
+        .sumOf { it.number("modifier")?.toInt() ?: 1 }
 
 private fun miningCategory(identifier: String) =
     when (identifier) {
@@ -208,8 +288,8 @@ private fun miningCategory(identifier: String) =
         else -> null
     }
 
-private fun JsonObject.surfaceConditions(): List<SurfaceCondition> =
-    array("surface_conditions")?.objects().orEmpty().mapNotNull { table ->
+private fun JsonObject.surfaceConditions() =
+    objects("surface_conditions").mapNotNull { table ->
         val property = table.string("property")?.let(::surfaceProperty) ?: return@mapNotNull null
         val min = table.number("min")?.toInt() ?: Int.MIN_VALUE
         val max = table.number("max")?.toInt() ?: Int.MAX_VALUE
