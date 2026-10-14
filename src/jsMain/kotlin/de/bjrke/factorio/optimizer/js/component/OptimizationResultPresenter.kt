@@ -111,6 +111,9 @@ private fun ChildrenBuilder.groupBox(inline: Boolean = false, content: ChildrenB
     div {
         css {
             border = Border(1.px, LineStyle.solid, rgb(120, 120, 120))
+            // the theme token wins; the literal is the light fallback for contexts without the
+            // stylesheet tokens (e.g. component tests)
+            borderColor = Color("var(--border, #787878)")
             borderRadius = 0.25.rem
             padding = 0.25.rem
             marginBottom = 0.25.rem
@@ -248,7 +251,13 @@ internal val optimizationResult =
                     display = Display.inlineBlock
                     verticalAlign = VerticalAlign.middle
                     padding = 0.5.rem
-                    backgroundColor = hashColor(factoryProduction.material.name, 0.75)
+                    // the material hue tints the block (keeping its identity) but is mixed with
+                    // the themed panel so it stays muted in dark mode
+                    backgroundColor =
+                        Color(
+                            "color-mix(in srgb, ${hashColor(factoryProduction.material.name)} " +
+                                "var(--factory-tint, 70%), var(--factory-panel, #fff))"
+                        )
                 }
                 div {
                     css {

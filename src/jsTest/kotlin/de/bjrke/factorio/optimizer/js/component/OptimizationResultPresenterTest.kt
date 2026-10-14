@@ -18,6 +18,7 @@ import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -196,6 +197,22 @@ class OptimizationResultPresenterTest : ComponentTest() {
                 "group $index is not boxed",
             )
         }
+    }
+
+    @Test
+    fun themedFactoryBlocksAndGroupBoxesKeepTheirBackgroundAndBorder() {
+        val rendered =
+            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+
+        val block = rendered.container.querySelector(":scope > div")!!
+        val group = materialGroups(rendered.container).item(0)!!
+
+        // the colours come from theme tokens; the light fallbacks must still resolve on the bare
+        // test page, which defines no stylesheet tokens
+        assertAll(
+            { assertNotEquals("rgba(0, 0, 0, 0)", computedStyle(block, "backgroundColor")) },
+            { assertNotEquals("rgba(0, 0, 0, 0)", computedStyle(group, "borderTopColor")) },
+        )
     }
 
     @Test

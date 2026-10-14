@@ -5,8 +5,45 @@
     <title>Factorio Optimizer</title>
     <link rel="icon" type="image/png" href="icons/assembling-machine-3.png">
     <style>
+        /* Light theme; the dark (Factorio-flavored) overrides follow in the media query. The
+           same token names are read by the emotion styles in the Kotlin components. */
+        :root {
+            color-scheme: light dark;
+            --bg: #fff;
+            --fg: #000;
+            --border: #787878;
+            --input-border: #999;
+            --dropdown-bg: #fff;
+            --dropdown-border: #888;
+            --highlight: #8fb8ff;
+            --highlight-fg: #000;
+            --muted: #888;
+            --link: #0000ee;
+            --factory-tint: 70%;
+            --factory-panel: #fff;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #313131;
+                --fg: #e6e6e6;
+                --border: #5a5a5a;
+                --input-border: #6b6b6b;
+                --dropdown-bg: #3a3a3a;
+                --dropdown-border: #555;
+                --highlight: #b5731f;
+                --highlight-fg: #1a1a1a;
+                --muted: #a0a0a0;
+                --link: #f0a93a;
+                --factory-tint: 35%;
+                --factory-panel: #262626;
+            }
+        }
         html, body { height: 100%; margin: 0; }
-        body { display: flex; flex-direction: column; }
+        body {
+            display: flex; flex-direction: column;
+            background: var(--bg); color: var(--fg);
+        }
+        a { color: var(--link); }
         .app-root { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
         .app-layout { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
         .app-header {
@@ -20,7 +57,8 @@
         .material-selector-input {
             width: 16rem; height: 2.5rem; box-sizing: border-box;
             padding-left: 2.5rem; font: inherit; color: inherit;
-            border: 1px solid #999; border-radius: 4px;
+            background: var(--bg);
+            border: 1px solid var(--input-border); border-radius: 4px;
         }
         .material-selector-input::placeholder { color: inherit; opacity: 1; }
         .material-selector .material-selector-icon {
@@ -30,20 +68,23 @@
         .material-selector-dropdown {
             position: absolute; z-index: 10; top: 100%; left: 0; min-width: 100%;
             max-height: 20rem; overflow-y: auto;
-            background: #fff; border: 1px solid #888; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+            background: var(--dropdown-bg); border: 1px solid var(--dropdown-border);
+            box-shadow: 0 2px 6px rgba(0,0,0,.3);
         }
-        .material-selector-empty { padding: .2rem .4rem; color: #888; }
+        .material-selector-empty { padding: .2rem .4rem; color: var(--muted); }
         .material-selector-option {
             display: flex; align-items: center; gap: .35rem;
             padding: .2rem .4rem; white-space: nowrap; cursor: pointer;
         }
-        .material-selector-option.highlighted { background: #8fb8ff; }
+        .material-selector-option.highlighted {
+            background: var(--highlight); color: var(--highlight-fg);
+        }
         .icon-option {
             display: inline-flex; align-items: center;
             padding: 6px; margin: 2px; border-radius: 6px; cursor: pointer;
             user-select: none; background: transparent;
         }
-        .icon-option.selected { background: #8fb8ff; }
+        .icon-option.selected { background: var(--highlight); }
         .icon-option.disabled { opacity: .4; cursor: not-allowed; }
         .visually-hidden {
             position: absolute; width: 1px; height: 1px;
