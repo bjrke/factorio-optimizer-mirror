@@ -12,7 +12,7 @@ object RecipeProvider {
     fun forActiveMods(selected: Set<String>): ParsedRecipe {
         val spaceAge = SPACE_AGE_MOD in activeMods(selected)
         return cache.getOrPut(spaceAge) {
-            parsePrototypes(loadPrototypeDump(spaceAge)) { defaultRecipes(spaceAge) }
+            parsePrototypes(loadPrototypeDump(spaceAge), allSciencePacks(spaceAge))
         }
     }
 }

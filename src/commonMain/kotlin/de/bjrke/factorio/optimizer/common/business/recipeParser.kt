@@ -48,10 +48,7 @@ private fun resultProbability(result: JsonObject): Double =
  * task) into the optimizer's model. Only the prototype types the optimizer needs are read;
  * everything else in the dump is ignored.
  */
-fun parsePrototypes(
-    json: String,
-    defaultRecipesProvider: () -> List<Recipe> = { listOf() },
-): ParsedRecipe {
+fun parsePrototypes(json: String, customRecipes: Iterable<Recipe> = emptyList()): ParsedRecipe {
     val root =
         Json.parseToJsonElement(json) as? JsonObject
             ?: return ParsedRecipe(emptyList(), emptyList())
@@ -137,7 +134,7 @@ fun parsePrototypes(
 
                 yieldAll(resourceRecipes(root))
                 yieldAll(spoilageRecipes(root))
-                yieldAll(defaultRecipesProvider())
+                yieldAll(customRecipes)
             }
             .associateBy { it.name }
 

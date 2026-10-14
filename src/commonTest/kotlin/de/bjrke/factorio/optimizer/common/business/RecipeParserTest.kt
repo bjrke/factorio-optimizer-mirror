@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 class RecipeParserTest {
 
     private fun parse(s: String) =
-        parsePrototypes(s, defaultRecipesProvider = { listOf() })
+        parsePrototypes(s)
             .recipes
             // resource, harvesting, asteroid and spoilage recipes are derived separately
             .filter {
@@ -151,8 +151,7 @@ class RecipeParserTest {
                     "ingredients":[{"type":"item","name":"iron-plate","amount":2}],
                     "results":[{"type":"item","name":"iron-gear-wheel","amount":1}]}
                 }}
-                """,
-                defaultRecipesProvider = { listOf() },
+                """
             )
 
         val names = parsed.materials.map(Material::name)
@@ -393,8 +392,7 @@ class RecipeParserTest {
                         "big-mining-drill": {"resource_categories": ["basic-solid", "hard-solid"], "mining_speed": 2.5}
                       }
                     }
-                    """,
-                    defaultRecipesProvider = { listOf() },
+                    """
                 )
                 .machineStats
 
@@ -444,8 +442,7 @@ class RecipeParserTest {
                       "offshore-pump": {"offshore-pump": {"pumping_speed": 20}},
                       "fluid": {"water": {}, "crude-oil": {}}
                     }
-                    """,
-                    defaultRecipesProvider = { listOf() },
+                    """
                 )
                 .logistics
 

@@ -28,7 +28,7 @@ class RecipeProviderTest {
     fun parseDumpRecipes() =
         assertEquals(
             setOf("copper-plate", "tungsten-plate"),
-            parsePrototypes(dump, defaultRecipesProvider = { listOf() })
+            parsePrototypes(dump)
                 .recipes
                 .filter {
                     it.categories.none(extractionCategories::contains) &&

@@ -29,13 +29,10 @@ private val spaceAgeSciencePacks =
             "promethium-science-pack",
         )
 
-private fun allSciencePacks(spaceAge: Boolean) =
+private fun allSciencePacks(sciencePacks: List<String>) =
     Recipe(
         name = ALL_SCIENCE_PACKS,
-        ingredients =
-            (if (spaceAge) spaceAgeSciencePacks else baseSciencePacks).associate {
-                Material(it) to 1.0
-            },
+        ingredients = sciencePacks.associate { Material(it) to 1.0 },
         result = mapOf(Material(ALL_SCIENCE_PACKS) to 1.0),
         time = 1.0,
         categories = setOf(Category.SCIENCE_LAB),
@@ -45,7 +42,7 @@ private fun allSciencePacks(spaceAge: Boolean) =
  * The base game produces space science in the rocket silo. In Space Age the mod ships its own
  * recipe (assembled from asteroids in space), so this fallback must not be added then.
  */
-private fun spaceSciencePack() =
+private fun spaceSciencePackForBaseMod() =
     Recipe(
         name = SPACE_SCIENCE_PACK,
         ingredients = mapOf(Material("satellite") to 1.0, Material("rocket-part") to 100.0),
@@ -59,5 +56,10 @@ private fun spaceSciencePack() =
  * every science pack (the default optimisation target) and, for the base game, the space science
  * recipe the rocket silo runs (Space Age ships its own recipe instead).
  */
-fun defaultRecipes(spaceAge: Boolean) =
-    (if (spaceAge) emptyList() else listOf(spaceSciencePack())) + listOf(allSciencePacks(spaceAge))
+fun allSciencePacks(spaceAge: Boolean) =
+    if (spaceAge) listOf(allSciencePacks(spaceAgeSciencePacks))
+    else
+        listOf(
+            spaceSciencePackForBaseMod(),
+            allSciencePacks(baseSciencePacks),
+        )

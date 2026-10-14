@@ -9,7 +9,7 @@ import kotlin.test.assertFalse
 
 class DefaultRecipesTest {
 
-    private fun recipes(spaceAge: Boolean) = defaultRecipes(spaceAge).associateBy(Recipe::name)
+    private fun recipes(spaceAge: Boolean) = allSciencePacks(spaceAge).associateBy(Recipe::name)
 
     private val baseSciencePacks =
         setOf(
