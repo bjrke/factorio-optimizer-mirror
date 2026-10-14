@@ -52,7 +52,25 @@
         }
         .app-header > div { display: contents; }
         .app-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-        .footer { flex-shrink: 0; }
+        .footer {
+            flex-shrink: 0;
+            display: flex; align-items: center; flex-wrap: wrap; gap: .35rem;
+            padding: 2px 8px; font-size: .85em;
+        }
+        .footer img { vertical-align: middle; }
+        .footer-license { font: inherit; color: var(--link); background: none; border: none; padding: 0; cursor: pointer; }
+        .license-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, .5);
+        }
+        .license-dialog {
+            max-width: min(48rem, 90vw); max-height: 80vh; overflow-y: auto;
+            padding: 1rem; border: 1px solid var(--border); border-radius: 6px;
+            background: var(--dropdown-bg); color: var(--fg);
+        }
+        .license-dialog pre { margin: 0; white-space: pre-wrap; font: inherit; }
+        .license-close { float: right; }
         .material-selector { position: relative; display: inline-block; margin-right: 2px; }
         .material-selector-input {
             width: 16rem; height: 2.5rem; box-sizing: border-box;
@@ -95,10 +113,6 @@
 </head>
 <body>
     <script src="factorio-optimizer.js"></script>
-    <div class="footer">
-        Open-Source: <a href="https://gitlab.com/bjrke/factorio-optimizer" target="_blank">gitlab.com/bjrke/factorio-optimizer</a> |
-        License: <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache 2.0</a> |
-        Icons and Recipes: ©<a href="https://www.factorio.com/game/about" target="_blank">Wube Software</a>
-    </div>
+    <div class="footer" id="footer"></div>
 </body>
 </html>

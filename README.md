@@ -1,5 +1,7 @@
 # Factorio-Optimizer
 
+[![pipeline status](https://gitlab.com/bjrke/factorio-optimizer/badges/main/pipeline.svg)](https://gitlab.com/bjrke/factorio-optimizer/-/pipelines/latest?ref=main)
+
 #### Website
 <https://bjrke.gitlab.io/factorio-optimizer>
 

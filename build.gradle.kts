@@ -1,6 +1,8 @@
 import de.bjrke.factorio.optimizer.buildlogic.dumpPrototypes
 import de.bjrke.factorio.optimizer.buildlogic.sanitizePrototypes
 import de.bjrke.factorio.optimizer.buildlogic.updateImages
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 plugins {
     kotlin("multiplatform") version libs.versions.kotlin
@@ -12,6 +14,45 @@ group = "de.bjrke.factorio"
 version = "1.0"
 
 repositories { mavenCentral() }
+
+private fun gitRevParse(vararg args: String) =
+    providers
+        .exec { commandLine("git", "rev-parse", *args) }
+        .standardOutput
+        .asText
+        .map(String::trim)
+        .orElse("unknown")
+        .get()
+
+private val generatedKotlinDir = layout.buildDirectory.dir("generated/commonMain/kotlin")
+private val generatedResourcesDir = layout.buildDirectory.dir("generated/jsMain/resources")
+
+val generateBuildInfo =
+    tasks.register<Copy>("generateBuildInfo") {
+        group = "build"
+        description = "Generates BuildInfo.kt (build date, git commit, branch) into commonMain"
+        from("buildSrc/templates")
+        rename("BuildInfo.kt.template", "BuildInfo.kt")
+        into(generatedKotlinDir.map { it.dir("de/bjrke/factorio/optimizer") })
+        expand(
+            mapOf(
+                "date" to Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
+                "commit" to
+                    (System.getenv("CI_COMMIT_SHORT_SHA") ?: gitRevParse("--short", "HEAD")),
+                "branch" to
+                    (System.getenv("CI_COMMIT_REF_NAME") ?: gitRevParse("--abbrev-ref", "HEAD")),
+            )
+        )
+    }
+
+val generateLicenseResource =
+    tasks.register<Copy>("generateLicenseResource") {
+        group = "build"
+        description = "Copies LICENSE into the jsMain resources so the web UI can display it"
+        from("LICENSE")
+        into(generatedResourcesDir)
+        rename("LICENSE", "LICENSE.txt")
+    }
 
 kotlin {
     jvmToolchain { languageVersion.set(JavaLanguageVersion.of(25)) }
@@ -45,11 +86,15 @@ kotlin {
     }
 
     sourceSets {
-        commonMain { dependencies { implementation(libs.kotlinx.serialization.json) } }
+        commonMain {
+            kotlin.srcDir(generateBuildInfo.map { generatedKotlinDir.get().asFile })
+            dependencies { implementation(libs.kotlinx.serialization.json) }
+        }
 
         commonTest { dependencies { implementation(kotlin("test")) } }
 
         jsMain {
+            resources.srcDir(generateLicenseResource.map { generatedResourcesDir.get().asFile })
             dependencies {
                 implementation(dependencies.platform(libs.kotlin.wrappers.bom))
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-emotion-react

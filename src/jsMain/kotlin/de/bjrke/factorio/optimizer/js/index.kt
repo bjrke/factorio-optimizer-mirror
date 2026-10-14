@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.factorio.optimizer.common.model.forSurface
 import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.toUrlParam
+import de.bjrke.factorio.optimizer.js.component.appFooter
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlLogisticsSelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
@@ -111,6 +112,10 @@ fun main() {
         val root = document.createElement("div")
         root.className = ClassName("app-root")
         document.body.prepend(root)
+
+        document.querySelector("#footer")?.let { footerElement ->
+            createRoot(footerElement).render(appFooter.create())
+        }
 
         val rootRoute = createRootRoute()
 

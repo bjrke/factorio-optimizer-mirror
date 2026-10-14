@@ -1,0 +1,8 @@
+// GENERATED FILE — do not edit, regenerate via the `generateBuildInfo` Gradle task.
+package de.bjrke.factorio.optimizer
+
+object BuildInfo {
+    const val date = "${date}"
+    const val commit = "${commit}"
+    const val branch = "${branch}"
+}
