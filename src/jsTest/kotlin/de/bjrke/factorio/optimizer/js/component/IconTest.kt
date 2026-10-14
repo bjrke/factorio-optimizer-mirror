@@ -72,6 +72,11 @@ class IconTest : ComponentTest() {
             "raw-fish" to "fish",
             "asteroid-collection" to "asteroid-collector",
             "space-age" to "factorio-space-age-logo-11tiles",
+            "fluoroketone" to "fluoroketone-hot",
+            "barrel" to "empty-barrel",
+            "heat-exchanger" to "heat-boiler",
+            "capture-robot-rocket" to "capture-bot",
+            "landing-pad-unloading-bay" to "cargo-unloading-bay",
         ) { (name, file) ->
             assertEquals(listOf("icons/$file.png"), renderIcon(name).sources())
         }
