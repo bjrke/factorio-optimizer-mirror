@@ -4,9 +4,9 @@ package de.bjrke.factorio.optimizer.common.model
 data class Material private constructor(val name: String) {
 
     companion object {
-        private val materialsCache = mutableMapOf<String, Material>()
+        private val cache = mutableMapOf<String, Material>()
 
-        operator fun invoke(name: String) = materialsCache.getOrPut(name) { Material(name) }
+        operator fun invoke(name: String) = cache.getOrPut(name) { Material(name) }
     }
 }
 
@@ -40,7 +40,15 @@ data class Recipe(
     val surfaceConditions: List<SurfaceCondition> = emptyList(),
 )
 
-data class Subgroup(val name: String = "no subgroup")
+@ConsistentCopyVisibility
+data class Subgroup private constructor(val name: String) {
+
+    companion object {
+        private val cache = mutableMapOf<String, Subgroup>()
+
+        operator fun invoke(name: String = "no subgroup") = cache.getOrPut(name) { Subgroup(name) }
+    }
+}
 
 enum class SurfaceProperty(val identifier: String) {
     PRESSURE("pressure"),
