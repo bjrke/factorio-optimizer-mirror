@@ -26,7 +26,7 @@ internal val planetSelector =
             selectableIcon(
                 name = surface.identifier,
                 selected = props.selectedSurface == surface,
-                inputType = InputType.Companion.radio,
+                inputType = InputType.radio,
                 groupName = "surface",
                 disabled = !props.enabled,
                 onChange = { props.selectSurface(surface) },

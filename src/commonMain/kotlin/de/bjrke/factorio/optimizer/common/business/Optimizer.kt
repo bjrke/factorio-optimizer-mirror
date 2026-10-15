@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.FactoryConfig
 
 private const val EPSILON = 1e-7
 private const val SLACK = 1e-6
@@ -18,8 +19,8 @@ private const val IMPORT_DISPLAY_EPSILON = 1e-4
  * intermediates.
  */
 class Optimizer(
-    private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(defaultMods),
-    private val factories: Set<Factory> = defaultFactories,
+    private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(),
+    private val factories: Set<Factory> = FactoryConfig().defaults,
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()
 

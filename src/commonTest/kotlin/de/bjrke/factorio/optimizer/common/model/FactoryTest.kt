@@ -94,17 +94,69 @@ class FactoryTest {
     @Test
     fun urlRoundTrip() =
         assertAll(
-            { assertEquals(base.defaults, base.fromUrl(base.defaults.toUrlParam())) },
-            { assertEquals(spaceAge.defaults, spaceAge.fromUrl(spaceAge.defaults.toUrlParam())) },
+            { assertEquals(base.defaults, base.fromUrl(base.toUrlParam(base.defaults))) },
+            {
+                assertEquals(
+                    spaceAge.defaults,
+                    spaceAge.fromUrl(spaceAge.toUrlParam(spaceAge.defaults)),
+                )
+            },
+        )
+
+    @Test
+    fun urlDecodingIgnoresTheSurfaceBeltAndFlagCodes() =
+        assertAll(
+            {
+                assertEquals(
+                    base.defaults,
+                    base.fromUrl(base.toUrlParam(base.defaults) + "opteySL"),
+                )
+            },
+            {
+                assertEquals(
+                    spaceAge.defaults,
+                    spaceAge.fromUrl(spaceAge.toUrlParam(spaceAge.defaults) + "opteySL"),
+                )
+            },
         )
 
     @Test
     fun urlRoundTripKeepsAlwaysEnabledFactories() {
-        val decoded = base.fromUrl(base.defaults.toUrlParam())
+        val decoded = base.fromUrl(base.toUrlParam(base.defaults))
         assertTableOf(Factory.PUMPJACK, Factory.OFFSHORE_PUMP) { factory ->
             assertTrue(factory in decoded, "$factory")
         }
     }
+
+    @Test
+    fun groupDefaultsAreNotEncoded() {
+        assertAll(
+            // the assembler-3, electric furnace and electric mining drill hold no codes, so the
+            // base-game defaults encode to the empty string
+            { assertEquals("", base.toUrlParam(base.defaults)) },
+            // with Space Age only the independently toggled machines remain in the parameter
+            {
+                assertEquals(
+                    spaceAge.singles.mapNotNull { it.code }.sorted().joinToString(""),
+                    spaceAge.toUrlParam(spaceAge.defaults),
+                )
+            },
+        )
+    }
+
+    @Test
+    fun absentSelectionTurnsOnTheDefaultMachines() =
+        assertAll(
+            { assertEquals(base.defaults, base.fromUrl(null)) },
+            { assertEquals(base.defaults, base.fromUrl("")) },
+            { assertEquals(spaceAge.defaults, spaceAge.fromUrl(null)) },
+            { assertEquals(spaceAge.defaults, spaceAge.fromUrl("")) },
+        )
+
+    @Test
+    fun aSelectionWithoutAMachinesCodeTurnsItOff() =
+        // Space Age on but no factory code: the independently toggled machines are all off
+        assertEquals(spaceAge.defaults - spaceAge.singles, spaceAge.fromUrl("S"))
 
     @Test
     fun rocketSiloIsBaseOnlyAndAlwaysOn() =

@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import react.ChildrenBuilder
 import react.FC
@@ -28,8 +27,6 @@ internal val spaceAgeToggle =
 fun ChildrenBuilder.urlSpaceAgeToggle(props: FactorioOptimizerProps) {
     spaceAgeToggle {
         enabled = props.spaceAgeEnabled
-        toggle = { enabled ->
-            props.changeUrl { mods = if (enabled) mods + SPACE_AGE_MOD else mods - SPACE_AGE_MOD }
-        }
+        toggle = { enabled -> props.changeUrl { spaceAgeEnabled = enabled } }
     }
 }

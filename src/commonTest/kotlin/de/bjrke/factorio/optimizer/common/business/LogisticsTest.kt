@@ -348,14 +348,33 @@ class LogisticsTest {
     }
 
     @Test
-    fun beltLanesDefaultToHalfAndCanBeFull() {
+    fun beltLanesDefaultToHalfAndTheFullBeltFlagSelectsBoth() {
         val config = LogisticsConfig(testLogistics, spaceAge = true)
 
         assertAll(
             { assertEquals(1, config.beltLanes(null)) },
-            { assertEquals(2, config.beltLanes("2")) },
-            { assertEquals(2, config.beltLanes("9")) },
-            { assertEquals(1, config.beltLanes("0")) },
+            { assertEquals(1, config.beltLanes("tx")) },
+            { assertEquals(2, config.beltLanes("L")) },
+            { assertEquals(2, config.beltLanes("txL")) },
+        )
+    }
+
+    @Test
+    fun beltAndInserterArePickedFromTheSelectionString() {
+        val config = LogisticsConfig(testLogistics, spaceAge = true)
+
+        assertAll(
+            // only the tier's own code matters, the surrounding letters are ignored
+            { assertEquals(Belt.TRANSPORT_BELT, config.belt("a3t")) },
+            { assertEquals(Belt.EXPRESS_TRANSPORT_BELT, config.belt("a3e")) },
+            { assertEquals(Inserter.INSERTER, config.inserter("a3i")) },
+            { assertEquals(Inserter.STACK_INSERTER, config.inserter("a3z")) },
+            // the red belt and the fast inserter are the defaults and carry no code
+            { assertEquals(Belt.FAST_TRANSPORT_BELT, config.defaultBelt) },
+            { assertEquals(Inserter.FAST_INSERTER, config.defaultInserter) },
+            // absent falls back to the default tier
+            { assertEquals(config.defaultBelt, config.belt(null)) },
+            { assertEquals(config.defaultInserter, config.inserter(null)) },
         )
     }
 

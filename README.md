@@ -20,8 +20,8 @@ types it does not need. Luckily there is a gradle task for it (it requires a fac
 
 `./gradlew dumpPrototypes`
 
-At runtime the web UI and the CLI use the base dump, or the Space Age dump when the Space Age mod is
-active.
+At runtime the web UI and the CLI use the base dump, or the Space Age dump when the Space Age
+toggle is on.
 
 #### Updating Icons
 

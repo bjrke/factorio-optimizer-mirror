@@ -1,42 +1,41 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.Optimizer
-import de.bjrke.factorio.optimizer.common.business.RecipeProvider
-import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
-import de.bjrke.factorio.optimizer.common.business.defaultMods
-import de.bjrke.factorio.optimizer.common.business.superRound
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
-import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
-import de.bjrke.factorio.optimizer.common.model.forSurface
-import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
+import de.bjrke.factorio.optimizer.common.business.*
+import de.bjrke.factorio.optimizer.common.model.*
+
+/** The command line arguments the optimizer understands. */
+data class CliArgs(
+    val material: String = ALL_SCIENCE_PACKS,
+    val spaceAge: Boolean = true,
+    val surface: Surface = Surface.NAUVIS,
+)
+
+/**
+ * Parses the CLI arguments: a positional material plus `--base-game` (turns Space Age off) and
+ * `--planet=<surface>`.
+ */
+fun parseArgs(args: Array<String>): CliArgs =
+    CliArgs(
+        material = args.firstOrNull { !it.startsWith("--") } ?: ALL_SCIENCE_PACKS,
+        // Space Age is on by default; --base-game switches to the base-game dump.
+        spaceAge = args.none { it == "--base-game" },
+        surface =
+            args
+                .firstOrNull { it.startsWith("--planet=") }
+                ?.removePrefix("--planet=")
+                ?.let { surfaceFromPlanet(it) } ?: Surface.NAUVIS,
+    )
 
 fun main(args: Array<String>) {
-    val material = Material(args.firstOrNull { !it.startsWith("--") } ?: ALL_SCIENCE_PACKS)
-    val mods =
-        args
-            .firstOrNull { it.startsWith("--mods=") }
-            ?.removePrefix("--mods=")
-            ?.split(",")
-            ?.filter { it.isNotBlank() }
-            ?.toSet() ?: defaultMods
-    val surface =
-        args
-            .firstOrNull { it.startsWith("--planet=") }
-            ?.removePrefix("--planet=")
-            ?.let { surfaceFromUrl(it) } ?: Surface.NAUVIS
-    val activeMods = RecipeProvider.resolveMods(mods)
-    val spaceAge = SPACE_AGE_MOD in activeMods
-    val factories = FactoryConfig(spaceAge).defaults
+    val cli = parseArgs(args)
+    val factories = FactoryConfig(cli.spaceAge).defaults
     val result =
-        Optimizer(RecipeProvider.forActiveMods(mods).forSurface(surface), factories)[material]
+        Optimizer(
+            RecipeProvider.forActiveMods(cli.spaceAge).forSurface(cli.surface),
+            factories,
+        )[Material(cli.material)]
 
-    val logisticsConfig = LogisticsConfig(result.logistics, spaceAge)
+    val logisticsConfig = LogisticsConfig(result.logistics, cli.spaceAge)
     val logistics =
         LogisticsCalculator(
             result.logistics,

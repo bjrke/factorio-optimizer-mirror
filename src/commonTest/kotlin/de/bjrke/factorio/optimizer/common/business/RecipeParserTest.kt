@@ -185,8 +185,8 @@ class RecipeParserTest {
     @Test
     fun realPrototypeDumpsDoNotListPhantomMaterials() =
         assertTableOf(
-            "base" to RecipeProvider.forActiveMods(setOf(BASE_MOD)),
-            "space-age" to RecipeProvider.forActiveMods(defaultMods),
+            "base" to RecipeProvider.forActiveMods(false),
+            "space-age" to RecipeProvider.forActiveMods(),
         ) { (label, parsed) ->
             assertEquals(
                 emptyList(),
@@ -199,7 +199,7 @@ class RecipeParserTest {
     @Test
     fun spaceAgePrototypeDumpKeepsHarvestableWood() =
         assertContains(
-            RecipeProvider.forActiveMods(defaultMods).materials.map(Material::name),
+            RecipeProvider.forActiveMods().materials.map(Material::name),
             "wood",
             "wood must be producible by the agricultural tower",
         )

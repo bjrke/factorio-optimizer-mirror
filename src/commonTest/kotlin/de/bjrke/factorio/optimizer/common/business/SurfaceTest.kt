@@ -7,6 +7,7 @@ import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SurfaceTest {
@@ -301,13 +302,36 @@ class SurfaceTest {
 
     @Test
     fun urlRoundTrip() =
-        assertTable(Surface.entries) { surface ->
-            assertEquals(surface, surfaceFromUrl(surface.toUrlParam()), "$surface")
+        assertTable(Surface.entries.filter { it.code != null }) { surface ->
+            assertEquals(surface, surfaceFromUrl(surface.code.toString()), "$surface")
         }
 
     @Test
-    fun identifierRoundTrip() =
+    fun surfaceCodeIsFoundInsideACombinedSelectionString() =
+        assertTable(Surface.entries.filter { it.code != null }) { surface ->
+            val selection = "3eE${surface.code}xyzSL"
+            assertEquals(surface, surfaceFromUrl(selection), "$surface")
+        }
+
+    @Test
+    fun urlParsingIsNotSensitiveToPlanetIdentifiers() =
+        assertAll(
+            { assertNull(surfaceFromUrl(null)) },
+            { assertNull(surfaceFromUrl("")) },
+            { assertNull(surfaceFromUrl("xyz")) },
+            // only the code characters are scanned, so Fulgora's identifier resolves to its 'g'
+            { assertEquals(Surface.GLEBA, surfaceFromUrl(Surface.FULGORA.identifier)) },
+        )
+
+    @Test
+    fun planetRoundTrip() =
         assertTable(Surface.entries) { surface ->
-            assertEquals(surface, surfaceFromUrl(surface.identifier), "$surface")
+            assertEquals(surface, surfaceFromPlanet(surface.identifier), "$surface")
+        }
+
+    @Test
+    fun planetAcceptsACodeToo() =
+        assertTable(Surface.entries.filter { it.code != null }) { surface ->
+            assertEquals(surface, surfaceFromPlanet(surface.code.toString()), "$surface")
         }
 }

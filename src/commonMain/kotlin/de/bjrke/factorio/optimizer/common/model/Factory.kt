@@ -33,7 +33,7 @@ enum class Factory(
 ) {
     ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
     ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
-    ASSEMBLING_MACHINE_3('3', "assembling-machine-3", assembler2Categories, 1.25),
+    ASSEMBLING_MACHINE_3(null, "assembling-machine-3", assembler2Categories, 1.25),
     OIL_REFINERY(null, "oil-refinery", setOf(Category.OIL_PROCESSING)),
     CHEMICAL_PLANT(null, "chemical-plant", setOf(Category.CHEMISTRY)),
     CENTRIFUGE(null, "centrifuge", setOf(Category.CENTRIFUGING)),
@@ -41,7 +41,7 @@ enum class Factory(
     ROCKET_SILO(null, "rocket-silo", setOf(Category.ROCKET_BUILDING), baseOnly = true),
     STONE_FURNACE('f', "stone-furnace", smelterCategories),
     STEEL_FURNACE('s', "steel-furnace", smelterCategories, 2.0),
-    ELECTRIC_FURNACE('e', "electric-furnace", smelterCategories, 2.0),
+    ELECTRIC_FURNACE(null, "electric-furnace", smelterCategories, 2.0),
     BIOCHAMBER(
         'b',
         "biochamber",
@@ -112,7 +112,7 @@ enum class Factory(
         outputsDirectly = true,
     ),
     BIG_MINING_DRILL(
-        'G',
+        null,
         "big-mining-drill",
         setOf(Category.MINING_BASIC_SOLID, Category.MINING_HARD_SOLID),
         2.5,
@@ -171,16 +171,15 @@ class FactoryConfig(val spaceAge: Boolean = true) {
             if (spaceAge) Factory.BIG_MINING_DRILL else Factory.ELECTRIC_MINING_DRILL,
         ) intersect available
 
-    val defaults = groupDefaults.toSet() + alwaysEnabled + tech
+    val defaults = groupDefaults + alwaysEnabled + tech
 
     /** Independently toggled machines; rendered as icon options. */
-    val singles: List<Factory> =
+    val singles =
         (available - alwaysEnabled).filter { factory -> groups.none { factory in it } }.sorted()
 
-    fun add(current: Set<Factory>, factory: Factory): Set<Factory> =
-        remove(current, factory) + factory
+    fun add(current: Set<Factory>, factory: Factory) = remove(current, factory) + factory
 
-    fun remove(current: Set<Factory>, factory: Factory): Set<Factory> =
+    fun remove(current: Set<Factory>, factory: Factory) =
         when (factory) {
             in smelters -> current - smelters
             in assemblers -> current - assemblers
@@ -188,9 +187,15 @@ class FactoryConfig(val spaceAge: Boolean = true) {
             else -> current - factory
         } + alwaysEnabled
 
-    /** Decodes a URL parameter, dropping machines that are not available for these mods. */
-    fun fromUrl(s: String): Set<Factory> {
-        val decoded = s.mapNotNull { factoriesByCode[it] }.filter { it in available }
+    /**
+     * Decodes the `selection` URL parameter. An absent or empty parameter means the full default
+     * set, including the machines toggled on by default (biochamber, foundry, ...). A present
+     * parameter omits the default of every group and turns off every independently toggled machine
+     * whose code is missing.
+     */
+    fun fromUrl(selection: String?): Set<Factory> {
+        if (selection.isNullOrEmpty()) return defaults
+        val decoded = selection.mapNotNull { factoriesByCode[it] }.filter { it in available }
         var result = decoded.fold(alwaysEnabled, ::add)
         for (group in groups) {
             if (group.none { it in result }) {
@@ -199,6 +204,13 @@ class FactoryConfig(val spaceAge: Boolean = true) {
         }
         return result
     }
+
+    /**
+     * Encodes the machines for the `selection` URL parameter. The default of every group (and every
+     * machine without a code) is left out; [fromUrl] restores it.
+     */
+    fun toUrlParam(factories: Set<Factory>) =
+        (factories - groupDefaults).mapNotNull { it.code }.sorted().joinToString("")
 
     companion object {
         private val minerFactories =
@@ -227,12 +239,3 @@ class FactoryConfig(val spaceAge: Boolean = true) {
             Factory.entries.filter { it.code != null }.associateBy { it.code }
     }
 }
-
-/**
- * Defaults for all machines (all mods active); used by the
- * [de.bjrke.factorio.optimizer.common.business.Optimizer]'s default.
- */
-val defaultFactories: Set<Factory>
-    get() = FactoryConfig().defaults
-
-fun Set<Factory>.toUrlParam() = sorted().mapNotNull { it.code }.joinToString("")

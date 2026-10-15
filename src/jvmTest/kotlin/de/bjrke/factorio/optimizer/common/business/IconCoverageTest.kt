@@ -29,8 +29,8 @@ class IconCoverageTest {
 
     /** Every prototype name the UI passes to `icon(...)`, for the base game and Space Age. */
     private fun iconNames(): Set<String> = buildSet {
-        for (mods in listOf(setOf(BASE_MOD), defaultMods)) {
-            val parsed = RecipeProvider.forActiveMods(mods)
+        for (spaceAge in listOf(true, false)) {
+            val parsed = RecipeProvider.forActiveMods(spaceAge)
             addAll(parsed.materials.map { it.name })
             addAll(parsed.recipes.map { it.name })
         }

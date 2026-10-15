@@ -72,11 +72,12 @@ data class SurfaceCondition(
  * as [SurfaceCondition]s against the physical properties listed in [properties].
  */
 enum class Surface(
-    val code: Char,
+    val code: Char?,
     val identifier: String,
     val properties: Map<SurfaceProperty, Int>,
 ) {
-    NAUVIS('n', "nauvis", mapOf(SurfaceProperty.PRESSURE to 1000, SurfaceProperty.GRAVITY to 10)),
+    // Nauvis is the default surface, so it carries no code
+    NAUVIS(null, "nauvis", mapOf(SurfaceProperty.PRESSURE to 1000, SurfaceProperty.GRAVITY to 10)),
     VULCANUS(
         'v',
         "vulcanus",
@@ -84,7 +85,7 @@ enum class Surface(
     ),
     GLEBA('g', "gleba", mapOf(SurfaceProperty.PRESSURE to 2000, SurfaceProperty.GRAVITY to 20)),
     FULGORA(
-        'f',
+        'o',
         "fulgora",
         mapOf(
             SurfaceProperty.PRESSURE to 1000,
@@ -94,7 +95,7 @@ enum class Surface(
     ),
     AQUILO('a', "aquilo", mapOf(SurfaceProperty.PRESSURE to 300, SurfaceProperty.GRAVITY to 10)),
     SPACE(
-        's',
+        'p',
         "space-platform-surface",
         mapOf(SurfaceProperty.PRESSURE to 0, SurfaceProperty.GRAVITY to 0),
     );
@@ -167,11 +168,14 @@ private val resourceSurfaces =
         "jellynut" to setOf(Surface.GLEBA),
     )
 
-private val surfacesByCode = Surface.entries.associateBy { it.code }
+private val surfacesByCode = Surface.entries.filter { it.code != null }.associateBy { it.code }
 
-fun surfaceFromUrl(s: String) = s.firstOrNull()?.let { surfacesByCode[it] }
+/** Scans the `selection` URL parameter for a surface's single code; the default is Nauvis. */
+fun surfaceFromUrl(s: String?) = s?.firstNotNullOfOrNull { surfacesByCode[it] }
 
-fun Surface.toUrlParam() = code.toString()
+/** Resolves the CLI's `--planet=` value: an exact [Surface.identifier] or a single code. */
+fun surfaceFromPlanet(s: String?) =
+    Surface.entries.firstOrNull { it.identifier == s } ?: surfaceFromUrl(s)
 
 fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
     val kept = recipes.filter {

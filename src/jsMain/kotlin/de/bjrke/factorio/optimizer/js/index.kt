@@ -1,28 +1,8 @@
 package de.bjrke.factorio.optimizer.js
 
-import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.Optimizer
-import de.bjrke.factorio.optimizer.common.business.RecipeProvider
-import de.bjrke.factorio.optimizer.common.business.SPACE_AGE_MOD
-import de.bjrke.factorio.optimizer.common.business.defaultMods
-import de.bjrke.factorio.optimizer.common.business.normalizeTargetFromUrl
-import de.bjrke.factorio.optimizer.common.business.normalizeTargetToUrl
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
-import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.forSurface
-import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
-import de.bjrke.factorio.optimizer.common.model.toUrlParam
-import de.bjrke.factorio.optimizer.js.component.appFooter
-import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
-import de.bjrke.factorio.optimizer.js.component.urlLogisticsSelector
-import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
-import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
-import de.bjrke.factorio.optimizer.js.component.urlPlanetSelector
-import de.bjrke.factorio.optimizer.js.component.urlSpaceAgeToggle
+import de.bjrke.factorio.optimizer.common.business.*
+import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.js.component.*
 import react.FC
 import react.Props
 import react.create
@@ -43,27 +23,21 @@ class FactorioOptimizerProps {
 
     var normalizeTarget = normalizeTargetFromUrl(params[ParamName("normalizeTarget")])
     var target = Material(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
-    var mods =
-        params[ParamName("mods")]?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: defaultMods
-    val activeMods = RecipeProvider.resolveMods(mods)
-    val spaceAgeEnabled = SPACE_AGE_MOD in activeMods
+    private val selection = params[ParamName("selection")]
+    var spaceAgeEnabled = selection?.let(SelectionFlag.SPACE_AGE::enabledIn) ?: true
     val factoryConfig = FactoryConfig(spaceAgeEnabled)
-    var factories =
-        params[ParamName("factories")]?.let { factoryConfig.fromUrl(it) } ?: factoryConfig.defaults
+    var factories = factoryConfig.fromUrl(selection)
     var surface =
-        if (spaceAgeEnabled) {
-            params[ParamName("surface")]?.let { surfaceFromUrl(it) } ?: Surface.NAUVIS
-        } else {
-            Surface.NAUVIS
-        }
+        if (spaceAgeEnabled) surfaceFromUrl(selection) ?: Surface.NAUVIS else Surface.NAUVIS
 
-    val parsedRecipes = RecipeProvider.forActiveMods(mods).forSurface(surface)
+    val parsedRecipes = RecipeProvider.forActiveMods(spaceAgeEnabled).forSurface(surface)
+
     val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
 
     val logisticsConfig = LogisticsConfig(parsedRecipes.logistics, spaceAgeEnabled)
-    var belt = logisticsConfig.belt(params[ParamName("belt")])
-    var inserter = logisticsConfig.inserter(params[ParamName("inserter")])
-    var beltLanes = logisticsConfig.beltLanes(params[ParamName("lanes")])
+    var belt = logisticsConfig.belt(selection)
+    var inserter = logisticsConfig.inserter(selection)
+    var beltLanes = logisticsConfig.beltLanes(selection)
     var beltStack = logisticsConfig.beltStack(params[ParamName("beltStack")])
     var inserterStack = logisticsConfig.inserterStack(params[ParamName("inserterStack")], inserter)
     val logistics =
@@ -76,8 +50,21 @@ class FactorioOptimizerProps {
             inserterStack,
         )
 
-    private fun createNewUrl(): String =
-        "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/${factories.toUrlParam()}/${mods.sorted().joinToString(",")}/${surface.toUrlParam()}/${belt.code}/${inserter.code}/$beltLanes/$beltStack/$inserterStack"
+    private fun createNewUrl(): String {
+        val encodedSelection =
+            selectionString(
+                factories,
+                spaceAgeEnabled,
+                surface,
+                fullBelt = beltLanes == Belt.MAX_LANES,
+                belt,
+                inserter,
+            )
+        // the segment is never empty so the route always matches; '-' marks the all-defaults choice
+        val selectionSegment = encodedSelection.ifEmpty { EMPTY_SELECTION }
+        return "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/$selectionSegment" +
+            "/$beltStack/$inserterStack"
+    }
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
         navigate {
@@ -125,29 +112,8 @@ fun main() {
                     getParentRoute = { rootRoute },
                     path =
                         RoutePath(
-                            "/\$normalizeTarget/\$target/\$factories/\$mods/\$surface" +
-                                "/\$belt/\$inserter/\$lanes/\$beltStack/\$inserterStack"
+                            "/\$normalizeTarget/\$target/\$selection/\$beltStack/\$inserterStack"
                         ),
-                    component = RouterBasedParams,
-                )
-            )
-
-        // legacy route without the logistics segment, defaults to the fastest belt/inserter
-        val surfaceRoute =
-            createRoute(
-                RouteOptions(
-                    getParentRoute = { rootRoute },
-                    path = RoutePath("/\$normalizeTarget/\$target/\$factories/\$mods/\$surface"),
-                    component = RouterBasedParams,
-                )
-            )
-
-        // legacy route without the surface segment, defaults to Nauvis
-        val legacyRoute =
-            createRoute(
-                RouteOptions(
-                    getParentRoute = { rootRoute },
-                    path = RoutePath("/\$normalizeTarget/\$target/\$factories/\$mods"),
                     component = RouterBasedParams,
                 )
             )
@@ -161,7 +127,7 @@ fun main() {
                 )
             )
 
-        rootRoute.addChildren(arrayOf(indexRoute, surfaceRoute, legacyRoute, catchAllRoute))
+        rootRoute.addChildren(arrayOf(indexRoute, catchAllRoute))
 
         val appRouter =
             createRouter(

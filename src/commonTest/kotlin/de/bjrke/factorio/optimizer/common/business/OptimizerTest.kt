@@ -185,8 +185,7 @@ class OptimizerTest {
     fun glebaIronAndCopperOreSpoilFromBacteria() {
         // Gleba has no ore patches, but iron/copper bacteria spoil into their ore, so the ore must
         // resolve to the spoiling machine instead of a free source (box).
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(oreSpoilingBacteria.keys) { ore ->
             val material = Material(ore)
@@ -200,8 +199,7 @@ class OptimizerTest {
 
     @Test
     fun glebaIronAndCopperOreUseBacteriaSpoilingRecipe() {
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(oreSpoilingBacteria.entries) { (ore, bacteria) ->
             val material = Material(ore)
@@ -216,8 +214,7 @@ class OptimizerTest {
     @Test
     fun nauvisOreStillComesFromMiningDrill() {
         // the spoiling recipe must not shadow mining where ore patches exist
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS))
 
         val material = Material("iron-ore")
         val production = optimizer[material].production(material)
@@ -231,8 +228,7 @@ class OptimizerTest {
     fun fulgoraIronOreComesFromRecyclingNotBacteria() {
         // Fulgora has no ore patches and no bacteria: iron ore is recovered by recycling concrete,
         // which is one of the scrap-recycling outputs
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.FULGORA))
 
         val material = Material("iron-ore")
         val result = optimizer[material]
@@ -254,8 +250,7 @@ class OptimizerTest {
     fun fulgoraCopperOreIsImported() {
         // nothing on Fulgora recycles into copper ore, so it is imported instead of being spoiled
         // from imported bacteria
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.FULGORA))
 
         val material = Material("copper-ore")
         val production = optimizer[material].production(material)
@@ -267,8 +262,7 @@ class OptimizerTest {
 
     @Test
     fun fulgoraScienceNeverSpoilsBacteria() {
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.FULGORA))
 
         val result = optimizer[Material(ALL_SCIENCE_PACKS)]
         assertAll(
@@ -281,8 +275,7 @@ class OptimizerTest {
     fun fulgoraScrapRecyclingConsumesWhatTheDrillProduces() {
         // Regression: the recycler's display used the curated Factory speed (1.0) instead of the
         // dump's crafting speed (0.5), so its scrap input showed twice the drill's scrap output.
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.FULGORA))
 
         val result = optimizer[Material(ALL_SCIENCE_PACKS)]
         val scrap = Material("scrap")
@@ -300,8 +293,7 @@ class OptimizerTest {
         // gear wheels and batteries into iron plates, processing units into electronic circuits.
         // Crafting a material that recycling already supplies (iron-plate, electronic-circuit,
         // copper-cable, ...) is not allowed.
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.FULGORA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.FULGORA))
 
         val result = optimizer[Material("assembling-machine-1")]
         val recipes = result.factories.values.map { it.recipe.name }.toSet()
@@ -323,8 +315,7 @@ class OptimizerTest {
     fun glebaSpoilageComesFromCheapOrganicByproductNotScience() {
         // spoilage is cheapest as a byproduct of the bacteria recipes, not by rotting raw fruit
         // (jellynut itself takes an hour) nor by spoiling expensive Gleba science packs.
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.GLEBA))
 
         val spoilage = Material("spoilage")
         val result = optimizer[spoilage]
@@ -345,8 +336,7 @@ class OptimizerTest {
     @Test
     fun glebaFruitIsHarvestedByAgriculturalTower() {
         // yumako/jellynut are harvested from trees by the agricultural tower, not free boxes
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(harvestedFruits) { fruit ->
             val material = Material(fruit)
@@ -360,8 +350,7 @@ class OptimizerTest {
 
     @Test
     fun glebaFruitHarvestYieldsFifty() {
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(harvestedFruits) { fruit ->
             val material = Material(fruit)
@@ -372,8 +361,7 @@ class OptimizerTest {
 
     @Test
     fun nauvisWoodIsHarvestedByAgriculturalTower() {
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS))
         val wood = Material("wood")
         val actual = optimizer[wood].production(wood).factory
         assertEquals(Factory.AGRICULTURAL_TOWER, actual)
@@ -395,7 +383,7 @@ class OptimizerTest {
     fun baseGameSpaceScienceComesFromRocketSilo() {
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(setOf(BASE_MOD)).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods(false).forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = false).defaults,
             )
 
@@ -407,7 +395,7 @@ class OptimizerTest {
     fun spaceAgeSpaceScienceIsImportedOnNauvis() {
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -419,7 +407,7 @@ class OptimizerTest {
     fun spaceAgeSpaceScienceIsAssembledInSpace() {
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                RecipeProvider.forActiveMods().forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -437,7 +425,7 @@ class OptimizerTest {
         // on space platforms; the fluoroketone it needs is imported (barrels) there
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                RecipeProvider.forActiveMods().forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -454,7 +442,7 @@ class OptimizerTest {
         // electromagnetic plant (with its built-in productivity) is preferred over an assembler
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -471,7 +459,7 @@ class OptimizerTest {
         // must not be used for them
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -487,7 +475,7 @@ class OptimizerTest {
         // plastic gains the cryogenics category, so the cryogenic plant can run it
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -503,7 +491,7 @@ class OptimizerTest {
         // lubricant is pure chemistry, so the cryogenic plant must not be used for it
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -520,7 +508,7 @@ class OptimizerTest {
         // than the petroleum-based chemical one
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.GLEBA),
+                RecipeProvider.forActiveMods().forSurface(Surface.GLEBA),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -536,8 +524,7 @@ class OptimizerTest {
     fun biterEggsAreImportedInSpace() {
         // the captive biter spawner can only be built on Nauvis, so the biter eggs needed for
         // promethium science must be imported on space platforms
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.SPACE))
 
         val eggs = Material("biter-egg")
         assertEquals(Factory.NO_FACTORY, optimizer[eggs].production(eggs).factory)
@@ -545,8 +532,7 @@ class OptimizerTest {
 
     @Test
     fun biterEggsAreBredOnNauvis() {
-        val optimizer =
-            Optimizer(RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS))
+        val optimizer = Optimizer(RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS))
 
         val eggs = Material("biter-egg")
         assertEquals(
@@ -559,7 +545,7 @@ class OptimizerTest {
     fun spaceAsteroidChunksComeFromCollectors() {
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                RecipeProvider.forActiveMods().forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -577,7 +563,7 @@ class OptimizerTest {
     fun spaceAsteroidChunksUseCollectionRecipe() {
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                RecipeProvider.forActiveMods().forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -597,7 +583,7 @@ class OptimizerTest {
         // collector must appear once instead of once per chunk
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                RecipeProvider.forActiveMods().forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -612,7 +598,7 @@ class OptimizerTest {
         // whichever output is needed most, not once per ore
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.SPACE),
+                RecipeProvider.forActiveMods().forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -630,7 +616,7 @@ class OptimizerTest {
     fun asteroidChunkIsImportedOnNauvis() {
         val optimizer =
             Optimizer(
-                RecipeProvider.forActiveMods(defaultMods).forSurface(Surface.NAUVIS),
+                RecipeProvider.forActiveMods().forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
