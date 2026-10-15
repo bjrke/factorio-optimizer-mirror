@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.7.1, Kotlin 2.4.20) app
+Factorio-Optimizer is a Kotlin Multiplatform (Gradle 9.8.1, Kotlin 2.4.21) app
 optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 (JVM).
 

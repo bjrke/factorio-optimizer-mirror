@@ -1,4 +1,4 @@
-FROM gradle:9.7.1-jdk25
+FROM gradle:9.8.1-jdk25
 
 # Google Chrome for the Karma-based jsBrowserTest (ChromeHeadless launcher).
 # The deb pulls in all of Chrome's runtime dependencies via apt.
