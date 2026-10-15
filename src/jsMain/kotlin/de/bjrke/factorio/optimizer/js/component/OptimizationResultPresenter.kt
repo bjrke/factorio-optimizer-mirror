@@ -199,10 +199,11 @@ private fun ChildrenBuilder.pipeMarker() {
  * for solids, a pump plus a pipe marker for fluids. The counts are editable like the material
  * amounts.
  *
- * Mines and the recycler drop their output straight onto the belt, so an output of such a machine
- * needs no inserter and the belt stacking always applies. Every other output is loaded by the
- * selected inserter, so belt stacking only applies when that inserter can stack, and the output
- * inserter count uses the slower belt-limited placing rate.
+ * The big mining drill and the recycler drop their output straight onto the belt and stack it
+ * themselves, so such an output needs no inserter and always uses the belt stacking. The other
+ * drills place single items, and the remaining outputs are loaded by the selected inserter, so belt
+ * stacking only applies when that inserter can stack, and the output inserter count uses the slower
+ * belt-limited placing rate.
  */
 private fun ChildrenBuilder.materialLogistics(
     props: OptimizationResultPresenterProps,
@@ -219,8 +220,9 @@ private fun ChildrenBuilder.materialLogistics(
     }
 
     val directOutput = isOutput && factory.outputsDirectly
-    val stack =
-        if (isOutput && !directOutput && !calculator.stacksOnBelt()) 1 else calculator.beltStack
+    // a direct output is stacked by the machine itself, any other output by the selected inserter
+    val outputStacks = if (directOutput) factory.stacksOnBelt else calculator.stacksOnBelt()
+    val stack = if (isOutput && !outputStacks) 1 else calculator.beltStack
     logisticsInputIcon(
         props,
         calculator.belt.identifier,

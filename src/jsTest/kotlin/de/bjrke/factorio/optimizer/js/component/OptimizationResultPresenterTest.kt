@@ -495,16 +495,28 @@ class OptimizationResultPresenterTest : ComponentTest() {
     }
 
     @Test
-    fun miningOutputHonorsTheBeltStackWithoutAStackingInserter() {
-        val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
+    fun theBigMiningDrillHonorsTheBeltStackWithoutAnInserter() {
+        val result = optimizationResult(miningRecipe, ore, Factory.BIG_MINING_DRILL)
         val rendered = renderResult(result, calculator(Inserter.FAST_INSERTER, beltStack = 1))
         val atSingle = beltInput(0)
 
         rendered.rerender(resultElement(result, calculator(Inserter.FAST_INSERTER, beltStack = 4)))
         val atStacked = beltInput(0)
 
-        // the drill stacks the belt itself, so stacking means a quarter of the belts
+        // the big mining drill stacks the belt itself, so stacking means a quarter of the belts
         assertEquals(atSingle, atStacked * 4, 0.01)
+    }
+
+    @Test
+    fun theOtherMiningDrillsIgnoreTheBeltStack() {
+        val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
+        val rendered = renderResult(result, calculator(Inserter.FAST_INSERTER, beltStack = 1))
+        val atSingle = beltInput(0)
+
+        rendered.rerender(resultElement(result, calculator(Inserter.FAST_INSERTER, beltStack = 4)))
+
+        // an electric mining drill places single items, so stacking does not change its belts
+        assertEquals(atSingle, beltInput(0), 0.01)
     }
 
     @Test

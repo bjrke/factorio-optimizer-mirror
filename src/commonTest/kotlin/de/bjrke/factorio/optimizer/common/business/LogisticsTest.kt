@@ -380,16 +380,40 @@ class LogisticsTest {
 
     @Test
     fun beltStackingIsLimitedToSpaceAge() {
+        val spaceAge = LogisticsConfig(testLogistics, spaceAge = true)
+        val base = LogisticsConfig(testLogistics, spaceAge = false)
+
         assertAll(
+            { assertEquals(Belt.MAX_STACK, spaceAge.beltStackMax) },
+            // only the Space Age stack inserter builds whole stacks on a belt
+            { assertEquals(1, spaceAge.beltStackMin(Inserter.FAST_INSERTER)) },
             {
                 assertEquals(
-                    Belt.MAX_STACK,
-                    LogisticsConfig(testLogistics, spaceAge = true).beltStackMax,
+                    Belt.MIN_STACK_INSERTER_STACK,
+                    spaceAge.beltStackMin(Inserter.STACK_INSERTER),
                 )
             },
+            // an unstacked belt is the default; selecting the stack inserter lifts the level to two
+            { assertEquals(1, spaceAge.beltStack(null, Inserter.FAST_INSERTER)) },
+            { assertEquals(1, spaceAge.beltStack("1", Inserter.FAST_INSERTER)) },
+            {
+                assertEquals(
+                    Belt.MIN_STACK_INSERTER_STACK,
+                    spaceAge.beltStack("1", Inserter.STACK_INSERTER),
+                )
+            },
+            {
+                assertEquals(
+                    Belt.MIN_STACK_INSERTER_STACK,
+                    spaceAge.beltStack(null, Inserter.STACK_INSERTER),
+                )
+            },
+            { assertEquals(3, spaceAge.beltStack("3", Inserter.STACK_INSERTER)) },
+            { assertEquals(Belt.MAX_STACK, spaceAge.beltStack("9", Inserter.STACK_INSERTER)) },
             // belt stacking needs the Space Age stack inserters
-            { assertEquals(1, LogisticsConfig(testLogistics, spaceAge = false).beltStackMax) },
-            { assertEquals(1, LogisticsConfig(testLogistics, spaceAge = false).beltStack("4")) },
+            { assertEquals(1, base.beltStackMax) },
+            { assertEquals(1, base.beltStackMin(Inserter.STACK_INSERTER)) },
+            { assertEquals(1, base.beltStack("4", Inserter.STACK_INSERTER)) },
         )
     }
 

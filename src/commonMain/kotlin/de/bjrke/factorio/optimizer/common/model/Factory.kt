@@ -17,8 +17,9 @@ private val smelterCategories = setOf(Category.SMELTING)
  * plant). These values are curated fallbacks; the optimizer prefers the stats derived from the
  * prototype dump (see [MachineStats]).
  *
- * [outputsDirectly] marks machines that place their product straight onto a belt (mining drills and
- * the recycler): they need no output inserter and stack the belt themselves.
+ * [outputsDirectly] marks machines that place their product straight onto a belt (the mining drills
+ * and the recycler): they need no output inserter. [stacksOnBelt] marks the subset that also builds
+ * belt stacks (the big mining drill and the recycler); the other drills place single items.
  */
 enum class Factory(
     val code: Char?,
@@ -30,6 +31,7 @@ enum class Factory(
     val spaceAgeOnly: Boolean = false,
     val baseOnly: Boolean = false,
     val outputsDirectly: Boolean = false,
+    val stacksOnBelt: Boolean = false,
 ) {
     ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
     ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
@@ -90,6 +92,7 @@ enum class Factory(
         setOf(Category.RECYCLING),
         spaceAgeOnly = true,
         outputsDirectly = true,
+        stacksOnBelt = true,
     ),
     CAPTIVE_BITER_SPAWNER(
         null,
@@ -118,6 +121,7 @@ enum class Factory(
         2.5,
         spaceAgeOnly = true,
         outputsDirectly = true,
+        stacksOnBelt = true,
     ),
     PUMPJACK(null, "pumpjack", setOf(Category.MINING_FLUID), 1.0),
     OFFSHORE_PUMP(null, "offshore-pump", setOf(Category.OFFSHORE_PUMPING), 1200.0),

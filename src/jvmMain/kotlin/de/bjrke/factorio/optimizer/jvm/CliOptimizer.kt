@@ -42,7 +42,7 @@ fun main(args: Array<String>) {
             logisticsConfig.defaultBelt,
             logisticsConfig.defaultInserter,
             lanes = 1,
-            beltStack = 1,
+            beltStack = logisticsConfig.beltStack(null, logisticsConfig.defaultInserter),
             inserterStack = 1,
         )
 
@@ -55,10 +55,10 @@ fun main(args: Array<String>) {
         if (logistics.isFluid(material)) {
             return logistics.pumpCount(rate)?.let { "${superRound(it)} pumps + pipe" } ?: "pipe"
         }
-        // mines and the recycler drop their product straight onto the belt
+        // the big mining drill and the recycler drop their product straight onto the belt
         val directOutput = isOutput && factory.outputsDirectly
-        val stack =
-            if (isOutput && !directOutput && !logistics.stacksOnBelt()) 1 else logistics.beltStack
+        val outputStacks = if (directOutput) factory.stacksOnBelt else logistics.stacksOnBelt()
+        val stack = if (isOutput && !outputStacks) 1 else logistics.beltStack
         val belts = "${superRound(logistics.beltCount(rate, stack))} belts"
         return if (directOutput) belts
         else "$belts + ${superRound(logistics.inserterCount(rate, ontoBelt = isOutput))} inserters"

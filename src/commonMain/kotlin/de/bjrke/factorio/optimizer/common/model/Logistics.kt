@@ -52,6 +52,9 @@ enum class Belt(val code: Char?, val identifier: String, val spaceAgeOnly: Boole
 
         const val MAX_LANES = 2
 
+        /** The Stack inserter research sets the belt stack to two items per slot. */
+        const val MIN_STACK_INSERTER_STACK = 2
+
         /** Belt stacking caps at four items per slot. */
         const val MAX_STACK = 4
 
@@ -119,12 +122,24 @@ class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = true) {
         Inserter.fromSelection(selection)?.takeIf { it in availableInserters } ?: defaultInserter
 
     /**
-     * Belt stacking level. Belt stacking is unlocked by the Space Age stack inserters/belt capacity
-     * research, so without Space Age it is fixed at one.
+     * The lowest belt stacking level for [inserter]. Belt stacking is unlocked by the Space Age
+     * stack inserters, so without Space Age it is fixed at one. Once the stack inserter loads the
+     * belt it always builds whole stacks, so the level never drops below
+     * [Belt.MIN_STACK_INSERTER_STACK].
      */
+    fun beltStackMin(inserter: Inserter) =
+        if (spaceAge && logistics.inserters.getValue(inserter.identifier).stacksOnBelt)
+            Belt.MIN_STACK_INSERTER_STACK
+        else 1
+
+    /** The highest belt stacking level; belt capacity research raises it to [Belt.MAX_STACK]. */
     val beltStackMax = if (spaceAge) Belt.MAX_STACK else 1
 
-    fun beltStack(value: String?) = (value?.toIntOrNull() ?: 1).coerceIn(1, beltStackMax)
+    /**
+     * The belt stacking level for [value], clamped to the range the selected [inserter] supports.
+     */
+    fun beltStack(value: String?, inserter: Inserter) =
+        (value?.toIntOrNull() ?: 1).coerceIn(beltStackMin(inserter), beltStackMax)
 
     /**
      * Number of belt lanes in use. The [SelectionFlag.FULL_BELT] flag selects both lanes; without

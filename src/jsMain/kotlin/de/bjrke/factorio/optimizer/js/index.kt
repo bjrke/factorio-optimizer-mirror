@@ -38,7 +38,7 @@ class FactorioOptimizerProps {
     var belt = logisticsConfig.belt(selection)
     var inserter = logisticsConfig.inserter(selection)
     var beltLanes = logisticsConfig.beltLanes(selection)
-    var beltStack = logisticsConfig.beltStack(params[ParamName("beltStack")])
+    var beltStack = logisticsConfig.beltStack(params[ParamName("beltStack")], inserter)
     var inserterStack = logisticsConfig.inserterStack(params[ParamName("inserterStack")], inserter)
     val logistics =
         LogisticsCalculator(

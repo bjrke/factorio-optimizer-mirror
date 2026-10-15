@@ -309,4 +309,14 @@ class FactoryTest {
         ) { factory ->
             assertTrue(factory.outputsDirectly, "$factory")
         }
+
+    @Test
+    fun onlyTheBigMiningDrillAndTheRecyclerStackTheirOutput() =
+        assertTable(Factory.entries) { factory ->
+            assertEquals(
+                factory in setOf(Factory.BIG_MINING_DRILL, Factory.RECYCLER),
+                factory.stacksOnBelt,
+                "$factory",
+            )
+        }
 }

@@ -30,7 +30,7 @@ class LogisticsSelectorTest : ComponentTest() {
         belt: Belt = usedConfig.defaultBelt,
         inserter: Inserter = usedConfig.defaultInserter,
         beltLanes: Int = 1,
-        beltStack: Int = 1,
+        beltStack: Int = usedConfig.beltStackMin(inserter),
         inserterStack: Int = 1,
     ) =
         render(
@@ -83,6 +83,32 @@ class LogisticsSelectorTest : ComponentTest() {
         fireEvent.change(screen.getByTitle("belt stack"), changeTo("9"))
 
         assertEquals(listOf(Belt.MAX_STACK), beltStacks)
+    }
+
+    @Test
+    fun theBeltStackControlStartsAtOneWithoutAStackingInserter() {
+        renderSelector()
+
+        assertEquals("1", (screen.getByTitle("belt stack") as HTMLInputElement).min)
+    }
+
+    @Test
+    fun theBeltStackControlStartsAtTwoWithTheStackInserter() {
+        renderSelector(inserter = Inserter.STACK_INSERTER)
+
+        assertEquals(
+            Belt.MIN_STACK_INSERTER_STACK.toString(),
+            (screen.getByTitle("belt stack") as HTMLInputElement).min,
+        )
+    }
+
+    @Test
+    fun theBeltStackIsRaisedToTheMinimumWithTheStackInserter() {
+        renderSelector(inserter = Inserter.STACK_INSERTER)
+
+        fireEvent.change(screen.getByTitle("belt stack"), changeTo("1"))
+
+        assertEquals(listOf(Belt.MIN_STACK_INSERTER_STACK), beltStacks)
     }
 
     @Test

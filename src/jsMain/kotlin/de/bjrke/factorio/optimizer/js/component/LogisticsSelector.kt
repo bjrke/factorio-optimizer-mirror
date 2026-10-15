@@ -81,6 +81,7 @@ internal val logisticsSelector =
             stackInput(
                 title = "belt stack",
                 value = props.beltStack,
+                minimum = props.config.beltStackMin(props.selectedInserter),
                 maximum = props.config.beltStackMax,
                 onValue = props.selectBeltStack,
             )
@@ -98,8 +99,8 @@ internal val logisticsSelector =
 private fun ChildrenBuilder.stackInput(
     title: String,
     value: Int,
+    minimum: Int,
     maximum: Int,
-    minimum: Int = 1,
     onValue: (Int) -> Unit,
 ) {
     input {
