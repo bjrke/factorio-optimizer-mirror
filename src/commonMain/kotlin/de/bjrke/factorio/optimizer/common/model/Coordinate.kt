@@ -84,3 +84,6 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
             Dimension(width + amount * 2, height + amount * 2),
         )
 }
+
+/** A one-tile area whose only coordinate is ([x], [y]). */
+fun AreaTile(x: Int, y: Int) = Area(Coordinate(x, y), Dimension(1, 1))

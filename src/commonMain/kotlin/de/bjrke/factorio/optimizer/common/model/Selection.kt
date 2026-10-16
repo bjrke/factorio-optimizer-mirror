@@ -34,8 +34,8 @@ fun selectionString(
     spaceAge: Boolean,
     surface: Surface,
     fullBelt: Boolean,
-    belt: Belt,
-    inserter: Inserter,
+    belt: BeltTier,
+    inserter: InserterTier,
     cheats: Boolean = false,
 ) = buildList {
     addAll(FactoryConfig(spaceAge).toUrlParam(factories).toList())

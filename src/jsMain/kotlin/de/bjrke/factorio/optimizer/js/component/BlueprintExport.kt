@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.*
 import de.bjrke.factorio.optimizer.common.model.Blueprint
+import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.toJson
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
@@ -18,8 +19,13 @@ import web.cssom.rem
 private const val TILE = 24.0
 
 /** Turns an entity's direction into the clockwise rotation its icon needs; icons face east. */
-private fun rotationDegrees(direction: Int?): Int? = direction?.let {
-    (((it - 4) * 90 / 4) % 360 + 360) % 360
+private fun rotationDegrees(direction: Direction?): Int? = direction?.let {
+    when (it) {
+        Direction.NORTH -> 270
+        Direction.EAST -> 0
+        Direction.SOUTH -> 90
+        Direction.WEST -> 180
+    }
 }
 
 private fun copyToClipboard(text: String) {

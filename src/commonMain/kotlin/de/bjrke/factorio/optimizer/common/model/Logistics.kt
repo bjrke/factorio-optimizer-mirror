@@ -39,7 +39,7 @@ data class InserterStats(
 }
 
 /** A belt tier. The speed comes from the dump; a tier without a prototype is not selectable. */
-enum class Belt(val code: Char?, val identifier: String, val spaceAgeOnly: Boolean = false) {
+enum class BeltTier(val code: Char?, val identifier: String, val spaceAgeOnly: Boolean = false) {
     TRANSPORT_BELT('t', "transport-belt"),
     // the red belt is the default, so it carries no code
     FAST_TRANSPORT_BELT(null, "fast-transport-belt"),
@@ -69,7 +69,11 @@ enum class Belt(val code: Char?, val identifier: String, val spaceAgeOnly: Boole
  * An inserter tier. The rotation speed and stack capacity come from the dump; a tier without a
  * prototype is not selectable.
  */
-enum class Inserter(val code: Char?, val identifier: String, val spaceAgeOnly: Boolean = false) {
+enum class InserterTier(
+    val code: Char?,
+    val identifier: String,
+    val spaceAgeOnly: Boolean = false,
+) {
     BURNER_INSERTER('w', "burner-inserter"),
     INSERTER('i', "inserter"),
     LONG_HANDED_INSERTER('l', "long-handed-inserter"),
@@ -93,10 +97,12 @@ enum class Inserter(val code: Char?, val identifier: String, val spaceAgeOnly: B
 class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = true) {
 
     val availableBelts =
-        Belt.entries.filter { (!it.spaceAgeOnly || spaceAge) && it.identifier in logistics.belts }
+        BeltTier.entries.filter {
+            (!it.spaceAgeOnly || spaceAge) && it.identifier in logistics.belts
+        }
 
     val availableInserters =
-        Inserter.entries.filter {
+        InserterTier.entries.filter {
             (!it.spaceAgeOnly || spaceAge) && it.identifier in logistics.inserters
         }
 
@@ -110,35 +116,40 @@ class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = true) {
         availableInserters.firstOrNull { it.code == null } ?: availableInserters.last()
 
     /** The items per hand [inserter] always carries, from its prototype. */
-    fun minStack(inserter: Inserter) = logistics.inserters.getValue(inserter.identifier).minStack
+    fun minStack(inserter: InserterTier) =
+        logistics.inserters.getValue(inserter.identifier).minStack
 
     /** The items per hand [inserter] can reach with all capacity research, from its prototype. */
-    fun maxStack(inserter: Inserter) = logistics.inserters.getValue(inserter.identifier).maxStack
+    fun maxStack(inserter: InserterTier) =
+        logistics.inserters.getValue(inserter.identifier).maxStack
 
-    fun belt(selection: String?): Belt =
-        Belt.fromSelection(selection)?.takeIf { it in availableBelts } ?: defaultBelt
+    fun belt(selection: String?): BeltTier =
+        BeltTier.fromSelection(selection)?.takeIf { it in availableBelts } ?: defaultBelt
 
     fun inserter(selection: String?) =
-        Inserter.fromSelection(selection)?.takeIf { it in availableInserters } ?: defaultInserter
+        InserterTier.fromSelection(selection)?.takeIf { it in availableInserters }
+            ?: defaultInserter
 
     /**
      * The lowest belt stacking level for [inserter]. Belt stacking is unlocked by the Space Age
      * stack inserters, so without Space Age it is fixed at one. Once the stack inserter loads the
      * belt it always builds whole stacks, so the level never drops below
-     * [Belt.MIN_STACK_INSERTER_STACK].
+     * [BeltTier.MIN_STACK_INSERTER_STACK].
      */
-    fun beltStackMin(inserter: Inserter) =
+    fun beltStackMin(inserter: InserterTier) =
         if (spaceAge && logistics.inserters.getValue(inserter.identifier).stacksOnBelt)
-            Belt.MIN_STACK_INSERTER_STACK
+            BeltTier.MIN_STACK_INSERTER_STACK
         else 1
 
-    /** The highest belt stacking level; belt capacity research raises it to [Belt.MAX_STACK]. */
-    val beltStackMax = if (spaceAge) Belt.MAX_STACK else 1
+    /**
+     * The highest belt stacking level; belt capacity research raises it to [BeltTier.MAX_STACK].
+     */
+    val beltStackMax = if (spaceAge) BeltTier.MAX_STACK else 1
 
     /**
      * The belt stacking level for [value], clamped to the range the selected [inserter] supports.
      */
-    fun beltStack(value: String?, inserter: Inserter) =
+    fun beltStack(value: String?, inserter: InserterTier) =
         (value?.toIntOrNull() ?: 1).coerceIn(beltStackMin(inserter), beltStackMax)
 
     /**
@@ -146,14 +157,14 @@ class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = true) {
      * it the single lane factories usually feed is used.
      */
     fun beltLanes(selection: String?) =
-        if (SelectionFlag.FULL_BELT.enabledIn(selection)) Belt.MAX_LANES else 1
+        if (SelectionFlag.FULL_BELT.enabledIn(selection)) BeltTier.MAX_LANES else 1
 
     /**
-     * Inserter stacking level, clamped to what [inserter] can carry. Picking a bulk or stack
+     * InserterTier stacking level, clamped to what [inserter] can carry. Picking a bulk or stack
      * inserter raises the level to its base hand size (2 resp. 6) even if a smaller number was
      * requested, since those inserters never carry fewer items.
      */
-    fun inserterStack(value: String?, inserter: Inserter) =
+    fun inserterStack(value: String?, inserter: InserterTier) =
         logistics.inserters.getValue(inserter.identifier).let {
             it.stackSize(value?.toIntOrNull() ?: it.minStack)
         }

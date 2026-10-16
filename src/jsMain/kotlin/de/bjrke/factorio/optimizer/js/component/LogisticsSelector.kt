@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.Belt
-import de.bjrke.factorio.optimizer.common.model.Inserter
+import de.bjrke.factorio.optimizer.common.model.BeltTier
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
@@ -19,8 +19,8 @@ import web.html.radio
 
 external interface LogisticsSelectorStateProps : Props {
     var config: LogisticsConfig
-    var selectedBelt: Belt
-    var selectedInserter: Inserter
+    var selectedBelt: BeltTier
+    var selectedInserter: InserterTier
     var beltLanes: Int
     var beltStack: Int
     var inserterStack: Int
@@ -28,8 +28,8 @@ external interface LogisticsSelectorStateProps : Props {
 }
 
 external interface LogisticsSelectorDispatchProps : Props {
-    var selectBelt: (Belt) -> Unit
-    var selectInserter: (Inserter) -> Unit
+    var selectBelt: (BeltTier) -> Unit
+    var selectInserter: (InserterTier) -> Unit
     var selectBeltLanes: (Int) -> Unit
     var selectBeltStack: (Int) -> Unit
     var selectInserterStack: (Int) -> Unit
@@ -61,9 +61,9 @@ internal val logisticsSelector =
             css { marginLeft = 0.5.ch }
             input {
                 type = InputType.checkbox
-                checked = props.beltLanes == Belt.MAX_LANES
+                checked = props.beltLanes == BeltTier.MAX_LANES
                 onChange = {
-                    props.selectBeltLanes(if (it.target.checked) Belt.MAX_LANES else 1)
+                    props.selectBeltLanes(if (it.target.checked) BeltTier.MAX_LANES else 1)
                 }
             }
             +" full belt"

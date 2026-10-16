@@ -36,8 +36,8 @@ class BlueprintLayoutTest {
     private val logistics =
         LogisticsCalculator(
             testLogistics.copy(fluids = setOf(water, lubricant)),
-            Belt.EXPRESS_TRANSPORT_BELT,
-            Inserter.FAST_INSERTER,
+            BeltTier.EXPRESS_TRANSPORT_BELT,
+            InserterTier.FAST_INSERTER,
             lanes = 2,
             beltStack = 1,
             inserterStack = 1,
@@ -75,8 +75,8 @@ class BlueprintLayoutTest {
         assertAll(
             { assertEquals(1, names.count { it == Factory.ASSEMBLING_MACHINE_3.identifier }) },
             { assertEquals(1, names.count { it == Factory.ASSEMBLING_MACHINE_1.identifier }) },
-            { assertTrue(Inserter.FAST_INSERTER.identifier in names) },
-            { assertTrue(Belt.EXPRESS_TRANSPORT_BELT.identifier in names) },
+            { assertTrue(InserterTier.FAST_INSERTER.identifier in names) },
+            { assertTrue(BeltTier.EXPRESS_TRANSPORT_BELT.identifier in names) },
             { assertTrue("constant-combinator" in names) },
             { assertTrue("medium-electric-pole" in names) },
         )
@@ -114,7 +114,7 @@ class BlueprintLayoutTest {
         val names = buildBlueprint(fluidPlan, logistics).entities.map { it.name }
         assertAll(
             { assertTrue("pipe" in names) },
-            { assertTrue(Belt.EXPRESS_TRANSPORT_BELT.identifier !in names) },
+            { assertTrue(BeltTier.EXPRESS_TRANSPORT_BELT.identifier !in names) },
         )
     }
 
@@ -192,7 +192,7 @@ class BlueprintLayoutTest {
             // every inserter takes from the tile it faces, which is always north here: the lane
             // above for an input, the machine above for an output
             { assertTrue(inserters.isNotEmpty()) },
-            { assertTrue(inserters.all { it.direction == 0 }, inserters.toString()) },
+            { assertTrue(inserters.all { it.direction == Direction.NORTH }, inserters.toString()) },
             {
                 val dangling = inserters.filter {
                     val reach = if (it.name == "long-handed-inserter") 2 else 1
@@ -358,7 +358,7 @@ class BlueprintLayoutTest {
         val inserters =
             buildBlueprint(threePlan, logistics).entities.filter { it.name.endsWith("inserter") }
         assertTrue(
-            inserters.any { it.name == "long-handed-inserter" && it.direction == 8 },
+            inserters.any { it.name == "long-handed-inserter" && it.direction == Direction.SOUTH },
             inserters.toString(),
         )
     }
@@ -476,7 +476,13 @@ class BlueprintLayoutTest {
         val feed = entities.singleOrNull { it.area.topLeft == feedCoordinate }
         assertAll(
             { assertTrue(feed != null, "no feed east of the lane") },
-            { assertEquals(12, feed?.direction, "the feed does not face the lane: $feed") },
+            {
+                assertEquals(
+                    Direction.WEST,
+                    feed?.direction,
+                    "the feed does not face the lane: $feed",
+                )
+            },
         )
     }
 }

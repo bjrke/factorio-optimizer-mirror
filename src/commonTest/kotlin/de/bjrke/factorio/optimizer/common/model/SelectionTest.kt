@@ -14,12 +14,12 @@ class SelectionTest {
     private val allCodes =
         Factory.entries.mapNotNull { it.code } +
             Surface.entries.mapNotNull { it.code } +
-            Belt.entries.mapNotNull { it.code } +
-            Inserter.entries.mapNotNull { it.code } +
+            BeltTier.entries.mapNotNull { it.code } +
+            InserterTier.entries.mapNotNull { it.code } +
             SelectionFlag.entries.map { it.code }
 
-    private val belt = Belt.FAST_TRANSPORT_BELT
-    private val inserter = Inserter.FAST_INSERTER
+    private val belt = BeltTier.FAST_TRANSPORT_BELT
+    private val inserter = InserterTier.FAST_INSERTER
 
     private fun defaultSelection(spaceAge: Boolean) =
         selectionString(
@@ -52,8 +52,8 @@ class SelectionTest {
                 )
             },
             { assertNull(surfaceFromUrl(EMPTY_SELECTION)) },
-            { assertNull(Belt.fromSelection(EMPTY_SELECTION)) },
-            { assertNull(Inserter.fromSelection(EMPTY_SELECTION)) },
+            { assertNull(BeltTier.fromSelection(EMPTY_SELECTION)) },
+            { assertNull(InserterTier.fromSelection(EMPTY_SELECTION)) },
         )
 
     @Test
@@ -87,16 +87,16 @@ class SelectionTest {
                 spaceAge = false,
                 Surface.VULCANUS,
                 fullBelt = true,
-                Belt.EXPRESS_TRANSPORT_BELT,
-                Inserter.BULK_INSERTER,
+                BeltTier.EXPRESS_TRANSPORT_BELT,
+                InserterTier.BULK_INSERTER,
             )
 
         assertAll(
             { assertEquals("Levy", selection) },
             { assertEquals(Surface.VULCANUS, surfaceFromUrl(selection)) },
             { assertTrue(SelectionFlag.FULL_BELT.enabledIn(selection)) },
-            { assertEquals(Belt.EXPRESS_TRANSPORT_BELT, Belt.fromSelection(selection)) },
-            { assertEquals(Inserter.BULK_INSERTER, Inserter.fromSelection(selection)) },
+            { assertEquals(BeltTier.EXPRESS_TRANSPORT_BELT, BeltTier.fromSelection(selection)) },
+            { assertEquals(InserterTier.BULK_INSERTER, InserterTier.fromSelection(selection)) },
         )
     }
 

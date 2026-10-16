@@ -57,7 +57,7 @@ class FactorioOptimizerProps {
                 factories,
                 spaceAgeEnabled,
                 surface,
-                fullBelt = beltLanes == Belt.MAX_LANES,
+                fullBelt = beltLanes == BeltTier.MAX_LANES,
                 belt,
                 inserter,
                 cheats = cheats,

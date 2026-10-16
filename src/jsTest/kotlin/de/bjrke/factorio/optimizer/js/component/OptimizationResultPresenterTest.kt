@@ -2,11 +2,11 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.business.testLogistics
-import de.bjrke.factorio.optimizer.common.model.Belt
+import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.Inserter
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.Recipe
@@ -92,8 +92,8 @@ class OptimizationResultPresenterTest : ComponentTest() {
     private val logistics =
         LogisticsCalculator(
             testLogistics,
-            Belt.EXPRESS_TRANSPORT_BELT,
-            Inserter.FAST_INSERTER,
+            BeltTier.EXPRESS_TRANSPORT_BELT,
+            InserterTier.FAST_INSERTER,
             lanes = 1,
             beltStack = 1,
             inserterStack = 1,
@@ -259,7 +259,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
     fun ingredientAndOutputBeltsAreRotatedOppositely() {
         renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
-        val belts = screen.getAllByTitle(Belt.EXPRESS_TRANSPORT_BELT.identifier)
+        val belts = screen.getAllByTitle(BeltTier.EXPRESS_TRANSPORT_BELT.identifier)
 
         assertAll(
             { assertEquals("matrix(0, 1, -1, 0, 0, 0)", computedStyle(belts[0], "transform")) },
@@ -271,7 +271,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
     fun onlyTheOutputInserterIsMirroredHorizontally() {
         renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
-        val inserters = screen.getAllByTitle(Inserter.FAST_INSERTER.identifier)
+        val inserters = screen.getAllByTitle(InserterTier.FAST_INSERTER.identifier)
 
         assertAll(
             { assertEquals("none", computedStyle(inserters[0], "transform")) },
@@ -290,7 +290,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
                 assertEquals(
                     materialSize,
                     computedStyle(
-                        screen.getAllByTitle(Belt.EXPRESS_TRANSPORT_BELT.identifier)[0],
+                        screen.getAllByTitle(BeltTier.EXPRESS_TRANSPORT_BELT.identifier)[0],
                         "width",
                     ),
                 )
@@ -299,7 +299,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
                 assertEquals(
                     materialSize,
                     computedStyle(
-                        screen.getAllByTitle(Inserter.FAST_INSERTER.identifier)[0],
+                        screen.getAllByTitle(InserterTier.FAST_INSERTER.identifier)[0],
                         "width",
                     ),
                 )
@@ -386,8 +386,8 @@ class OptimizationResultPresenterTest : ComponentTest() {
         val calculator =
             LogisticsCalculator(
                 testLogistics.copy(fluids = setOf(water)),
-                Belt.EXPRESS_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.EXPRESS_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 1,
                 beltStack = 1,
                 inserterStack = 1,
@@ -438,7 +438,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
         val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
         renderResult(result)
 
-        fireEvent.click(screen.getAllByTitle(Belt.EXPRESS_TRANSPORT_BELT.identifier).first())
+        fireEvent.click(screen.getAllByTitle(BeltTier.EXPRESS_TRANSPORT_BELT.identifier).first())
 
         assertEquals(firstBeltInput().value.toDouble(), normalizedTo.single(), 0.01)
     }
@@ -455,14 +455,14 @@ class OptimizationResultPresenterTest : ComponentTest() {
         val rendered =
             renderResult(
                 result,
-                calculator(Inserter.BULK_INSERTER, beltStack = 4, inserterStack = 8),
+                calculator(InserterTier.BULK_INSERTER, beltStack = 4, inserterStack = 8),
             )
         val bulkOutput = inserterInput(1)
 
         rendered.rerender(
             resultElement(
                 result,
-                calculator(Inserter.STACK_INSERTER, beltStack = 4, inserterStack = 8),
+                calculator(InserterTier.STACK_INSERTER, beltStack = 4, inserterStack = 8),
             ),
         )
         val stackOutput = inserterInput(1)
@@ -473,13 +473,13 @@ class OptimizationResultPresenterTest : ComponentTest() {
     }
 
     private fun calculator(
-        inserter: Inserter,
+        inserter: InserterTier,
         beltStack: Int,
         inserterStack: Int = 1,
     ) =
         LogisticsCalculator(
             testLogistics,
-            Belt.EXPRESS_TRANSPORT_BELT,
+            BeltTier.EXPRESS_TRANSPORT_BELT,
             inserter,
             lanes = 1,
             beltStack = beltStack,
@@ -497,10 +497,12 @@ class OptimizationResultPresenterTest : ComponentTest() {
     @Test
     fun theBigMiningDrillHonorsTheBeltStackWithoutAnInserter() {
         val result = optimizationResult(miningRecipe, ore, Factory.BIG_MINING_DRILL)
-        val rendered = renderResult(result, calculator(Inserter.FAST_INSERTER, beltStack = 1))
+        val rendered = renderResult(result, calculator(InserterTier.FAST_INSERTER, beltStack = 1))
         val atSingle = beltInput(0)
 
-        rendered.rerender(resultElement(result, calculator(Inserter.FAST_INSERTER, beltStack = 4)))
+        rendered.rerender(
+            resultElement(result, calculator(InserterTier.FAST_INSERTER, beltStack = 4)),
+        )
         val atStacked = beltInput(0)
 
         // the big mining drill stacks the belt itself, so stacking means a quarter of the belts
@@ -510,10 +512,12 @@ class OptimizationResultPresenterTest : ComponentTest() {
     @Test
     fun theOtherMiningDrillsIgnoreTheBeltStack() {
         val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
-        val rendered = renderResult(result, calculator(Inserter.FAST_INSERTER, beltStack = 1))
+        val rendered = renderResult(result, calculator(InserterTier.FAST_INSERTER, beltStack = 1))
         val atSingle = beltInput(0)
 
-        rendered.rerender(resultElement(result, calculator(Inserter.FAST_INSERTER, beltStack = 4)))
+        rendered.rerender(
+            resultElement(result, calculator(InserterTier.FAST_INSERTER, beltStack = 4)),
+        )
 
         // an electric mining drill places single items, so stacking does not change its belts
         assertEquals(atSingle, beltInput(0), 0.01)
@@ -522,11 +526,13 @@ class OptimizationResultPresenterTest : ComponentTest() {
     @Test
     fun otherOutputsOnlyStackWithAStackingInserter() {
         val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
-        val rendered = renderResult(result, calculator(Inserter.STACK_INSERTER, beltStack = 4))
+        val rendered = renderResult(result, calculator(InserterTier.STACK_INSERTER, beltStack = 4))
         val inputStacked = beltInput(0)
         val outputStacked = beltInput(1)
 
-        rendered.rerender(resultElement(result, calculator(Inserter.FAST_INSERTER, beltStack = 4)))
+        rendered.rerender(
+            resultElement(result, calculator(InserterTier.FAST_INSERTER, beltStack = 4)),
+        )
         val inputUnstacked = beltInput(0)
         val outputUnstacked = beltInput(1)
 
@@ -580,8 +586,8 @@ class OptimizationResultPresenterTest : ComponentTest() {
         val calculator =
             LogisticsCalculator(
                 testLogistics.copy(fluids = setOf(water)),
-                Belt.EXPRESS_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.EXPRESS_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 1,
                 beltStack = 1,
                 inserterStack = 1,

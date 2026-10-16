@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Belt
+import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.Inserter
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.iconLayers
 import de.bjrke.test.assertTable
 import java.io.File
@@ -35,8 +35,8 @@ class IconCoverageTest {
             addAll(parsed.recipes.map { it.name })
         }
         addAll(Factory.entries.map { it.identifier })
-        addAll(Belt.entries.map { it.identifier })
-        addAll(Inserter.entries.map { it.identifier })
+        addAll(BeltTier.entries.map { it.identifier })
+        addAll(InserterTier.entries.map { it.identifier })
         // fixed icons the UI renders without a prototype behind them
         addAll(listOf("pipe", "recycling", "recycling-top", "spoilage", "space-age"))
     }

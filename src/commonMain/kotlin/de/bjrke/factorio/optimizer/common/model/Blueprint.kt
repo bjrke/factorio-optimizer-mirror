@@ -5,9 +5,22 @@ import kotlinx.serialization.json.*
 /** The stock an infinity chest keeps available, matching what the game writes into a blueprint. */
 private const val INFINITY_STOCK = 100
 
+/** A cardinal facing, stored in a blueprint as 0/4/8/12 (see the entity JSON writer). */
+enum class Direction {
+    NORTH,
+    EAST,
+    SOUTH,
+    WEST,
+}
+
+/** Which end of a directional entity (an underground belt or a loader) this is: its `type`. */
+enum class Io {
+    INPUT,
+    OUTPUT,
+}
+
 /**
- * One entity of a blueprint. [direction] is only set for entities that face a way; the 2.0
- * convention doubles the cardinal values to 0/4/8/12.
+ * One entity of a blueprint. [direction] is only set for entities that face a way.
  *
  * [type] is `input`/`output` for an underground belt (or pipe-to-ground), [recipe] the recipe an
  * assembling machine runs and [marker] the material a constant-combinator marker carries.
@@ -15,9 +28,9 @@ private const val INFINITY_STOCK = 100
 data class BlueprintEntity(
     val name: String,
     val area: Area,
-    val direction: Int? = null,
+    val direction: Direction? = null,
     val recipe: String? = null,
-    val type: String? = null,
+    val type: Io? = null,
     val marker: Material? = null,
     /**
      * Whether [marker] is a fluid; a constant combinator needs an explicit signal type for those.
@@ -35,9 +48,9 @@ data class BlueprintEntity(
     constructor(
         name: String,
         topLeft: Coordinate,
-        direction: Int? = null,
+        direction: Direction? = null,
         recipe: String? = null,
-        type: String? = null,
+        type: Io? = null,
         marker: Material? = null,
         markerFluid: Boolean = false,
         neighbours: List<Int> = emptyList(),
@@ -105,9 +118,28 @@ private fun BlueprintEntity.toJson(entityNumber: Int) = buildJsonObject {
         put("y", jsonNumber(area.topLeft.y + area.height / 2.0))
     }
 
-    direction?.let { put("direction", it) }
+    direction?.let { direction ->
+        // the 2.0 convention doubles the cardinal values to 0/4/8/12
+        put(
+            "direction",
+            when (direction) {
+                Direction.NORTH -> 0
+                Direction.EAST -> 4
+                Direction.SOUTH -> 8
+                Direction.WEST -> 12
+            },
+        )
+    }
     recipe?.let { put("recipe", it) }
-    type?.let { put("type", it) }
+    type?.let { type ->
+        put(
+            "type",
+            when (type) {
+                Io.INPUT -> "input"
+                Io.OUTPUT -> "output"
+            },
+        )
+    }
     infinity?.let { infinity ->
         putJsonObject("infinity_settings") {
             put("remove_unfiltered_items", infinity.removeUnfiltered)

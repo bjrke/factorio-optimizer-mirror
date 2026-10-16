@@ -25,8 +25,8 @@ class BlueprintIntegrationTest {
         val logistics =
             LogisticsCalculator(
                 result.logistics,
-                Belt.FAST_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.FAST_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 2,
                 beltStack = 1,
                 inserterStack = 1,
@@ -50,8 +50,8 @@ class BlueprintIntegrationTest {
         val logistics =
             LogisticsCalculator(
                 result.logistics,
-                Belt.FAST_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.FAST_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 2,
                 beltStack = 1,
                 inserterStack = 1,
@@ -125,8 +125,8 @@ class BlueprintIntegrationTest {
         val logistics =
             LogisticsCalculator(
                 result.logistics,
-                Belt.FAST_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.FAST_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 2,
                 beltStack = 1,
                 inserterStack = 1,
@@ -178,18 +178,12 @@ class BlueprintIntegrationTest {
                     val direction = it.direction ?: return@filter false
                     val reach = if (it.name == "long-handed-inserter") 2 else 1
                     val d =
-                        Coordinate(
-                            when (direction) {
-                                4 -> 1
-                                12 -> -1
-                                else -> 0
-                            },
-                            when (direction) {
-                                0 -> -1
-                                8 -> 1
-                                else -> 0
-                            },
-                        )
+                        when (direction) {
+                            Direction.NORTH -> Coordinate(0, -1)
+                            Direction.EAST -> Coordinate(1, 0)
+                            Direction.SOUTH -> Coordinate(0, 1)
+                            Direction.WEST -> Coordinate(-1, 0)
+                        }
                     val tile = it.area.topLeft + d * reach
                     tile !in occupied
                 }
@@ -215,22 +209,22 @@ class BlueprintIntegrationTest {
     private fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
         val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
 
-        fun step(direction: Int) =
+        fun step(direction: Direction) =
             when (direction) {
-                0 -> Coordinate(0, -1)
-                4 -> Coordinate(1, 0)
-                8 -> Coordinate(0, 1)
-                else -> Coordinate(-1, 0)
+                Direction.NORTH -> Coordinate(0, -1)
+                Direction.EAST -> Coordinate(1, 0)
+                Direction.SOUTH -> Coordinate(0, 1)
+                Direction.WEST -> Coordinate(-1, 0)
             }
 
         val underground = entities.filter { it.name.endsWith("underground-belt") }
-        val inputs = underground.filter { it.type == "input" }.map { it.area.topLeft }.toSet()
-        val outputs = underground.filter { it.type == "output" }.map { it.area.topLeft }.toSet()
+        val inputs = underground.filter { it.type == Io.INPUT }.map { it.area.topLeft }.toSet()
+        val outputs = underground.filter { it.type == Io.OUTPUT }.map { it.area.topLeft }.toSet()
         val problems = mutableListOf<String>()
         for (entity in underground) {
-            val step = step(entity.direction ?: 0)
+            val step = step(entity.direction ?: Direction.NORTH)
             val topLeft = entity.area.topLeft
-            if (entity.type == "input") {
+            if (entity.type == Io.INPUT) {
                 val exit = (1..9).any { outputs.contains(topLeft + step * it) }
                 if (!exit) problems += "input $topLeft has no exit ahead"
                 if ((topLeft - step) !in occupied) problems += "input $topLeft is not fed"
@@ -258,8 +252,8 @@ class BlueprintIntegrationTest {
         val logistics =
             LogisticsCalculator(
                 result.logistics,
-                Belt.FAST_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.FAST_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 2,
                 beltStack = 1,
                 inserterStack = 1,
@@ -395,12 +389,12 @@ class BlueprintIntegrationTest {
                     it.area.topLeft to it.direction!!
                 }
 
-        fun step(direction: Int) =
+        fun step(direction: Direction) =
             when (direction) {
-                0 -> Coordinate(0, -1)
-                4 -> Coordinate(1, 0)
-                8 -> Coordinate(0, 1)
-                else -> Coordinate(-1, 0)
+                Direction.NORTH -> Coordinate(0, -1)
+                Direction.EAST -> Coordinate(1, 0)
+                Direction.SOUTH -> Coordinate(0, 1)
+                Direction.WEST -> Coordinate(-1, 0)
             }
 
         val merges =
@@ -420,8 +414,8 @@ class BlueprintIntegrationTest {
         val logistics =
             LogisticsCalculator(
                 result.logistics,
-                Belt.FAST_TRANSPORT_BELT,
-                Inserter.FAST_INSERTER,
+                BeltTier.FAST_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
                 lanes = 2,
                 beltStack = 1,
                 inserterStack = 1,

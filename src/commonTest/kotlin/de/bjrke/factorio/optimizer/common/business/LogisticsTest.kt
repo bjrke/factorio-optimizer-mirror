@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Belt
-import de.bjrke.factorio.optimizer.common.model.Inserter
+import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterStats
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Logistics
 import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.model.Material
@@ -80,13 +80,18 @@ internal val testLogistics =
         pumpRate = 1200.0,
     )
 
-private data class BeltCase(val belt: Belt, val lanes: Int, val stack: Int, val expected: Double)
+private data class BeltCase(
+    val belt: BeltTier,
+    val lanes: Int,
+    val stack: Int,
+    val expected: Double,
+)
 
 class LogisticsTest {
 
     private fun calculator(
-        belt: Belt = Belt.TRANSPORT_BELT,
-        inserter: Inserter = Inserter.INSERTER,
+        belt: BeltTier = BeltTier.TRANSPORT_BELT,
+        inserter: InserterTier = InserterTier.INSERTER,
         lanes: Int = 1,
         beltStack: Int = 1,
         inserterStack: Int = 1,
@@ -97,12 +102,12 @@ class LogisticsTest {
     fun beltThroughputPerTierLanesAndStacking() =
         assertTableOf(
             // 0.03125 tiles/tick * 60 * 4 items per lane
-            BeltCase(Belt.TRANSPORT_BELT, 1, 1, 7.5),
-            BeltCase(Belt.TRANSPORT_BELT, 2, 1, 15.0),
-            BeltCase(Belt.TURBO_TRANSPORT_BELT, 1, 1, 30.0),
-            BeltCase(Belt.TURBO_TRANSPORT_BELT, 2, 1, 60.0),
+            BeltCase(BeltTier.TRANSPORT_BELT, 1, 1, 7.5),
+            BeltCase(BeltTier.TRANSPORT_BELT, 2, 1, 15.0),
+            BeltCase(BeltTier.TURBO_TRANSPORT_BELT, 1, 1, 30.0),
+            BeltCase(BeltTier.TURBO_TRANSPORT_BELT, 2, 1, 60.0),
             // stacking multiplies the throughput
-            BeltCase(Belt.TRANSPORT_BELT, 1, 4, 30.0),
+            BeltCase(BeltTier.TRANSPORT_BELT, 1, 4, 30.0),
         ) { (belt, lanes, stack, expected) ->
             assertEquals(
                 expected,
@@ -114,10 +119,10 @@ class LogisticsTest {
     @Test
     fun inserterThroughputPerTierAndStacking() =
         assertTableOf(
-            Triple(Inserter.INSERTER, 1, 0.84), // 0.014 turns/tick * 60 * 1
-            Triple(Inserter.FAST_INSERTER, 1, 2.4),
-            Triple(Inserter.STACK_INSERTER, 6, 14.4), // 0.04 * 60 * 6 (its base hand size)
-            Triple(Inserter.BURNER_INSERTER, 1, 0.78),
+            Triple(InserterTier.INSERTER, 1, 0.84), // 0.014 turns/tick * 60 * 1
+            Triple(InserterTier.FAST_INSERTER, 1, 2.4),
+            Triple(InserterTier.STACK_INSERTER, 6, 14.4), // 0.04 * 60 * 6 (its base hand size)
+            Triple(InserterTier.BURNER_INSERTER, 1, 0.78),
         ) { (inserter, stack, expected) ->
             assertEquals(
                 expected,
@@ -134,8 +139,8 @@ class LogisticsTest {
                 assertEquals(
                     8 * 60.0 / 41.0,
                     calculator(
-                            belt = Belt.TURBO_TRANSPORT_BELT,
-                            inserter = Inserter.BULK_INSERTER,
+                            belt = BeltTier.TURBO_TRANSPORT_BELT,
+                            inserter = InserterTier.BULK_INSERTER,
                             inserterStack = 8,
                         )
                         .placingThroughput(),
@@ -147,8 +152,8 @@ class LogisticsTest {
                 assertEquals(
                     8 * 60.0 / 29.0,
                     calculator(
-                            belt = Belt.TURBO_TRANSPORT_BELT,
-                            inserter = Inserter.STACK_INSERTER,
+                            belt = BeltTier.TURBO_TRANSPORT_BELT,
+                            inserter = InserterTier.STACK_INSERTER,
                             inserterStack = 8,
                             beltStack = 4,
                         )
@@ -162,15 +167,15 @@ class LogisticsTest {
     fun aStackInserterPlacesFasterThanABulkInserterWithTheSameHand() {
         val bulk =
             calculator(
-                belt = Belt.EXPRESS_TRANSPORT_BELT,
-                inserter = Inserter.BULK_INSERTER,
+                belt = BeltTier.EXPRESS_TRANSPORT_BELT,
+                inserter = InserterTier.BULK_INSERTER,
                 inserterStack = 8,
                 beltStack = 4,
             )
         val stack =
             calculator(
-                belt = Belt.EXPRESS_TRANSPORT_BELT,
-                inserter = Inserter.STACK_INSERTER,
+                belt = BeltTier.EXPRESS_TRANSPORT_BELT,
+                inserter = InserterTier.STACK_INSERTER,
                 inserterStack = 8,
                 beltStack = 4,
             )
@@ -183,9 +188,17 @@ class LogisticsTest {
         assertAll(
             {
                 assertEquals(
-                    calculator(inserter = Inserter.BULK_INSERTER, inserterStack = 4, beltStack = 1)
+                    calculator(
+                            inserter = InserterTier.BULK_INSERTER,
+                            inserterStack = 4,
+                            beltStack = 1,
+                        )
                         .placingThroughput(),
-                    calculator(inserter = Inserter.BULK_INSERTER, inserterStack = 4, beltStack = 4)
+                    calculator(
+                            inserter = InserterTier.BULK_INSERTER,
+                            inserterStack = 4,
+                            beltStack = 4,
+                        )
                         .placingThroughput(),
                     TOLERANCE,
                 )
@@ -194,14 +207,14 @@ class LogisticsTest {
             {
                 assertTrue(
                     calculator(
-                            belt = Belt.TURBO_TRANSPORT_BELT,
-                            inserter = Inserter.BULK_INSERTER,
+                            belt = BeltTier.TURBO_TRANSPORT_BELT,
+                            inserter = InserterTier.BULK_INSERTER,
                             inserterStack = 4,
                         )
                         .placingThroughput() >
                         calculator(
-                                belt = Belt.TRANSPORT_BELT,
-                                inserter = Inserter.BULK_INSERTER,
+                                belt = BeltTier.TRANSPORT_BELT,
+                                inserter = InserterTier.BULK_INSERTER,
                                 inserterStack = 4,
                             )
                             .placingThroughput(),
@@ -209,7 +222,8 @@ class LogisticsTest {
             },
             // placing onto a belt is never faster than moving between storages
             {
-                val calculator = calculator(inserter = Inserter.BULK_INSERTER, inserterStack = 4)
+                val calculator =
+                    calculator(inserter = InserterTier.BULK_INSERTER, inserterStack = 4)
                 assertTrue(calculator.placingThroughput() <= calculator.inserterThroughput())
             },
         )
@@ -223,7 +237,7 @@ class LogisticsTest {
             {
                 assertEquals(
                     5.0,
-                    calculator(inserter = Inserter.FAST_INSERTER).inserterCount(12.0),
+                    calculator(inserter = InserterTier.FAST_INSERTER).inserterCount(12.0),
                     TOLERANCE,
                 )
             },
@@ -262,11 +276,11 @@ class LogisticsTest {
     @Test
     fun onlyTheStackInserterStacksOnBelts() =
         assertAll(
-            { assertFalse(calculator(inserter = Inserter.INSERTER).stacksOnBelt()) },
-            { assertFalse(calculator(inserter = Inserter.FAST_INSERTER).stacksOnBelt()) },
+            { assertFalse(calculator(inserter = InserterTier.INSERTER).stacksOnBelt()) },
+            { assertFalse(calculator(inserter = InserterTier.FAST_INSERTER).stacksOnBelt()) },
             // the bulk inserter holds several items but cannot stack them on a belt
-            { assertFalse(calculator(inserter = Inserter.BULK_INSERTER).stacksOnBelt()) },
-            { assertTrue(calculator(inserter = Inserter.STACK_INSERTER).stacksOnBelt()) },
+            { assertFalse(calculator(inserter = InserterTier.BULK_INSERTER).stacksOnBelt()) },
+            { assertTrue(calculator(inserter = InserterTier.STACK_INSERTER).stacksOnBelt()) },
         )
 
     @Test
@@ -276,13 +290,13 @@ class LogisticsTest {
             {
                 assertEquals(
                     2,
-                    calculator(inserter = Inserter.BULK_INSERTER, inserterStack = 1).handSize,
+                    calculator(inserter = InserterTier.BULK_INSERTER, inserterStack = 1).handSize,
                 )
             },
             {
                 assertEquals(
                     6,
-                    calculator(inserter = Inserter.STACK_INSERTER, inserterStack = 1).handSize,
+                    calculator(inserter = InserterTier.STACK_INSERTER, inserterStack = 1).handSize,
                 )
             },
             // a plain inserter keeps the requested stack
@@ -291,7 +305,7 @@ class LogisticsTest {
             {
                 assertEquals(
                     1.0,
-                    calculator(inserter = Inserter.BULK_INSERTER, inserterStack = 1)
+                    calculator(inserter = InserterTier.BULK_INSERTER, inserterStack = 1)
                         .inserterCount(4.8),
                     TOLERANCE,
                 )
@@ -303,11 +317,11 @@ class LogisticsTest {
         val config = LogisticsConfig(testLogistics, spaceAge = true)
 
         assertAll(
-            { assertEquals(2, config.inserterStack("1", Inserter.BULK_INSERTER)) },
-            { assertEquals(6, config.inserterStack(null, Inserter.STACK_INSERTER)) },
-            { assertEquals(12, config.inserterStack("99", Inserter.BULK_INSERTER)) },
-            { assertEquals(1, config.inserterStack(null, Inserter.INSERTER)) },
-            { assertEquals(16, config.inserterStack("99", Inserter.STACK_INSERTER)) },
+            { assertEquals(2, config.inserterStack("1", InserterTier.BULK_INSERTER)) },
+            { assertEquals(6, config.inserterStack(null, InserterTier.STACK_INSERTER)) },
+            { assertEquals(12, config.inserterStack("99", InserterTier.BULK_INSERTER)) },
+            { assertEquals(1, config.inserterStack(null, InserterTier.INSERTER)) },
+            { assertEquals(16, config.inserterStack("99", InserterTier.STACK_INSERTER)) },
         )
     }
 
@@ -342,8 +356,8 @@ class LogisticsTest {
         val config = LogisticsConfig(partial, spaceAge = true)
 
         assertAll(
-            { assertEquals(listOf(Belt.TRANSPORT_BELT), config.availableBelts) },
-            { assertEquals(listOf(Inserter.INSERTER), config.availableInserters) },
+            { assertEquals(listOf(BeltTier.TRANSPORT_BELT), config.availableBelts) },
+            { assertEquals(listOf(InserterTier.INSERTER), config.availableInserters) },
         )
     }
 
@@ -365,13 +379,13 @@ class LogisticsTest {
 
         assertAll(
             // only the tier's own code matters, the surrounding letters are ignored
-            { assertEquals(Belt.TRANSPORT_BELT, config.belt("a3t")) },
-            { assertEquals(Belt.EXPRESS_TRANSPORT_BELT, config.belt("a3e")) },
-            { assertEquals(Inserter.INSERTER, config.inserter("a3i")) },
-            { assertEquals(Inserter.STACK_INSERTER, config.inserter("a3z")) },
+            { assertEquals(BeltTier.TRANSPORT_BELT, config.belt("a3t")) },
+            { assertEquals(BeltTier.EXPRESS_TRANSPORT_BELT, config.belt("a3e")) },
+            { assertEquals(InserterTier.INSERTER, config.inserter("a3i")) },
+            { assertEquals(InserterTier.STACK_INSERTER, config.inserter("a3z")) },
             // the red belt and the fast inserter are the defaults and carry no code
-            { assertEquals(Belt.FAST_TRANSPORT_BELT, config.defaultBelt) },
-            { assertEquals(Inserter.FAST_INSERTER, config.defaultInserter) },
+            { assertEquals(BeltTier.FAST_TRANSPORT_BELT, config.defaultBelt) },
+            { assertEquals(InserterTier.FAST_INSERTER, config.defaultInserter) },
             // absent falls back to the default tier
             { assertEquals(config.defaultBelt, config.belt(null)) },
             { assertEquals(config.defaultInserter, config.inserter(null)) },
@@ -384,36 +398,41 @@ class LogisticsTest {
         val base = LogisticsConfig(testLogistics, spaceAge = false)
 
         assertAll(
-            { assertEquals(Belt.MAX_STACK, spaceAge.beltStackMax) },
+            { assertEquals(BeltTier.MAX_STACK, spaceAge.beltStackMax) },
             // only the Space Age stack inserter builds whole stacks on a belt
-            { assertEquals(1, spaceAge.beltStackMin(Inserter.FAST_INSERTER)) },
+            { assertEquals(1, spaceAge.beltStackMin(InserterTier.FAST_INSERTER)) },
             {
                 assertEquals(
-                    Belt.MIN_STACK_INSERTER_STACK,
-                    spaceAge.beltStackMin(Inserter.STACK_INSERTER),
+                    BeltTier.MIN_STACK_INSERTER_STACK,
+                    spaceAge.beltStackMin(InserterTier.STACK_INSERTER),
                 )
             },
             // an unstacked belt is the default; selecting the stack inserter lifts the level to two
-            { assertEquals(1, spaceAge.beltStack(null, Inserter.FAST_INSERTER)) },
-            { assertEquals(1, spaceAge.beltStack("1", Inserter.FAST_INSERTER)) },
+            { assertEquals(1, spaceAge.beltStack(null, InserterTier.FAST_INSERTER)) },
+            { assertEquals(1, spaceAge.beltStack("1", InserterTier.FAST_INSERTER)) },
             {
                 assertEquals(
-                    Belt.MIN_STACK_INSERTER_STACK,
-                    spaceAge.beltStack("1", Inserter.STACK_INSERTER),
+                    BeltTier.MIN_STACK_INSERTER_STACK,
+                    spaceAge.beltStack("1", InserterTier.STACK_INSERTER),
                 )
             },
             {
                 assertEquals(
-                    Belt.MIN_STACK_INSERTER_STACK,
-                    spaceAge.beltStack(null, Inserter.STACK_INSERTER),
+                    BeltTier.MIN_STACK_INSERTER_STACK,
+                    spaceAge.beltStack(null, InserterTier.STACK_INSERTER),
                 )
             },
-            { assertEquals(3, spaceAge.beltStack("3", Inserter.STACK_INSERTER)) },
-            { assertEquals(Belt.MAX_STACK, spaceAge.beltStack("9", Inserter.STACK_INSERTER)) },
+            { assertEquals(3, spaceAge.beltStack("3", InserterTier.STACK_INSERTER)) },
+            {
+                assertEquals(
+                    BeltTier.MAX_STACK,
+                    spaceAge.beltStack("9", InserterTier.STACK_INSERTER),
+                )
+            },
             // belt stacking needs the Space Age stack inserters
             { assertEquals(1, base.beltStackMax) },
-            { assertEquals(1, base.beltStackMin(Inserter.STACK_INSERTER)) },
-            { assertEquals(1, base.beltStack("4", Inserter.STACK_INSERTER)) },
+            { assertEquals(1, base.beltStackMin(InserterTier.STACK_INSERTER)) },
+            { assertEquals(1, base.beltStack("4", InserterTier.STACK_INSERTER)) },
         )
     }
 

@@ -3,11 +3,6 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.*
 import kotlin.math.*
 
-private const val NORTH = 0
-private const val EAST = 4
-private const val SOUTH = 8
-private const val WEST = 12
-
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
 
@@ -70,7 +65,7 @@ internal fun blueprintBeltMaterials(
 ) =
     RowLayout(plan, logistics, cheats).run {
         build()
-        beltMaterial.toMap()
+        beltMaterials()
     }
 
 private class RowLayout(
@@ -80,7 +75,7 @@ private class RowLayout(
 ) {
     private val belt = logistics.belt.identifier
     private val inserter = logistics.inserter.identifier
-    private val longInserter = Inserter.LONG_HANDED_INSERTER.identifier
+    private val longInserter = InserterTier.LONG_HANDED_INSERTER.identifier
     private val splitter = belt.replace("transport-belt", "splitter")
     private val undergroundBelt = belt.replace("transport-belt", "underground-belt")
 
@@ -96,30 +91,26 @@ private class RowLayout(
             else -> 5
         }
 
-    private val entities = mutableListOf<BlueprintEntity>()
-    private val occupied = mutableMapOf<Coordinate, BlueprintEntity>()
-
-    /** Tiles a feed will need (lane feed tiles); no route may run through them first. */
-    private val reserved = mutableSetOf<Coordinate>()
-
-    /** The fluid each placed pipe tile carries, so two different fluids never touch. */
-    private val fluidAt = mutableMapOf<Coordinate, Material>()
+    private val placed = mutableListOf<LayoutEntity>()
 
     /**
-     * The direction of each placed belt, so a new belt never lands where one would side-load it.
+     * One tile of the layout: the entity that covers it and the planner's flags for the tile. A
+     * tile with no [entity] is free; the flags only matter while the layout is being built.
      */
-    private val beltAt = mutableMapOf<Coordinate, Int>()
+    private class Cell {
+        var entity: LayoutEntity? = null
 
-    /** The material each belt carries, so only belts of the same material may merge. */
-    val beltMaterial = mutableMapOf<Coordinate, Material>()
+        /** A feed will need this tile; no route may run through it first. */
+        var reserved = false
 
-    /**
-     * The fluid each machine-edge pipe is reserved for, so two fluids never pick touching edges.
-     */
-    private val fluidEdgeOwner = mutableMapOf<Coordinate, Material>()
+        /** The fluid a machine-edge pipe is reserved for here, so two fluids never touch edges. */
+        var edgeFluid: Material? = null
 
-    /** Tiles already tunneled over; two underground belts must never share a tile. */
-    private val undergroundUsed = mutableSetOf<Coordinate>()
+        /** An underground belt tunnels over this tile; two tunnels must never share a tile. */
+        var underground = false
+    }
+
+    private val grid = mutableMapOf<Coordinate, Cell>()
 
     private val markerRows = mutableSetOf<Int>()
 
@@ -179,42 +170,46 @@ private class RowLayout(
     }
 
     fun build(): List<BlueprintEntity> {
-        if (plan.recipes.isEmpty()) return entities
-        computeDepth()
-        placeRows()
-        placeTargetOutput()
-        val sinks = allSolidSinks()
-        for ((_, _, sink) in sinks) {
-            reserved += sink.routeTo
-            reserved += sink.approach
+        if (plan.recipes.isNotEmpty()) {
+            computeDepth()
+            placeRows()
+            placeTargetOutput()
+            val sinks = allSolidSinks()
+            for ((_, _, sink) in sinks) {
+                reserve(sink.routeTo)
+                reserve(sink.approach)
+            }
+            feedSolids(sinks)
+            feedFluids()
+            placeTargetFluidOutput()
+            placePoles()
+            wirePoles()
         }
-        feedSolids(sinks)
-        feedFluids()
-        placeTargetFluidOutput()
-        placePoles()
-        wirePoles()
-        return entities
+        return placed.map { it.toBlueprintEntity() }
     }
+
+    /** The material each belt tile carries, keyed by the tile. Used by tests. */
+    fun beltMaterials(): Map<Coordinate, Material> =
+        placed
+            .filterIsInstance<BeltLikeEntity>()
+            .mapNotNull { entity -> entity.material?.let { entity.area.topLeft to it } }
+            .toMap()
 
     /**
      * Wires every pair of poles within reach. A blueprint does not rebuild pole wires on its own,
      * so they have to be part of it.
      */
     private fun wirePoles() {
-        val poles = entities.withIndex().filter { it.value.name == POLE }
+        val poles = placed.withIndex().filter { it.value is PoleEntity }
         for (i in poles.indices) {
             for (j in i + 1 until poles.size) {
                 val a = poles[i]
                 val b = poles[j]
                 if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= WIRE_REACH_SQ) {
-                    entities[a.index] =
-                        entities[a.index].copy(
-                            neighbours = entities[a.index].neighbours + (b.index + 1),
-                        )
-                    entities[b.index] =
-                        entities[b.index].copy(
-                            neighbours = entities[b.index].neighbours + (a.index + 1),
-                        )
+                    val first = placed[a.index] as PoleEntity
+                    val second = placed[b.index] as PoleEntity
+                    placed[a.index] = first.copy(neighbours = first.neighbours + (b.index + 1))
+                    placed[b.index] = second.copy(neighbours = second.neighbours + (a.index + 1))
                 }
             }
         }
@@ -346,11 +341,11 @@ private class RowLayout(
             )
 
         for (copy in 0 until copies) {
-            add(
-                BlueprintEntity(
-                    recipe.factory.identifier,
+            place(
+                MachineEntity(
                     Coordinate(row.left + copy * stride, factoryTop).area(size),
-                    recipe = recipe.recipe.name,
+                    recipe.factory.identifier,
+                    recipe.recipe.name,
                 ),
             )
         }
@@ -363,18 +358,18 @@ private class RowLayout(
         for (copy in 0 until copies) {
             val left = row.left + copy * stride
             pattern.forEachIndexed { index, long ->
-                addInserter(long, Coordinate(left + index, factoryTop - 1), NORTH)
+                placeInserter(Coordinate(left + index, factoryTop - 1), Direction.NORTH, long)
             }
         }
 
         // an imported lane flows east (fed from the west); a produced lane flows west (fed from
         // the producer's fan on the east), so produced belts never cross the import lanes
-        fun laneDirection(material: Material) = if (material in producerOf) WEST else EAST
+        fun laneDirection(material: Material) =
+            if (material in producerOf) Direction.WEST else Direction.EAST
         fun placeLane(y: Int, material: Material) {
             val direction = laneDirection(material)
             for (x in row.left..row.right) {
-                add(BlueprintEntity(belt, Coordinate(x, y), direction))
-                beltMaterial[Coordinate(x, y)] = material
+                placeBelt(Coordinate(x, y), direction, material)
             }
         }
         laneNearRow?.let { placeLane(it, solids[0]) }
@@ -386,39 +381,28 @@ private class RowLayout(
             val left = row.left + copy * stride
             // the product is inserted onto the belt below the row
             if (producesSolid) {
-                addInserter(
-                    false,
+                placeInserter(
                     Coordinate(
                         left + size.width / 2,
                         row.factoryBottom + 1,
                     ),
-                    NORTH,
+                    Direction.NORTH,
+                    false,
                 )
             }
             // a long inserter reaches over the output belt to a third input belt below the row
             if (laneBelowRow != null) {
                 val column = if (size.width == 2) left else left + size.width - 1
-                add(BlueprintEntity(longInserter, Coordinate(column, row.factoryBottom + 1), SOUTH))
+                placeInserter(Coordinate(column, row.factoryBottom + 1), Direction.SOUTH, true)
             }
         }
         if (producesSolid) {
             val product = recipe.recipe.result.keys.first()
             for (x in row.left..row.right) {
-                add(BlueprintEntity(belt, Coordinate(x, outputLaneRow), EAST))
-                beltMaterial[Coordinate(x, outputLaneRow)] = product
+                placeBelt(Coordinate(x, outputLaneRow), Direction.EAST, product)
             }
         }
         return row
-    }
-
-    private fun addInserter(long: Boolean, coordinate: Coordinate, direction: Int) {
-        add(
-            BlueprintEntity(
-                if (long) longInserter else inserter,
-                coordinate,
-                direction,
-            ),
-        )
     }
 
     private fun sinkOf(row: Row, material: Material): Sink? {
@@ -481,36 +465,17 @@ private class RowLayout(
                 }
                 if (cheats) {
                     // an infinity chest feeds the belt through a loader, so no supply is needed
-                    add(
-                        BlueprintEntity(
-                            INFINITY_CHEST,
-                            Coordinate(2, row),
-                            infinity = InfinitySettings(item = material),
-                        ),
-                    )
-                    add(
-                        BlueprintEntity(
-                            loader,
-                            Coordinate(3, row).area(2, 1),
-                            EAST,
-                            type = "output",
-                        ),
-                    )
+                    placeInfinityChest(Coordinate(2, row), InfinitySettings(item = material))
+                    placeLoader(Coordinate(3, row), Direction.EAST, Io.OUTPUT)
                     for (x in 5..sink.routeTo.x) {
-                        add(BlueprintEntity(belt, Coordinate(x, row), EAST))
+                        placeBelt(Coordinate(x, row), Direction.EAST)
                     }
                 } else {
                     for (x in 2..sink.routeTo.x) {
-                        add(BlueprintEntity(belt, Coordinate(x, row), EAST))
+                        placeBelt(Coordinate(x, row), Direction.EAST)
                     }
                     val spot = markerSpot(Coordinate(2, row))
-                    add(
-                        BlueprintEntity(
-                            MARKER,
-                            spot,
-                            marker = material,
-                        ),
-                    )
+                    placeMarker(spot, Signal(material))
                 }
             }
         }
@@ -551,12 +516,12 @@ private class RowLayout(
     private fun fanFree(start: Coordinate, count: Int): Boolean {
         // the body is two tiles tall: a splitter per branch plus the final belt
         val body = start.area(2 * count - 1, 2)
-        if (!body.all { isFree(it) && it !in reserved }) return false
+        if (!body.all { isFree(it) && !isReserved(it) }) return false
 
         // each splitter's branch turns south; its first route tile must stay clear
         var coordinate = start.south(2).east()
         repeat(count - 1) {
-            if (!isFree(coordinate) || coordinate in reserved) return false
+            if (!isFree(coordinate) || isReserved(coordinate)) return false
             coordinate = coordinate.east(2)
         }
         return true
@@ -572,24 +537,26 @@ private class RowLayout(
         var startX = row.right + 1
         while (startX < row.right + 60 && !fanFree(Coordinate(startX, y), count)) startX++
         // connect the output lane to the fan when it had to shift east
-        for (x in (row.right + 1) until startX) add(BlueprintEntity(belt, Coordinate(x, y), EAST))
+        for (x in (row.right + 1) until startX) {
+            placeBelt(Coordinate(x, y), Direction.EAST)
+        }
         val branches = mutableListOf<Coordinate>()
         var start = Coordinate(startX, y)
         repeat(count - 1) {
             // a splitter is two tiles across the flow; its input comes from the west, its outputs
             // run east, one of which turns south into a branch
-            add(BlueprintEntity(splitter, start.area(1, 2), EAST))
+            place(SplitterEntity(start.area(1, 2), splitter, Direction.EAST))
             val branchEast = start.east()
             val branchSouth = branchEast.south()
-            add(BlueprintEntity(belt, branchSouth, SOUTH))
+            placeBelt(branchSouth, Direction.SOUTH)
             branches += branchSouth
-            add(BlueprintEntity(belt, branchEast, EAST))
+            placeBelt(branchEast, Direction.EAST)
             start = start.east(2)
         }
-        add(BlueprintEntity(belt, start, SOUTH))
+        placeBelt(start, Direction.SOUTH)
         branches += start
         // keep each branch's first route tile free, so no earlier feed blocks it
-        for (c in branches) reserved += c.south()
+        for (c in branches) reserve(c.south())
         return branches
     }
 
@@ -602,7 +569,7 @@ private class RowLayout(
                 attempts++ < 50
         ) row++
         markerRows += row
-        add(BlueprintEntity(MARKER, Coordinate(1, row), marker = material))
+        placeMarker(Coordinate(1, row), Signal(material))
         return Coordinate(2, row)
     }
 
@@ -647,8 +614,8 @@ private class RowLayout(
             for (material in fluids) {
                 for (copy in 0 until row.copies) {
                     val tile = fluidEdge(row, copy, material) ?: continue
-                    reserved += tile
-                    fluidEdgeOwner[tile] = material
+                    reserve(tile)
+                    cell(tile).edgeFluid = material
                     targets.getOrPut(material) { mutableListOf() }.add(tile)
                 }
             }
@@ -659,7 +626,7 @@ private class RowLayout(
             for (target in sinks) {
                 val segment = fluidRoute(current, target, material) ?: continue
                 for (tile in segment) {
-                    if (isFree(tile)) addPipe(tile, material)
+                    if (isFree(tile)) placePipe(tile, material)
                 }
                 current = target
             }
@@ -671,9 +638,9 @@ private class RowLayout(
         for (x in listOf(left - 1, left + row.width)) {
             for (y in row.factoryTop until row.factoryTop + row.height) {
                 val tile = Coordinate(x, y)
-                if (!isFree(tile) || tile in reserved) continue
+                if (!isFree(tile) || isReserved(tile)) continue
                 val clash = steps.any { d ->
-                    fluidEdgeOwner[tile + d].let { it != null && it != material }
+                    grid[tile + d]?.edgeFluid.let { it != null && it != material }
                 }
                 if (!clash) return tile
             }
@@ -686,9 +653,10 @@ private class RowLayout(
         val coordinate = Coordinate(2, row)
         while (row in markerRows || !isFree(Coordinate(2, row - 1)) || !isFree(coordinate)) row++
         markerRows += row
-        add(BlueprintEntity(MARKER, Coordinate(2, row - 1), marker = material, markerFluid = true))
-        add(BlueprintEntity(PIPE_TO_GROUND, Coordinate(2, row), EAST))
-        fluidAt[coordinate] = material
+        placeMarker(Coordinate(2, row - 1), Signal(material, fluid = true))
+        place(
+            PipeToGroundEntity(Coordinate(2, row).area(), PIPE_TO_GROUND, Direction.EAST, material),
+        )
         return coordinate
     }
 
@@ -700,37 +668,21 @@ private class RowLayout(
         var coordinate = Coordinate(row.right + 1, row.outputLaneRow)
 
         while (coordinate.x <= row.right + 3 && isFree(coordinate)) {
-            add(BlueprintEntity(belt, coordinate, EAST))
+            placeBelt(coordinate, Direction.EAST)
             coordinate = coordinate.east()
         }
         val loaderFits =
             cheats && isFree(coordinate) && isFree(coordinate.east()) && isFree(coordinate.east(2))
         if (loaderFits) {
             // the product belt runs into a loader that voids it in an infinity chest
-            add(
-                BlueprintEntity(
-                    loader,
-                    coordinate.area(2, 1),
-                    EAST,
-                    type = "input",
-                ),
-            )
-            add(
-                BlueprintEntity(
-                    INFINITY_CHEST,
-                    coordinate.east(2),
-                    infinity = InfinitySettings(removeUnfiltered = true),
-                ),
+            placeLoader(coordinate, Direction.EAST, Io.INPUT)
+            placeInfinityChest(
+                coordinate.east(2),
+                InfinitySettings(removeUnfiltered = true),
             )
         } else {
             val spot = markerSpot(coordinate.west())
-            add(
-                BlueprintEntity(
-                    MARKER,
-                    spot,
-                    marker = plan.target,
-                ),
-            )
+            placeMarker(spot, Signal(plan.target))
         }
     }
 
@@ -744,7 +696,7 @@ private class RowLayout(
             for (y in row.factoryTop until row.factoryTop + row.height) {
                 val coordinate = Coordinate(x, y)
                 if (isFree(coordinate)) {
-                    addPipe(coordinate, plan.target)
+                    placePipe(coordinate, plan.target)
                     break
                 }
             }
@@ -756,19 +708,16 @@ private class RowLayout(
             tile == target || pipeAllowed(tile, fluid)
         }
 
-    private fun addPipe(coordinate: Coordinate, fluid: Material) {
-        add(BlueprintEntity(PIPE, coordinate))
-        fluidAt[coordinate] = fluid
-    }
-
     /** A pipe tile is free only when it touches no pipe carrying a different fluid. */
     private fun pipeAllowed(coordinate: Coordinate, fluid: Material) =
-        !(!isFree(coordinate) || coordinate in reserved) &&
+        isFree(coordinate) &&
+            !isReserved(coordinate) &&
             steps.none { d ->
                 val cd = coordinate + d
-                val placed = fluidAt[cd]
-                val reservedFor = fluidEdgeOwner[cd]
-                (placed != null && placed != fluid) || (reservedFor != null && reservedFor != fluid)
+                val placedFluid = fluidAt(cd)
+                val reservedFor = grid[cd]?.edgeFluid
+                (placedFluid != null && placedFluid != fluid) ||
+                    (reservedFor != null && reservedFor != fluid)
             }
 
     /** Draws the belts of [material] along [nodes]; a jump becomes an underground belt. */
@@ -782,16 +731,9 @@ private class RowLayout(
             val adjacent = abs(from.x - to.x) + abs(from.y - to.y) == 1
             if (from !in emitted && isFree(from)) {
                 if (adjacent) {
-                    add(BlueprintEntity(belt, from, direction))
+                    placeBelt(from, direction, material)
                 } else {
-                    add(
-                        BlueprintEntity(
-                            undergroundBelt,
-                            from,
-                            direction,
-                            type = "input",
-                        ),
-                    )
+                    placeUndergroundBelt(from, direction, material, Io.INPUT)
                 }
                 emitted += from
             }
@@ -800,42 +742,25 @@ private class RowLayout(
                 val step = Coordinate(dx.compareTo(0), dy.compareTo(0))
                 val reach = maxOf(abs(dx), abs(dy))
                 for (k in 1 until reach) {
-                    undergroundUsed += from + step * k
+                    cell(from + step * k).underground = true
                 }
-                add(
-                    BlueprintEntity(
-                        undergroundBelt,
-                        to,
-                        direction,
-                        type = "output",
-                    ),
-                )
+                placeUndergroundBelt(to, direction, material, Io.OUTPUT)
                 emitted += to
             }
         }
         val last = nodes.last()
         if (last !in emitted && isFree(last)) {
             val before = nodes[nodes.size - 2]
-            add(
-                BlueprintEntity(
-                    belt,
-                    last,
-                    directionBetween(before, last),
-                ),
-            )
-        }
-        // remember which material each belt on this path carries
-        for (node in nodes) {
-            if (node in beltAt) beltMaterial[node] = material
+            placeBelt(last, directionBetween(before, last), material)
         }
     }
 
     private fun directionBetween(from: Coordinate, to: Coordinate) =
         when {
-            to.x > from.x -> EAST
-            to.x < from.x -> WEST
-            to.y > from.y -> SOUTH
-            else -> NORTH
+            to.x > from.x -> Direction.EAST
+            to.x < from.x -> Direction.WEST
+            to.y > from.y -> Direction.SOUTH
+            else -> Direction.NORTH
         }
 
     /** Surface routes first, an underground one otherwise, so belts can cross anything. */
@@ -937,7 +862,7 @@ private class RowLayout(
     /** True when a tunnel of [reach] tiles in [direction] crosses no other tunnel. */
     private fun tunnelFree(from: Coordinate, direction: Coordinate, reach: Int): Boolean {
         for (k in 1 until reach) {
-            if (from + direction * k in undergroundUsed) return false
+            if (grid[from + direction * k]?.underground == true) return false
         }
         return true
     }
@@ -958,10 +883,7 @@ private class RowLayout(
     /** Covers every machine, inserter and loader with a pole and wires the poles together. */
     private fun placePoles() {
         val machineAreas =
-            entities
-                .filter { it.isPowered() }
-                .map { it.area }
-                .sortedWith(compareBy({ it.y }, { it.x }))
+            placed.filter { it.isPowered }.map { it.area }.sortedWith(compareBy({ it.y }, { it.x }))
         if (machineAreas.isEmpty()) return
 
         val covered = mutableSetOf<Coordinate>()
@@ -970,15 +892,11 @@ private class RowLayout(
             if (!area.any(covered::contains)) {
                 val spot = bestPoleSpot(area, covered) ?: continue
                 poles += spot
-                addPole(spot)
+                placePole(spot)
                 covered.addAll(spot.area().grow(SUPPLY_RADIUS))
             }
         }
         connectPoles(poles)
-    }
-
-    private fun addPole(poleTile: Coordinate) {
-        add(BlueprintEntity(POLE, poleTile))
     }
 
     /** The free tile near [tile] that powers the most not-yet-[covered] machines, if any. */
@@ -990,7 +908,7 @@ private class RowLayout(
                 it.area().grow(SUPPLY_RADIUS).sumOf { other ->
                     when {
                         other in covered -> 0
-                        occupied[other]?.isPowered() == true -> 2
+                        entityAt(other)?.isPowered == true -> 2
                         else -> 1
                     }
                 }
@@ -1036,7 +954,7 @@ private class RowLayout(
                 val y = round(from.y + (to.y - from.y) * fraction).toInt()
                 val spot = freeNear(Coordinate(x, y)) ?: continue
                 poles += spot
-                addPole(spot)
+                placePole(spot)
                 components[fromIndex] += spot
                 added = true
             }
@@ -1088,27 +1006,94 @@ private class RowLayout(
         return null
     }
 
-    private fun routable(coordinate: Coordinate) = isFree(coordinate) && coordinate !in reserved
+    private fun routable(coordinate: Coordinate) = isFree(coordinate) && !isReserved(coordinate)
 
-    private fun add(entity: BlueprintEntity) {
-        entities += entity
-        val topLeft = entity.area.topLeft
-        if (entity.name.contains("-belt") && entity.direction != null) {
-            beltAt[topLeft] = entity.direction
-        }
-        entity.area.forEach { occupy(it, entity) }
+    /** Records [entity] and marks every tile it covers as occupied. */
+    private fun place(entity: LayoutEntity) {
+        placed += entity
+        entity.area.forEach { cell(it).entity = entity }
+    }
+
+    // The entity kinds that are placed often get their own helper, so the tile size and prototype
+    // name live in one place rather than at every call site.
+
+    /** Places a belt (always one tile) facing [direction], carrying [material] when tracked. */
+    private fun placeBelt(
+        coordinate: Coordinate,
+        direction: Direction,
+        material: Material? = null,
+    ) {
+        place(BeltEntity(coordinate.area(), belt, direction, material))
+    }
+
+    /** Places an underground belt end (always one tile) facing [direction]. */
+    private fun placeUndergroundBelt(
+        coordinate: Coordinate,
+        direction: Direction,
+        material: Material?,
+        io: Io,
+    ) {
+        place(UndergroundBeltEntity(coordinate.area(), undergroundBelt, direction, material, io))
+    }
+
+    /** Places an inserter (always one tile) of the selected tier, long when [long]. */
+    private fun placeInserter(coordinate: Coordinate, direction: Direction, long: Boolean) {
+        place(
+            InserterEntity(
+                coordinate.area(),
+                if (long) longInserter else inserter,
+                direction,
+                long,
+            ),
+        )
+    }
+
+    /** Places a loader (two tiles across the belt it serves) with its input/output [io]. */
+    private fun placeLoader(coordinate: Coordinate, direction: Direction, io: Io) {
+        place(LoaderEntity(coordinate.area(2, 1), loader, direction, io))
+    }
+
+    /** Places a constant-combinator marker (always one tile) showing [signal]. */
+    private fun placeMarker(coordinate: Coordinate, signal: Signal) {
+        place(MarkerEntity(coordinate.area(), MARKER, signal))
+    }
+
+    /** Places a pipe (always one tile) carrying [fluid]. */
+    private fun placePipe(coordinate: Coordinate, fluid: Material) {
+        place(PipeEntity(coordinate.area(), PIPE, fluid))
+    }
+
+    /** Places an infinity chest (always one tile) with its [settings]. */
+    private fun placeInfinityChest(coordinate: Coordinate, settings: InfinitySettings) {
+        place(InfinityChestEntity(coordinate.area(), INFINITY_CHEST, settings))
+    }
+
+    /** Places a medium electric pole (always one tile). */
+    private fun placePole(coordinate: Coordinate) {
+        place(PoleEntity(coordinate.area(), POLE))
     }
 
     /** True when a belt next to [coordinate] carries a different material into that tile. */
     private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean = steps.any { d ->
         val neighbour = coordinate + d
-        beltAt[neighbour] == directionBetween(neighbour, coordinate) &&
-            beltMaterial[neighbour] != material
+        val belt = entityAt(neighbour) as? BeltLikeEntity
+        belt != null &&
+            belt.direction == directionBetween(neighbour, coordinate) &&
+            belt.material != material
     }
 
-    private fun isFree(coordinate: Coordinate) = coordinate !in occupied
+    private fun cell(coordinate: Coordinate) = grid.getOrPut(coordinate) { Cell() }
 
-    private fun occupy(coordinate: Coordinate, blueprint: BlueprintEntity) {
-        occupied[coordinate] = blueprint
+    private fun entityAt(coordinate: Coordinate) = grid[coordinate]?.entity
+
+    /** The fluid the pipe or pipe-to-ground at [coordinate] carries, if any. */
+    private fun fluidAt(coordinate: Coordinate) = (entityAt(coordinate) as? Plumbing)?.fluid
+
+    private fun isFree(coordinate: Coordinate) = grid[coordinate]?.entity == null
+
+    private fun isReserved(coordinate: Coordinate) = grid[coordinate]?.reserved == true
+
+    private fun reserve(coordinate: Coordinate) {
+        cell(coordinate).reserved = true
     }
 }

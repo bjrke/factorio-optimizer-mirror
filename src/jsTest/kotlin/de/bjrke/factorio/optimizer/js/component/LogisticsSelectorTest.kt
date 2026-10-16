@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.testLogistics
-import de.bjrke.factorio.optimizer.common.model.Belt
-import de.bjrke.factorio.optimizer.common.model.Inserter
+import de.bjrke.factorio.optimizer.common.model.BeltTier
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.changeTo
@@ -19,16 +19,16 @@ import web.html.HTMLInputElement
 
 class LogisticsSelectorTest : ComponentTest() {
     private val logisticsConfig = LogisticsConfig(testLogistics, spaceAge = true)
-    private val belts = mutableListOf<Belt>()
-    private val inserters = mutableListOf<Inserter>()
+    private val belts = mutableListOf<BeltTier>()
+    private val inserters = mutableListOf<InserterTier>()
     private val lanes = mutableListOf<Int>()
     private val beltStacks = mutableListOf<Int>()
     private val inserterStacks = mutableListOf<Int>()
 
     private fun renderSelector(
         usedConfig: LogisticsConfig = logisticsConfig,
-        belt: Belt = usedConfig.defaultBelt,
-        inserter: Inserter = usedConfig.defaultInserter,
+        belt: BeltTier = usedConfig.defaultBelt,
+        inserter: InserterTier = usedConfig.defaultInserter,
         beltLanes: Int = 1,
         beltStack: Int = usedConfig.beltStackMin(inserter),
         inserterStack: Int = 1,
@@ -53,18 +53,18 @@ class LogisticsSelectorTest : ComponentTest() {
     fun selectingABeltReportsIt() {
         renderSelector()
 
-        fireEvent.click(screen.getByRole("radio", named(Belt.TRANSPORT_BELT.identifier)))
+        fireEvent.click(screen.getByRole("radio", named(BeltTier.TRANSPORT_BELT.identifier)))
 
-        assertEquals(listOf(Belt.TRANSPORT_BELT), belts)
+        assertEquals(listOf(BeltTier.TRANSPORT_BELT), belts)
     }
 
     @Test
     fun selectingAnInserterReportsIt() {
         renderSelector()
 
-        fireEvent.click(screen.getByRole("radio", named(Inserter.INSERTER.identifier)))
+        fireEvent.click(screen.getByRole("radio", named(InserterTier.INSERTER.identifier)))
 
-        assertEquals(listOf(Inserter.INSERTER), inserters)
+        assertEquals(listOf(InserterTier.INSERTER), inserters)
     }
 
     @Test
@@ -82,7 +82,7 @@ class LogisticsSelectorTest : ComponentTest() {
 
         fireEvent.change(screen.getByTitle("belt stack"), changeTo("9"))
 
-        assertEquals(listOf(Belt.MAX_STACK), beltStacks)
+        assertEquals(listOf(BeltTier.MAX_STACK), beltStacks)
     }
 
     @Test
@@ -94,36 +94,36 @@ class LogisticsSelectorTest : ComponentTest() {
 
     @Test
     fun theBeltStackControlStartsAtTwoWithTheStackInserter() {
-        renderSelector(inserter = Inserter.STACK_INSERTER)
+        renderSelector(inserter = InserterTier.STACK_INSERTER)
 
         assertEquals(
-            Belt.MIN_STACK_INSERTER_STACK.toString(),
+            BeltTier.MIN_STACK_INSERTER_STACK.toString(),
             (screen.getByTitle("belt stack") as HTMLInputElement).min,
         )
     }
 
     @Test
     fun theBeltStackIsRaisedToTheMinimumWithTheStackInserter() {
-        renderSelector(inserter = Inserter.STACK_INSERTER)
+        renderSelector(inserter = InserterTier.STACK_INSERTER)
 
         fireEvent.change(screen.getByTitle("belt stack"), changeTo("1"))
 
-        assertEquals(listOf(Belt.MIN_STACK_INSERTER_STACK), beltStacks)
+        assertEquals(listOf(BeltTier.MIN_STACK_INSERTER_STACK), beltStacks)
     }
 
     @Test
     fun theInserterStackIsClampedToTheInserterMaximum() {
-        renderSelector(inserter = Inserter.INSERTER)
+        renderSelector(inserter = InserterTier.INSERTER)
 
         // a plain inserter tops out at 3 hand slots
         fireEvent.change(screen.getByTitle("inserter stack"), changeTo("9"))
 
-        assertEquals(listOf(logisticsConfig.maxStack(Inserter.INSERTER)), inserterStacks)
+        assertEquals(listOf(logisticsConfig.maxStack(InserterTier.INSERTER)), inserterStacks)
     }
 
     @Test
     fun theInserterStackIsRaisedToTheInsertersHandSize() {
-        renderSelector(inserter = Inserter.STACK_INSERTER)
+        renderSelector(inserter = InserterTier.STACK_INSERTER)
 
         // a stack inserter always carries at least six items
         fireEvent.change(screen.getByTitle("inserter stack"), changeTo("3"))
@@ -133,7 +133,7 @@ class LogisticsSelectorTest : ComponentTest() {
 
     @Test
     fun theInserterStackControlStartsAtTheInsertersHandSize() {
-        renderSelector(inserter = Inserter.BULK_INSERTER)
+        renderSelector(inserter = InserterTier.BULK_INSERTER)
 
         assertEquals("2", (screen.getByTitle("inserter stack") as HTMLInputElement).min)
     }
@@ -144,7 +144,7 @@ class LogisticsSelectorTest : ComponentTest() {
 
         fireEvent.click(screen.getByLabelText("full belt"))
 
-        assertEquals(listOf(Belt.MAX_LANES), lanes)
+        assertEquals(listOf(BeltTier.MAX_LANES), lanes)
     }
 
     @Test

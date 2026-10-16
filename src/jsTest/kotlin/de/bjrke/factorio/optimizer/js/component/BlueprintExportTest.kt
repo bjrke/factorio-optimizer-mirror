@@ -45,8 +45,8 @@ class BlueprintExportTest : ComponentTest() {
     private val logistics =
         LogisticsCalculator(
             testLogistics,
-            Belt.EXPRESS_TRANSPORT_BELT,
-            Inserter.FAST_INSERTER,
+            BeltTier.EXPRESS_TRANSPORT_BELT,
+            InserterTier.FAST_INSERTER,
             lanes = 2,
             beltStack = 1,
             inserterStack = 1,

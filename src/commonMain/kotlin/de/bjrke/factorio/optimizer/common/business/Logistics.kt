@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Belt
-import de.bjrke.factorio.optimizer.common.model.Inserter
+import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterStats
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Logistics
 import de.bjrke.factorio.optimizer.common.model.Material
 
@@ -18,8 +18,8 @@ private const val TICKS_PER_SECOND = 60.0
  */
 class LogisticsCalculator(
     private val logistics: Logistics,
-    val belt: Belt,
-    val inserter: Inserter,
+    val belt: BeltTier,
+    val inserter: InserterTier,
     val lanes: Int,
     val beltStack: Int,
     private val inserterStack: Int,
@@ -41,7 +41,7 @@ class LogisticsCalculator(
     fun beltThroughput(stack: Int): Double =
         logistics.belts.getValue(belt.identifier) *
             TICKS_PER_SECOND *
-            Belt.ITEMS_PER_LANE *
+            BeltTier.ITEMS_PER_LANE *
             lanes *
             stack
 
@@ -52,7 +52,7 @@ class LogisticsCalculator(
 
     /** Ticks the belt needs to move past the space a single item occupies on a lane. */
     private fun beltSlotTicks() =
-        1.0 / (logistics.belts.getValue(belt.identifier) * Belt.ITEMS_PER_LANE)
+        1.0 / (logistics.belts.getValue(belt.identifier) * BeltTier.ITEMS_PER_LANE)
 
     /**
      * Items per second a single inserter drops onto a belt. Every placement needs the belt to make
