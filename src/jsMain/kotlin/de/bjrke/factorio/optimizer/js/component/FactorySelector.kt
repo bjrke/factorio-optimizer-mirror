@@ -51,7 +51,7 @@ internal val factorySelector =
                             props.config.remove(props.selectedFactories, factory)
                         } else {
                             props.config.add(props.selectedFactories, factory)
-                        }
+                        },
                     )
                 },
             )

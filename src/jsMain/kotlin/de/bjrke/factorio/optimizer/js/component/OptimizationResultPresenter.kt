@@ -258,7 +258,7 @@ internal val optimizationResult =
                     backgroundColor =
                         Color(
                             "color-mix(in srgb, ${hashColor(factoryProduction.material.name)} " +
-                                "var(--factory-tint, 70%), var(--factory-panel, #fff))"
+                                "var(--factory-tint, 70%), var(--factory-panel, #fff))",
                         )
                 }
                 div {

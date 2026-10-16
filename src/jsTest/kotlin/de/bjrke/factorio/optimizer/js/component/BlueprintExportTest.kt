@@ -33,7 +33,7 @@ private val plan =
                         FactoryProduction(gear, craft, Factory.ASSEMBLING_MACHINE_3, 1.0, 0),
                     machines = 1.0,
                     directInsert = emptySet(),
-                )
+                ),
             ),
         sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
         scale = 1.0,
@@ -57,7 +57,7 @@ class BlueprintExportTest : ComponentTest() {
             blueprintButton.create {
                 this.outcome = outcome
                 this.logistics = this@BlueprintExportTest.logistics
-            }
+            },
         )
 
     @Test

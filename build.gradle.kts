@@ -41,7 +41,7 @@ val generateBuildInfo =
                     (System.getenv("CI_COMMIT_SHORT_SHA") ?: gitRevParse("--short", "HEAD")),
                 "branch" to
                     (System.getenv("CI_COMMIT_REF_NAME") ?: gitRevParse("--abbrev-ref", "HEAD")),
-            )
+            ),
         )
     }
 
@@ -136,6 +136,7 @@ tasks.register<JavaExec>("run") {
 spotless {
     kotlin {
         target("src/**/*.kt", "buildSrc/**/*.kt")
+        targetExclude("buildSrc/build/**")
         ktfmt().kotlinlangStyle()
     }
     kotlinGradle { ktfmt().kotlinlangStyle() }

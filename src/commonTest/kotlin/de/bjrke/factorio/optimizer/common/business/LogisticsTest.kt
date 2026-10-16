@@ -204,7 +204,7 @@ class LogisticsTest {
                                 inserter = Inserter.BULK_INSERTER,
                                 inserterStack = 4,
                             )
-                            .placingThroughput()
+                            .placingThroughput(),
                 )
             },
             // placing onto a belt is never faster than moving between storages
@@ -244,7 +244,7 @@ class LogisticsTest {
                                 minStack = 1,
                                 maxStack = 3,
                                 stacksOnBelt = false,
-                            )
+                            ),
                     ),
                 pumpRate = 600.0,
             )
@@ -336,7 +336,7 @@ class LogisticsTest {
                                 minStack = 1,
                                 maxStack = 3,
                                 stacksOnBelt = false,
-                            )
+                            ),
                     ),
             )
         val config = LogisticsConfig(partial, spaceAge = true)

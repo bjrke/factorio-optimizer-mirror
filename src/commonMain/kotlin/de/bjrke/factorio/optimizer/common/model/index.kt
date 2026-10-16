@@ -204,7 +204,7 @@ fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
             kept.filter { recipe ->
                 Category.SPOILING !in recipe.categories ||
                     produced.containsAll(recipe.ingredients.keys)
-            }
+            },
     )
 }
 

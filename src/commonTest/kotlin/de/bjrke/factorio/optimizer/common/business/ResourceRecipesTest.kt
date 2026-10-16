@@ -36,7 +36,7 @@ class ResourceRecipesTest {
                     "ammoniacal-ocean": {"fluid": "ammoniacal-solution"}
                   }
                 }
-                """
+                """,
             )
             .let { it as JsonObject }
 

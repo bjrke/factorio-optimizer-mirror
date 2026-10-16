@@ -37,15 +37,14 @@ fun selectionString(
     belt: Belt,
     inserter: Inserter,
     cheats: Boolean = false,
-) =
-    buildList {
-            addAll(FactoryConfig(spaceAge).toUrlParam(factories).toList())
-            if (spaceAge) add(SelectionFlag.SPACE_AGE.code)
-            surface.code?.let { add(it) }
-            if (fullBelt) add(SelectionFlag.FULL_BELT.code)
-            if (cheats) add(SelectionFlag.CHEATS.code)
-            belt.code?.let { add(it) }
-            inserter.code?.let { add(it) }
-        }
-        .sorted()
-        .joinToString("")
+) = buildList {
+    addAll(FactoryConfig(spaceAge).toUrlParam(factories).toList())
+    if (spaceAge) add(SelectionFlag.SPACE_AGE.code)
+    surface.code?.let { add(it) }
+    if (fullBelt) add(SelectionFlag.FULL_BELT.code)
+    if (cheats) add(SelectionFlag.CHEATS.code)
+    belt.code?.let { add(it) }
+    inserter.code?.let { add(it) }
+}
+    .sorted()
+    .joinToString("")

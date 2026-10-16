@@ -75,7 +75,7 @@ class RecipeParserTest {
                     time = 3.2,
                     categories = setOf(Category.SMELTING),
                     subgroup = Subgroup(),
-                )
+                ),
             ),
             parse(
                 """
@@ -87,7 +87,7 @@ class RecipeParserTest {
                   "ingredients":[{"type":"item","name":"copper-ore","amount":1}],
                   "results":[{"type":"item","name":"copper-plate","amount":1}]
                 }}}
-                """
+                """,
             ),
         )
 
@@ -103,7 +103,7 @@ class RecipeParserTest {
                     time = 12.0,
                     categories = setOf(Category.CENTRIFUGING),
                     subgroup = Subgroup("uranium-processing"),
-                )
+                ),
             ),
             parse(
                 """
@@ -119,7 +119,7 @@ class RecipeParserTest {
                     {"type":"item","name":"uranium-238","shared_probability":{"min":0.007,"max":1},"amount":1}
                   ]
                 }}}
-                """
+                """,
             ),
         )
 
@@ -131,9 +131,9 @@ class RecipeParserTest {
                     {"recipe":{"parameter-0":{
                       "type":"recipe","name":"parameter-0","parameter":true,"categories":["parameters"]
                     }}}
-                    """
+                    """,
                 )
-                .isEmpty()
+                .isEmpty(),
         )
 
     @Test
@@ -151,7 +151,7 @@ class RecipeParserTest {
                     "ingredients":[{"type":"item","name":"iron-plate","amount":2}],
                     "results":[{"type":"item","name":"iron-gear-wheel","amount":1}]}
                 }}
-                """
+                """,
             )
 
         val names = parsed.materials.map(Material::name)
@@ -215,7 +215,7 @@ class RecipeParserTest {
                       "ingredients":[{"type":"item","name":"iron-plate","amount":2}],
                       "results":[{"type":"item","name":"iron-gear-wheel","amount":1}]
                     }}}
-                    """
+                    """,
                 )
                 .single()
                 .categories,
@@ -241,7 +241,7 @@ class RecipeParserTest {
                         ]
                       }
                     }}
-                    """
+                    """,
                 )
                 .associateBy(Recipe::name)
 
@@ -277,7 +277,7 @@ class RecipeParserTest {
                     ]
                   }
                 }}
-                """
+                """,
             )
 
         assertAll(
@@ -306,7 +306,7 @@ class RecipeParserTest {
                     ]
                   }
                 }}
-                """
+                """,
             )
 
         assertAll(
@@ -334,7 +334,7 @@ class RecipeParserTest {
                             ),
                             SurfaceCondition(property = SurfaceProperty.GRAVITY),
                         ),
-                )
+                ),
             ),
             parse(
                 """
@@ -355,7 +355,7 @@ class RecipeParserTest {
                     {"property":"unknown","min":1}
                   ]
                 }}}
-                """
+                """,
             ),
         )
 
@@ -371,7 +371,7 @@ class RecipeParserTest {
                       "ingredients":[{"type":"item","name":"coal","amount":2}],
                       "results":[{"type":"item","name":"carbon","amount":1}]
                     }}}
-                    """
+                    """,
                 )
                 .single()
 
@@ -392,7 +392,7 @@ class RecipeParserTest {
                         "big-mining-drill": {"resource_categories": ["basic-solid", "hard-solid"], "mining_speed": 2.5}
                       }
                     }
-                    """
+                    """,
                 )
                 .machineStats
 
@@ -442,7 +442,7 @@ class RecipeParserTest {
                       "offshore-pump": {"offshore-pump": {"pumping_speed": 20}},
                       "fluid": {"water": {}, "crude-oil": {}}
                     }
-                    """
+                    """,
                 )
                 .logistics
 

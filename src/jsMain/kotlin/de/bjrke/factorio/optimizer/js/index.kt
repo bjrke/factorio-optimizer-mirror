@@ -115,10 +115,10 @@ fun main() {
                     getParentRoute = { rootRoute },
                     path =
                         RoutePath(
-                            "/\$normalizeTarget/\$target/\$selection/\$beltStack/\$inserterStack"
+                            "/\$normalizeTarget/\$target/\$selection/\$beltStack/\$inserterStack",
                         ),
                     component = RouterBasedParams,
-                )
+                ),
             )
 
         val catchAllRoute =
@@ -127,7 +127,7 @@ fun main() {
                     getParentRoute = { rootRoute },
                     path = RoutePath("\$"),
                     component = RouterBasedParams,
-                )
+                ),
             )
 
         rootRoute.addChildren(arrayOf(indexRoute, catchAllRoute))
@@ -137,7 +137,7 @@ fun main() {
                 RouterOptions(
                     routeTree = rootRoute,
                     history = createHashHistory(),
-                )
+                ),
             )
 
         val app = FC { RouterProvider { router = appRouter } }

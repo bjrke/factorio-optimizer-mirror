@@ -61,7 +61,7 @@ private fun optimizationResult(recipe: Recipe, target: Material, factory: Factor
                         factory = factory,
                         amount = 1.0,
                         level = 0,
-                    )
+                    ),
             ),
     )
 
@@ -463,7 +463,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
             resultElement(
                 result,
                 calculator(Inserter.STACK_INSERTER, beltStack = 4, inserterStack = 8),
-            )
+            ),
         )
         val stackOutput = inserterInput(1)
 
@@ -558,7 +558,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
                 twoProductions(
                     Triple(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL),
                     Triple(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
-                )
+                ),
             )
 
         val widths = blockWidths(rendered.container)

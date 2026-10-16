@@ -19,7 +19,7 @@ class SpaceAgeToggleTest : ComponentTest() {
             spaceAgeToggle.create {
                 this.enabled = enabled
                 toggle = { toggles += it }
-            }
+            },
         )
 
     @Test

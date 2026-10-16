@@ -15,7 +15,7 @@ fun assertAll(assertionList: List<() -> Unit>) {
             "${failures.size} of ${assertionList.size} assertions failed:\n\n" +
                 failures.withIndex().joinToString("\n\n") { (i, failure) ->
                     "${i + 1}) ${shortMessage(failure)}"
-                }
+                },
         )
     }
 }
@@ -32,7 +32,7 @@ fun <T> assertTable(cases: Iterable<T>, assertion: (T) -> Unit) =
                     fail("case: $it\n${failure.message ?: failure.toString()}", failure)
                 }
             }
-        }
+        },
     )
 
 internal expect fun shortMessage(failure: Throwable): String

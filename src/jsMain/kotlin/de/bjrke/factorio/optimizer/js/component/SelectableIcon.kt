@@ -32,7 +32,7 @@ private val selectableIconX =
                             if (props.selected) "selected" else null,
                             if (props.disabled) "disabled" else null,
                         )
-                        .joinToString(" ")
+                        .joinToString(" "),
                 )
             input {
                 className = ClassName("visually-hidden")

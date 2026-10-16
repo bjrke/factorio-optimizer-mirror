@@ -175,7 +175,7 @@ class OptimizerTest {
             { assertTrue(result.factories.values.none { it.factory == Factory.NO_FACTORY }) },
             {
                 assertTrue(
-                    result.factories.values.any { it.recipe.name == "molten-iron-from-lava" }
+                    result.factories.values.any { it.recipe.name == "molten-iron-from-lava" },
                 )
             },
         )
@@ -240,7 +240,7 @@ class OptimizerTest {
                 assertTrue(
                     result.factories.values.none {
                         it.factory == Factory.SPOILING || it.factory == Factory.NO_FACTORY
-                    }
+                    },
                 )
             },
         )
@@ -327,7 +327,7 @@ class OptimizerTest {
                 assertTrue(
                     result.factories.values.none {
                         it.recipe.name == "agricultural-science-pack-spoiling"
-                    }
+                    },
                 )
             },
         )
@@ -721,7 +721,7 @@ class OptimizerTest {
                             Category.CRAFTING,
                         ),
                         product,
-                    )
+                    ),
                 ),
                 setOf(
                     Factory.BIOCHAMBER,
@@ -748,7 +748,7 @@ class OptimizerTest {
                             Category.CRYOGENICS,
                         ),
                         product,
-                    )
+                    ),
                 ),
                 setOf(
                     Factory.CRYOGENIC_PLANT,
@@ -829,7 +829,7 @@ class OptimizerTest {
             { assertEquals(Factory.NO_FACTORY, result.production(concrete).factory) },
             {
                 assertTrue(
-                    result.factories.values.none { it.factory == Factory.ASSEMBLING_MACHINE_1 }
+                    result.factories.values.none { it.factory == Factory.ASSEMBLING_MACHINE_1 },
                 )
             },
         )

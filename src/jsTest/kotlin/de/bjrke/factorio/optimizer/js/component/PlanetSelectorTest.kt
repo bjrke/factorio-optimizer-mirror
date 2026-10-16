@@ -28,7 +28,7 @@ class PlanetSelectorTest : ComponentTest() {
                 availableSurfaces = Surface.entries
                 this.enabled = enabled
                 selectSurface = { selections += it }
-            }
+            },
         )
 
     private fun option(surface: Surface): HTMLInputElement =

@@ -46,7 +46,7 @@ class LogisticsSelectorTest : ComponentTest() {
                 selectBeltLanes = { lanes += it }
                 selectBeltStack = { beltStacks += it }
                 selectInserterStack = { inserterStacks += it }
-            }
+            },
         )
 
     @Test

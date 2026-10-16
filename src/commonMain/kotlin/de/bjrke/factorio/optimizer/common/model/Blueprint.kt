@@ -76,27 +76,26 @@ data class Blueprint(
  * fields are omitted and integral coordinates are written without a decimal part, both to keep the
  * string short.
  */
-fun Blueprint.toJson(): String =
-    buildJsonObject {
-            putJsonObject("blueprint") {
-                put("item", "blueprint")
-                put("label", label)
-                icon?.let {
-                    putJsonArray("icons") {
-                        addJsonObject {
-                            put("index", 1)
-                            put("signal", buildJsonObject { put("name", it.name) })
-                        }
-                    }
-                }
-                putJsonArray("entities") {
-                    entities.forEachIndexed { index, entity ->
-                        add(entity.toJson(index + 1))
-                    }
+fun Blueprint.toJson(): String = buildJsonObject {
+    putJsonObject("blueprint") {
+        put("item", "blueprint")
+        put("label", label)
+        icon?.let {
+            putJsonArray("icons") {
+                addJsonObject {
+                    put("index", 1)
+                    put("signal", buildJsonObject { put("name", it.name) })
                 }
             }
         }
-        .toString()
+        putJsonArray("entities") {
+            entities.forEachIndexed { index, entity ->
+                add(entity.toJson(index + 1))
+            }
+        }
+    }
+}
+    .toString()
 
 private fun BlueprintEntity.toJson(entityNumber: Int) = buildJsonObject {
     put("entity_number", entityNumber)

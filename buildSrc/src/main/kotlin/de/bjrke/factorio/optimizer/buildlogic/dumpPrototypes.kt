@@ -22,7 +22,7 @@ fun dumpPrototypes(binary: File, rawDir: File, outputDir: File) {
                 |read-data=__PATH__executable__/../../data
                 |write-data=${dir.absolutePath}
                 """
-                .trimMargin()
+                .trimMargin(),
         )
         val modList = buildString {
             append("""{"mods":[{"name":"base","enabled":true}""")

@@ -1,6 +1,6 @@
 [plugins]
 #https://plugins.gradle.org/plugin/com.diffplug.gradle.spotless
-spotless = { id = "com.diffplug.spotless", version = "8.10.2" }
+spotless = { id = "com.diffplug.spotless", version = "8.10.4" }
 
 [versions]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin

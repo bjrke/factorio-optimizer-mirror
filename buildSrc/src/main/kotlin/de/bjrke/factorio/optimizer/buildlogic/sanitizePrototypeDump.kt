@@ -220,7 +220,7 @@ fun sanitizePrototypeDump(file: File) {
                         if (prototype is JsonObject)
                             JsonObject(prototype.filterKeys(fields::contains))
                         else prototype
-                    }
+                    },
                 ),
             )
         }

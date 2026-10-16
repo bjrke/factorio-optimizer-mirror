@@ -305,7 +305,7 @@ class FactoryTest {
                 Factory.ELECTRIC_MINING_DRILL,
                 Factory.BIG_MINING_DRILL,
                 Factory.RECYCLER,
-            )
+            ),
         ) { factory ->
             assertTrue(factory.outputsDirectly, "$factory")
         }

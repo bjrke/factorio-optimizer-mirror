@@ -55,7 +55,7 @@ fun main(args: Array<String>) {
         when (val outcome = blueprintPlan(result, logistics)) {
             is BlueprintPlanResult.Planned ->
                 println(
-                    blueprintString(buildBlueprint(outcome.plan, logistics, cli.cheats).toJson())
+                    blueprintString(buildBlueprint(outcome.plan, logistics, cli.cheats).toJson()),
                 )
             is BlueprintPlanResult.Unavailable ->
                 println("No blueprint available: ${outcome.reason}")
@@ -83,20 +83,20 @@ fun main(args: Array<String>) {
 
     result.factories.values.sortedWith(factoryProductionComparator).forEach { production ->
         println(
-            "${superRound(production.amount)} x ${production.recipe.name} in ${production.factory.name}"
+            "${superRound(production.amount)} x ${production.recipe.name} in ${production.factory.name}",
         )
         production.recipe.ingredients.keys.forEach { material ->
             val rate = production.consumption(material)
             println(
                 "  in  ${material.name}: ${superRound(rate)} -> " +
-                    transport(production.factory, material, rate, isOutput = false)
+                    transport(production.factory, material, rate, isOutput = false),
             )
         }
         production.recipe.result.keys.forEach { material ->
             val rate = production.production(material)
             println(
                 "  out ${material.name}: ${superRound(rate)} -> " +
-                    transport(production.factory, material, rate, isOutput = true)
+                    transport(production.factory, material, rate, isOutput = true),
             )
         }
     }

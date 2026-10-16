@@ -25,7 +25,7 @@ class FactorySelectorTest : ComponentTest() {
                 config = factoryConfig
                 selectedFactories = selected
                 selectFactory = { selections += it }
-            }
+            },
         )
 
     private fun option(name: String): HTMLInputElement =

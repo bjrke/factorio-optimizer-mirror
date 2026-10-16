@@ -21,7 +21,7 @@ class FooterTest : ComponentTest() {
             footer.create {
                 buildInfo = BUILD_INFO
                 license = LICENSE
-            }
+            },
         )
 
     @Test

@@ -52,7 +52,7 @@ class IconTest : ComponentTest() {
                 this.alt = alt
                 this.rotation = rotation
                 this.flipHorizontal = flipHorizontal
-            }
+            },
         )
 
     @Test

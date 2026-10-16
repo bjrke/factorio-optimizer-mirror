@@ -209,11 +209,11 @@ private class RowLayout(
                 if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= WIRE_REACH_SQ) {
                     entities[a.index] =
                         entities[a.index].copy(
-                            neighbours = entities[a.index].neighbours + (b.index + 1)
+                            neighbours = entities[a.index].neighbours + (b.index + 1),
                         )
                     entities[b.index] =
                         entities[b.index].copy(
-                            neighbours = entities[b.index].neighbours + (a.index + 1)
+                            neighbours = entities[b.index].neighbours + (a.index + 1),
                         )
                 }
             }
@@ -351,7 +351,7 @@ private class RowLayout(
                     recipe.factory.identifier,
                     Coordinate(row.left + copy * stride, factoryTop).area(size),
                     recipe = recipe.recipe.name,
-                )
+                ),
             )
         }
 
@@ -417,7 +417,7 @@ private class RowLayout(
                 if (long) longInserter else inserter,
                 coordinate,
                 direction,
-            )
+            ),
         )
     }
 
@@ -486,7 +486,7 @@ private class RowLayout(
                             INFINITY_CHEST,
                             Coordinate(2, row),
                             infinity = InfinitySettings(item = material),
-                        )
+                        ),
                     )
                     add(
                         BlueprintEntity(
@@ -494,7 +494,7 @@ private class RowLayout(
                             Coordinate(3, row).area(2, 1),
                             EAST,
                             type = "output",
-                        )
+                        ),
                     )
                     for (x in 5..sink.routeTo.x) {
                         add(BlueprintEntity(belt, Coordinate(x, row), EAST))
@@ -509,7 +509,7 @@ private class RowLayout(
                             MARKER,
                             spot,
                             marker = material,
-                        )
+                        ),
                     )
                 }
             }
@@ -713,14 +713,14 @@ private class RowLayout(
                     coordinate.area(2, 1),
                     EAST,
                     type = "input",
-                )
+                ),
             )
             add(
                 BlueprintEntity(
                     INFINITY_CHEST,
                     coordinate.east(2),
                     infinity = InfinitySettings(removeUnfiltered = true),
-                )
+                ),
             )
         } else {
             val spot = markerSpot(coordinate.west())
@@ -729,7 +729,7 @@ private class RowLayout(
                     MARKER,
                     spot,
                     marker = plan.target,
-                )
+                ),
             )
         }
     }
@@ -790,7 +790,7 @@ private class RowLayout(
                             from,
                             direction,
                             type = "input",
-                        )
+                        ),
                     )
                 }
                 emitted += from
@@ -808,7 +808,7 @@ private class RowLayout(
                         to,
                         direction,
                         type = "output",
-                    )
+                    ),
                 )
                 emitted += to
             }
@@ -821,7 +821,7 @@ private class RowLayout(
                     belt,
                     last,
                     directionBetween(before, last),
-                )
+                ),
             )
         }
         // remember which material each belt on this path carries
@@ -946,15 +946,14 @@ private class RowLayout(
         previous: Map<Coordinate, Coordinate>,
         goal: Coordinate,
         start: Coordinate,
-    ) =
-        buildList {
-                var current: Coordinate? = goal
-                while (current != null && current != start) {
-                    add(current)
-                    current = previous[current]
-                }
-            }
-            .reversed()
+    ) = buildList {
+        var current: Coordinate? = goal
+        while (current != null && current != start) {
+            add(current)
+            current = previous[current]
+        }
+    }
+        .reversed()
 
     /** Covers every machine, inserter and loader with a pole and wires the poles together. */
     private fun placePoles() {

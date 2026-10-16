@@ -54,7 +54,7 @@ private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {
                 result = result,
                 time = minable.number("mining_time") ?: 1.0,
                 categories = setOf(category),
-            )
+            ),
         )
     }
 }
@@ -74,7 +74,7 @@ private fun MutableList<Recipe>.offshorePumpFluids(root: JsonObject) {
                 result = mapOf(Material(fluid) to 1.0),
                 time = 1.0,
                 categories = setOf(Category.OFFSHORE_PUMPING),
-            )
+            ),
         )
     }
 }
@@ -89,7 +89,7 @@ private fun MutableList<Recipe>.harvestedFruit() {
                 result = mapOf(Material(fruit) to 50.0),
                 time = 300.0,
                 categories = setOf(Category.HARVESTING),
-            )
+            ),
         )
     }
 }
@@ -109,7 +109,7 @@ private fun MutableList<Recipe>.harvestedWood(root: JsonObject) {
                 result = mapOf(Material("wood") to 4.0),
                 time = 600.0,
                 categories = setOf(Category.HARVESTING),
-            )
+            ),
         )
 }
 
@@ -134,6 +134,6 @@ private fun MutableList<Recipe>.asteroidCollectionRecipes() {
                     .associate { Material(it) to 1.0 },
             time = 0.2,
             categories = setOf(Category.ASTEROID_COLLECTION),
-        )
+        ),
     )
 }

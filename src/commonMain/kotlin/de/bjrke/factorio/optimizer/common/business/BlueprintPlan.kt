@@ -111,7 +111,7 @@ fun blueprintPlan(
     if (result.target.name == ALL_SCIENCE_PACKS) {
         return BlueprintPlanResult.Unavailable(
             "all-science-packs needs every science pack and is too large for one blueprint; " +
-                "choose a specific material"
+                "choose a specific material",
         )
     }
 
@@ -144,7 +144,7 @@ fun blueprintPlan(
     val targetFactory =
         candidates.firstOrNull { it.recipe.name == result.recipe.name }
             ?: return BlueprintPlanResult.Unavailable(
-                "no buildable factory for ${result.target.name}"
+                "no buildable factory for ${result.target.name}",
             )
 
     val included = mutableListOf<FactoryProduction>()
@@ -203,7 +203,7 @@ fun blueprintPlan(
             sources = sources,
             scale = scale,
             label = planLabel(result.target, scale / normalizeTarget),
-        )
+        ),
     )
 }
 

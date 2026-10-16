@@ -61,82 +61,81 @@ fun parsePrototypes(json: String, customRecipes: Iterable<Recipe> = emptyList())
             else -> subgroups.getOrPut(name) { Subgroup(name) }
         }
 
-    val parsedRecipes =
-        sequence {
-                for ((name, element) in root.table("recipe").filterValueIsInstance<JsonObject>()) {
-                    if (element.boolean("parameter") == true) continue
+    val parsedRecipes = sequence {
+        for ((name, element) in root.table("recipe").filterValueIsInstance<JsonObject>()) {
+            if (element.boolean("parameter") == true) continue
 
-                    val subgroupName = element.string("subgroup")
-                    when (subgroupName) {
-                        "fill-barrel",
-                        "empty-barrel" -> continue
-                    }
+            val subgroupName = element.string("subgroup")
+            when (subgroupName) {
+                "fill-barrel",
+                "empty-barrel" -> continue
+            }
 
-                    val result = buildMap {
-                        element.string("result")?.also {
-                            put(Material(it), (element.number("result_count") ?: DEFAULT_AMOUNT))
-                        }
-                        for (entry in element.objects("results")) {
-                            val resultName = entry.string("name") ?: continue
+            val result = buildMap {
+                element.string("result")?.also {
+                    put(Material(it), (element.number("result_count") ?: DEFAULT_AMOUNT))
+                }
+                for (entry in element.objects("results")) {
+                    val resultName = entry.string("name") ?: continue
 
-                            // recycling recipes express fractional yields via
-                            // `extra_count_fraction`
-                            val extraCountFraction = entry.number("extra_count_fraction") ?: 0.0
+                    // recycling recipes express fractional yields via
+                    // `extra_count_fraction`
+                    val extraCountFraction = entry.number("extra_count_fraction") ?: 0.0
 
-                            // on top of `amount` (usually 0), so they must be added, not replaced
-                            val amount = entry.number("amount") ?: DEFAULT_AMOUNT
+                    // on top of `amount` (usually 0), so they must be added, not replaced
+                    val amount = entry.number("amount") ?: DEFAULT_AMOUNT
 
-                            put(
-                                Material(resultName),
-                                (amount + extraCountFraction) * resultProbability(entry),
-                            )
-                        }
-                    }
-                    if (result.isEmpty()) continue
-
-                    val ingredients = buildMap {
-                        for (entry in element.objects("ingredients")) {
-                            entry.string("name")?.also {
-                                put(Material(it), entry.number("amount") ?: DEFAULT_AMOUNT)
-                            }
-                        }
-                    }
-
-                    val categories =
-                        element
-                            .strings("categories")
-                            .ifEmpty { listOf(DEFAULT_CATEGORY) }
-                            .mapNotNull(::category)
-                            .toSet()
-                    if (categories.isEmpty()) continue
-
-                    val recycling = Category.RECYCLING in categories
-                    // hidden recipes are internal/cheat prototypes (loaders, infinity chests, ...);
-                    // the auto-generated lossy `*-recycling` recipes are hidden too, but they are
-                    // the recycler's real production recipes and must be kept.
-                    if (element.boolean("hidden") == true && !recycling) continue
-                    // a self-recycling recipe (an ingredient is also a result) is a lossy raw->raw
-                    // conversion that would let any resource "produce itself"; drop it.
-                    if (recycling && ingredients.keys.any { it in result.keys }) continue
-
-                    yield(
-                        Recipe(
-                            name = name,
-                            ingredients = ingredients,
-                            result = result,
-                            time = element.number("energy_required") ?: 0.5,
-                            subgroup = subGroup(subgroupName),
-                            categories = categories,
-                            surfaceConditions = element.surfaceConditions(),
-                        )
+                    put(
+                        Material(resultName),
+                        (amount + extraCountFraction) * resultProbability(entry),
                     )
                 }
-
-                yieldAll(resourceRecipes(root))
-                yieldAll(spoilageRecipes(root))
-                yieldAll(customRecipes)
             }
-            .associateBy { it.name }
+            if (result.isEmpty()) continue
+
+            val ingredients = buildMap {
+                for (entry in element.objects("ingredients")) {
+                    entry.string("name")?.also {
+                        put(Material(it), entry.number("amount") ?: DEFAULT_AMOUNT)
+                    }
+                }
+            }
+
+            val categories =
+                element
+                    .strings("categories")
+                    .ifEmpty { listOf(DEFAULT_CATEGORY) }
+                    .mapNotNull(::category)
+                    .toSet()
+            if (categories.isEmpty()) continue
+
+            val recycling = Category.RECYCLING in categories
+            // hidden recipes are internal/cheat prototypes (loaders, infinity chests, ...);
+            // the auto-generated lossy `*-recycling` recipes are hidden too, but they are
+            // the recycler's real production recipes and must be kept.
+            if (element.boolean("hidden") == true && !recycling) continue
+            // a self-recycling recipe (an ingredient is also a result) is a lossy raw->raw
+            // conversion that would let any resource "produce itself"; drop it.
+            if (recycling && ingredients.keys.any { it in result.keys }) continue
+
+            yield(
+                Recipe(
+                    name = name,
+                    ingredients = ingredients,
+                    result = result,
+                    time = element.number("energy_required") ?: 0.5,
+                    subgroup = subGroup(subgroupName),
+                    categories = categories,
+                    surfaceConditions = element.surfaceConditions(),
+                ),
+            )
+        }
+
+        yieldAll(resourceRecipes(root))
+        yieldAll(spoilageRecipes(root))
+        yieldAll(customRecipes)
+    }
+        .associateBy { it.name }
 
     // Only scrap and what scrap-recycling yields may enter the recycler. Keeping recycling recipes
     // one step past scrap avoids reverse chains (e.g. an accumulator recycling back into the

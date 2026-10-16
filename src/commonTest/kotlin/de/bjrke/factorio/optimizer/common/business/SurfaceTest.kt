@@ -259,12 +259,12 @@ class SurfaceTest {
         assertAll(
             {
                 assertTrue(
-                    parsed.forSurface(Surface.FULGORA).recipes.any { it.name == "scrap-recycling" }
+                    parsed.forSurface(Surface.FULGORA).recipes.any { it.name == "scrap-recycling" },
                 )
             },
             {
                 assertFalse(
-                    parsed.forSurface(Surface.NAUVIS).recipes.any { it.name == "scrap-recycling" }
+                    parsed.forSurface(Surface.NAUVIS).recipes.any { it.name == "scrap-recycling" },
                 )
             },
         )

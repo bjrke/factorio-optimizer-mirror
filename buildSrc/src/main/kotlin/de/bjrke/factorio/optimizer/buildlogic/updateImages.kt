@@ -23,7 +23,7 @@ fun updateImages(iconsDir: File, sources: ConfigurableFileTree) {
             val previous = chosen.putIfAbsent(source.name, source to img)
             if (previous != null) {
                 LOGGER.warn(
-                    "Duplicate icon name '${source.name}': using ${previous.first.path}, ignoring ${source.path}"
+                    "Duplicate icon name '${source.name}': using ${previous.first.path}, ignoring ${source.path}",
                 )
             }
         }

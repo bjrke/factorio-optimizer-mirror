@@ -28,7 +28,7 @@ class MaterialSelectorTest : ComponentTest() {
                 material = ironOre
                 availableMaterials = materials
                 changeMaterial = { selections += it }
-            }
+            },
         )
 
     private fun searchField() = screen.getByPlaceholderText(ironOre.name) as HTMLInputElement

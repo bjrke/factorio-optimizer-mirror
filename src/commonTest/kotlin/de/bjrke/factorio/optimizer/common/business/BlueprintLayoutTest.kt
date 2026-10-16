@@ -222,7 +222,7 @@ class BlueprintLayoutTest {
                                 ),
                             machines = 2.5,
                             directInsert = emptySet(),
-                        )
+                        ),
                     ),
                 sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
                 scale = 1.0,
@@ -254,7 +254,7 @@ class BlueprintLayoutTest {
                                 ),
                             machines = 3.0,
                             directInsert = emptySet(),
-                        )
+                        ),
                     ),
                 sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
                 scale = 1.0,

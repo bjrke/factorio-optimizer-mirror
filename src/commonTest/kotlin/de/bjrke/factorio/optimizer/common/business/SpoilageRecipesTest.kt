@@ -33,7 +33,7 @@ class SpoilageRecipesTest {
                     "yumako-mash": {"spoil_ticks": 10800, "spoil_result": "spoilage"}
                   }
                 }
-                """
+                """,
             )
             .let { it as JsonObject }
 

@@ -235,7 +235,7 @@ class BlueprintPlanTest {
                         Factory.ASSEMBLING_MACHINE_3,
                         amount = 3.0,
                         speed = 1.0,
-                    )
+                    ),
                 ),
             )
 

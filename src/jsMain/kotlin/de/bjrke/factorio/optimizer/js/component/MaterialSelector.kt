@@ -98,7 +98,7 @@ internal val materialSelector =
                                         "material-selector-option highlighted"
                                     } else {
                                         "material-selector-option"
-                                    }
+                                    },
                                 )
                             onMouseEnter = { setHighlighted(index) }
                             onMouseDown = {

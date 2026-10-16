@@ -70,7 +70,7 @@ class Optimizer(
                     { productivityOfFactory(it) },
                     { speedOfFactory(it) },
                     { it.identifier },
-                )
+                ),
             )
 
     private fun speedOf(recipe: Recipe) = findFactory(recipe)?.let(::speedOfFactory) ?: 1.0
