@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.model
 
 import kotlin.math.abs
-import kotlin.math.hypot
 
 data class Coordinate(val x: Int, val y: Int) {
     operator fun plus(other: Coordinate) = Coordinate(x + other.x, y + other.y)
@@ -10,11 +9,11 @@ data class Coordinate(val x: Int, val y: Int) {
 
     operator fun times(factor: Int) = Coordinate(x * factor, y * factor)
 
-    fun distance(b: Coordinate) =
-        hypot(
-            (x - b.x).toDouble(),
-            (y - b.y).toDouble(),
-        )
+    fun distanceSq(b: Coordinate): Long {
+        val dx = x.toLong() - b.x
+        val dy = y.toLong() - b.y
+        return dx * dx + dy * dy
+    }
 
     fun chebyshevDistance(b: Coordinate) = maxOf(abs(x - b.x), abs(y - b.y))
 

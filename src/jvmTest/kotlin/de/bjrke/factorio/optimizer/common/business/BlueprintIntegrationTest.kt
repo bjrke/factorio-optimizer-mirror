@@ -5,11 +5,7 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import java.util.Base64
 import java.util.zip.Inflater
-import kotlin.collections.ArrayDeque
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * End-to-end check on the real prototype dump: optimize a target, reduce it to a plan, lay it out
@@ -139,27 +135,29 @@ class BlueprintIntegrationTest {
         return buildBlueprint(planned, logistics, cheats).entities
     }
 
+    @OptIn(ExperimentalKotlinTestApi::class)
     private fun assertNoOverlap(entities: List<BlueprintEntity>) {
-        val seen = mutableSetOf<Coordinate>()
-        val collisions = mutableListOf<Coordinate>()
+        val seen = mutableMapOf<Coordinate, BlueprintEntity>()
         for (entity in entities) {
             for (tile in entity.area) {
-                if (!seen.add(tile)) collisions += tile
+                val existing = seen.put(tile, entity)
+                assertNull(existing, { "${entity.name} and  ${existing?.name} overlaps at $tile" })
             }
         }
-        assertTrue(collisions.isEmpty(), "overlaps at ${collisions.take(5)}")
     }
 
     @Test
     fun realBlueprintsHaveNoOverlappingEntities() =
-        assertAll(
-            { assertNoOverlap(entitiesFor("advanced-circuit")) },
-            { assertNoOverlap(entitiesFor("electronic-circuit")) },
-            { assertNoOverlap(entitiesFor("logistic-science-pack")) },
-            { assertNoOverlap(entitiesFor("processing-unit")) },
-            { assertNoOverlap(entitiesFor("utility-science-pack")) },
-            { assertNoOverlap(entitiesFor("lubricant")) },
-        )
+        assertTableOf(
+            "advanced-circuit",
+            "electronic-circuit",
+            "logistic-science-pack",
+            "processing-unit",
+            "utility-science-pack",
+            "lubricant",
+        ) {
+            assertNoOverlap(entitiesFor(it))
+        }
 
     @Test
     fun realCheatBlueprintsHaveNoOverlappingEntities() =
@@ -297,13 +295,7 @@ class BlueprintIntegrationTest {
 
         val coveredByPoles =
             poles.flatMapTo(mutableSetOf()) { p ->
-                sequence {
-                    for (x in p.x - 3..p.x + 3) {
-                        for (y in p.y - 3..p.y + 3) {
-                            yield(Coordinate(x, y))
-                        }
-                    }
-                }
+                p.area().grow(3)
             }
 
         val unpowered = entities.filter {
@@ -315,17 +307,18 @@ class BlueprintIntegrationTest {
         for (pole in poles) {
             if (!seen.add(pole)) continue
             components++
-            val queue = ArrayDeque(listOf(pole))
-            while (queue.isNotEmpty()) {
-                val current = queue.removeFirst()
+            val queue = ArrayDeque<Coordinate>()
+            var current: Coordinate? = pole
+            while (current != null) {
                 for (other in poles) {
-                    if (other in seen) continue
-                    val reach = current.distance(other)
-                    if (reach <= 9.0) {
-                        seen += other
-                        queue += other
+                    if (other !in seen) {
+                        if (current.distanceSq(other) <= 9 * 9) {
+                            seen += other
+                            queue += other
+                        }
                     }
                 }
+                current = queue.removeFirstOrNull()
             }
         }
 

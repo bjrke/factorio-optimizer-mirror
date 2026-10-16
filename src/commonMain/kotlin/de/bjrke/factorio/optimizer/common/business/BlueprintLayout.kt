@@ -1,11 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.util.intersects
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.round
-import kotlin.math.roundToInt
+import kotlin.math.*
 
 private const val NORTH = 0
 private const val EAST = 4
@@ -25,6 +21,7 @@ private const val MAX_COPIES = 9
 private const val SUPPLY_RADIUS = 3
 
 private const val WIRE_REACH = 9
+private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
 
 private const val MARKER = "constant-combinator"
 private const val INFINITY_CHEST = "infinity-chest"
@@ -209,8 +206,7 @@ private class RowLayout(
             for (j in i + 1 until poles.size) {
                 val a = poles[i]
                 val b = poles[j]
-                val distance = a.value.area.topLeft.distance(b.value.area.topLeft)
-                if (distance <= WIRE_REACH + 1e-9) {
+                if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= WIRE_REACH_SQ) {
                     entities[a.index] =
                         entities[a.index].copy(
                             neighbours = entities[a.index].neighbours + (b.index + 1)
@@ -968,111 +964,118 @@ private class RowLayout(
 
     /** Covers every machine, inserter and loader with a pole and wires the poles together. */
     private fun placePoles() {
-        val machineTiles =
-            entities.filter { it.isPowered() }.sortedWith(compareBy({ it.area.y }, { it.area.x }))
-        if (machineTiles.isEmpty()) return
+        val machineAreas =
+            entities
+                .filter { it.isPowered() }
+                .map { it.area }
+                .sortedWith(compareBy({ it.y }, { it.x }))
+        if (machineAreas.isEmpty()) return
 
-        val poles = mutableSetOf<Coordinate>()
         val covered = mutableSetOf<Coordinate>()
-        for (tile in machineTiles) {
-            if (tile.area.intersects(covered)) continue
-            val spot = bestPoleSpot(tile.area, covered, poles) ?: continue
-            poles += spot
-            covered.addAll(spot.area().grow(SUPPLY_RADIUS))
+        val poles = mutableSetOf<Coordinate>()
+        for (area in machineAreas) {
+            if (!area.any(covered::contains)) {
+                val spot = bestPoleSpot(area, covered) ?: continue
+                poles += spot
+                addPole(spot)
+                covered.addAll(spot.area().grow(SUPPLY_RADIUS))
+            }
         }
         connectPoles(poles)
-        for (poleTile in poles) add(BlueprintEntity(POLE, poleTile))
+    }
+
+    private fun addPole(poleTile: Coordinate) {
+        add(BlueprintEntity(POLE, poleTile))
     }
 
     /** The free tile near [tile] that powers the most not-yet-[covered] machines, if any. */
-    private fun bestPoleSpot(
-        tile: Area,
-        covered: Set<Coordinate>,
-        poles: Set<Coordinate>,
-    ): Coordinate? {
-        var best: Coordinate? = null
-        var bestCount = -1
-
-        for (candidate in tile.grow(SUPPLY_RADIUS)) {
-            if (!isFree(candidate) || candidate in poles) continue
-            var count = 0
-            for (other in candidate.area().grow(SUPPLY_RADIUS)) {
-                if (other !in covered) {
-                    count++
-
-                    val otherMachine = occupied[other]
-                    if (otherMachine?.isPowered() == true) {
-                        count++
+    private fun bestPoleSpot(tile: Area, covered: Set<Coordinate>) =
+        tile
+            .grow(SUPPLY_RADIUS)
+            .filter { isFree(it) }
+            .maxByOrNull {
+                it.area().grow(SUPPLY_RADIUS).sumOf { other ->
+                    when {
+                        other in covered -> 0
+                        occupied[other]?.isPowered() == true -> 2
+                        else -> 1
                     }
                 }
             }
-            if (count > bestCount) {
-                bestCount = count
-                best = candidate
-            }
-        }
-
-        return best
-    }
 
     /** Adds poles until every pole can reach another, so the whole set is one wire network. */
     private fun connectPoles(poles: MutableSet<Coordinate>) {
-        var guard = 0
-        while (guard++ < 400) {
-            val components = poleComponents(poles)
+        val components = poleComponents(poles)
+        repeat(40) {
             if (components.size <= 1) return
-            var bestDistance = Double.MAX_VALUE
+
+            var bestDistanceSq = Long.MAX_VALUE
             var from: Coordinate? = null
             var to: Coordinate? = null
+            var fromIndex = -1
+            var toIndex = -1
+
             for (i in components.indices) {
                 for (j in i + 1 until components.size) {
                     for (a in components[i]) {
                         for (b in components[j]) {
-                            val distance = a.distance(b)
-                            if (distance < bestDistance) {
-                                bestDistance = distance
+                            val distanceSq = a.distanceSq(b)
+                            if (distanceSq < bestDistanceSq) {
+                                bestDistanceSq = distanceSq
                                 from = a
                                 to = b
+                                fromIndex = i
+                                toIndex = j
                             }
                         }
                     }
                 }
             }
-            val start = from ?: return
-            val end = to ?: return
-            val steps = ceil(bestDistance / (WIRE_REACH - 1)).toInt().coerceAtLeast(1)
+            if (from == null || to == null) return
+
+            val steps =
+                ceil(sqrt(bestDistanceSq.toDouble()) / (WIRE_REACH - 1)).toInt().coerceAtLeast(1)
             var added = false
+
             for (step in 1 until steps) {
                 val fraction = step.toDouble() / steps
-                val x = round(start.x + (end.x - start.x) * fraction).toInt()
-                val y = round(start.y + (end.y - start.y) * fraction).toInt()
-                val spot = freeNear(Coordinate(x, y), poles.toSet()) ?: continue
+                val x = round(from.x + (to.x - from.x) * fraction).toInt()
+                val y = round(from.y + (to.y - from.y) * fraction).toInt()
+                val spot = freeNear(Coordinate(x, y)) ?: continue
                 poles += spot
+                addPole(spot)
+                components[fromIndex] += spot
                 added = true
             }
             if (!added) return
+
+            components[fromIndex] += components[toIndex]
+            components.removeAt(toIndex)
         }
     }
 
     /** The wire-connected groups of [poles], two poles being connected within the wire reach. */
-    private fun poleComponents(poles: Set<Coordinate>): List<List<Coordinate>> {
+    private fun poleComponents(poles: Set<Coordinate>): MutableList<MutableList<Coordinate>> {
         val seen = mutableSetOf<Coordinate>()
-        val components = mutableListOf<List<Coordinate>>()
+        val components = mutableListOf<MutableList<Coordinate>>()
         for (pole in poles) {
             if (!seen.add(pole)) continue
             val component = mutableListOf<Coordinate>()
-            val queue = ArrayDeque(listOf(pole))
-            while (queue.isNotEmpty()) {
-                val current = queue.removeFirst()
+            val queue = ArrayDeque<Coordinate>()
+            var current: Coordinate? = pole
+            while (current != null) {
                 component += current
+                // this is a job for a quadtree!
                 for (other in poles) {
-                    if (other in seen) continue
-                    val reach = current.distance(other)
-                    if (reach <= WIRE_REACH) {
-                        seen += other
-                        queue += other
+                    if (other !in seen) {
+                        val reach = current.distanceSq(other)
+                        if (reach <= WIRE_REACH_SQ) {
+                            seen += other
+                            queue += other
+                        }
                     }
                 }
+                current = queue.removeFirstOrNull()
             }
             components += component
         }
@@ -1080,12 +1083,12 @@ private class RowLayout(
     }
 
     /** The nearest free tile within one tile of ([c]), if any. */
-    private fun freeNear(c: Coordinate, used: Set<Coordinate>): Coordinate? {
+    private fun freeNear(c: Coordinate): Coordinate? {
         for (radius in 0..1) {
             for (dx in -radius..radius) {
                 for (dy in -radius..radius) {
                     val toTest = Coordinate(c.x + dx, c.y + dy)
-                    if (isFree(toTest) && toTest !in used) return toTest
+                    if (isFree(toTest)) return toTest
                 }
             }
         }

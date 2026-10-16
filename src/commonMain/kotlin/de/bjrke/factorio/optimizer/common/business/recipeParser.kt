@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.util.intersects
 import kotlinx.serialization.json.*
 
 private const val DEFAULT_AMOUNT = 1.0
@@ -118,7 +117,7 @@ fun parsePrototypes(json: String, customRecipes: Iterable<Recipe> = emptyList())
                     if (element.boolean("hidden") == true && !recycling) continue
                     // a self-recycling recipe (an ingredient is also a result) is a lossy raw->raw
                     // conversion that would let any resource "produce itself"; drop it.
-                    if (recycling && ingredients.keys.intersects(result.keys)) continue
+                    if (recycling && ingredients.keys.any { it in result.keys }) continue
 
                     yield(
                         Recipe(
