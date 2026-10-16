@@ -41,6 +41,13 @@ class CliOptimizerTest {
     }
 
     @Test
+    fun blueprintFlagIsParsed() =
+        assertAll(
+            { assertTrue(parseArgs(arrayOf("--blueprint")).blueprint) },
+            { assertFalse(parseArgs(arrayOf("iron-plate")).blueprint) },
+        )
+
+    @Test
     fun planetSelectsTheSurfaceByIdentifierOrCode() =
         assertTableOf(
             "vulcanus" to Surface.VULCANUS,

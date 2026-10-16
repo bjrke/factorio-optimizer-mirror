@@ -24,6 +24,7 @@ external interface LogisticsSelectorStateProps : Props {
     var beltLanes: Int
     var beltStack: Int
     var inserterStack: Int
+    var cheats: Boolean
 }
 
 external interface LogisticsSelectorDispatchProps : Props {
@@ -32,6 +33,7 @@ external interface LogisticsSelectorDispatchProps : Props {
     var selectBeltLanes: (Int) -> Unit
     var selectBeltStack: (Int) -> Unit
     var selectInserterStack: (Int) -> Unit
+    var selectCheats: (Boolean) -> Unit
 }
 
 external interface LogisticsSelectorProps :
@@ -48,7 +50,7 @@ internal val logisticsSelector =
             selectableIcon(
                 name = belt.identifier,
                 selected = props.selectedBelt == belt,
-                inputType = InputType.Companion.radio,
+                inputType = InputType.radio,
                 groupName = "belt",
                 onChange = { props.selectBelt(belt) },
             )
@@ -58,7 +60,7 @@ internal val logisticsSelector =
             title = "belt lanes"
             css { marginLeft = 0.5.ch }
             input {
-                type = InputType.Companion.checkbox
+                type = InputType.checkbox
                 checked = props.beltLanes == Belt.MAX_LANES
                 onChange = {
                     props.selectBeltLanes(if (it.target.checked) Belt.MAX_LANES else 1)
@@ -70,7 +72,7 @@ internal val logisticsSelector =
             selectableIcon(
                 name = inserter.identifier,
                 selected = props.selectedInserter == inserter,
-                inputType = InputType.Companion.radio,
+                inputType = InputType.radio,
                 groupName = "inserter",
                 onChange = { props.selectInserter(inserter) },
             )
@@ -94,6 +96,17 @@ internal val logisticsSelector =
             maximum = props.config.maxStack(props.selectedInserter),
             onValue = props.selectInserterStack,
         )
+        // cheat items: off by default, they only help testing a blueprint
+        label {
+            title = "add infinity-chest test inputs and outputs"
+            css { marginLeft = 0.5.ch }
+            input {
+                type = InputType.checkbox
+                checked = props.cheats
+                onChange = { props.selectCheats(it.target.checked) }
+            }
+            +" test chests"
+        }
     }
 
 private fun ChildrenBuilder.stackInput(
@@ -124,10 +137,12 @@ fun ChildrenBuilder.urlLogisticsSelector(props: FactorioOptimizerProps) {
         beltLanes = props.beltLanes
         beltStack = props.beltStack
         inserterStack = props.inserterStack
+        cheats = props.cheats
         selectBelt = { props.changeUrl { belt = it } }
         selectInserter = { props.changeUrl { inserter = it } }
         selectBeltLanes = { props.changeUrl { beltLanes = it } }
         selectBeltStack = { props.changeUrl { beltStack = it } }
         selectInserterStack = { props.changeUrl { inserterStack = it } }
+        selectCheats = { props.changeUrl { cheats = it } }
     }
 }

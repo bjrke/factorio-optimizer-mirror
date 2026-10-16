@@ -8,11 +8,14 @@ data class CliArgs(
     val material: String = ALL_SCIENCE_PACKS,
     val spaceAge: Boolean = true,
     val surface: Surface = Surface.NAUVIS,
+    val blueprint: Boolean = false,
+    val cheats: Boolean = false,
 )
 
 /**
- * Parses the CLI arguments: a positional material plus `--base-game` (turns Space Age off) and
- * `--planet=<surface>`.
+ * Parses the CLI arguments: a positional material plus `--base-game` (turns Space Age off),
+ * `--planet=<surface>`, `--blueprint` (print a blueprint string instead of the listing) and
+ * `--cheats` (add infinity-chest test inputs/outputs to the blueprint).
  */
 fun parseArgs(args: Array<String>): CliArgs =
     CliArgs(
@@ -24,6 +27,8 @@ fun parseArgs(args: Array<String>): CliArgs =
                 .firstOrNull { it.startsWith("--planet=") }
                 ?.removePrefix("--planet=")
                 ?.let { surfaceFromPlanet(it) } ?: Surface.NAUVIS,
+        blueprint = args.any { it == "--blueprint" },
+        cheats = args.any { it == "--cheats" },
     )
 
 fun main(args: Array<String>) {
@@ -45,6 +50,18 @@ fun main(args: Array<String>) {
             beltStack = logisticsConfig.beltStack(null, logisticsConfig.defaultInserter),
             inserterStack = 1,
         )
+
+    if (cli.blueprint) {
+        when (val outcome = blueprintPlan(result, logistics)) {
+            is BlueprintPlanResult.Planned ->
+                println(
+                    blueprintString(buildBlueprint(outcome.plan, logistics, cli.cheats).toJson())
+                )
+            is BlueprintPlanResult.Unavailable ->
+                println("No blueprint available: ${outcome.reason}")
+        }
+        return
+    }
 
     fun transport(
         factory: Factory,
