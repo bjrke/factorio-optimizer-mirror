@@ -68,6 +68,17 @@ internal fun blueprintBeltMaterials(
         beltMaterials()
     }
 
+/** The placed entities and the feed routes that failed, for the CLI's text layout. */
+internal fun blueprintLayoutDump(
+    plan: BlueprintPlan,
+    logistics: LogisticsCalculator,
+    cheats: Boolean = false,
+) =
+    RowLayout(plan, logistics, cheats).run {
+        build()
+        LayoutDump(placedEntities(), failures.toList())
+    }
+
 private class RowLayout(
     private val plan: BlueprintPlan,
     private val logistics: LogisticsCalculator,
@@ -187,6 +198,9 @@ private class RowLayout(
         }
         return placed.map { it.toBlueprintEntity() }
     }
+
+    /** The entities placed so far, in placement order. Used by [blueprintLayoutDump]. */
+    fun placedEntities(): List<LayoutEntity> = placed.toList()
 
     /** The material each belt tile carries, keyed by the tile. Used by tests. */
     fun beltMaterials(): Map<Coordinate, Material> =

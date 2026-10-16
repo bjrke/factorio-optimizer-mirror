@@ -16,7 +16,7 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 | `./gradlew jvmTest` | kotlin-test suites (commonTest + jvmTest); filter with `--tests "*RecipeParserTest*"` |
 | `./gradlew check` | Formatting check + all tests; CI: `gradle --no-daemon clean check jsBrowserDistribution` (adds `jsBrowserTest`, real headless Chrome) |
 | `./gradlew spotlessApply` | Fix formatting (Spotless/ktfmt `kotlinlangStyle`, `src/**/*.kt` + `build.gradle.kts`) |
-| `./gradlew run` | Run the CLI (`CliOptimizerKt`); `./gradlew buildFatJar` makes a runnable fat jar |
+| `./gradlew run` | Run the CLI (`CliOptimizerKt`); takes a material plus settings (`--planet`, `--factory`, `--belt`, `--inserter`, `--full-belt`, …) or a pasted web-UI URL, and outputs via `--settings`/`--listing`/`--layout`/`--json`/`--blueprint`; `./gradlew buildFatJar` makes a runnable fat jar |
 
 ## Testing
 
