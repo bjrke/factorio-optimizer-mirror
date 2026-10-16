@@ -153,19 +153,20 @@ class BlueprintLayoutTest {
         for (pipe in pipes) {
             if (!seen.add(pipe)) continue
             val component = mutableSetOf<Coordinate>()
-            val queue = ArrayDeque(listOf(pipe))
-            while (queue.isNotEmpty()) {
-                val (x, y) = queue.removeFirst()
-                component += Coordinate(x, y)
+            var at: Coordinate? = pipe
+            val queue = ArrayDeque<Coordinate>()
+            while (at != null) {
+                component += at
                 for (next in
                     listOf(
-                        Coordinate(x - 1, y),
-                        Coordinate(x + 1, y),
-                        Coordinate(x, y - 1),
-                        Coordinate(x, y + 1),
+                        at.west(),
+                        at.east(),
+                        at.north(),
+                        at.south(),
                     )) {
                     if (next in pipes && seen.add(next)) queue += next
                 }
+                at = queue.removeFirstOrNull()
             }
             components += component
         }
@@ -196,7 +197,7 @@ class BlueprintLayoutTest {
                 val dangling = inserters.filter {
                     val reach = if (it.name == "long-handed-inserter") 2 else 1
                     val inserterPos = it.area.topLeft
-                    (Coordinate(inserterPos.x, inserterPos.y - reach)) !in occupied
+                    inserterPos.north(reach) !in occupied
                 }
                 assertTrue(dangling.isEmpty(), "inserter takes from nothing: $dangling")
             },
@@ -397,26 +398,28 @@ class BlueprintLayoutTest {
                 .flatMapTo(mutableSetOf()) { it.area }
 
         val reachable = mutableSetOf<Coordinate>()
-        val queue = ArrayDeque(listOf(pipes.first()))
-        while (queue.isNotEmpty()) {
-            val (x, y) = queue.removeFirst()
-            if (!reachable.add(Coordinate(x, y))) continue
-            for (next in
-                listOf(
-                    Coordinate(x - 1, y),
-                    Coordinate(x + 1, y),
-                    Coordinate(x, y - 1),
-                    Coordinate(x, y + 1),
-                )) {
-                if (next in pipes) queue += next
+        var at: Coordinate? = pipes.first()
+        val queue = ArrayDeque<Coordinate>()
+        while (at != null) {
+            if (reachable.add(at)) {
+                for (next in
+                    listOf(
+                        at.west(),
+                        at.east(),
+                        at.north(),
+                        at.south(),
+                    )) {
+                    if (next in pipes) queue += next
+                }
             }
+            at = queue.removeFirstOrNull()
         }
         fun touchesMachine(tile: Coordinate) =
             listOf(
-                    Coordinate(tile.x - 1, tile.y),
-                    Coordinate(tile.x + 1, tile.y),
-                    Coordinate(tile.x, tile.y - 1),
-                    Coordinate(tile.x, tile.y + 1),
+                    tile.west(),
+                    tile.east(),
+                    tile.north(),
+                    tile.south(),
                 )
                 .any { it in machineTiles }
 

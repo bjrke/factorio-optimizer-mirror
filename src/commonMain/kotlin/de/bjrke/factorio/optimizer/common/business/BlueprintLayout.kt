@@ -441,10 +441,12 @@ private class RowLayout(
     private fun laneSink(row: Row, y: Int, material: Material): Sink =
         if (material in producerOf) {
             val x = row.right + 1
-            Sink(Coordinate(x, y), Coordinate((x + 1), y), y)
+            val routeTo = Coordinate(x, y)
+            Sink(routeTo, routeTo.east(), y)
         } else {
             val x = row.left - 1
-            Sink(Coordinate(x, y), Coordinate((x - 1), y), y)
+            val routeTo = Coordinate(x, y)
+            Sink(routeTo, routeTo.west(), y)
         }
 
     private fun allSolidSinks() = buildList {
@@ -501,7 +503,7 @@ private class RowLayout(
                     for (x in 2..sink.routeTo.x) {
                         add(BlueprintEntity(belt, Coordinate(x, row), EAST))
                     }
-                    val spot = markerSpot(row, 2)
+                    val spot = markerSpot(Coordinate(2, row))
                     add(
                         BlueprintEntity(
                             MARKER,
@@ -517,7 +519,7 @@ private class RowLayout(
             if (fan != null) {
                 list.forEachIndexed { index, entry ->
                     val branch = fan.getOrNull(index) ?: return@forEachIndexed
-                    deliver(material, Coordinate(branch.x, branch.y + 1), entry.third)
+                    deliver(material, branch.south(), entry.third)
                 }
             } else {
                 for ((_, _, sink) in list) {
@@ -532,33 +534,32 @@ private class RowLayout(
     /** True when a straight import belt can be laid in the margin on [row]. */
     private fun straightRowFree(row: Int, upto: Int) = (2..upto).all { isFree(Coordinate(it, row)) }
 
-    /** A free tile beside the belt on [beltRow], so a marker never blocks the belt. */
-    private fun markerSpot(beltRow: Int, anchorX: Int): Coordinate {
+    /** A free tile beside the belt at [where], so a marker never blocks the belt. */
+    private fun markerSpot(where: Coordinate): Coordinate {
+        val (anchorX, beltRow) = where
+
         for (dx in 0..12) {
             for (dy in listOf(-1, 1)) {
                 val tile = Coordinate(anchorX + dx, beltRow + dy)
                 if (isFree(tile)) return tile
             }
         }
-        return Coordinate((anchorX - 1), beltRow)
+        return where.west()
     }
 
-    /** True when a fan of [count] branches can be placed at [startX] on row [y]. */
-    private fun fanFree(startX: Int, y: Int, count: Int): Boolean {
-        var x = startX
-        val tiles = mutableListOf<Coordinate>()
+    /** True when a fan of [count] branches can be placed at [start]. */
+    private fun fanFree(start: Coordinate, count: Int): Boolean {
+        // the body is two tiles tall: a splitter per branch plus the final belt
+        val body = start.area(2 * count - 1, 2)
+        if (!body.all { isFree(it) && it !in reserved }) return false
+
+        // each splitter's branch turns south; its first route tile must stay clear
+        var coordinate = start.south(2).east()
         repeat(count - 1) {
-            tiles += Coordinate(x, y)
-            tiles += Coordinate(x, (y + 1))
-            tiles += Coordinate((x + 1), (y + 1))
-            tiles += Coordinate((x + 1), y)
-            // the branch's first route tile
-            tiles += Coordinate((x + 1), (y + 2))
-            x += 2
+            if (!isFree(coordinate) || coordinate in reserved) return false
+            coordinate = coordinate.east(2)
         }
-        tiles += Coordinate(x, y)
-        tiles += Coordinate(x, (y + 1))
-        return tiles.all { isFree(it) && it !in reserved }
+        return true
     }
 
     /**
@@ -569,26 +570,26 @@ private class RowLayout(
         val y = row.outputLaneRow
         // shift east until every fan tile is clear: a sink goal may sit right on the row's edge
         var startX = row.right + 1
-        while (startX < row.right + 60 && !fanFree(startX, y, count)) startX++
+        while (startX < row.right + 60 && !fanFree(Coordinate(startX, y), count)) startX++
         // connect the output lane to the fan when it had to shift east
         for (x in (row.right + 1) until startX) add(BlueprintEntity(belt, Coordinate(x, y), EAST))
         val branches = mutableListOf<Coordinate>()
-        var x = startX
+        var start = Coordinate(startX, y)
         repeat(count - 1) {
             // a splitter is two tiles across the flow; its input comes from the west, its outputs
             // run east, one of which turns south into a branch
-            add(BlueprintEntity(splitter, Coordinate(x, y).area(1, 2), EAST))
-            val branch = Coordinate((x + 1), (y + 1))
-            add(BlueprintEntity(belt, branch, SOUTH))
-            branches += branch
-            add(BlueprintEntity(belt, Coordinate(x + 1, y), EAST))
-            x += 2
+            add(BlueprintEntity(splitter, start.area(1, 2), EAST))
+            val branchEast = start.east()
+            val branchSouth = branchEast.south()
+            add(BlueprintEntity(belt, branchSouth, SOUTH))
+            branches += branchSouth
+            add(BlueprintEntity(belt, branchEast, EAST))
+            start = start.east(2)
         }
-        val last = Coordinate(x, y)
-        add(BlueprintEntity(belt, last, SOUTH))
-        branches += last
+        add(BlueprintEntity(belt, start, SOUTH))
+        branches += start
         // keep each branch's first route tile free, so no earlier feed blocks it
-        for ((x, y) in branches) reserved += Coordinate(x, (y + 1))
+        for (c in branches) reserved += c.south()
         return branches
     }
 
@@ -700,13 +701,10 @@ private class RowLayout(
 
         while (coordinate.x <= row.right + 3 && isFree(coordinate)) {
             add(BlueprintEntity(belt, coordinate, EAST))
-            coordinate = Coordinate(coordinate.x + 1, row.outputLaneRow)
+            coordinate = coordinate.east()
         }
         val loaderFits =
-            cheats &&
-                isFree(coordinate) &&
-                isFree(Coordinate(coordinate.x + 1, row.outputLaneRow)) &&
-                isFree(Coordinate(coordinate.x + 2, row.outputLaneRow))
+            cheats && isFree(coordinate) && isFree(coordinate.east()) && isFree(coordinate.east(2))
         if (loaderFits) {
             // the product belt runs into a loader that voids it in an infinity chest
             add(
@@ -720,15 +718,12 @@ private class RowLayout(
             add(
                 BlueprintEntity(
                     INFINITY_CHEST,
-                    Coordinate(
-                        coordinate.x + 2,
-                        row.outputLaneRow,
-                    ),
+                    coordinate.east(2),
                     infinity = InfinitySettings(removeUnfiltered = true),
                 )
             )
         } else {
-            val spot = markerSpot(row.outputLaneRow, coordinate.x - 1)
+            val spot = markerSpot(coordinate.west())
             add(
                 BlueprintEntity(
                     MARKER,
@@ -918,8 +913,7 @@ private class RowLayout(
                         if (incoming != direction) continue
                         // and only to cross an obstacle: if the next tile is free, just step there
                         if (allowed(current + direction)) continue
-                        if (!tunnelFree(current.x, current.y, direction.x, direction.y, reach))
-                            continue
+                        if (!tunnelFree(current, direction, reach)) continue
                     }
                     val n = current + direction * reach
                     val isGoal = n == to
@@ -940,10 +934,10 @@ private class RowLayout(
         return null
     }
 
-    /** True when a tunnel of [reach] tiles in direction ([dx],[dy]) crosses no other tunnel. */
-    private fun tunnelFree(x: Int, y: Int, dx: Int, dy: Int, reach: Int): Boolean {
+    /** True when a tunnel of [reach] tiles in [direction] crosses no other tunnel. */
+    private fun tunnelFree(from: Coordinate, direction: Coordinate, reach: Int): Boolean {
         for (k in 1 until reach) {
-            if (Coordinate(x + dx * k, y + dy * k) in undergroundUsed) return false
+            if (from + direction * k in undergroundUsed) return false
         }
         return true
     }

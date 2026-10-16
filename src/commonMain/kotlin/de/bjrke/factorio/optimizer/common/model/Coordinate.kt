@@ -20,6 +20,14 @@ data class Coordinate(val x: Int, val y: Int) {
     fun area(dimension: Dimension) = Area(this, dimension)
 
     fun area(width: Int = 1, height: Int = 1) = area(Dimension(width, height))
+
+    fun north(amount: Int = 1) = copy(y = y - amount)
+
+    fun south(amount: Int = 1) = copy(y = y + amount)
+
+    fun east(amount: Int = 1) = copy(x = x + amount)
+
+    fun west(amount: Int = 1) = copy(x = x - amount)
 }
 
 data class Dimension(val width: Int, val height: Int) {

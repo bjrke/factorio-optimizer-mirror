@@ -407,8 +407,7 @@ class BlueprintIntegrationTest {
             belts
                 .filter { (tile, _) ->
                     val feeding = belts.filter { (from, direction) ->
-                        val (dx, dy) = step(direction)
-                        Coordinate(from.x + dx, from.y + dy) == tile
+                        from + step(direction) == tile
                     }
                     feeding.map { materials[it.key] }.distinct().size > 1
                 }
