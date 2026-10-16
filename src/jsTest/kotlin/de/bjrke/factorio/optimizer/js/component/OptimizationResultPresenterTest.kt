@@ -377,7 +377,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
         val water = Material("water")
         val fluidRecipe =
             Recipe(
-                name = "chemical-plant-recipe",
+                name = "sulfuric-acid",
                 ingredients = mapOf(water to 10.0),
                 result = mapOf(gear to 1.0),
                 time = 1.0,
@@ -571,7 +571,7 @@ class OptimizationResultPresenterTest : ComponentTest() {
         val water = Material("water")
         val fluidRecipe =
             Recipe(
-                name = "fluid-recipe",
+                name = "heavy-oil",
                 ingredients = mapOf(water to 10.0),
                 result = mapOf(gear to 1.0),
                 time = 1.0,
