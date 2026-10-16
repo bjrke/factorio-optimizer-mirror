@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.business.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf

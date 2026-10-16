@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.business.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.util.intersects
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.round
@@ -23,8 +23,6 @@ private const val MAX_COPIES = 9
 
 /** Medium poles supply a 7x7 area (radius 3) and reach 9 tiles of wire. */
 private const val SUPPLY_RADIUS = 3
-
-private val supplyRange = -SUPPLY_RADIUS..SUPPLY_RADIUS
 
 private const val WIRE_REACH = 9
 
@@ -970,19 +968,17 @@ private class RowLayout(
 
     /** Covers every machine, inserter and loader with a pole and wires the poles together. */
     private fun placePoles() {
-        val machineTiles = entities.filter { it.isPowered() }.flatMapTo(mutableSetOf()) { it.area }
+        val machineTiles =
+            entities.filter { it.isPowered() }.sortedWith(compareBy({ it.area.y }, { it.area.x }))
         if (machineTiles.isEmpty()) return
-        val poles = mutableListOf<Coordinate>()
+
+        val poles = mutableSetOf<Coordinate>()
         val covered = mutableSetOf<Coordinate>()
-        for (tile in machineTiles.sortedWith(compareBy({ it.y }, { it.x }))) {
-            if (tile in covered) continue
-            val spot = bestPoleSpot(machineTiles, tile, covered, poles) ?: continue
+        for (tile in machineTiles) {
+            if (tile.area.intersects(covered)) continue
+            val spot = bestPoleSpot(tile.area, covered, poles) ?: continue
             poles += spot
-            for (x in spot.x - SUPPLY_RADIUS..spot.x + SUPPLY_RADIUS) {
-                for (y in spot.y - SUPPLY_RADIUS..spot.y + SUPPLY_RADIUS) {
-                    covered += Coordinate(x, y)
-                }
-            }
+            covered.addAll(spot.area().grow(SUPPLY_RADIUS))
         }
         connectPoles(poles)
         for (poleTile in poles) add(BlueprintEntity(POLE, poleTile))
@@ -990,35 +986,37 @@ private class RowLayout(
 
     /** The free tile near [tile] that powers the most not-yet-[covered] machines, if any. */
     private fun bestPoleSpot(
-        machineTiles: Set<Coordinate>,
-        tile: Coordinate,
+        tile: Area,
         covered: Set<Coordinate>,
-        poles: List<Coordinate>,
+        poles: Set<Coordinate>,
     ): Coordinate? {
         var best: Coordinate? = null
         var bestCount = -1
-        for (dx in supplyRange) {
-            for (dy in supplyRange) {
-                val candidate = tile + Coordinate(dx, dy)
-                if (!isFree(candidate) || candidate in poles) continue
-                var count = 0
-                for (ox in supplyRange) {
-                    for (oy in supplyRange) {
-                        val other = candidate + Coordinate(ox, oy)
-                        if (other in machineTiles && other !in covered) count++
+
+        for (candidate in tile.grow(SUPPLY_RADIUS)) {
+            if (!isFree(candidate) || candidate in poles) continue
+            var count = 0
+            for (other in candidate.area().grow(SUPPLY_RADIUS)) {
+                if (other !in covered) {
+                    count++
+
+                    val otherMachine = occupied[other]
+                    if (otherMachine?.isPowered() == true) {
+                        count++
                     }
                 }
-                if (count > bestCount) {
-                    bestCount = count
-                    best = candidate
-                }
+            }
+            if (count > bestCount) {
+                bestCount = count
+                best = candidate
             }
         }
+
         return best
     }
 
     /** Adds poles until every pole can reach another, so the whole set is one wire network. */
-    private fun connectPoles(poles: MutableList<Coordinate>) {
+    private fun connectPoles(poles: MutableSet<Coordinate>) {
         var guard = 0
         while (guard++ < 400) {
             val components = poleComponents(poles)
@@ -1057,7 +1055,7 @@ private class RowLayout(
     }
 
     /** The wire-connected groups of [poles], two poles being connected within the wire reach. */
-    private fun poleComponents(poles: List<Coordinate>): List<List<Coordinate>> {
+    private fun poleComponents(poles: Set<Coordinate>): List<List<Coordinate>> {
         val seen = mutableSetOf<Coordinate>()
         val components = mutableListOf<List<Coordinate>>()
         for (pole in poles) {

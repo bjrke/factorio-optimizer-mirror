@@ -1,7 +1,5 @@
 package de.bjrke.factorio.optimizer.common.model
 
-import de.bjrke.factorio.optimizer.common.business.model.Area
-import de.bjrke.factorio.optimizer.common.business.model.Coordinate
 import kotlinx.serialization.json.*
 
 /** The stock an infinity chest keeps available, matching what the game writes into a blueprint. */

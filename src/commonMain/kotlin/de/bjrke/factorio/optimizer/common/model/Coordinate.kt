@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.business.model
+package de.bjrke.factorio.optimizer.common.model
 
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -20,7 +20,7 @@ data class Coordinate(val x: Int, val y: Int) {
 
     fun area(dimension: Dimension) = Area(this, dimension)
 
-    fun area(width: Int, height: Int) = area(Dimension(width, height))
+    fun area(width: Int = 1, height: Int = 1) = area(Dimension(width, height))
 }
 
 data class Dimension(val width: Int, val height: Int) {
