@@ -68,6 +68,8 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   merely-pending one, so the Blocked list below is the only authoritative
   signal: a listed host must never be retried or re-asked.
   - Blocked (do not retry, do not ask): `bing.com`, `www.bing.com`.
+  - Approved for **reading documentation only**: `opencode.ai`. Hard rule: never
+    download binaries or scripts from that domain — only read its docs pages.
 - Retry budget: at most **2 distinct URLs/approaches per failing resource**, then
   ask one direct question naming the URL(s) and wait; do not route around it.
 - Not available in the sandbox (don't search — ask the user): the local Factorio
@@ -82,6 +84,9 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 
 ## Asking the user for help
 
+- Whenever presenting **options or choices**, use the `question` tool — never a
+  prose list the user would have to retype. This applies to every decision, not
+  just ones that seem worth the tool.
 - A **question** (blocked/failing URL, missing resource, undecidable choice) is
   asked directly and the task stopped — never turned into a script. For a
   blocked/failing URL, name the host, paste the `curl` proof (status + raw
