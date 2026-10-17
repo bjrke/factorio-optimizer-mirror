@@ -11,6 +11,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 private val ore = Material("iron-ore")
+private val coal = Material("coal")
 private val plate = Material("iron-plate")
 private val gear = Material("iron-gear-wheel")
 private val water = Material("water")
@@ -129,6 +130,102 @@ class BlueprintLayoutTest {
             { assertContains(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
             { assertContains(names, "constant-combinator") },
             { assertContains(names, "medium-electric-pole") },
+        )
+    }
+
+    @Test
+    fun solidImportMarkersHideTheirBeltUnderTheLabel() {
+        val dump = blueprintLayoutDump(plan, logistics)
+        val marker =
+            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == ore }
+        val input =
+            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+                it.area.topLeft == marker.area.topLeft.west()
+            }
+        val output =
+            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+                it.area.topLeft == marker.area.topLeft.east()
+            }
+
+        assertAll(
+            { assertEquals(Io.INPUT, input.io) },
+            { assertEquals(Io.OUTPUT, output.io) },
+            { assertEquals(EAST, input.direction) },
+            { assertEquals(EAST, output.direction) },
+            { assertEquals(input.material, output.material) },
+        )
+    }
+
+    @Test
+    fun targetOutputHidesItsBeltUnderTheLabel() {
+        val dump = blueprintLayoutDump(plan, logistics)
+        val marker =
+            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == gear }
+        val input =
+            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+                it.area.topLeft == marker.area.topLeft.west()
+            }
+        val output =
+            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+                it.area.topLeft == marker.area.topLeft.east()
+            }
+
+        assertAll(
+            { assertEquals(Io.INPUT, input.io) },
+            { assertEquals(Io.OUTPUT, output.io) },
+            { assertEquals(EAST, input.direction) },
+            { assertEquals(EAST, output.direction) },
+            { assertEquals(gear, input.material) },
+            { assertEquals(input.material, output.material) },
+        )
+    }
+
+    @Test
+    fun fluidImportMarkersHideTheirPipeUnderTheLabel() {
+        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "water-boil",
+            )
+        val dump = blueprintLayoutDump(fluidPlan, logistics)
+        val marker = dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
+        val input =
+            dump.entities.filterIsInstance<PipeToGroundEntity>().single {
+                it.area.topLeft == marker.area.topLeft.west()
+            }
+        val output =
+            dump.entities.filterIsInstance<PipeToGroundEntity>().single {
+                it.area.topLeft == marker.area.topLeft.east()
+            }
+
+        assertAll(
+            { assertEquals(Io.INPUT, input.io) },
+            { assertEquals(Io.OUTPUT, output.io) },
+            { assertEquals(EAST, input.direction) },
+            { assertEquals(EAST, output.direction) },
+            { assertEquals(input.material, output.material) },
+        )
+    }
+
+    @Test
+    fun polesStayEastOfTheImportExtension() {
+        val dump = blueprintLayoutDump(plan, logistics)
+        val marker =
+            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == ore }
+        val poles = dump.entities.filterIsInstance<PoleEntity>()
+
+        assertAll(
+            { assertTrue(poles.isNotEmpty(), "no poles were placed") },
+            {
+                assertTrue(
+                    poles.all { it.area.topLeft.x >= marker.area.topLeft.x + 2 },
+                    "a pole sits in the import extension: $poles",
+                )
+            },
         )
     }
 
@@ -394,22 +491,25 @@ class BlueprintLayoutTest {
         val dump = blueprintLayoutDump(shared, logistics)
         val producer =
             dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "copper-cable" }
-        val outlet = Coordinate(producer.area.bottomRight.x + 1, producer.area.bottomRight.y + 2)
-        val byTile = dump.entities.associateBy { it.area.topLeft }
+        // compaction may move the outlet into the lane, so take the eastmost belt of the output
+        // lane
+        val outletRow = producer.area.bottomRight.y + 2
+        val outlet =
+            dump.entities
+                .filterIsInstance<BeltEntity>()
+                .filter { it.material == cable && it.area.topLeft.y == outletRow }
+                .maxByOrNull { it.area.topLeft.x }
+                ?.area
+                ?.topLeft
 
         assertAll(
             { assertTrue(dump.entities.any { it is SplitterEntity }, "no split at all") },
             {
                 // the producer outlet is a plain belt; the split happens further down the trunk
+                assertNotNull(outlet, "no trunk belt at the producer outlet")
                 assertTrue(
                     dump.entities.none { it is SplitterEntity && it.area.topLeft == outlet },
                     "a splitter sits directly at the producer",
-                )
-            },
-            {
-                assertTrue(
-                    byTile[outlet] is BeltEntity,
-                    "no trunk belt at the producer outlet: ${byTile[outlet]}",
                 )
             },
             { assertEquals(emptyList(), dump.failures) },
@@ -419,7 +519,6 @@ class BlueprintLayoutTest {
     @Test
     fun feedsEndOnTheSurfaceFacingTheirLane() {
         val dump = blueprintLayoutDump(plan, logistics)
-        val byTile = dump.entities.associateBy { it.area.topLeft }
         val craftMachine =
             dump.entities.filterIsInstance<MachineEntity>().single {
                 it.recipe == "iron-gear-wheel"
@@ -427,27 +526,59 @@ class BlueprintLayoutTest {
         val smeltMachine =
             dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
 
-        // the plate lane is produced, so it is fed from the east; the ore lane is imported
-        val plateFeed =
-            Coordinate(craftMachine.area.bottomRight.x + 1, craftMachine.area.topLeft.y - 2)
-        val oreFeed = Coordinate(smeltMachine.area.topLeft.x - 1, smeltMachine.area.topLeft.y - 2)
+        // compaction may shorten a lane, so pick a lane belt instead of a fixed end coordinate
+        fun laneBelt(machine: MachineEntity, material: Material): BeltEntity? {
+            val row = machine.area.topLeft.y - 2
+            return dump.entities
+                .filterIsInstance<BeltEntity>()
+                .filter { it.material == material && it.area.topLeft.y == row }
+                .filter {
+                    it.area.topLeft.x in
+                        (machine.area.xRange.first - 1)..(machine.area.bottomRight.x + 1)
+                }
+                .maxByOrNull { it.area.topLeft.x }
+        }
+
+        // the plate lane is produced, so it runs west into the machines; the ore lane runs east
+        val plateLane = laneBelt(craftMachine, plate)
+        val oreLane = laneBelt(smeltMachine, ore)
 
         assertAll(
             {
                 assertEquals(
                     WEST,
-                    (byTile[plateFeed] as? BeltEntity)?.direction,
-                    "feed does not face the produced lane: ${byTile[plateFeed]}",
+                    plateLane?.direction,
+                    "feed does not face the produced lane: $plateLane",
                 )
             },
             {
                 assertEquals(
                     EAST,
-                    (byTile[oreFeed] as? BeltEntity)?.direction,
-                    "feed does not face the imported lane: ${byTile[oreFeed]}",
+                    oreLane?.direction,
+                    "feed does not face the imported lane: $oreLane",
                 )
             },
             { assertEquals(emptyList(), dump.failures) },
+        )
+    }
+
+    @Test
+    fun importedLaneStartsAtTheMachineEdge() {
+        val dump = blueprintLayoutDump(plan, logistics)
+        val smeltMachine =
+            dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
+        val laneRow = smeltMachine.area.topLeft.y - 2
+        val lane =
+            dump.entities.filterIsInstance<BeltEntity>().filter {
+                it.material == ore && it.area.topLeft.y == laneRow
+            }
+
+        // compaction must not pull the factory west of the import lane, which would leave the
+        // first lane belt over the marker instead of over the machine edge
+        assertContains(
+            lane.map { it.area.topLeft.x },
+            smeltMachine.area.topLeft.x,
+            message = "the imported lane does not reach the machine edge: $lane",
         )
     }
 
@@ -527,12 +658,75 @@ class BlueprintLayoutTest {
 
     @Test
     fun feedRoutesStayEastOfTheWestBound() {
-        val belts =
-            buildBlueprint(plan, logistics).entities.filter {
-                it.name.contains("transport-belt") || it.name.contains("splitter")
+        val entities = blueprintLayoutDump(plan, logistics).entities
+        // compaction may shift the whole layout, so the import extension is the reference, not x=2
+        val westBound = entities.filterIsInstance<MarkerEntity>().minOf { it.area.topLeft.x } - 1
+        val belts = entities.filter {
+            it.name.contains("transport-belt") || it.name.contains("splitter")
+        }
+        val west = belts.map { it.area.topLeft }.filter { it.x < westBound }
+        assertEquals(emptyList(), west, "belts west of the import column")
+    }
+
+    @Test
+    fun compactionRemovesMostOfTheEmptySpace() {
+        val dump = blueprintLayoutDump(plan, logistics)
+        val minX = dump.entities.minOf { it.area.topLeft.x }
+        val maxX = dump.entities.maxOf { it.area.bottomRight.x }
+        val minY = dump.entities.minOf { it.area.topLeft.y }
+        val maxY = dump.entities.maxOf { it.area.bottomRight.y }
+        val width = maxX - minX + 1
+        val height = maxY - minY + 1
+
+        assertAll(
+            { assertTrue(width < 10, "layout is still $width tiles wide") },
+            { assertTrue(height < 20, "layout is still $height tiles tall") },
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+        )
+    }
+
+    @Test
+    fun importMarkersShareOneColumnAfterThePrefixIsTrimmed() {
+        val twoImports =
+            recipe(
+                "gear",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ore to 1.0, coal to 1.0),
+            )
+        val mixedPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(twoImports, gear, Factory.ASSEMBLING_MACHINE_3)),
+                sources =
+                    listOf(
+                        PlannedSource(ore, 1.0, fluid = false),
+                        PlannedSource(coal, 1.0, fluid = false),
+                    ),
+                scale = 1.0,
+                label = "gear",
+            )
+        val dump = blueprintLayoutDump(mixedPlan, logistics)
+        val markers =
+            dump.entities.filterIsInstance<MarkerEntity>().filter {
+                it.signal.material == ore || it.signal.material == coal
             }
-        val west = belts.map { it.area.topLeft }.filter { it.x < 2 }
-        assertEquals(emptyList(), west, "belts west of the bound")
+        val machine = dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
+
+        assertAll(
+            { assertEquals(2, markers.size, "one marker per imported input") },
+            {
+                assertEquals(
+                    emptyList(),
+                    markers.map { it.area.topLeft.x }.distinct().drop(1),
+                    "import markers share one column",
+                )
+            },
+            { assertTrue(markers.all { it.area.topLeft.x < machine.area.topLeft.x }) },
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+        )
     }
 
     @Test
@@ -597,6 +791,8 @@ class BlueprintLayoutTest {
         val problems = mutableListOf<String>()
         for (input in
             byTile.values.filterIsInstance<PipeToGroundEntity>().filter { it.io == Io.INPUT }) {
+            // the import connector is a fixed marker pair, not a route to stretch
+            if (byTile[input.area.topLeft.east()] is MarkerEntity) continue
             val step = input.direction.step
             var output: PipeToGroundEntity? = null
             var reach = 0
@@ -658,17 +854,20 @@ class BlueprintLayoutTest {
                 label = "top",
             )
 
-        val entities = buildBlueprint(produced, logistics).entities
-        val machineArea = entities.single { it.recipe == "top" }.area
+        val entities = blueprintLayoutDump(produced, logistics).entities
+        val machineArea =
+            entities.filterIsInstance<MachineEntity>().single { it.recipe == "top" }.area
         val laneRow = machineArea.topLeft.y - 2
-        val eastEnd = machineArea.bottomRight.x
 
-        // a produced lane is fed from its east end, and that feed must face west into the lane
-        val feedCoordinate = Coordinate(eastEnd + 1, laneRow)
+        // a produced lane runs west into the machine; compaction may shorten it, so take the
+        // eastmost remaining lane belt rather than a fixed coordinate
         val feed =
             assertNotNull(
-                entities.singleOrNull { it.area.topLeft == feedCoordinate },
-                "no feed east of the lane",
+                entities
+                    .filterIsInstance<BeltEntity>()
+                    .filter { it.material == cable && it.area.topLeft.y == laneRow }
+                    .maxByOrNull { it.area.topLeft.x },
+                "no feed at the produced lane",
             )
         assertEquals(WEST, feed.direction, "the feed does not face the lane")
     }

@@ -23,7 +23,7 @@ class BlueprintIntegrationTest {
             FactoryConfig().defaults,
         )[Material(target)]
 
-    private fun planFor(target: String): BlueprintPlan {
+    private fun planAndLogistics(target: String): Pair<BlueprintPlan, LogisticsCalculator> {
         val result = optimize(target)
         val logistics =
             LogisticsCalculator(
@@ -34,8 +34,11 @@ class BlueprintIntegrationTest {
                 beltStack = 1,
                 inserterStack = 1,
             )
-        return assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
+        val plan = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
+        return plan to logistics
     }
+
+    private fun planFor(target: String): BlueprintPlan = planAndLogistics(target).first
 
     /** Resolves a pasted web-UI URL exactly like the CLI, so a reported layout can be replayed. */
     private fun planFromUrl(url: String): Triple<BlueprintPlan, LogisticsCalculator, Boolean> {
@@ -249,6 +252,11 @@ class BlueprintIntegrationTest {
      * into something: an exit is useless when the tile it faces is empty, and an entry is useless
      * when nothing feeds its back.
      */
+    /** An import connector: the label sits above the buried run between the input and output. */
+    private fun List<BlueprintEntity>.isImportConnector(entity: BlueprintEntity) = any {
+        it.name == "constant-combinator" && it.area.topLeft.manhattanDist(entity.area.topLeft) == 1
+    }
+
     private fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
         val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
 
@@ -257,6 +265,7 @@ class BlueprintIntegrationTest {
         val outputs = underground.filter { it.type == Io.OUTPUT }.map { it.area.topLeft }.toSet()
         val problems = mutableListOf<String>()
         for (entity in underground) {
+            if (entities.isImportConnector(entity)) continue
             val step = (entity.direction ?: NORTH).step
             val topLeft = entity.area.topLeft
             if (entity.type == Io.INPUT) {
@@ -324,18 +333,84 @@ class BlueprintIntegrationTest {
      * any underground belt means a cost or lane-direction regression, not a genuine obstacle.
      */
     @Test
+    fun compactionHalvesTheAdvancedCircuitLayout() {
+        val (plan, logistics) = planAndLogistics("advanced-circuit")
+        val dump = blueprintLayoutDump(plan, logistics)
+        val width =
+            dump.entities.maxOf { it.area.bottomRight.x } -
+                dump.entities.minOf { it.area.topLeft.x } + 1
+        val height =
+            dump.entities.maxOf { it.area.bottomRight.y } -
+                dump.entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertTrue(width < 40, "layout is still $width tiles wide") },
+            { assertTrue(height < 80, "layout is still $height tiles tall") },
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+        )
+    }
+
+    @Test
+    fun reportedUrlKeepsInputLanesAtTheMachineEdge() =
+        assertTableOf(false, true) { cheats ->
+            val (plan, logistics, _) =
+                planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+            val dump = blueprintLayoutDump(plan, logistics, cheats)
+            val entities = dump.entities
+            val recipes = plan.recipes.associate { it.recipe.name to it.recipe }
+            val belts = entities.filterIsInstance<BeltEntity>()
+
+            val missing =
+                entities.filterIsInstance<MachineEntity>().mapNotNull { machine ->
+                    val recipe = recipes[machine.recipe] ?: return@mapNotNull null
+                    val solids = recipe.ingredients.keys.filterNot(logistics::isFluid).toSet()
+                    if (solids.isEmpty()) return@mapNotNull null
+                    val laneRows =
+                        setOf(
+                            machine.area.topLeft.y - 2,
+                            machine.area.topLeft.y - 3,
+                            machine.area.bottomRight.y + 3,
+                        )
+                    val reachesEdge = belts.any {
+                        it.area.topLeft.x == machine.area.topLeft.x &&
+                            it.area.topLeft.y in laneRows &&
+                            it.material in solids
+                    }
+                    if (reachesEdge) null else "${machine.recipe}@${machine.area.topLeft}"
+                }
+
+            assertAll(
+                { assertEquals(emptyList(), dump.failures) },
+                {
+                    assertEquals(
+                        emptyList(),
+                        missing,
+                        "input lanes do not reach the machine edge",
+                    )
+                },
+            )
+        }
+
+    @Test
     fun advancedCircuitUrlNeedsNoUndergroundBelts() {
         val (plan, logistics, cheats) =
             planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
         val dump = blueprintLayoutDump(plan, logistics, cheats)
-        val tunnels = dump.entities.filterIsInstance<UndergroundBeltEntity>()
+        // the import connectors are fixed marker pairs; only route tunnels are unexpected here
+        val routeTunnels =
+            dump.entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
+                dump.entities.none {
+                    it is MarkerEntity && it.area.topLeft.manhattanDist(tunnel.area.topLeft) == 1
+                }
+            }
 
         assertAll(
             { assertEquals(emptyList(), dump.failures) },
             {
                 assertEquals(
                     emptyList(),
-                    tunnels,
+                    routeTunnels,
                     "unexpected underground belts",
                 )
             },
@@ -367,6 +442,8 @@ class BlueprintIntegrationTest {
         val problems = mutableListOf<String>()
         for (input in
             entities.filter { it.name.endsWith("underground-belt") && it.type == Io.INPUT }) {
+            // the import connector is a fixed marker pair, not a route to stretch
+            if (entities.isImportConnector(input)) continue
             val direction = input.direction ?: continue
             val step = direction.step
             val limit = range(input.name)

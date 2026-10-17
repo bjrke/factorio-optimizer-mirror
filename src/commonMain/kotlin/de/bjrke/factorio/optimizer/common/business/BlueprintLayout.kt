@@ -16,6 +16,9 @@ private const val LANE_MARGIN = 40
 /** Free rows between two recipe bands, so their belts can be routed between them. */
 private const val BAND_GAP = 14
 
+/** Upper bound on compaction corridors, so a pathological layout cannot loop forever. */
+private const val MAX_COMPACTION_PASSES = 256
+
 /** Upper bound on the copies of a recipe, so a huge rate cannot explode the blueprint. */
 private const val MAX_COPIES = 9
 
@@ -253,6 +256,42 @@ private class RowLayout(
 
     private val markerRows = mutableSetOf<Int>()
 
+    /**
+     * One imported input: its three-tile connector (marker or cheat chest/loader) and the tile its
+     * belt starts on. The prefix between the two is trimmed after routing, so the import bus does
+     * not have to cross the whole layout before the compactor sees it.
+     */
+    private class ImportFeed(
+        val material: Material,
+        val start: Coordinate,
+        val row: Int,
+        /** The lane tile the route feeds; the trim must never eat into the lane beyond it. */
+        val feed: Coordinate,
+    ) {
+        /** The connector before the belt: input/chest, marker/loader, output. */
+        val connector
+            get() = (start.x - 3)..(start.x - 1)
+    }
+
+    private val importFeeds = mutableListOf<ImportFeed>()
+
+    /**
+     * The import marker tiles. A vertical corridor may not move them, so the markers stay in one
+     * straight column even after the layout is compacted.
+     */
+    private val pinnedImportTiles = mutableSetOf<Coordinate>()
+
+    /**
+     * West of this column lies the import extension (markers and supply belts), not the factory.
+     */
+    private var poleWestBound = Int.MIN_VALUE
+
+    /**
+     * West of this column the imported rows may not be compacted: the input lane starts at the
+     * factory edge, and moving the factory west of it would pull the lane over the marker.
+     */
+    private var compactionWestBound = Int.MIN_VALUE
+
     private val producerOf = mutableMapOf<Material, PlannedRecipe>()
     private val depth = mutableMapOf<Recipe, Int>()
     private val rows = mutableMapOf<Recipe, Row>()
@@ -343,7 +382,11 @@ private class RowLayout(
             feedFluids()
             routeDeliveries(deliveries)
             placeTargetFluidOutput()
+            // the markers may move now that the routes are fixed; then the layout is compacted
+            // before electricity, so poles and wires are placed on the final geometry
+            trimImportPrefixes()
             stretchUndergroundRuns()
+            compact()
             placePoles()
             wirePoles()
         }
@@ -364,6 +407,146 @@ private class RowLayout(
         placed.filterIsInstance<Plumbing>().associate {
             it.area.topLeft to it.material
         }
+
+    /**
+     * Moves every import marker to one common column and removes the straight belt prefix in front
+     * of it. The routing already happened, so the router saw the old, wide west corridor and did
+     * not have to route around the markers; only the unused prefix disappears. The common column is
+     * the furthest east every feed has a straight eastward run, so the import bus stays straight.
+     */
+    private fun trimImportPrefixes() {
+        if (importFeeds.isEmpty()) return
+        val oldColumn = if (cheats) 2 else 0
+        // the connector takes three tiles, so the new marker column is the straight run's end - 3
+        val common = importFeeds.minOf { feed -> lastStraightEast(feed) - 3 }
+        var trimmed = common > oldColumn
+        if (trimmed) {
+            val saved = placed.toList()
+            for (feed in importFeeds) {
+                for (x in feed.connector) removeAt(Coordinate(x, feed.row))
+                for (x in feed.start.x..(common + 2)) removeAt(Coordinate(x, feed.row))
+                if (cheats) {
+                    placeInfinityChest(
+                        Coordinate(common, feed.row),
+                        InfinitySettings(item = feed.material),
+                    )
+                    placeLoader(
+                        Coordinate(common + 1, feed.row),
+                        EAST,
+                        OUTPUT,
+                        feed.material,
+                    )
+                } else {
+                    placeEnd(feed.material, Coordinate(common, feed.row), EAST, INPUT)
+                    placeMarker(Coordinate(common + 1, feed.row), Signal(feed.material))
+                    placeEnd(feed.material, Coordinate(common + 2, feed.row), EAST, OUTPUT)
+                    markTunnel(
+                        Coordinate(common, feed.row),
+                        Coordinate(common + 2, feed.row),
+                        endName(feed.material),
+                    )
+                }
+                reserve(Coordinate(common + 3, feed.row), feed.material)
+            }
+            if (validateLayout(placed).isNotEmpty()) {
+                replaceAll(saved)
+                trimmed = false
+            }
+        }
+        if (trimmed) poleWestBound = maxOf(poleWestBound, common + 3)
+        // keep the whole connector and the first belt together, so the markers keep one column
+        for (feed in importFeeds) {
+            val connectorStart = if (trimmed) common else feed.start.x - 3
+            for (x in connectorStart..(connectorStart + 3)) {
+                pinnedImportTiles += Coordinate(x, feed.row)
+            }
+        }
+        // the old connector marks are gone; re-index the tunnels before stretching
+        rebuildTunnels()
+    }
+
+    /**
+     * The last column of the straight eastward belt run from [feed]'s source to its lane. The lane
+     * itself starts behind [ImportFeed.feed] and is never part of the trim.
+     */
+    private fun lastStraightEast(feed: ImportFeed): Int {
+        if (feed.feed.y != feed.row || feed.feed.x < feed.start.x) return feed.start.x - 1
+        for (x in feed.start.x..feed.feed.x) {
+            val belt = entityAt(Coordinate(x, feed.row)) as? BeltEntity
+            if (belt == null || belt.material != feed.material || belt.direction != EAST) {
+                return feed.start.x - 1
+            }
+        }
+        return feed.feed.x
+    }
+
+    /**
+     * Removes empty or spliceable corridors from the layout until none is left. Every corridor is
+     * validated before it is kept; electricity is placed afterwards, so poles follow the compacted
+     * geometry.
+     */
+    private fun compact() {
+        repeat(MAX_COMPACTION_PASSES) {
+            val vertical =
+                nextCompaction(
+                    placed.toList(),
+                    SeamOrientation.VERTICAL,
+                    pinned = pinnedImportTiles,
+                    westBound = compactionWestBound,
+                )
+            val horizontal = nextCompaction(placed.toList(), SeamOrientation.HORIZONTAL)
+            val chosen =
+                when {
+                    vertical == null -> horizontal
+                    horizontal == null -> vertical
+                    vertical.width >= horizontal.width -> vertical
+                    else -> horizontal
+                } ?: return
+            val saved = placed.toList()
+            replaceAll(chosen.entities)
+            // a corridor can expose a longer underground run; grow it again before the next one
+            stretchUndergroundRuns()
+            if (validateLayout(placed).isNotEmpty()) {
+                replaceAll(saved)
+                return
+            }
+            // the whole import group moved together, so its pins and the no-pole zone move with it
+            if (chosen.pinnedShift != 0) {
+                poleWestBound += chosen.pinnedShift
+                val moved =
+                    pinnedImportTiles.mapTo(mutableSetOf()) { tile ->
+                        if (chosen.orientation == SeamOrientation.VERTICAL) {
+                            tile.east(chosen.pinnedShift)
+                        } else {
+                            tile.south(chosen.pinnedShift)
+                        }
+                    }
+                pinnedImportTiles.clear()
+                pinnedImportTiles += moved
+            }
+        }
+    }
+
+    /** Replaces the whole layout and rebuilds the tile grid and tunnel marks from the entities. */
+    private fun replaceAll(entities: List<LayoutEntity>) {
+        placed.clear()
+        grid.clear()
+        routeMinX = Int.MAX_VALUE
+        routeMaxX = Int.MIN_VALUE
+        routeMinY = Int.MAX_VALUE
+        routeMaxY = Int.MIN_VALUE
+        entities.forEach { place(it) }
+        rebuildTunnels()
+    }
+
+    /** Re-marks every underground run after the grid was rebuilt. */
+    private fun rebuildTunnels() {
+        for (cell in grid.values) cell.tunnels.clear()
+        for (input in placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
+            val output = undergroundOutputOf(input) ?: continue
+            markTunnel(input.area.topLeft, output.area.topLeft, endName(input.material))
+        }
+    }
 
     /**
      * Wires every pair of poles within reach. A blueprint does not rebuild pole wires on its own,
@@ -701,7 +884,7 @@ private class RowLayout(
      * free tile is reserved, so a route placed earlier cannot block this source.
      */
     private fun importSource(material: Material, sink: Sink): Coordinate {
-        val columns = if (cheats) 2..4 else 1..2
+        val columns = if (cheats) 2..5 else 0..3
         var row = sink.feedRow
         var attempts = 0
         while (
@@ -715,10 +898,17 @@ private class RowLayout(
                 placeLoader(Coordinate(3, row), EAST, OUTPUT, material)
                 Coordinate(5, row)
             } else {
+                // the label sits above an underground run, so the supply belt can pass underneath
+                placeEnd(material, Coordinate(0, row), EAST, INPUT)
                 placeMarker(Coordinate(1, row), Signal(material))
-                Coordinate(2, row)
+                placeEnd(material, Coordinate(2, row), EAST, OUTPUT)
+                markTunnel(Coordinate(0, row), Coordinate(2, row), endName(material))
+                Coordinate(3, row)
             }
         reserve(start, material)
+        importFeeds += ImportFeed(material, start, row, sink.feed)
+        poleWestBound = maxOf(poleWestBound, start.x)
+        compactionWestBound = maxOf(compactionWestBound, sink.target.x)
         return start
     }
 
@@ -996,14 +1186,15 @@ private class RowLayout(
     /** Places a fluid marker and returns the free tile its pipe lane starts on. */
     private fun fluidMarker(material: Material, target: Coordinate): Coordinate {
         var row = target.y
-        while (
-            row in markerRows || !isFree(Coordinate(2, row)) || !isFree(Coordinate(2, row - 1))
-        ) {
-            row++
-        }
+        while (row in markerRows || (0..3).any { !isFree(Coordinate(it, row)) }) row++
         markerRows += row
-        placeMarker(Coordinate(2, row - 1), Signal(material, fluid = true))
-        return Coordinate(2, row)
+        // a pipe-to-ground run under the label, so the label does not block the fluid
+        placeEnd(material, Coordinate(0, row), EAST, INPUT)
+        placeMarker(Coordinate(1, row), Signal(material, fluid = true))
+        placeEnd(material, Coordinate(2, row), EAST, OUTPUT)
+        markTunnel(Coordinate(0, row), Coordinate(2, row), endName(material))
+        poleWestBound = maxOf(poleWestBound, 3)
+        return Coordinate(3, row)
     }
 
     /** Extends the target's output belt and ends it in a marker or a cheat infinity chest. */
@@ -1027,6 +1218,14 @@ private class RowLayout(
                 coordinate.east(2),
                 InfinitySettings(removeUnfiltered = true),
             )
+        } else if (
+            !cheats && isFree(coordinate) && isFree(coordinate.east()) && isFree(coordinate.east(2))
+        ) {
+            // the output label sits above the product line, just like an imported input
+            placeEnd(targetMaterial, coordinate, EAST, INPUT)
+            placeMarker(coordinate.east(), Signal(targetMaterial))
+            placeEnd(targetMaterial, coordinate.east(2), EAST, OUTPUT)
+            markTunnel(coordinate, coordinate.east(2), endName(targetMaterial))
         } else {
             val spot = markerSpot(coordinate.west())
             placeMarker(spot, Signal(targetMaterial))
@@ -1174,6 +1373,8 @@ private class RowLayout(
      */
     private fun stretchUndergroundRuns() {
         for (input in placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
+            // the import connector is a fixed three-tile marker, not a route to stretch
+            if (entityAt(input.area.topLeft.east()) is MarkerEntity) continue
             stretchRun(input)
         }
     }
@@ -1489,7 +1690,7 @@ private class RowLayout(
     private fun bestPoleSpot(tile: Area, covered: Set<Coordinate>) =
         tile
             .grow(SUPPLY_RADIUS)
-            .filter { isFree(it) }
+            .filter { isFree(it) && it.x >= poleWestBound }
             .maxByOrNull {
                 it.area().grow(SUPPLY_RADIUS).sumOf { other ->
                     when {
@@ -1585,7 +1786,7 @@ private class RowLayout(
             for (dx in -radius..radius) {
                 for (dy in -radius..radius) {
                     val toTest = Coordinate(c.x + dx, c.y + dy)
-                    if (isFree(toTest)) return toTest
+                    if (isFree(toTest) && toTest.x >= poleWestBound) return toTest
                 }
             }
         }
