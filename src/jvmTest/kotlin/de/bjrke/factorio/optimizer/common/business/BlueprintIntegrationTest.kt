@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.*
+import de.bjrke.factorio.optimizer.jvm.parseArgs
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import java.util.Base64
@@ -33,6 +34,47 @@ class BlueprintIntegrationTest {
                 inserterStack = 1,
             )
         return assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
+    }
+
+    /** Resolves a pasted web-UI URL exactly like the CLI, so a reported layout can be replayed. */
+    private fun planFromUrl(url: String): Triple<BlueprintPlan, LogisticsCalculator, Boolean> {
+        val cli = parseArgs(arrayOf(url))
+        val parsedRecipes = RecipeProvider.forActiveMods(cli.spaceAge).forSurface(cli.surface)
+        val factoryConfig = FactoryConfig(cli.spaceAge)
+        val factories =
+            cli.factories
+                .filter { it in factoryConfig.available }
+                .fold(factoryConfig.fromUrl(cli.selection)) { chosen, factory ->
+                    factoryConfig.add(chosen, factory)
+                }
+        val logisticsConfig = LogisticsConfig(parsedRecipes.logistics, cli.spaceAge)
+        val inserter =
+            cli.inserter?.takeIf { it in logisticsConfig.availableInserters }
+                ?: logisticsConfig.inserter(cli.selection)
+        val belt =
+            cli.belt?.takeIf { it in logisticsConfig.availableBelts }
+                ?: logisticsConfig.belt(cli.selection)
+        val lanes =
+            if (cli.fullBelt == true) BeltTier.MAX_LANES
+            else logisticsConfig.beltLanes(cli.selection)
+        val beltStack = logisticsConfig.beltStack(cli.beltStack, inserter)
+        val inserterStack = logisticsConfig.inserterStack(cli.inserterStack, inserter)
+        val logistics =
+            LogisticsCalculator(
+                parsedRecipes.logistics,
+                belt,
+                inserter,
+                lanes,
+                beltStack,
+                inserterStack,
+            )
+        val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
+        val plan =
+            assertIs<BlueprintPlanResult.Planned>(
+                    blueprintPlan(result, logistics, cli.normalizeTarget),
+                )
+                .plan
+        return Triple(plan, logistics, cli.cheats)
     }
 
     private fun decode(blueprint: String): String {
@@ -234,6 +276,63 @@ class BlueprintIntegrationTest {
         )
 
     /**
+     * A splitter output may not enter an underground belt directly: that feeds one side of the
+     * tunnel, and a route can be left with an orphaned tunnel end when the two disagree.
+     */
+    private fun assertSplittersOnlyFeedSurface(entities: List<BlueprintEntity>) {
+        val inputs =
+            entities
+                .filter { it.name.endsWith("underground-belt") && it.type == Io.INPUT }
+                .map { it.area.topLeft }
+                .toSet()
+        val problems =
+            entities
+                .filter { it.name.endsWith("splitter") }
+                .flatMap { splitter ->
+                    val direction = splitter.direction ?: return@flatMap emptyList()
+                    splitter.area.mapNotNull { tile ->
+                        val downstream = tile + direction.step
+                        if (downstream in inputs) "$tile -> $downstream" else null
+                    }
+                }
+        assertTrue(problems.isEmpty(), "splitter output feeds underground belt: $problems")
+    }
+
+    @Test
+    fun splitterBranchesStartOnTheSurface() {
+        val (plan, logistics, cheats) =
+            planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+        val entities = buildBlueprint(plan, logistics, cheats).entities
+
+        assertAll(
+            { assertSplittersOnlyFeedSurface(entities) },
+            { assertConnectedUndergroundBelts(entities) },
+        )
+    }
+
+    /**
+     * Smoke test for the weights: this layout is small enough to stay entirely on the surface, so
+     * any underground belt means a cost or lane-direction regression, not a genuine obstacle.
+     */
+    @Test
+    fun advancedCircuitUrlNeedsNoUndergroundBelts() {
+        val (plan, logistics, cheats) =
+            planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+        val dump = blueprintLayoutDump(plan, logistics, cheats)
+        val tunnels = dump.entities.filterIsInstance<UndergroundBeltEntity>()
+
+        assertAll(
+            { assertTrue(dump.failures.isEmpty(), dump.failures.toString()) },
+            {
+                assertTrue(
+                    tunnels.isEmpty(),
+                    "unexpected underground belts: ${tunnels.map { it.area.topLeft }}",
+                )
+            },
+        )
+    }
+
+    /**
      * A run shorter than the belt tier's reach must not still have a belt of its own material to
      * swallow on either end: [RowLayout.stretchUndergroundRuns] grows it as far as the straight run
      * allows.
@@ -336,6 +435,12 @@ class BlueprintIntegrationTest {
                 )
             },
             { assertTrue(feedFailuresFor("processing-unit").isEmpty(), "processing-unit") },
+            {
+                assertTrue(
+                    feedFailuresFor("utility-science-pack").isEmpty(),
+                    "utility-science-pack",
+                )
+            },
             { assertTrue(feedFailuresFor("copper-cable").isEmpty(), "copper-cable") },
             { assertTrue(feedFailuresFor("iron-gear-wheel").isEmpty(), "iron-gear-wheel") },
         )

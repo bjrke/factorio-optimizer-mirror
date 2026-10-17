@@ -360,9 +360,92 @@ class BlueprintLayoutTest {
                 label = "alpha",
             )
 
-        // one producer feeding two recipes needs a splitter to fan its belt out
+        // one producer feeding two recipes needs a splitter on its belt
         val names = buildBlueprint(shared, logistics).entities.map { it.name }
         assertTrue(names.any { it.endsWith("-splitter") }, names.toString())
+    }
+
+    @Test
+    fun aSharedInputSplitsOnItsBeltNotAtTheProducer() {
+        val cable = Material("copper-cable")
+        val alpha = Material("alpha")
+        val beta = Material("beta")
+        val makeCable =
+            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ore to 1.0))
+        val makeAlpha = recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(cable to 1.0))
+        val makeBeta = recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(cable to 1.0))
+        val shared =
+            BlueprintPlan(
+                target = alpha,
+                recipes =
+                    listOf(
+                        planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
+                        planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
+                        planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                    ),
+                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                scale = 1.0,
+                label = "alpha",
+            )
+
+        val dump = blueprintLayoutDump(shared, logistics)
+        val producer =
+            dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "copper-cable" }
+        val outlet = Coordinate(producer.area.bottomRight.x + 1, producer.area.bottomRight.y + 2)
+        val byTile = dump.entities.associateBy { it.area.topLeft }
+
+        assertAll(
+            { assertTrue(dump.entities.any { it is SplitterEntity }, "no split at all") },
+            {
+                // the producer outlet is a plain belt; the split happens further down the trunk
+                assertTrue(
+                    dump.entities.none { it is SplitterEntity && it.area.topLeft == outlet },
+                    "a splitter sits directly at the producer",
+                )
+            },
+            {
+                assertTrue(
+                    byTile[outlet] is BeltEntity,
+                    "no trunk belt at the producer outlet: ${byTile[outlet]}",
+                )
+            },
+            { assertTrue(dump.failures.isEmpty(), dump.failures.toString()) },
+        )
+    }
+
+    @Test
+    fun feedsEndOnTheSurfaceFacingTheirLane() {
+        val dump = blueprintLayoutDump(plan, logistics)
+        val byTile = dump.entities.associateBy { it.area.topLeft }
+        val craftMachine =
+            dump.entities.filterIsInstance<MachineEntity>().single {
+                it.recipe == "iron-gear-wheel"
+            }
+        val smeltMachine =
+            dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
+
+        // the plate lane is produced, so it is fed from the east; the ore lane is imported
+        val plateFeed =
+            Coordinate(craftMachine.area.bottomRight.x + 1, craftMachine.area.topLeft.y - 2)
+        val oreFeed = Coordinate(smeltMachine.area.topLeft.x - 1, smeltMachine.area.topLeft.y - 2)
+
+        assertAll(
+            {
+                assertEquals(
+                    WEST,
+                    (byTile[plateFeed] as? BeltEntity)?.direction,
+                    "feed does not face the produced lane: ${byTile[plateFeed]}",
+                )
+            },
+            {
+                assertEquals(
+                    EAST,
+                    (byTile[oreFeed] as? BeltEntity)?.direction,
+                    "feed does not face the imported lane: ${byTile[oreFeed]}",
+                )
+            },
+            { assertTrue(dump.failures.isEmpty(), dump.failures.toString()) },
+        )
     }
 
     @Test

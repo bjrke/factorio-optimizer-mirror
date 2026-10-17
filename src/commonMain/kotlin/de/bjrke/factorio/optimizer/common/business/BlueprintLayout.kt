@@ -19,6 +19,12 @@ private const val BAND_GAP = 14
 /** Upper bound on the copies of a recipe, so a huge rate cannot explode the blueprint. */
 private const val MAX_COPIES = 9
 
+/** How many split points are routed before the cheapest one is chosen. */
+private const val SPLIT_CANDIDATES = 12
+
+/** Extra cost of an underground run when comparing two split points, so surface wins when close. */
+private const val SPLIT_TUNNEL_PENALTY = 12
+
 /** Medium poles supply a 7x7 area (radius 3) and reach 9 tiles of wire. */
 private const val SUPPLY_RADIUS = 3
 
@@ -60,9 +66,7 @@ private class RouteProfile(
      * Added to a surface tile outside the start-to-goal corridor, to prefer a tunnel over a detour.
      */
     val detourCost: Int = 2,
-    /** Added when a route is forced onto its sink's own tile, so the feed still faces the lane. */
-    val sinkCost: Int = 12,
-    /** Added to a surface tile next to a reserved sink tile, so a feed cannot box its lane in. */
+    /** Added next to a reserved feed or source tile, so a route cannot box it in. */
     val keepClearCost: Int = 6,
     /** Maximum length of a run, matching the prototype's `max_distance`. */
     val range: Int,
@@ -70,6 +74,8 @@ private class RouteProfile(
     val undergroundType: String,
     /** Whether a tunnel may only be started over an obstacle (belts) or anywhere (pipes). */
     val tunnelOnlyWhenBlocked: Boolean,
+    /** Whether the route may immediately reverse into the tile it came from. */
+    val forbidReverse: Boolean = true,
 )
 
 /** One queued A* entry; ties break on `g` then insertion order, so routes are reproducible. */
@@ -89,9 +95,10 @@ private class RouteEntry(
 /**
  * Lays out [plan] as rows of connected factories. Every recipe is one row of touching machines, fed
  * by belt lanes just above (a short inserter for the near lane, a long inserter for the far one)
- * and drained by an output belt just below. Rows flow top to bottom; imports enter from the left
- * and a material built inside the plan is fanned out of its producer's output belt to every recipe
- * that takes it. Fluids use pipe clusters next to the machines instead of belts.
+ * and drained by an output belt just below. Rows flow top to bottom; imports enter from the left,
+ * and a material built inside the plan runs on one trunk from its producer's output belt, with a
+ * splitter on that belt for every further recipe that takes it. Fluids use pipe clusters next to
+ * the machines instead of belts.
  *
  * When [cheats] is set, each imported input gets an infinity chest feeding the belt and the target
  * output ends in an infinity chest, so a blueprint can be tested without building the item supply.
@@ -188,6 +195,7 @@ private class RowLayout(
         RouteProfile(
             undergroundCost = 3,
             tunnelEntry = 1,
+            detourCost = 0,
             range = undergroundRange,
             undergroundType = undergroundBelt,
             tunnelOnlyWhenBlocked = true,
@@ -201,6 +209,7 @@ private class RowLayout(
             range = PIPE_UNDERGROUND_RANGE,
             undergroundType = PIPE_TO_GROUND,
             tunnelOnlyWhenBlocked = false,
+            forbidReverse = false,
         )
 
     /**
@@ -248,6 +257,12 @@ private class RowLayout(
     private val depth = mutableMapOf<Recipe, Int>()
     private val rows = mutableMapOf<Recipe, Row>()
 
+    /** The route tiles of each produced material, where a later consumer can split off. */
+    private val networks = mutableMapOf<Material, MutableSet<Coordinate>>()
+
+    /** The material each reserved tile serves, so only a foreign belt is kept away from it. */
+    private val reservedFor = mutableMapOf<Coordinate, Material>()
+
     /** Inputs whose belt could not be routed; a non-empty list means the blueprint is broken. */
     val failures = mutableListOf<String>()
 
@@ -277,15 +292,36 @@ private class RowLayout(
     }
 
     /**
-     * Where a material enters a row's lane: the feed ends at [routeTo], having come from
-     * [approach], so its belt ends up facing the lane. [feedRow] is the row its marker sits on.
+     * Where a material enters a row's lane: the route ends on [feed], the one tile next to
+     * [target], and faces [heading] so its belt or pipe points at the lane. [target] is already
+     * placed and is never overwritten.
      */
     private class Sink(
-        val routeTo: Coordinate,
-        /** The one tile the feed must come from, so its belt ends facing the lane. */
-        val approach: Coordinate,
-        val feedRow: Int,
-    )
+        val target: Coordinate,
+        val feed: Coordinate,
+        /** The direction the feed faces, or null for a pipe, which has no facing. */
+        val heading: Direction?,
+    ) {
+        val feedRow
+            get() = feed.y
+    }
+
+    /**
+     * One belt or pipe route: fill [sink] from [start], leaving in [direction]. A produced
+     * material's first delivery carries the other sinks as [followUps]; they split off its belt
+     * once it is laid. A [split] delivery starts on an existing belt of its material.
+     */
+    private class Delivery(
+        val material: Material,
+        val start: Coordinate,
+        val direction: Direction,
+        val sink: Sink,
+        val followUps: List<Sink> = emptyList(),
+        val split: Boolean = false,
+    ) {
+        val distance
+            get() = start.manhattanDist(sink.feed)
+    }
 
     init {
         for (recipe in plan.recipes) {
@@ -299,12 +335,13 @@ private class RowLayout(
             placeRows()
             placeTargetOutput()
             val sinks = allSolidSinks()
-            for ((_, _, sink) in sinks) {
-                reserve(sink.routeTo)
-                reserve(sink.approach)
-            }
-            feedSolids(sinks)
+            for ((material, _, sink) in sinks) reserve(sink.feed, material)
+            // prepare every source before routing anything, so a long early route cannot occupy a
+            // marker or producer outlet that a later delivery needs
+            val deliveries = prepareSolidDeliveries(sinks)
+            // pipes go first: their underground runs are cheap and belts can tunnel under them
             feedFluids()
+            routeDeliveries(deliveries)
             placeTargetFluidOutput()
             stretchUndergroundRuns()
             placePoles()
@@ -501,11 +538,8 @@ private class RowLayout(
             }
         }
 
-        // an imported lane flows east (fed from the west); a produced lane flows west (fed from
-        // the producer's fan on the east), so produced belts never cross the import lanes
-        fun laneDirection(material: Material) = if (material in producerOf) WEST else EAST
         fun placeLane(y: Int, material: Material) {
-            val direction = laneDirection(material)
+            val direction = laneDirection(row, material)
             for (x in row.left..row.right) {
                 placeBelt(Coordinate(x, y), material, direction)
             }
@@ -556,21 +590,38 @@ private class RowLayout(
                 // any further input side-loads the lower belt from below
                 val y = row.laneBelowRow ?: return null
                 val x = row.left + (index - 3)
-                Sink(Coordinate(x, (y + 1)), Coordinate(x, (y + 2)), y + 2 + (index - 3))
+                Sink(Coordinate(x, y), Coordinate(x, y + 1), NORTH)
             }
         }
     }
 
-    /** Where a lane is fed: an imported one from the west, a produced one from the east. */
+    /**
+     * Where a lane is fed: imports from the west. Produced materials split by their producer's
+     * outlet, the left half feeding from the west and the right half from the east, so two trunks
+     * into one row do not have to cross. A lone produced input picks the nearer end.
+     */
+    private fun laneDirection(row: Row, material: Material): Direction {
+        if (material !in producerOf) return EAST
+        val produced = row.solids.filter { it in producerOf }.sortedBy { outletX(it) }
+        val index = produced.indexOf(material)
+        val middle = produced.size / 2
+        if (index in 0 until middle) return EAST
+        if (index >= (produced.size + 1) / 2) return WEST
+        return if (outletX(material) <= (row.left + row.right) / 2) EAST else WEST
+    }
+
+    /** The tile east of a material's producer output lane, or far east when it is not placed. */
+    private fun outletX(material: Material): Int {
+        val producer = producerOf[material] ?: return Int.MAX_VALUE
+        val producerRow = rows[producer.recipe] ?: return Int.MAX_VALUE
+        return producerRow.right + 1
+    }
+
     private fun laneSink(row: Row, y: Int, material: Material): Sink =
-        if (material in producerOf) {
-            val x = row.right + 1
-            val routeTo = Coordinate(x, y)
-            Sink(routeTo, routeTo.east(), y)
+        if (laneDirection(row, material) == EAST) {
+            Sink(Coordinate(row.left, y), Coordinate(row.left - 1, y), EAST)
         } else {
-            val x = row.left - 1
-            val routeTo = Coordinate(x, y)
-            Sink(routeTo, routeTo.west(), y)
+            Sink(Coordinate(row.right, y), Coordinate(row.right + 1, y), WEST)
         }
 
     private fun allSolidSinks() = buildList {
@@ -581,63 +632,95 @@ private class RowLayout(
         }
     }
 
-    private fun feedSolids(sinks: List<Triple<Material, Row, Sink>>) {
+    /**
+     * Turns the solid sinks into deliveries and places every source up front. An intermediate gets
+     * one trunk from its producer to the farthest consumer; the nearer consumers split off that
+     * belt later. An import gets one marker (or cheat chest) per sink, so unrelated consumers are
+     * not tied to one long shared belt.
+     */
+    private fun prepareSolidDeliveries(sinks: List<Triple<Material, Row, Sink>>): List<Delivery> {
         val grouped = sinks.groupBy { it.first }
-        // place every producer's fan before routing anything, so a route never crosses a fan that
-        // is placed later
-        val branches = buildMap {
-            for ((material, list) in grouped) {
-                val producer = producerOf[material] ?: continue
+        val deliveries = mutableListOf<Delivery>()
+        for ((material, list) in grouped.entries.sortedBy { it.key.name }) {
+            val producer = producerOf[material]
+            if (producer != null) {
                 val producerRow = rows[producer.recipe] ?: continue
-                put(material, fanOut(producerRow, material, list.size))
-            }
-        }
-        // an imported material that feeds a lane from the west gets a straight belt laid down now,
-        // so its row stays clear and nothing has to route across it
-        for ((material, list) in grouped.entries.sortedBy { it.key.name }) {
-            if (material in branches) continue
-            for ((_, _, sink) in list) {
-                if (sink.approach.x == sink.routeTo.x) continue
-                val row = sink.feedRow
-                if (!straightRowFree(row, sink.routeTo.x)) {
-                    failures += "${material.name} to ${sink.routeTo} (row blocked)"
-                    continue
-                }
-                if (cheats) {
-                    // an infinity chest feeds the belt through a loader, so no supply is needed
-                    placeInfinityChest(Coordinate(2, row), InfinitySettings(item = material))
-                    placeLoader(Coordinate(3, row), EAST, OUTPUT, material)
-                    for (x in 5..sink.routeTo.x) {
-                        placeBelt(Coordinate(x, row), material, EAST)
-                    }
-                } else {
-                    for (x in 2..sink.routeTo.x) {
-                        placeBelt(Coordinate(x, row), material, EAST)
-                    }
-                    val spot = markerSpot(Coordinate(2, row))
-                    placeMarker(spot, Signal(material))
-                }
-            }
-        }
-        for ((material, list) in grouped.entries.sortedBy { it.key.name }) {
-            val fan = branches[material]
-            if (fan != null) {
-                list.forEachIndexed { index, entry ->
-                    val branch = fan.getOrNull(index) ?: return@forEachIndexed
-                    deliver(material, branch.south(), SOUTH, entry.third)
-                }
+                val start = outputStart(producerRow, material)
+                val distinctSinks = list.map { it.third }.distinctBy { it.feed }
+                // the trunk reaches the farthest consumer, so it passes the nearer ones on the way
+                val sorted = distinctSinks.sortedByDescending { start.manhattanDist(it.feed) }
+                deliveries +=
+                    Delivery(
+                        material = material,
+                        start = start,
+                        direction = EAST,
+                        sink = sorted.first(),
+                        followUps = sorted.drop(1),
+                    )
             } else {
                 for ((_, _, sink) in list) {
-                    if (sink.approach.x != sink.routeTo.x) continue
-                    val source = solidMarker(material, sink)
-                    deliver(material, source, EAST, sink)
+                    deliveries += Delivery(material, importSource(material, sink), EAST, sink)
+                }
+            }
+        }
+        return deliveries
+    }
+
+    /**
+     * Routes every delivery, shortest first so a long belt can go around a confined one. A produced
+     * material's split-offs only enter the queue once its trunk exists, but then compete with the
+     * remaining deliveries.
+     */
+    private fun routeDeliveries(deliveries: List<Delivery>) {
+        val pending = deliveries.toMutableList()
+        while (pending.isNotEmpty()) {
+            val next = pending.minBy { it.distance }
+            pending.remove(next)
+            val routed =
+                if (next.split) deliverSplit(next.material, next.sink)
+                else deliver(next.material, next.start, next.direction, next.sink)
+            if (routed) {
+                for (sink in next.followUps) {
+                    pending += Delivery(next.material, next.start, EAST, sink, split = true)
                 }
             }
         }
     }
 
-    /** True when a straight import belt can be laid in the margin on [row]. */
-    private fun straightRowFree(row: Int, upto: Int) = (2..upto).all { isFree(Coordinate(it, row)) }
+    /** The first free belt tile east of [row]'s output lane, reserved as a source. */
+    private fun outputStart(row: Row, material: Material): Coordinate {
+        var x = row.right + 1
+        while (x < row.right + 60 && !isFree(Coordinate(x, row.outputLaneRow))) x++
+        val start = Coordinate(x, row.outputLaneRow)
+        reserve(start, material)
+        return start
+    }
+
+    /**
+     * A marker (or, with cheats, an infinity chest and loader) feeding one imported sink. The first
+     * free tile is reserved, so a route placed earlier cannot block this source.
+     */
+    private fun importSource(material: Material, sink: Sink): Coordinate {
+        val columns = if (cheats) 2..4 else 1..2
+        var row = sink.feedRow
+        var attempts = 0
+        while (
+            (row in markerRows || columns.any { !isFree(Coordinate(it, row)) }) && attempts++ < 50
+        ) row++
+        markerRows += row
+        val start =
+            if (cheats) {
+                // an infinity chest feeds the belt through a loader, so no supply is needed
+                placeInfinityChest(Coordinate(2, row), InfinitySettings(item = material))
+                placeLoader(Coordinate(3, row), EAST, OUTPUT, material)
+                Coordinate(5, row)
+            } else {
+                placeMarker(Coordinate(1, row), Signal(material))
+                Coordinate(2, row)
+            }
+        reserve(start, material)
+        return start
+    }
 
     /** A free tile beside the belt at [where], so a marker never blocks the belt. */
     private fun markerSpot(where: Coordinate): Coordinate {
@@ -652,98 +735,172 @@ private class RowLayout(
         return where.west()
     }
 
-    /** True when a fan of [count] branches can be placed at [start]. */
-    private fun fanFree(start: Coordinate, count: Int): Boolean {
-        // the body is two tiles tall: a splitter per branch plus the final belt
-        val body = start.area(2 * count - 1, 2)
-        if (!body.all { isFree(it) && !isReserved(it) }) return false
-
-        // each splitter's branch turns south; its first route tile must stay clear
-        var coordinate = start.south(2).east()
-        repeat(count - 1) {
-            if (!isFree(coordinate) || isReserved(coordinate)) return false
-            coordinate = coordinate.east(2)
-        }
-        return true
-    }
-
     /**
-     * Splits the east-flowing output belt of [row] into [count] belts, one per consumer. Returns
-     * the belt (facing south) each branch starts from.
+     * Routes one belt or pipe from [start] to [sink]'s feed tile, arriving on the surface and, for
+     * a belt, heading into the target. The target itself is never touched.
      */
-    private fun fanOut(row: Row, material: Material, count: Int): List<Coordinate> {
-        val y = row.outputLaneRow
-        // shift east until every fan tile is clear: a sink goal may sit right on the row's edge
-        var startX = row.right + 1
-        while (startX < row.right + 60 && !fanFree(Coordinate(startX, y), count)) startX++
-        // connect the output lane to the fan when it had to shift east
-        for (x in (row.right + 1) until startX) {
-            placeBelt(Coordinate(x, y), material, EAST)
-        }
-        val branches = mutableListOf<Coordinate>()
-        var start = Coordinate(startX, y)
-        repeat(count - 1) {
-            // a splitter is two tiles across the flow; its input comes from the west, its outputs
-            // run east, one of which turns south into a branch
-            place(SplitterEntity(start.area(1, 2), splitter, material, EAST))
-            val branchEast = start.east()
-            val branchSouth = branchEast.south()
-            placeBelt(branchSouth, material, SOUTH)
-            branches += branchSouth
-            placeBelt(branchEast, material, EAST)
-            start = start.east(2)
-        }
-        placeBelt(start, material, SOUTH)
-        branches += start
-        // keep each branch's first route tile free, so no earlier feed blocks it
-        for (c in branches) reserve(c.south())
-        return branches
-    }
-
-    private fun solidMarker(material: Material, sink: Sink): Coordinate {
-        // the marker sits at the lane's own row, so its belt runs straight east into the lane
-        var row = sink.feedRow
-        var attempts = 0
-        while (
-            (row in markerRows || !isFree(Coordinate(1, row)) || !isFree(Coordinate(2, row))) &&
-                attempts++ < 50
-        ) row++
-        markerRows += row
-        placeMarker(Coordinate(1, row), Signal(material))
-        return Coordinate(2, row)
-    }
-
-    /**
-     * Routes one belt from [start] to [sink]'s approach tile and then steps onto the feed tile, so
-     * the feed belt always faces the lane whichever way the route arrived.
-     */
-    private fun deliver(material: Material, start: Coordinate, direction: Direction, sink: Sink) {
+    private fun deliver(
+        material: Material,
+        start: Coordinate,
+        direction: Direction,
+        sink: Sink,
+    ): Boolean {
         if (!isFree(start)) {
             failures += "${material.name} from $start (start blocked)"
-            return
+            return false
         }
-        // the search may only use the sink's own tile when it has to: normally it stops one tile
-        // short (at the approach) so the feed belt lands facing the lane, but a boxed-in approach
-        // can only be reached by surfacing on the sink tile first
-        val segment =
-            findRoute(start, direction, sink.approach, sink.routeTo) { coordinate: Coordinate ->
-                (routable(coordinate) ||
-                    coordinate == sink.routeTo ||
-                    coordinate == sink.approach) && !sideLoaded(coordinate, material)
-            }
-
+        if (start == sink.feed) {
+            placeSurface(material, sink.feed, sink.heading ?: direction)
+            return true
+        }
+        val segment = findRoute(start, direction, sink.feed, beltAllowed(material, sink))
         if (segment == null) {
-            failures += "${material.name} to ${sink.routeTo} (no route)"
-            return
+            failures += "${material.name} to ${sink.feed} (no route)"
+            return false
         }
 
         val nodes = buildList {
             add(start)
             addAll(segment)
-            add(sink.routeTo)
+        }
+        placePath(material, nodes, sink.heading)
+        recordNetwork(material, nodes, sink)
+        return true
+    }
+
+    /**
+     * What a belt route may do: stay off foreign belts, leave every other sink's feed clear, and
+     * avoid [blocked] tiles (the splitter a branch starts from must not be routed over).
+     */
+    private fun beltAllowed(
+        material: Material,
+        sink: Sink,
+        blocked: Set<Coordinate> = emptySet(),
+    ): (Coordinate, Direction) -> Boolean = { coordinate, heading ->
+        val goal = coordinate == sink.feed
+        val facing = if (goal) sink.heading ?: heading else heading
+        // the feed may side-load its target (a fourth input does), but no earlier tile may
+        (routable(coordinate) || goal) &&
+            coordinate !in blocked &&
+            !sideLoaded(coordinate, material) &&
+            (goal || !poursIntoSide(coordinate, facing, material)) &&
+            !facesReservedFeed(coordinate, facing, sink.feed, material)
+    }
+
+    /** Remembers the tiles of a produced material's belt, so a nearer consumer can split off it. */
+    private fun recordNetwork(material: Material, nodes: List<Coordinate>, sink: Sink) {
+        if (material !in producerOf) return
+        networks.getOrPut(material) { mutableSetOf() } += nodes.filter { it != sink.feed }
+    }
+
+    /** A place where a splitter can be inserted into a produced material's belt. */
+    private class SplitCandidate(
+        val belt: Coordinate,
+        val side: Coordinate,
+        /** The splitter's free output, where the branch belt starts. */
+        val exit: Coordinate,
+        val direction: Direction,
+    )
+
+    /**
+     * Feeds one more consumer by inserting a splitter into the material's existing belt. Both sides
+     * of the belt are tried, and the routable split with the best surface-biased score wins.
+     */
+    private fun deliverSplit(material: Material, sink: Sink): Boolean {
+        val candidates = splitCandidates(material).sortedBy { it.exit.manhattanDist(sink.feed) }
+        var best: Pair<SplitCandidate, List<Coordinate>>? = null
+        var bestScore = Int.MAX_VALUE
+        for (candidate in candidates.take(SPLIT_CANDIDATES)) {
+            val splitterTiles = setOf(candidate.belt, candidate.side)
+            val segment =
+                findRoute(
+                    candidate.exit,
+                    candidate.direction,
+                    sink.feed,
+                    beltAllowed(material, sink, splitterTiles),
+                    strictStart = true,
+                ) ?: continue
+            val score = routeScore(listOf(candidate.exit) + segment)
+            if (score < bestScore) {
+                bestScore = score
+                best = candidate to segment
+            }
+        }
+        val (candidate, segment) =
+            best
+                ?: run {
+                    failures += "${material.name} to ${sink.feed} (no split)"
+                    return false
+                }
+
+        split(candidate, material)
+        val nodes = listOf(candidate.exit) + segment
+        placePath(material, nodes, sink.heading)
+        recordNetwork(material, nodes, sink)
+        return true
+    }
+
+    /**
+     * How good a split route is: its travelled length plus a penalty for every underground run. A
+     * slightly longer surface route beats a shorter one that dives under the trunk.
+     */
+    private fun routeScore(nodes: List<Coordinate>): Int =
+        nodes.zipWithNext().sumOf { (from, to) ->
+            if (from.adjacent(to)) 1 else from.manhattanDist(to) + SPLIT_TUNNEL_PENALTY
         }
 
-        placePath(material, nodes)
+    /** Every belt tile where a splitter fits: straight trunk, a free side and a free exit. */
+    private fun splitCandidates(material: Material): List<SplitCandidate> {
+        val tiles = networks[material] ?: return emptyList()
+        return tiles.flatMap { tile ->
+            val belt = entityAt(tile) as? BeltEntity ?: return@flatMap emptyList()
+            if (belt.material != material) return@flatMap emptyList()
+            val direction = belt.direction
+            val next = entityAt(tile + direction.step) as? BeltEntity
+            if (next == null || next.material != material || next.direction != direction) {
+                return@flatMap emptyList()
+            }
+            sides(direction).mapNotNull { sideDirection ->
+                val side = tile + sideDirection.step
+                if (!isFree(side) || isReserved(side)) return@mapNotNull null
+                val exit = side + direction.step
+                if (!isFree(exit) || isReserved(exit)) return@mapNotNull null
+                val area = splitterArea(tile, side, direction)
+                if (!area.all { it == tile || isFree(it) }) return@mapNotNull null
+                SplitCandidate(tile, side, exit, direction)
+            }
+        }
+    }
+
+    /** The two tiles across [direction] from [tile] that a splitter can use. */
+    private fun sides(direction: Direction) =
+        when (direction) {
+            NORTH,
+            SOUTH -> listOf(EAST, WEST)
+            EAST,
+            WEST -> listOf(NORTH, SOUTH)
+        }
+
+    /** The two-by-one area a splitter covers when [belt] is its input side. */
+    private fun splitterArea(belt: Coordinate, side: Coordinate, direction: Direction) =
+        when (direction) {
+            EAST,
+            WEST -> Coordinate(belt.x, minOf(belt.y, side.y)).area(1, 2)
+            NORTH,
+            SOUTH -> Coordinate(minOf(belt.x, side.x), belt.y).area(2, 1)
+        }
+
+    /** Replaces the trunk belt at [candidate] with a splitter; its continuations stay in place. */
+    private fun split(candidate: SplitCandidate, material: Material) {
+        removeAt(candidate.belt)
+        place(
+            SplitterEntity(
+                splitterArea(candidate.belt, candidate.side, candidate.direction),
+                splitter,
+                material,
+                candidate.direction,
+            ),
+        )
     }
 
     private fun feedFluids() {
@@ -757,19 +914,66 @@ private class RowLayout(
             for (material in fluids) {
                 for (copy in 0 until row.copies) {
                     val tile = fluidEdge(row, copy, material) ?: continue
-                    reserve(tile)
+                    reserve(tile, material)
                     cell(tile).edgeFluid = material
                     targets.getOrPut(material) { mutableListOf() }.add(tile)
                 }
             }
         }
-        for ((material, sinks) in targets.entries.sortedBy { it.key.name }) {
-            val source = fluidMarker(material, sinks.first())
-            var current = source
-            for (target in sinks) {
-                val segment = fluidRoute(current, EAST, target, material) ?: continue
-                placePath(material, listOf(current) + segment)
-                current = target
+        // prepare a source per fluid up front, then route the groups nearest-first
+        val groups =
+            targets.entries
+                .sortedBy { it.key.name }
+                .map { (material, sinks) ->
+                    val source = fluidMarker(material, sinks.first())
+                    reserve(source, material)
+                    PipeGroup(material, source, sinks)
+                }
+                .sortedBy { it.nearestDistance }
+        for (group in groups) routePipeGroup(group)
+    }
+
+    /** One fluid to lay: its marker tile, the pipe network grown from it and the taps to reach. */
+    private class PipeGroup(
+        val material: Material,
+        val source: Coordinate,
+        val sinks: List<Coordinate>,
+    ) {
+        val nearestDistance
+            get() = sinks.minOf { it.manhattanDist(source) }
+    }
+
+    /**
+     * Grows this fluid's network to every sink, each time tapping the nearest point that already
+     * carries the fluid. A pipe connects on any side, so no splitter is needed.
+     */
+    private fun routePipeGroup(group: PipeGroup) {
+        val network = mutableListOf(group.source)
+        val pending = group.sinks.toMutableList()
+        while (pending.isNotEmpty()) {
+            val sink = pending.minBy { candidate -> network.minOf { it.manhattanDist(candidate) } }
+            val candidates =
+                network
+                    .filter { it == group.source || entityAt(it) is PipeEntity }
+                    .sortedBy { it.manhattanDist(sink) }
+            var routed = false
+            for (start in candidates.take(8)) {
+                if (start == sink) {
+                    pending.remove(sink)
+                    routed = true
+                    break
+                }
+                val segment = fluidRoute(start, EAST, sink, group.material)
+                if (segment == null) continue
+                placePath(group.material, listOf(start) + segment)
+                network += listOf(start) + segment
+                pending.remove(sink)
+                routed = true
+                break
+            }
+            if (!routed) {
+                failures += "${group.material.name} to $sink (no pipe route)"
+                pending.remove(sink)
             }
         }
     }
@@ -856,7 +1060,7 @@ private class RowLayout(
             from,
             direction,
             target,
-            { tile -> tile == target || pipeAllowed(tile, fluid) },
+            { tile, _ -> tile == target || pipeAllowed(tile, fluid) },
             pipeProfile,
         )
 
@@ -889,8 +1093,12 @@ private class RowLayout(
      * search can step back onto a tile to turn first. A tile carries one entity, so each gets its
      * final role from [roles] before anything is placed. A fluid material routes as pipes.
      */
-    private fun placePath(material: Material, nodes: List<Coordinate>) {
-        for ((tile, role) in roles(nodes)) {
+    private fun placePath(
+        material: Material,
+        nodes: List<Coordinate>,
+        finalHeading: Direction? = null,
+    ) {
+        for ((tile, role) in roles(nodes, finalHeading)) {
             if (!isFree(tile)) continue
             when (role) {
                 is SurfaceRole -> placeSurface(material, tile, role.direction)
@@ -903,9 +1111,14 @@ private class RowLayout(
 
     /**
      * The role of every tile in [nodes], keyed by tile. A tunnel end beats a plain belt, so a
-     * revisit never breaks a paired run; otherwise the last occurrence wins.
+     * revisit never breaks a paired run; otherwise the last occurrence wins. [finalHeading] is the
+     * direction the last tile must face, so a feed can turn onto its target regardless of the side
+     * the route arrived from.
      */
-    private fun roles(nodes: List<Coordinate>): Map<Coordinate, PathRole> {
+    private fun roles(
+        nodes: List<Coordinate>,
+        finalHeading: Direction?,
+    ): Map<Coordinate, PathRole> {
         if (nodes.size <= 1) return emptyMap()
 
         val roles = LinkedHashMap<Coordinate, PathRole>()
@@ -932,6 +1145,7 @@ private class RowLayout(
                 roles[next] = TunnelOutputRole(direction)
             }
         }
+        if (finalHeading != null) roles[nodes.last()] = SurfaceRole(finalHeading)
 
         return roles
     }
@@ -1099,28 +1313,28 @@ private class RowLayout(
         from: Coordinate,
         fromDirection: Direction,
         to: Coordinate,
-        avoid: Coordinate? = null,
-        allowed: (Coordinate) -> Boolean,
-    ) = route(from, fromDirection, to, allowed, beltProfile, avoid)
+        allowed: (Coordinate, Direction) -> Boolean,
+        strictStart: Boolean = false,
+    ) = route(from, fromDirection, to, allowed, beltProfile, strictStart)
 
     /**
      * A weighted A* route. A tile costs [RouteProfile.surfaceCost], a turn adds
      * [RouteProfile.turnCost], and a straight underground run costs [RouteProfile.tunnelEntry] plus
      * [RouteProfile.undergroundCost] per tile, so a started tunnel runs long. A tunnel is entered
      * only straight, and (for belts) only over an obstacle so surface stays the first choice. The
-     * last move into the goal is always a surface step, so a feed reaches its sink facing it.
-     * Manhattan distance times the cheapest tile is the (admissible) heuristic.
+     * goal is always reached on the surface; the caller decides which way the goal entity faces.
+     * Manhattan times the cheapest tile is the (admissible) heuristic.
      */
     private fun route(
         from: Coordinate,
         heading: Direction,
         to: Coordinate,
-        allowed: (Coordinate) -> Boolean,
+        allowed: (Coordinate, Direction) -> Boolean,
         profile: RouteProfile,
-        avoid: Coordinate? = null,
+        strictStart: Boolean = false,
     ): List<Coordinate>? {
         if (from == to) return emptyList()
-        if (!inRegion(to) || !allowed(to)) return null
+        if (!inRegion(to)) return null
 
         val start = RouteNode(from, heading, forced = false)
         val gScore = mutableMapOf(start to 0)
@@ -1151,37 +1365,48 @@ private class RowLayout(
             for (direction in directions) {
                 val directionStep = direction.step
                 val surface = current.tile + directionStep
-                if (inRegion(surface) && allowed(surface)) {
+                // a belt cannot turn back into the tile it just came from
+                if (profile.forbidReverse && direction == opposite(current.heading)) continue
+                // a split route must not step back onto its start: that would leave a dead end
+                if (strictStart && surface == from) continue
+                if (inRegion(surface) && allowed(surface, direction)) {
                     val turn = if (current.heading != direction) profile.turnCost else 0
                     val detour = if (inCorridor(surface, from, to)) 0 else profile.detourCost
-                    val sink = if (surface == avoid) profile.sinkCost else 0
                     val clear =
                         if (steps.any { isReserved(surface + it) }) profile.keepClearCost else 0
                     relax(
                         current,
                         RouteNode(surface, direction, forced = false),
-                        profile.surfaceCost + turn + detour + sink + clear,
+                        profile.surfaceCost + turn + detour + clear,
                         entry.g,
                     )
                 }
-                // a tunnel is only entered straight, never as the route's first move, and never
-                // right after surfacing
-                if (current.forced || current.heading != direction) continue
+                // a tunnel is only entered straight, never right after surfacing; a splitter
+                // branch may not start with one, because the splitter would feed its side
+                if (
+                    (strictStart && current == start) ||
+                        current.forced ||
+                        current.heading != direction
+                )
+                    continue
                 // a belt tunnels only to cross an obstacle: if the tile ahead is free, step there
-                if (profile.tunnelOnlyWhenBlocked && allowed(current.tile + directionStep)) continue
+                if (
+                    profile.tunnelOnlyWhenBlocked &&
+                        allowed(current.tile + directionStep, direction)
+                )
+                    continue
                 for (reach in 2..profile.range) {
                     val target = current.tile + directionStep * reach
                     // a feed must reach its sink on the surface, so its last belt faces the lane
-                    if (target == to) continue
-                    if (!inRegion(target) || !allowed(target)) continue
+                    if (target == to || (strictStart && target == from)) continue
+                    if (!inRegion(target) || !allowed(target, direction)) continue
                     if (!tunnelFree(current.tile, directionStep, reach, profile.undergroundType)) {
                         continue
                     }
-                    val sink = if (target == avoid) profile.sinkCost else 0
                     relax(
                         current,
                         RouteNode(target, direction, forced = true),
-                        profile.tunnelEntry + reach * profile.undergroundCost + sink,
+                        profile.tunnelEntry + reach * profile.undergroundCost,
                         entry.g,
                     )
                 }
@@ -1460,14 +1685,52 @@ private class RowLayout(
         place(PoleEntity(coordinate.area(), POLE))
     }
 
-    /** True when a belt next to [coordinate] carries a different material into that tile. */
+    /** True when a belt next to [coordinate] pours a different material into that tile. */
     private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean = steps.any { d ->
         val neighbour = coordinate + d
-        val belt = entityAt(neighbour) as? BeltLikeEntity
+        val belt = entityAt(neighbour) as? ConveyorEntity
         belt != null &&
             belt.direction == directionBetween(neighbour, coordinate) &&
             belt.material != material
     }
+
+    /** True when a belt at [coordinate] leaving in [direction] would side-load a foreign belt. */
+    private fun poursIntoSide(
+        coordinate: Coordinate,
+        direction: Direction,
+        material: Material,
+    ): Boolean {
+        val belt = entityAt(coordinate + direction.step) as? ConveyorEntity ?: return false
+        return belt.material != material &&
+            belt.direction != direction &&
+            belt.direction != opposite(direction)
+    }
+
+    /**
+     * True when a belt at [coordinate] leaving in [direction] would run straight at a reserved feed
+     * tile. That feed would later be entered from another side, so the belt would either block it
+     * or side-load a foreign material into the lane.
+     */
+    private fun facesReservedFeed(
+        coordinate: Coordinate,
+        direction: Direction,
+        ownFeed: Coordinate,
+        material: Material,
+    ): Boolean {
+        val ahead = coordinate + direction.step
+        if (ahead == ownFeed) return false
+        val reserved = reservedFor[ahead] ?: return false
+        // the same material may join its own feed; a foreign one would merge or block it
+        return reserved != material
+    }
+
+    private fun opposite(direction: Direction) =
+        when (direction) {
+            NORTH -> SOUTH
+            EAST -> WEST
+            SOUTH -> NORTH
+            WEST -> EAST
+        }
 
     private fun cell(coordinate: Coordinate) = grid.getOrPut(coordinate) { Cell() }
 
@@ -1480,7 +1743,9 @@ private class RowLayout(
 
     private fun isReserved(coordinate: Coordinate) = grid[coordinate]?.reserved == true
 
-    private fun reserve(coordinate: Coordinate) {
+    /** Marks [coordinate] as needed by a feed or source of [material]. */
+    private fun reserve(coordinate: Coordinate, material: Material) {
         cell(coordinate).reserved = true
+        reservedFor[coordinate] = material
     }
 }
