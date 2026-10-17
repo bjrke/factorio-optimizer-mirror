@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,6 +31,52 @@ private fun planned(
         machines = 1.0,
         directInsert = directInsert,
     )
+
+/**
+ * The connected pipe networks of [entities]. Pipes connect by touching, and a pipe-to-ground also
+ * connects to the next pipe-to-ground straight ahead within its reach, so the two ends of an
+ * underground run belong to the same network.
+ */
+private fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordinate>> {
+    val tiles =
+        entities
+            .filter { it.name == "pipe" || it.name == "pipe-to-ground" }
+            .associateBy { it.area.topLeft }
+    val grounds =
+        tiles.filterValues { it.name == "pipe-to-ground" }.mapValues { it.value.direction }
+
+    fun neighbours(tile: Coordinate): List<Coordinate> = buildList {
+        for (direction in Direction.entries) {
+            val next = tile + direction.step
+            if (next in tiles) add(next)
+        }
+        val direction = grounds[tile]
+        if (direction != null) {
+            for (distance in 1..9) {
+                val next = tile + direction.step * distance
+                if (grounds[next] == direction) {
+                    add(next)
+                    break
+                }
+            }
+        }
+    }
+
+    val seen = mutableSetOf<Coordinate>()
+    val components = mutableListOf<Set<Coordinate>>()
+    for (start in tiles.keys) {
+        if (!seen.add(start)) continue
+        val component = mutableSetOf<Coordinate>()
+        val queue = ArrayDeque(listOf(start))
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            component += current
+            for (next in neighbours(current)) if (seen.add(next)) queue += next
+        }
+        components += component
+    }
+    return components
+}
 
 class BlueprintLayoutTest {
 
@@ -141,41 +188,17 @@ class BlueprintLayoutTest {
             )
 
         val entities = buildBlueprint(fluidPlan, logistics).entities
-        fun pipesOn(name: String) =
-            entities.filter { it.name == name }.mapTo(mutableSetOf()) { it.area.topLeft }
-        val pipes = pipesOn("pipe") + pipesOn("pipe-to-ground")
-        val grounds = pipesOn("pipe-to-ground")
+        val fluids = blueprintPipeFluids(fluidPlan, logistics)
+        val components = plumbingComponents(entities)
 
-        // merge pipes that touch; one fluid's lane must be one network with one source, so two
-        // different fluids sharing a network shows up as a component holding two pipe-to-grounds
-        val components = mutableListOf<Set<Coordinate>>()
-        val seen = mutableSetOf<Coordinate>()
-        for (pipe in pipes) {
-            if (!seen.add(pipe)) continue
-            val component = mutableSetOf<Coordinate>()
-            var at: Coordinate? = pipe
-            val queue = ArrayDeque<Coordinate>()
-            while (at != null) {
-                component += at
-                for (next in
-                    listOf(
-                        at.west(),
-                        at.east(),
-                        at.north(),
-                        at.south(),
-                    )) {
-                    if (next in pipes && seen.add(next)) queue += next
-                }
-                at = queue.removeFirstOrNull()
-            }
-            components += component
-        }
-
+        // each connected pipe network must carry exactly one fluid, so two fluids never merge
         assertAll(
-            { assertEquals(2, grounds.size, "one pipe-to-ground per fluid") },
+            { assertEquals(setOf(water, lubricant), fluids.values.toSet()) },
             {
                 assertTrue(
-                    components.all { component -> component.count { it in grounds } <= 1 },
+                    components.all { component ->
+                        component.mapNotNull { fluids[it] }.distinct().size <= 1
+                    },
                     "two different fluids share one pipe network",
                 )
             },
@@ -184,22 +207,34 @@ class BlueprintLayoutTest {
 
     @Test
     fun insertersFaceTheMaterialTheyMove() {
-        val blueprint = buildBlueprint(plan, logistics)
-        val occupied = blueprint.entities.flatMap { it.area }.toSet()
-        val inserters = blueprint.entities.filter { it.name.endsWith("inserter") }
+        val dump = blueprintLayoutDump(plan, logistics)
+        val byTile = dump.entities.associateBy { it.area.topLeft }
+        val occupied = dump.entities.flatMap { it.area }.toSet()
+        val inserters = dump.entities.filterIsInstance<InserterEntity>()
 
         assertAll(
             // every inserter takes from the tile it faces, which is always north here: the lane
             // above for an input, the machine above for an output
             { assertTrue(inserters.isNotEmpty()) },
-            { assertTrue(inserters.all { it.direction == Direction.NORTH }, inserters.toString()) },
+            { assertTrue(inserters.all { it.direction == NORTH }, inserters.toString()) },
             {
                 val dangling = inserters.filter {
-                    val reach = if (it.name == "long-handed-inserter") 2 else 1
-                    val inserterPos = it.area.topLeft
-                    inserterPos.north(reach) !in occupied
+                    it.area.topLeft.north(if (it.long) 2 else 1) !in occupied
                 }
                 assertTrue(dangling.isEmpty(), "inserter takes from nothing: $dangling")
+            },
+            {
+                // the tile it draws from (or the belt it drops onto) must carry its own material,
+                // so an inserter can never be left moving a foreign one
+                val wrong = inserters.filter { inserter ->
+                    val pos = inserter.area.topLeft
+                    val reach = if (inserter.long) 2 else 1
+                    val nearby =
+                        listOf(pos.north(reach), pos.south(reach), pos.north(1), pos.south(1))
+                            .mapNotNull { (byTile[it] as? TransportEntity)?.material }
+                    inserter.material !in nearby
+                }
+                assertTrue(wrong.isEmpty(), "inserter carries the wrong material: $wrong")
             },
         )
     }
@@ -358,7 +393,7 @@ class BlueprintLayoutTest {
         val inserters =
             buildBlueprint(threePlan, logistics).entities.filter { it.name.endsWith("inserter") }
         assertTrue(
-            inserters.any { it.name == "long-handed-inserter" && it.direction == Direction.SOUTH },
+            inserters.any { it.name == "long-handed-inserter" && it.direction == SOUTH },
             inserters.toString(),
         )
     }
@@ -387,46 +422,117 @@ class BlueprintLayoutTest {
                 label = "water-boil",
             )
         val entities = buildBlueprint(fluidPlan, logistics).entities
-        val pipes =
-            entities
-                .filter { it.name == "pipe" || it.name == "pipe-to-ground" }
-                .mapTo(mutableSetOf()) { it.area.topLeft }
-
         val machineTiles =
             entities
                 .filter { it.name == Factory.CHEMICAL_PLANT.identifier }
                 .flatMapTo(mutableSetOf()) { it.area }
+        val components = plumbingComponents(entities)
 
-        val reachable = mutableSetOf<Coordinate>()
-        var at: Coordinate? = pipes.first()
-        val queue = ArrayDeque<Coordinate>()
-        while (at != null) {
-            if (reachable.add(at)) {
-                for (next in
-                    listOf(
-                        at.west(),
-                        at.east(),
-                        at.north(),
-                        at.south(),
-                    )) {
-                    if (next in pipes) queue += next
-                }
-            }
-            at = queue.removeFirstOrNull()
-        }
         fun touchesMachine(tile: Coordinate) =
-            listOf(
-                    tile.west(),
-                    tile.east(),
-                    tile.north(),
-                    tile.south(),
-                )
-                .any { it in machineTiles }
+            listOf(tile.west(), tile.east(), tile.north(), tile.south()).any { it in machineTiles }
 
         assertAll(
-            { assertEquals(pipes.size, reachable.size, "the fluid lane is split") },
-            { assertTrue(reachable.any(::touchesMachine), "no pipe reaches the machine") },
+            { assertEquals(1, components.size, "the fluid lane is split") },
+            {
+                assertTrue(components.single().any(::touchesMachine), "no pipe reaches the machine")
+            },
         )
+    }
+
+    @Test
+    fun feedRoutesStayEastOfTheWestBound() {
+        val belts =
+            buildBlueprint(plan, logistics).entities.filter {
+                it.name.contains("transport-belt") || it.name.contains("splitter")
+            }
+        val west = belts.map { it.area.topLeft }.filter { it.x < 2 }
+        assertTrue(west.isEmpty(), "belts west of the bound: $west")
+    }
+
+    @Test
+    fun fluidRunsUseUndergroundPipes() {
+        val coolant =
+            recipe(
+                "coolant",
+                Category.CHEMISTRY,
+                mapOf(gear to 1.0),
+                mapOf(water to 1.0, lubricant to 1.0),
+            )
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
+                sources =
+                    listOf(
+                        PlannedSource(water, 1.0, fluid = true),
+                        PlannedSource(lubricant, 1.0, fluid = true),
+                    ),
+                scale = 1.0,
+                label = "coolant",
+            )
+        val entities = buildBlueprint(fluidPlan, logistics).entities
+        val grounds = entities.count { it.name == "pipe-to-ground" }
+        val components = plumbingComponents(entities)
+
+        // more pipe-to-ground ends than the two source markers, and one network per fluid
+        assertAll(
+            { assertTrue(grounds > 2, "no underground pipes were used: $grounds") },
+            { assertEquals(2, components.size, "the pipe runs are split") },
+        )
+    }
+
+    @Test
+    fun pipeRunsAreStretched() {
+        val coolant =
+            recipe(
+                "coolant",
+                Category.CHEMISTRY,
+                mapOf(gear to 1.0),
+                mapOf(water to 1.0, lubricant to 1.0),
+            )
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
+                sources =
+                    listOf(
+                        PlannedSource(water, 1.0, fluid = true),
+                        PlannedSource(lubricant, 1.0, fluid = true),
+                    ),
+                scale = 1.0,
+                label = "coolant",
+            )
+        val byTile =
+            blueprintLayoutDump(fluidPlan, logistics).entities.associateBy { it.area.topLeft }
+
+        fun plainPipe(tile: Coordinate, fluid: Material?) =
+            (byTile[tile] as? PipeEntity)?.material == fluid
+
+        val problems = mutableListOf<String>()
+        for (input in
+            byTile.values.filterIsInstance<PipeToGroundEntity>().filter { it.io == Io.INPUT }) {
+            val step = input.direction.step
+            var output: PipeToGroundEntity? = null
+            var reach = 0
+            for (distance in 2..9) {
+                val entity = byTile[input.area.topLeft + step * distance] as? PipeToGroundEntity
+                if (entity != null && entity.io == Io.OUTPUT && entity.material == input.material) {
+                    output = entity
+                    reach = distance
+                    break
+                }
+            }
+            if (output == null || reach >= 9) continue
+            val back = input.area.topLeft - step
+            if (plainPipe(back, input.material) && back - step in byTile) {
+                problems += "input ${input.area.topLeft} can still grow back"
+            }
+            val forward = output.area.topLeft + step
+            if (plainPipe(forward, input.material) && forward + step in byTile) {
+                problems += "output ${output.area.topLeft} can still grow forward"
+            }
+        }
+        assertTrue(problems.isEmpty(), problems.take(5).toString())
     }
 
     @Test
@@ -478,7 +584,7 @@ class BlueprintLayoutTest {
             { assertTrue(feed != null, "no feed east of the lane") },
             {
                 assertEquals(
-                    Direction.WEST,
+                    WEST,
                     feed?.direction,
                     "the feed does not face the lane: $feed",
                 )

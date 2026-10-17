@@ -9,7 +9,7 @@ internal data class LayoutDump(val entities: List<LayoutEntity>, val failures: L
 /** Codes for the materials on belts and in pipes; cycled if a blueprint ever uses more. */
 private const val MATERIAL_CODES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-/** Direction arrows shared by belts that carry no tracked material and by inserters/loaders. */
+/** Direction arrows for inserters and loaders, which point their material instead of naming it. */
 private fun arrow(direction: Direction) =
     when (direction) {
         Direction.NORTH -> '^'
@@ -20,9 +20,8 @@ private fun arrow(direction: Direction) =
 
 /**
  * Renders a [dump] as one character per tile so a layout can be eyeballed in a terminal: machines
- * are digits, belts show the code of the material they carry (or an arrow when none is tracked),
- * and every other entity has its own glyph. A legend decodes the codes and the failures are listed
- * below the grid.
+ * are digits, belts show the code of the material they carry, and every other entity has its own
+ * glyph. A legend decodes the codes and the failures are listed below the grid.
  */
 internal fun layoutAscii(dump: LayoutDump): String {
     val entities = dump.entities
@@ -39,8 +38,7 @@ internal fun layoutAscii(dump: LayoutDump): String {
         entities
             .flatMap { entity ->
                 when (entity) {
-                    is BeltLikeEntity -> listOfNotNull(entity.material)
-                    is Plumbing -> listOfNotNull(entity.fluid)
+                    is TransportEntity -> listOf(entity.material)
                     is MarkerEntity -> listOf(entity.signal.material)
                     else -> emptyList()
                 }
@@ -60,7 +58,7 @@ internal fun layoutAscii(dump: LayoutDump): String {
         when (entity) {
             is MachineEntity -> recipeCode.getValue(entity.recipe)
             is InserterEntity -> arrow(entity.direction)
-            is BeltEntity -> entity.material?.let(materialCode::getValue) ?: arrow(entity.direction)
+            is BeltEntity -> materialCode.getValue(entity.material)
             is UndergroundBeltEntity -> if (entity.io == Io.INPUT) '(' else ')'
             is SplitterEntity -> '='
             is LoaderEntity -> arrow(entity.direction)

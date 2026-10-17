@@ -1,6 +1,9 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -26,50 +29,52 @@ class LayoutEntityTest {
             InserterEntity(
                 AreaTile(5, 1),
                 "fast-inserter",
-                Direction.EAST,
+                plate,
+                EAST,
                 long = false,
-            ) to BlueprintEntity("fast-inserter", AreaTile(5, 1), Direction.EAST),
-            BeltEntity(AreaTile(7, 2), "transport-belt", Direction.EAST, plate) to
-                BlueprintEntity("transport-belt", AreaTile(7, 2), Direction.EAST),
-            SplitterEntity(AreaTile(9, 4), "fast-splitter", Direction.EAST) to
-                BlueprintEntity("fast-splitter", AreaTile(9, 4), Direction.EAST),
+            ) to BlueprintEntity("fast-inserter", AreaTile(5, 1), EAST),
+            BeltEntity(AreaTile(7, 2), "transport-belt", plate, EAST) to
+                BlueprintEntity("transport-belt", AreaTile(7, 2), EAST),
+            SplitterEntity(AreaTile(9, 4), "fast-splitter", plate, EAST) to
+                BlueprintEntity("fast-splitter", AreaTile(9, 4), EAST),
             UndergroundBeltEntity(
                 AreaTile(1, 8),
                 "transport-belt",
-                Direction.EAST,
                 plate,
+                EAST,
                 Io.INPUT,
             ) to
                 BlueprintEntity(
                     "transport-belt",
                     AreaTile(1, 8),
-                    Direction.EAST,
+                    EAST,
                     type = Io.INPUT,
                 ),
             UndergroundBeltEntity(
                 AreaTile(3, 8),
                 "transport-belt",
-                Direction.SOUTH,
                 plate,
-                Io.OUTPUT,
+                SOUTH,
+                OUTPUT,
             ) to
                 BlueprintEntity(
                     "transport-belt",
                     AreaTile(3, 8),
-                    Direction.SOUTH,
-                    type = Io.OUTPUT,
+                    SOUTH,
+                    type = OUTPUT,
                 ),
             LoaderEntity(
                 Coordinate(6, 6).area(2, 1),
                 "fast-loader",
-                Direction.EAST,
-                Io.OUTPUT,
+                plate,
+                OUTPUT,
+                EAST,
             ) to
                 BlueprintEntity(
                     "fast-loader",
                     Coordinate(6, 6).area(2, 1),
-                    Direction.EAST,
-                    type = Io.OUTPUT,
+                    EAST,
+                    type = OUTPUT,
                 ),
             InfinityChestEntity(
                 AreaTile(2, 12),
@@ -98,9 +103,10 @@ class LayoutEntityTest {
             PipeToGroundEntity(
                 AreaTile(10, 16),
                 "pipe-to-ground",
-                Direction.EAST,
                 water,
-            ) to BlueprintEntity("pipe-to-ground", AreaTile(10, 16), Direction.EAST),
+                EAST,
+                Io.INPUT,
+            ) to BlueprintEntity("pipe-to-ground", AreaTile(10, 16), EAST),
             PoleEntity(AreaTile(12, 18), "medium-electric-pole", listOf(2, 5)) to
                 BlueprintEntity(
                     "medium-electric-pole",

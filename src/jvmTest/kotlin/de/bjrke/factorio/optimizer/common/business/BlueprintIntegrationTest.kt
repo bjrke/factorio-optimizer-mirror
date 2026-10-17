@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import java.util.Base64
@@ -141,7 +142,7 @@ class BlueprintIntegrationTest {
         for (entity in entities) {
             for (tile in entity.area) {
                 val existing = seen.put(tile, entity)
-                assertNull(existing, { "${entity.name} and  ${existing?.name} overlaps at $tile" })
+                assertNull(existing) { "${entity.name} and  ${existing?.name} overlaps at $tile" }
             }
         }
     }
@@ -177,14 +178,7 @@ class BlueprintIntegrationTest {
                 .filter {
                     val direction = it.direction ?: return@filter false
                     val reach = if (it.name == "long-handed-inserter") 2 else 1
-                    val d =
-                        when (direction) {
-                            Direction.NORTH -> Coordinate(0, -1)
-                            Direction.EAST -> Coordinate(1, 0)
-                            Direction.SOUTH -> Coordinate(0, 1)
-                            Direction.WEST -> Coordinate(-1, 0)
-                        }
-                    val tile = it.area.topLeft + d * reach
+                    val tile = it.area.topLeft + direction.step * reach
                     tile !in occupied
                 }
                 .map { "${it.name}@${it.area.topLeft}" }
@@ -209,20 +203,12 @@ class BlueprintIntegrationTest {
     private fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
         val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
 
-        fun step(direction: Direction) =
-            when (direction) {
-                Direction.NORTH -> Coordinate(0, -1)
-                Direction.EAST -> Coordinate(1, 0)
-                Direction.SOUTH -> Coordinate(0, 1)
-                Direction.WEST -> Coordinate(-1, 0)
-            }
-
         val underground = entities.filter { it.name.endsWith("underground-belt") }
         val inputs = underground.filter { it.type == Io.INPUT }.map { it.area.topLeft }.toSet()
         val outputs = underground.filter { it.type == Io.OUTPUT }.map { it.area.topLeft }.toSet()
         val problems = mutableListOf<String>()
         for (entity in underground) {
-            val step = step(entity.direction ?: Direction.NORTH)
+            val step = (entity.direction ?: NORTH).step
             val topLeft = entity.area.topLeft
             if (entity.type == Io.INPUT) {
                 val exit = (1..9).any { outputs.contains(topLeft + step * it) }
@@ -245,6 +231,81 @@ class BlueprintIntegrationTest {
             { assertConnectedUndergroundBelts(entitiesFor("logistic-science-pack")) },
             { assertConnectedUndergroundBelts(entitiesFor("processing-unit")) },
             { assertConnectedUndergroundBelts(entitiesFor("utility-science-pack")) },
+        )
+
+    /**
+     * A run shorter than the belt tier's reach must not still have a belt of its own material to
+     * swallow on either end: [RowLayout.stretchUndergroundRuns] grows it as far as the straight run
+     * allows.
+     */
+    private fun assertUndergroundRunsAreStretched(
+        entities: List<BlueprintEntity>,
+        materials: Map<Coordinate, Material>,
+    ) {
+        val byTile = entities.associateBy { it.area.topLeft }
+        fun range(name: String) =
+            when {
+                name.contains("turbo") -> 11
+                name.contains("express") -> 9
+                name.contains("fast") -> 7
+                else -> 5
+            }
+        fun plainBelt(tile: Coordinate, direction: Direction, material: Material?) =
+            byTile[tile]?.let {
+                it.name.endsWith("transport-belt") && it.direction == direction
+            } == true && materials[tile] == material
+
+        val problems = mutableListOf<String>()
+        for (input in
+            entities.filter { it.name.endsWith("underground-belt") && it.type == Io.INPUT }) {
+            val direction = input.direction ?: continue
+            val step = direction.step
+            val limit = range(input.name)
+            var reach = 0
+            var output: BlueprintEntity? = null
+            for (k in 2..limit) {
+                val entity = byTile[input.area.topLeft + step * k]
+                if (entity != null && entity.type == Io.OUTPUT && entity.name == input.name) {
+                    reach = k
+                    output = entity
+                    break
+                }
+            }
+            if (output == null || reach >= limit) continue
+            val material = materials[input.area.topLeft]
+            val back = input.area.topLeft - step
+            if (plainBelt(back, direction, material) && back - step in byTile) {
+                problems += "input ${input.area.topLeft} can still grow back"
+            }
+            val forward = output.area.topLeft + step
+            if (plainBelt(forward, direction, material) && forward + step in byTile) {
+                problems += "output ${output.area.topLeft} can still grow forward"
+            }
+        }
+        assertEquals(emptyList(), problems.take(5))
+    }
+
+    @Test
+    fun realBlueprintsStretchUndergroundRuns() =
+        assertAll(
+            {
+                assertUndergroundRunsAreStretched(
+                    entitiesFor("advanced-circuit"),
+                    transportMaterialsFor("advanced-circuit"),
+                )
+            },
+            {
+                assertUndergroundRunsAreStretched(
+                    entitiesFor("electronic-circuit"),
+                    transportMaterialsFor("electronic-circuit"),
+                )
+            },
+            {
+                assertUndergroundRunsAreStretched(
+                    entitiesFor("processing-unit"),
+                    transportMaterialsFor("processing-unit"),
+                )
+            },
         )
 
     private fun feedFailuresFor(target: String): List<String> {
@@ -389,19 +450,11 @@ class BlueprintIntegrationTest {
                     it.area.topLeft to it.direction!!
                 }
 
-        fun step(direction: Direction) =
-            when (direction) {
-                Direction.NORTH -> Coordinate(0, -1)
-                Direction.EAST -> Coordinate(1, 0)
-                Direction.SOUTH -> Coordinate(0, 1)
-                Direction.WEST -> Coordinate(-1, 0)
-            }
-
         val merges =
             belts
                 .filter { (tile, _) ->
                     val feeding = belts.filter { (from, direction) ->
-                        from + step(direction) == tile
+                        from + direction.step == tile
                     }
                     feeding.map { materials[it.key] }.distinct().size > 1
                 }
@@ -409,7 +462,7 @@ class BlueprintIntegrationTest {
         assertTrue(merges.isEmpty(), "belts fed by several materials: ${merges.take(5)}")
     }
 
-    private fun beltMaterialsFor(target: String): Map<Coordinate, Material> {
+    private fun transportMaterialsFor(target: String): Map<Coordinate, Material> {
         val result = optimize(target)
         val logistics =
             LogisticsCalculator(
@@ -421,7 +474,7 @@ class BlueprintIntegrationTest {
                 inserterStack = 1,
             )
         val plan = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
-        return blueprintBeltMaterials(plan, logistics)
+        return blueprintTransportMaterials(plan, logistics)
     }
 
     @Test
@@ -430,19 +483,19 @@ class BlueprintIntegrationTest {
             {
                 assertNoMergingBelts(
                     entitiesFor("inserter"),
-                    beltMaterialsFor("inserter"),
+                    transportMaterialsFor("inserter"),
                 )
             },
             {
                 assertNoMergingBelts(
                     entitiesFor("advanced-circuit"),
-                    beltMaterialsFor("advanced-circuit"),
+                    transportMaterialsFor("advanced-circuit"),
                 )
             },
             {
                 assertNoMergingBelts(
                     entitiesFor("electronic-circuit"),
-                    beltMaterialsFor("electronic-circuit"),
+                    transportMaterialsFor("electronic-circuit"),
                 )
             },
         )

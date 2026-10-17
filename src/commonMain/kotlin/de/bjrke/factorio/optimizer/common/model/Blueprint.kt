@@ -6,11 +6,11 @@ import kotlinx.serialization.json.*
 private const val INFINITY_STOCK = 100
 
 /** A cardinal facing, stored in a blueprint as 0/4/8/12 (see the entity JSON writer). */
-enum class Direction {
-    NORTH,
-    EAST,
-    SOUTH,
-    WEST,
+enum class Direction(val step: Coordinate) {
+    NORTH(Coordinate.north),
+    EAST(Coordinate.east),
+    SOUTH(Coordinate.south),
+    WEST(Coordinate.west),
 }
 
 /** Which end of a directional entity (an underground belt or a loader) this is: its `type`. */

@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class LayoutAsciiTest {
@@ -26,6 +25,7 @@ class LayoutAsciiTest {
                     InserterEntity(
                         Coordinate(2, 1).area(),
                         "fast-inserter",
+                        material("iron-plate"),
                         Direction.NORTH,
                         false,
                     ),
@@ -33,8 +33,8 @@ class LayoutAsciiTest {
                     BeltEntity(
                         Coordinate(0, 2).area(),
                         "fast-transport-belt",
-                        Direction.EAST,
                         material("iron-plate"),
+                        Direction.EAST,
                     ),
                     MarkerEntity(
                         Coordinate(3, 2).area(),
@@ -72,29 +72,6 @@ class LayoutAsciiTest {
             { assertTrue(ascii.contains("failures (1)"), ascii) },
             { assertTrue(ascii.contains("water to (2, 3) (no route)"), ascii) },
         )
-
-    @Test
-    fun aBeltWithNoTrackedMaterialShowsItsDirection() {
-        val dump =
-            LayoutDump(
-                listOf(
-                    BeltEntity(
-                        Coordinate(0, 0).area(),
-                        "fast-transport-belt",
-                        Direction.WEST,
-                        null,
-                    ),
-                ),
-                emptyList(),
-            )
-
-        val text = layoutAscii(dump)
-
-        assertAll(
-            { assertTrue(text.contains("<"), text) },
-            { assertFalse(text.contains("failures"), text) },
-        )
-    }
 
     @Test
     fun anEmptyLayoutRendersNothingButAHeader() =

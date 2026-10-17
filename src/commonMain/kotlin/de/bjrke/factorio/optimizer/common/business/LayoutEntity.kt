@@ -26,34 +26,51 @@ sealed interface LayoutEntity {
         get() = false
 }
 
-/** A belt, underground belt or splitter: everything that faces a [direction]. */
-sealed interface ConveyorEntity : LayoutEntity {
+/**
+ * Everything the layout moves material with: items on belts, inserters and loaders, fluids in
+ * pipes. Each carries exactly the one [material] it handles, so a higher layer can tell what is on
+ * a tile (and whether two feed materials would merge).
+ */
+sealed interface TransportEntity : LayoutEntity {
+    val material: Material
+}
+
+/** A belt, underground belt or splitter: a transport entity that faces a [direction]. */
+sealed interface ConveyorEntity : TransportEntity {
     val direction: Direction
 }
 
-/** A conveyor that moves items, so it carries the [material] currently on it (held for routing). */
-sealed interface BeltLikeEntity : ConveyorEntity {
-    val material: Material?
+/** A belt or underground belt: the belt-like carriers the layout treats as item movers. */
+sealed interface BeltLikeEntity : ConveyorEntity
+
+/** A pipe or pipe-to-ground; both carry the fluid [material] the layout routed through them. */
+sealed interface Plumbing : TransportEntity
+
+/** One end of an underground run (an underground belt or a pipe-to-ground). */
+sealed interface UndergroundEntity : TransportEntity {
+    val direction: Direction
+    val io: Io
 }
 
 data class BeltEntity(
     override val area: Area,
     override val name: String,
+    override val material: Material,
     override val direction: Direction,
-    override val material: Material?,
 ) : BeltLikeEntity
 
 data class UndergroundBeltEntity(
     override val area: Area,
     override val name: String,
+    override val material: Material,
     override val direction: Direction,
-    override val material: Material?,
-    val io: Io,
-) : BeltLikeEntity
+    override val io: Io,
+) : BeltLikeEntity, UndergroundEntity
 
 data class SplitterEntity(
     override val area: Area,
     override val name: String,
+    override val material: Material,
     override val direction: Direction,
 ) : ConveyorEntity
 
@@ -68,19 +85,21 @@ data class MachineEntity(
 data class InserterEntity(
     override val area: Area,
     override val name: String,
+    override val material: Material,
     val direction: Direction,
     /** Whether this is a long-handed inserter (reaches two tiles). */
     val long: Boolean,
-) : LayoutEntity {
+) : TransportEntity {
     override val isPowered = true
 }
 
 data class LoaderEntity(
     override val area: Area,
     override val name: String,
-    val direction: Direction,
+    override val material: Material,
     val io: Io,
-) : LayoutEntity
+    val direction: Direction,
+) : TransportEntity
 
 data class InfinityChestEntity(
     override val area: Area,
@@ -94,23 +113,22 @@ data class MarkerEntity(
     val signal: Signal,
 ) : LayoutEntity
 
-/** A pipe or pipe-to-ground; both carry the [fluid] the layout routed through them. */
-sealed interface Plumbing : LayoutEntity {
-    val fluid: Material?
-}
-
 data class PipeEntity(
     override val area: Area,
     override val name: String,
-    override val fluid: Material?,
+    override val material: Material,
 ) : Plumbing
 
 data class PipeToGroundEntity(
     override val area: Area,
     override val name: String,
-    val direction: Direction,
-    override val fluid: Material?,
-) : Plumbing
+    override val material: Material,
+    override val direction: Direction,
+    /**
+     * Input or output end of the run; a blueprint carries only the direction, so this is internal.
+     */
+    override val io: Io,
+) : Plumbing, UndergroundEntity
 
 data class PoleEntity(
     override val area: Area,

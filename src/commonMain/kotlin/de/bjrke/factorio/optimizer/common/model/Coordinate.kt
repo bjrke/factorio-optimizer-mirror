@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.model
 
 import kotlin.math.abs
+import kotlin.math.sign
 
 data class Coordinate(val x: Int, val y: Int) {
     operator fun plus(other: Coordinate) = Coordinate(x + other.x, y + other.y)
@@ -15,7 +16,16 @@ data class Coordinate(val x: Int, val y: Int) {
         return dx * dx + dy * dy
     }
 
-    fun chebyshevDistance(b: Coordinate) = maxOf(abs(x - b.x), abs(y - b.y))
+    val chebyshevLen by lazy { maxOf(abs(x), abs(y)) }
+
+    fun chebyshevDist(b: Coordinate) = (this - b).chebyshevLen
+
+    val manhattanLen by lazy { abs(x) + abs(y) }
+
+    fun manhattanDist(b: Coordinate) = (this - b).manhattanLen
+
+    /** True when [to] is one tile orthogonally next to this. */
+    fun adjacent(to: Coordinate) = manhattanDist(to) == 1
 
     fun area(dimension: Dimension) = Area(this, dimension)
 
@@ -28,6 +38,21 @@ data class Coordinate(val x: Int, val y: Int) {
     fun east(amount: Int = 1) = copy(x = x + amount)
 
     fun west(amount: Int = 1) = copy(x = x - amount)
+
+    companion object {
+        val origin = Coordinate(0, 0)
+
+        val north = origin.north()
+        val south = origin.south()
+        val west = origin.west()
+        val east = origin.east()
+    }
+
+    val direction by lazy {
+        val newX = x.sign
+        val newY = y.sign
+        if (x == newX && y == newY) this else Coordinate(newX, newY)
+    }
 }
 
 data class Dimension(val width: Int, val height: Int) {
