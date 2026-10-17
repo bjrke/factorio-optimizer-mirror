@@ -3,10 +3,10 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.test.assertAll
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class LayoutAsciiTest {
 
@@ -49,29 +49,28 @@ class LayoutAsciiTest {
 
     @Test
     fun machinesAreDigitsAndBeltsShowTheirMaterialCode() =
-        assertAll(
-            { assertTrue(ascii.contains("11 +"), ascii) },
-            { assertTrue(ascii.contains("11^-"), ascii) },
-            { assertTrue(ascii.contains("b  C"), ascii) },
-        )
+        assertTableOf("11 +", "11^-", "b  C") { expected ->
+            assertContains(ascii, expected, message = ascii)
+        }
 
     @Test
     fun theLegendDecodesMachinesMaterialsAndMarkers() =
-        assertAll(
-            { assertTrue(ascii.contains("1 = assembling-machine-3: advanced-circuit"), ascii) },
+        assertTableOf(
+            "1 = assembling-machine-3: advanced-circuit",
             // materials are coded in name order: copper-plate=a, iron-plate=b, water=c
-            { assertTrue(ascii.contains("a = copper-plate"), ascii) },
-            { assertTrue(ascii.contains("b = iron-plate"), ascii) },
-            { assertTrue(ascii.contains("c = water"), ascii) },
-            { assertTrue(ascii.contains("C = constant-combinator: copper-plate"), ascii) },
-        )
+            "a = copper-plate",
+            "b = iron-plate",
+            "c = water",
+            "C = constant-combinator: copper-plate",
+        ) { expected ->
+            assertContains(ascii, expected, message = ascii)
+        }
 
     @Test
     fun theFailedRoutesAreListedBelowTheGrid() =
-        assertAll(
-            { assertTrue(ascii.contains("failures (1)"), ascii) },
-            { assertTrue(ascii.contains("water to (2, 3) (no route)"), ascii) },
-        )
+        assertTableOf("failures (1)", "water to (2, 3) (no route)") { expected ->
+            assertContains(ascii, expected, message = ascii)
+        }
 
     @Test
     fun anEmptyLayoutRendersNothingButAHeader() =

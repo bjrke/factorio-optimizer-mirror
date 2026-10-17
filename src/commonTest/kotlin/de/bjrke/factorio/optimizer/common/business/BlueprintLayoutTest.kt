@@ -3,8 +3,11 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 private val ore = Material("iron-ore")
@@ -113,7 +116,7 @@ class BlueprintLayoutTest {
         val blueprint = buildBlueprint(plan, logistics)
         val seen = mutableSetOf<Coordinate>()
         val collisions = blueprint.entities.flatMap { it.area }.filter { !seen.add(it) }
-        assertTrue(collisions.isEmpty(), "overlapping tiles: ${collisions.take(5)}")
+        assertEquals(emptyList(), collisions, "overlapping tiles")
     }
 
     @Test
@@ -122,10 +125,10 @@ class BlueprintLayoutTest {
         assertAll(
             { assertEquals(1, names.count { it == Factory.ASSEMBLING_MACHINE_3.identifier }) },
             { assertEquals(1, names.count { it == Factory.ASSEMBLING_MACHINE_1.identifier }) },
-            { assertTrue(InserterTier.FAST_INSERTER.identifier in names) },
-            { assertTrue(BeltTier.EXPRESS_TRANSPORT_BELT.identifier in names) },
-            { assertTrue("constant-combinator" in names) },
-            { assertTrue("medium-electric-pole" in names) },
+            { assertContains(names, InserterTier.FAST_INSERTER.identifier) },
+            { assertContains(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
+            { assertContains(names, "constant-combinator") },
+            { assertContains(names, "medium-electric-pole") },
         )
     }
 
@@ -142,7 +145,7 @@ class BlueprintLayoutTest {
             )
 
         val names = buildBlueprint(fluidPlan, logistics).entities.map { it.name }
-        assertTrue("pipe-to-ground" in names, names.toString())
+        assertContains(names, "pipe-to-ground")
     }
 
     @Test
@@ -160,8 +163,8 @@ class BlueprintLayoutTest {
 
         val names = buildBlueprint(fluidPlan, logistics).entities.map { it.name }
         assertAll(
-            { assertTrue("pipe" in names) },
-            { assertTrue(BeltTier.EXPRESS_TRANSPORT_BELT.identifier !in names) },
+            { assertContains(names, "pipe") },
+            { assertContainsNot(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
         )
     }
 
@@ -221,7 +224,7 @@ class BlueprintLayoutTest {
                 val dangling = inserters.filter {
                     it.area.topLeft.north(if (it.long) 2 else 1) !in occupied
                 }
-                assertTrue(dangling.isEmpty(), "inserter takes from nothing: $dangling")
+                assertEquals(emptyList(), dangling, "inserter takes from nothing")
             },
             {
                 // the tile it draws from (or the belt it drops onto) must carry its own material,
@@ -234,7 +237,7 @@ class BlueprintLayoutTest {
                             .mapNotNull { (byTile[it] as? TransportEntity)?.material }
                     inserter.material !in nearby
                 }
-                assertTrue(wrong.isEmpty(), "inserter carries the wrong material: $wrong")
+                assertEquals(emptyList(), wrong, "inserter carries the wrong material")
             },
         )
     }
@@ -334,7 +337,7 @@ class BlueprintLayoutTest {
 
         // the second input sits on the far lane, which only a long inserter reaches
         val names = buildBlueprint(twoPlan, logistics).entities.map { it.name }
-        assertTrue("long-handed-inserter" in names, names.toString())
+        assertContains(names, "long-handed-inserter")
     }
 
     @Test
@@ -409,7 +412,7 @@ class BlueprintLayoutTest {
                     "no trunk belt at the producer outlet: ${byTile[outlet]}",
                 )
             },
-            { assertTrue(dump.failures.isEmpty(), dump.failures.toString()) },
+            { assertEquals(emptyList(), dump.failures) },
         )
     }
 
@@ -444,7 +447,7 @@ class BlueprintLayoutTest {
                     "feed does not face the imported lane: ${byTile[oreFeed]}",
                 )
             },
-            { assertTrue(dump.failures.isEmpty(), dump.failures.toString()) },
+            { assertEquals(emptyList(), dump.failures) },
         )
     }
 
@@ -490,7 +493,7 @@ class BlueprintLayoutTest {
                 .map { it.marker }
 
         // the product leaves the target on a belt labelled with the target signal
-        assertTrue(gear in markers, markers.toString())
+        assertContains(markers, gear)
     }
 
     @Test
@@ -529,7 +532,7 @@ class BlueprintLayoutTest {
                 it.name.contains("transport-belt") || it.name.contains("splitter")
             }
         val west = belts.map { it.area.topLeft }.filter { it.x < 2 }
-        assertTrue(west.isEmpty(), "belts west of the bound: $west")
+        assertEquals(emptyList(), west, "belts west of the bound")
     }
 
     @Test
@@ -615,7 +618,7 @@ class BlueprintLayoutTest {
                 problems += "output ${output.area.topLeft} can still grow forward"
             }
         }
-        assertTrue(problems.isEmpty(), problems.take(5).toString())
+        assertEquals(emptyList(), problems)
     }
 
     @Test
@@ -662,16 +665,11 @@ class BlueprintLayoutTest {
 
         // a produced lane is fed from its east end, and that feed must face west into the lane
         val feedCoordinate = Coordinate(eastEnd + 1, laneRow)
-        val feed = entities.singleOrNull { it.area.topLeft == feedCoordinate }
-        assertAll(
-            { assertTrue(feed != null, "no feed east of the lane") },
-            {
-                assertEquals(
-                    WEST,
-                    feed?.direction,
-                    "the feed does not face the lane: $feed",
-                )
-            },
-        )
+        val feed =
+            assertNotNull(
+                entities.singleOrNull { it.area.topLeft == feedCoordinate },
+                "no feed east of the lane",
+            )
+        assertEquals(WEST, feed.direction, "the feed does not face the lane")
     }
 }

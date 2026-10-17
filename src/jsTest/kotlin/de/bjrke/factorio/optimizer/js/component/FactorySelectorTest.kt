@@ -4,13 +4,13 @@ import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryConfig
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.fireEvent
 import de.bjrke.test.named
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertContains
 import react.create
 import web.dom.Element
 import web.html.HTMLInputElement
@@ -39,8 +39,8 @@ class FactorySelectorTest : ComponentTest() {
         renderSelector()
 
         assertAll(
-            { assertTrue("selected" in labelClasses(option("assembling-machine-3"))) },
-            { assertFalse("selected" in labelClasses(option("assembling-machine-1"))) },
+            { assertContains(labelClasses(option("assembling-machine-3")), "selected") },
+            { assertContainsNot(labelClasses(option("assembling-machine-1")), "selected") },
         )
     }
 
@@ -52,8 +52,8 @@ class FactorySelectorTest : ComponentTest() {
 
         val selected = selections.single()
         assertAll(
-            { assertTrue(Factory.ASSEMBLING_MACHINE_1 in selected) },
-            { assertFalse(Factory.ASSEMBLING_MACHINE_3 in selected) },
+            { assertContains(selected, Factory.ASSEMBLING_MACHINE_1) },
+            { assertContainsNot(selected, Factory.ASSEMBLING_MACHINE_3) },
         )
     }
 
@@ -64,6 +64,6 @@ class FactorySelectorTest : ComponentTest() {
 
         fireEvent.click(screen.getByRole("checkbox", named(single.identifier)))
 
-        assertTrue(single in selections.single())
+        assertContains(selections.single(), single)
     }
 }

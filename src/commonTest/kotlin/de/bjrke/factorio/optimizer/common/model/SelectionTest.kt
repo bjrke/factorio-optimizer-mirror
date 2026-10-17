@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.model
 
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -35,7 +36,7 @@ class SelectionTest {
     fun everySelectionCodeIsUnique() {
         val duplicates = allCodes.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
 
-        assertTrue(duplicates.isEmpty(), "duplicate selection codes: $duplicates")
+        assertEquals(emptySet(), duplicates, "duplicate selection codes")
     }
 
     @Test
@@ -102,10 +103,12 @@ class SelectionTest {
 
     @Test
     fun flagsAreOffWhenTheirCodeIsAbsent() =
-        assertAll(
-            { assertTrue(SelectionFlag.SPACE_AGE.enabledIn("S")) },
-            { assertTrue(SelectionFlag.SPACE_AGE.enabledIn("abcSL")) },
-            { assertFalse(SelectionFlag.SPACE_AGE.enabledIn("L")) },
-            { assertFalse(SelectionFlag.SPACE_AGE.enabledIn(null)) },
-        )
+        assertTableOf<Pair<String?, Boolean>>(
+            "S" to true,
+            "abcSL" to true,
+            "L" to false,
+            null to false,
+        ) { (selection, expected) ->
+            assertEquals(expected, SelectionFlag.SPACE_AGE.enabledIn(selection))
+        }
 }

@@ -3,9 +3,9 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 
 class DefaultRecipesTest {
 
@@ -52,6 +52,6 @@ class DefaultRecipesTest {
 
     @Test
     fun spaceAgeHasNoRocketSiloSpaceScienceFallback() {
-        assertFalse(recipes(spaceAge = true).containsKey("space-science-pack"))
+        assertContainsNot(recipes(spaceAge = true), "space-science-pack")
     }
 }

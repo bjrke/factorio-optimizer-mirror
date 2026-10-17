@@ -2,11 +2,11 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class RecipeParserTest {
 
@@ -62,7 +62,7 @@ class RecipeParserTest {
             "upgrade-planner",
         )
 
-    @Test fun emptyDumpShouldReturnEmptyRecipeList() = assertTrue(parse("{}").isEmpty())
+    @Test fun emptyDumpShouldReturnEmptyRecipeList() = assertEquals(emptyList(), parse("{}"))
 
     @Test
     fun parseCopperPlate() =
@@ -125,15 +125,15 @@ class RecipeParserTest {
 
     @Test
     fun parseParameterRecipeIsSkipped() =
-        assertTrue(
+        assertEquals(
+            emptyList(),
             parse(
-                    """
-                    {"recipe":{"parameter-0":{
-                      "type":"recipe","name":"parameter-0","parameter":true,"categories":["parameters"]
-                    }}}
-                    """,
-                )
-                .isEmpty(),
+                """
+                {"recipe":{"parameter-0":{
+                  "type":"recipe","name":"parameter-0","parameter":true,"categories":["parameters"]
+                }}}
+                """,
+            ),
         )
 
     @Test
@@ -246,7 +246,7 @@ class RecipeParserTest {
                 .associateBy(Recipe::name)
 
         assertAll(
-            { assertTrue(recipes.containsKey("iron-gear-wheel-recycling")) },
+            { assertContains(recipes, "iron-gear-wheel-recycling") },
             // amount (0) + extra_count_fraction (0.5) is the expected yield
             {
                 assertEquals(
@@ -281,8 +281,8 @@ class RecipeParserTest {
             )
 
         assertAll(
-            { assertTrue(recipes.any { it.name == "scrap-recycling" }) },
-            { assertTrue(recipes.none { it.name == "iron-ore-recycling" }) },
+            { assertContains(recipes.map(Recipe::name), "scrap-recycling") },
+            { assertContainsNot(recipes.map(Recipe::name), "iron-ore-recycling") },
         )
     }
 
@@ -310,8 +310,8 @@ class RecipeParserTest {
             )
 
         assertAll(
-            { assertTrue(recipes.any { it.name == "scrap-recycling" }) },
-            { assertTrue(recipes.none { it.name == "accumulator-recycling" }) },
+            { assertContains(recipes.map(Recipe::name), "scrap-recycling") },
+            { assertContainsNot(recipes.map(Recipe::name), "accumulator-recycling") },
         )
     }
 

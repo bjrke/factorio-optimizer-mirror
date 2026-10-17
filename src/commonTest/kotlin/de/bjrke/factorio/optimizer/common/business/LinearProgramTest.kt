@@ -3,7 +3,7 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertIs
 
 class LinearProgramTest {
 
@@ -73,7 +73,7 @@ class LinearProgramTest {
         // x <= -1 with x >= 0
         val result = solve(arrayOf(doubleArrayOf(1.0)), doubleArrayOf(-1.0), doubleArrayOf(1.0))
 
-        assertTrue(result is LinearProgramResult.Infeasible)
+        assertIs<LinearProgramResult.Infeasible>(result)
     }
 
     @Test
@@ -82,6 +82,6 @@ class LinearProgramTest {
         val result =
             solve(arrayOf(doubleArrayOf(0.0, 1.0)), doubleArrayOf(1.0), doubleArrayOf(-1.0, 0.0))
 
-        assertTrue(result is LinearProgramResult.Unbounded)
+        assertIs<LinearProgramResult.Unbounded>(result)
     }
 }

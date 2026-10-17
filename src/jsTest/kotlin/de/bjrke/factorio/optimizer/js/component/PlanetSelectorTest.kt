@@ -3,13 +3,14 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.fireEvent
 import de.bjrke.test.named
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import react.create
 import web.dom.Element
@@ -42,8 +43,8 @@ class PlanetSelectorTest : ComponentTest() {
         renderSelector(selected = Surface.VULCANUS)
 
         assertAll(
-            { assertTrue("selected" in labelClasses(option(Surface.VULCANUS))) },
-            { assertFalse("selected" in labelClasses(option(Surface.NAUVIS))) },
+            { assertContains(labelClasses(option(Surface.VULCANUS)), "selected") },
+            { assertContainsNot(labelClasses(option(Surface.NAUVIS)), "selected") },
         )
     }
 

@@ -17,6 +17,7 @@ import de.bjrke.test.fireEvent
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -246,8 +247,9 @@ class OptimizationResultPresenterTest : ComponentTest() {
 
         assertAll(
             {
-                assertTrue(
-                    ingredient in 0 until factory,
+                assertContains(
+                    0 until factory,
+                    ingredient,
                     "ingredient at $ingredient, factory at $factory",
                 )
             },

@@ -6,6 +6,7 @@ import de.bjrke.test.fireEvent
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import react.create
@@ -54,7 +55,12 @@ class SpaceAgeToggleTest : ComponentTest() {
 
         assertAll(
             { assertTrue(checkbox.checked) },
-            { assertTrue("selected" in (checkbox.closest("label")?.getAttribute("class") ?: "")) },
+            {
+                assertContains(
+                    checkbox.closest("label")?.getAttribute("class").orEmpty(),
+                    "selected",
+                )
+            },
         )
     }
 }

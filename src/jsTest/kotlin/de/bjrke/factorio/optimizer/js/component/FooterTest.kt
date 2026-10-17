@@ -6,10 +6,10 @@ import de.bjrke.test.fireEvent
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import react.create
 
 private const val BUILD_INFO = "build 2026-10-10T10:49:10Z · ace16532 · main"
@@ -71,7 +71,7 @@ class FooterTest : ComponentTest() {
 
         val dialog = screen.getByRole("dialog")
         assertAll(
-            { assertTrue(dialog.textContent?.contains(LICENSE) == true) },
+            { assertContains(dialog.textContent.orEmpty(), LICENSE) },
             { assertNotNull(screen.getByText("Close")) },
         )
     }

@@ -2,9 +2,11 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -21,48 +23,49 @@ class SurfaceTest {
     @Test
     fun pressureSelectsPlanet() {
         val vulcanusOnly = listOf(pressure(4000, 4000))
-        assertAll(
-            { assertTrue(Surface.VULCANUS.accepts(vulcanusOnly)) },
-            { assertFalse(Surface.NAUVIS.accepts(vulcanusOnly)) },
-            { assertFalse(Surface.GLEBA.accepts(vulcanusOnly)) },
-        )
+        assertTableOf(
+            Surface.VULCANUS to true,
+            Surface.NAUVIS to false,
+            Surface.GLEBA to false,
+        ) { (surface, expected) ->
+            assertEquals(expected, surface.accepts(vulcanusOnly))
+        }
     }
 
     @Test
     fun pressureRangeAcceptsAquilo() {
         val aquilo = listOf(pressure(100, 600))
-        assertAll(
-            { assertTrue(Surface.AQUILO.accepts(aquilo)) },
-            { assertFalse(Surface.NAUVIS.accepts(aquilo)) },
-        )
+        assertTableOf(Surface.AQUILO to true, Surface.NAUVIS to false) { (surface, expected) ->
+            assertEquals(expected, surface.accepts(aquilo))
+        }
     }
 
     @Test
     fun missingPropertyIsRejected() {
         val magnetic = listOf(SurfaceCondition(SurfaceProperty.MAGNETIC_FIELD, 99..Int.MAX_VALUE))
-        assertAll(
-            { assertTrue(Surface.FULGORA.accepts(magnetic)) },
-            { assertFalse(Surface.NAUVIS.accepts(magnetic)) },
-        )
+        assertTableOf(Surface.FULGORA to true, Surface.NAUVIS to false) { (surface, expected) ->
+            assertEquals(expected, surface.accepts(magnetic))
+        }
     }
 
     @Test
     fun spaceAcceptsZeroGravity() {
         val zeroGravity = listOf(SurfaceCondition(SurfaceProperty.GRAVITY, 0..0))
-        assertAll(
-            { assertTrue(Surface.SPACE.accepts(zeroGravity)) },
-            { assertFalse(Surface.NAUVIS.accepts(zeroGravity)) },
-        )
+        assertTableOf(Surface.SPACE to true, Surface.NAUVIS to false) { (surface, expected) ->
+            assertEquals(expected, surface.accepts(zeroGravity))
+        }
     }
 
     @Test
     fun subgroupSelectsPlanet() =
-        assertAll(
-            { assertTrue(Surface.VULCANUS.accepts(Subgroup("vulcanus-processes"))) },
-            { assertFalse(Surface.NAUVIS.accepts(Subgroup("vulcanus-processes"))) },
-            { assertTrue(Surface.GLEBA.accepts(Subgroup("agriculture-products"))) },
-            { assertTrue(Surface.SPACE.accepts(Subgroup("space-processing"))) },
-        )
+        assertTableOf(
+            Triple(Surface.VULCANUS, Subgroup("vulcanus-processes"), true),
+            Triple(Surface.NAUVIS, Subgroup("vulcanus-processes"), false),
+            Triple(Surface.GLEBA, Subgroup("agriculture-products"), true),
+            Triple(Surface.SPACE, Subgroup("space-processing"), true),
+        ) { (surface, subgroup, expected) ->
+            assertEquals(expected, surface.accepts(subgroup))
+        }
 
     @Test
     fun fluidRecipesAreAvailableOnEverySurface() =
@@ -72,11 +75,13 @@ class SurfaceTest {
 
     @Test
     fun crushingOnlyInSpace() =
-        assertAll(
-            { assertTrue(Surface.SPACE.accepts(Category.CRUSHING)) },
-            { assertFalse(Surface.NAUVIS.accepts(Category.CRUSHING)) },
-            { assertFalse(Surface.VULCANUS.accepts(Category.CRUSHING)) },
-        )
+        assertTableOf(
+            Surface.SPACE to true,
+            Surface.NAUVIS to false,
+            Surface.VULCANUS to false,
+        ) { (surface, expected) ->
+            assertEquals(expected, surface.accepts(Category.CRUSHING))
+        }
 
     @Test
     fun asteroidCollectionIsAvailableInSpace() =
@@ -256,17 +261,13 @@ class SurfaceTest {
             )
         val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(recycling))
 
-        assertAll(
-            {
-                assertTrue(
-                    parsed.forSurface(Surface.FULGORA).recipes.any { it.name == "scrap-recycling" },
-                )
-            },
-            {
-                assertFalse(
-                    parsed.forSurface(Surface.NAUVIS).recipes.any { it.name == "scrap-recycling" },
-                )
-            },
+        assertContains(
+            parsed.forSurface(Surface.FULGORA).recipes.map(Recipe::name),
+            "scrap-recycling",
+        )
+        assertContainsNot(
+            parsed.forSurface(Surface.NAUVIS).recipes.map(Recipe::name),
+            "scrap-recycling",
         )
     }
 

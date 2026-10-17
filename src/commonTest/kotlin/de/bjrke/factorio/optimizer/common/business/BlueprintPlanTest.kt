@@ -5,9 +5,9 @@ import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 private val ore = Material("iron-ore")
 private val plate = Material("iron-plate")
@@ -126,7 +126,7 @@ class BlueprintPlanTest {
         val keptPlan = assertIs<BlueprintPlanResult.Planned>(kept).plan
         val excludedPlan = assertIs<BlueprintPlanResult.Planned>(excluded).plan
         assertAll(
-            { assertTrue(keptPlan.recipes.any { it.factory == Factory.FOUNDRY }) },
+            { assertContains(keptPlan.recipes.map { it.factory }, Factory.FOUNDRY) },
             // the furnace plan has only the gear recipe left; the plate is imported
             { assertEquals(listOf(plate), excludedPlan.sources.map { it.material }) },
         )
@@ -216,7 +216,7 @@ class BlueprintPlanTest {
 
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         val gearRecipe = planned.recipes.single { it.material == gear }
-        assertTrue(plate in gearRecipe.directInsert)
+        assertContains(gearRecipe.directInsert, plate)
     }
 
     @Test

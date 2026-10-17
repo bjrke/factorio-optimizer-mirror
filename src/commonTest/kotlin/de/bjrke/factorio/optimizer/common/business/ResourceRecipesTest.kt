@@ -7,6 +7,7 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
@@ -51,7 +52,7 @@ class ResourceRecipesTest {
             { assertEquals(setOf(Category.MINING_BASIC_SOLID), iron.categories) },
             { assertEquals(1.0, iron.time) },
             { assertEquals(mapOf(Material("iron-ore") to 1.0), iron.result) },
-            { assertTrue(iron.ingredients.isEmpty()) },
+            { assertEquals(emptyMap(), iron.ingredients) },
         )
     }
 
@@ -126,7 +127,7 @@ class ResourceRecipesTest {
     @Test
     fun harvestedFruitHasNoIngredients() =
         assertTable(harvestedFruits) { fruit ->
-            assertTrue(recipes.getValue(fruit).ingredients.isEmpty(), fruit)
+            assertEquals(emptyMap(), recipes.getValue(fruit).ingredients, fruit)
         }
 
     @Test
@@ -137,7 +138,7 @@ class ResourceRecipesTest {
             // a tree yields the 4 wood a hand-mined tree gives
             { assertEquals(mapOf(Material("wood") to 4.0), wood.result) },
             { assertEquals(600.0, wood.time) },
-            { assertTrue(wood.ingredients.isEmpty()) },
+            { assertEquals(emptyMap(), wood.ingredients) },
         )
     }
 
@@ -147,7 +148,7 @@ class ResourceRecipesTest {
         val baseDump = Json.parseToJsonElement("{}") as JsonObject
         assertAll(
             { assertTrue(resourceRecipes(baseDump).none { it.name == "wood" }) },
-            { assertTrue(recipes.containsKey("wood")) },
+            { assertContains(recipes, "wood") },
         )
     }
 
@@ -157,7 +158,7 @@ class ResourceRecipesTest {
         assertAll(
             { assertEquals(setOf(Category.ASTEROID_COLLECTION), recipe.categories) },
             { assertEquals(0.2, recipe.time) },
-            { assertTrue(recipe.ingredients.isEmpty()) },
+            { assertEquals(emptyMap(), recipe.ingredients) },
             {
                 assertEquals(
                     setOf(

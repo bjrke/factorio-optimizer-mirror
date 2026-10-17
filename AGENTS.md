@@ -28,6 +28,28 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   `assertAll`, and `assertTable`/`assertTableOf` for table-driven cases.
   Descriptive names stating expected behavior (e.g.
   `vulcanusSteelUsesLavaNotChestOre`).
+- Never express a collection check with `assertTrue`; it hides the failing
+  values:
+  - membership → `assertContains(collection, element, message)` (works for
+    `Iterable`, `Map` keys, arrays, sequences, strings and ranges). For strings
+    the message is the fourth parameter, so pass it by name:
+    `assertContains(text, part, message = text)`.
+  - absence → `assertContainsNot(collection, element, message)` from
+    `de.bjrke.test` (`kotlin.test` has no `assertNotContains`).
+  - emptiness → `assertEquals(emptyList(), actual)`, `emptySet()`/`emptyMap()`,
+    `assertEquals("", string)`, `assertContentEquals(emptyArray(), array)`, or
+    `assertEquals(emptyList(), sequence.toList())`. Never
+    `assertTrue(actual.isEmpty())`.
+- `assertTrue`/`assertFalse` are only for genuine predicates (comparisons,
+  flags, `any`/`none` domain rules); use `assertIs`, `assertNotNull`,
+  `assertNull`, `assertEquals` when they express the check.
+- `assertAll` is only for independent assertions about one subject. Repeated
+  assertions over cases MUST use `assertTable`/`assertTableOf` with the case as
+  the element (`String`, `Pair`, `Triple`, local data class). `assertTable`
+  labels each failure with `case: <value>`, so no manual counting is needed; do
+  not collect case lambdas in `assertAll`.
+- Do not append the actual value's `.toString()` to a message; equality
+  assertions already print it. Keep only messages that add context.
 - `commonTest` runs on JVM **and** JS: keep it platform-neutral; target specifics
   go in `src/jvmTest` / `src/jsTest`.
 - Iterate with `./gradlew jvmTest`; finish with `./gradlew check` +

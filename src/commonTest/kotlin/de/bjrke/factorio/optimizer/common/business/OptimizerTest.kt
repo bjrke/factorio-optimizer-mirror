@@ -2,8 +2,10 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -300,12 +302,12 @@ class OptimizerTest {
         val scrap = result.factories.values.single { it.recipe.name == "scrap" }
         assertAll(
             { assertEquals(Factory.BIG_MINING_DRILL, scrap.factory) },
-            { assertTrue("iron-gear-wheel-recycling" in recipes) },
-            { assertTrue("battery-recycling" in recipes) },
-            { assertTrue("processing-unit-recycling" in recipes) },
-            { assertTrue("electronic-circuit" !in recipes) },
-            { assertTrue("iron-plate" !in recipes) },
-            { assertTrue("copper-cable" !in recipes) },
+            { assertContains(recipes, "iron-gear-wheel-recycling") },
+            { assertContains(recipes, "battery-recycling") },
+            { assertContains(recipes, "processing-unit-recycling") },
+            { assertContainsNot(recipes, "electronic-circuit") },
+            { assertContainsNot(recipes, "iron-plate") },
+            { assertContainsNot(recipes, "copper-cable") },
             // far less scrap than the old single-recipe chain that needed 180 drills
             { assertEquals(20.909, scrap.amount, 1e-3) },
         )

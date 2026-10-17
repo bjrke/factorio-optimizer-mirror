@@ -6,10 +6,13 @@ import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CliOptimizerTest {
@@ -24,7 +27,7 @@ class CliOptimizerTest {
             { assertEquals(ALL_SCIENCE_PACKS, args.material) },
             { assertTrue(args.spaceAge) },
             { assertEquals(Surface.NAUVIS, args.surface) },
-            { assertTrue(args.outputs.isEmpty()) },
+            { assertEquals(emptySet(), args.outputs) },
         )
     }
 
@@ -55,8 +58,8 @@ class CliOptimizerTest {
                     parseArgs(arrayOf("--json", "--layout")).outputs,
                 )
             },
-            { assertTrue(Output.BLUEPRINT in parseArgs(arrayOf("--blueprint")).outputs) },
-            { assertTrue(parseArgs(arrayOf("iron-plate")).outputs.isEmpty()) },
+            { assertContains(parseArgs(arrayOf("--blueprint")).outputs, Output.BLUEPRINT) },
+            { assertEquals(emptySet(), parseArgs(arrayOf("iron-plate")).outputs) },
         )
 
     @Test
@@ -130,12 +133,13 @@ class CliOptimizerTest {
     @Test
     fun logisticsFlagsAreParsedByIdentifierOrCode() =
         assertAll(
-            { assertEquals(BeltTier.EXPRESS_TRANSPORT_BELT, parseArgs(arrayOf("--belt=e")).belt) },
             {
-                assertEquals(
-                    BeltTier.EXPRESS_TRANSPORT_BELT,
-                    parseArgs(arrayOf("--belt=express-transport-belt")).belt,
-                )
+                assertTableOf(
+                    listOf("--belt=e") to BeltTier.EXPRESS_TRANSPORT_BELT,
+                    listOf("--belt=express-transport-belt") to BeltTier.EXPRESS_TRANSPORT_BELT,
+                ) { (args, expected) ->
+                    assertEquals(expected, parseArgs(args.toTypedArray()).belt)
+                }
             },
             {
                 assertEquals(
@@ -143,41 +147,28 @@ class CliOptimizerTest {
                     parseArgs(arrayOf("--inserter=stack-inserter")).inserter,
                 )
             },
-            { assertEquals(true, parseArgs(arrayOf("--full-belt")).fullBelt) },
-            { assertEquals(null, parseArgs(emptyArray()).fullBelt) },
             { assertEquals("4", parseArgs(arrayOf("--belt-stack=4")).beltStack) },
             { assertEquals("8", parseArgs(arrayOf("--inserter-stack=8")).inserterStack) },
+            { assertEquals(true, parseArgs(arrayOf("--full-belt")).fullBelt) },
+            { assertNull(parseArgs(emptyArray()).fullBelt) },
         )
 
     @Test
     fun factoryFlagsCollectMachinesByIdentifierOrCode() =
-        assertAll(
-            {
-                assertEquals(
-                    listOf(Factory.ASSEMBLING_MACHINE_2),
-                    parseArgs(arrayOf("--factory=assembling-machine-2")).factories,
-                )
-            },
-            { assertEquals(listOf(Factory.FOUNDRY), parseArgs(arrayOf("--factory=F")).factories) },
-            {
-                assertEquals(
-                    listOf(Factory.FOUNDRY, Factory.ASSEMBLING_MACHINE_2),
-                    parseArgs(
-                            arrayOf(
-                                "--factory=foundry",
-                                "--factory=assembling-machine-2",
-                            ),
-                        )
-                        .factories,
-                )
-            },
-        )
+        assertTableOf(
+            listOf("--factory=assembling-machine-2") to listOf(Factory.ASSEMBLING_MACHINE_2),
+            listOf("--factory=F") to listOf(Factory.FOUNDRY),
+            listOf("--factory=foundry", "--factory=assembling-machine-2") to
+                listOf(Factory.FOUNDRY, Factory.ASSEMBLING_MACHINE_2),
+        ) { (args, expected) ->
+            assertEquals(expected, parseArgs(args.toTypedArray()).factories)
+        }
 
     @Test
     fun settingsIsAnOutput() =
         assertAll(
-            { assertTrue(Output.SETTINGS in parseArgs(arrayOf("--settings")).outputs) },
-            { assertFalse(Output.SETTINGS in parseArgs(arrayOf("--json")).outputs) },
+            { assertContains(parseArgs(arrayOf("--settings")).outputs, Output.SETTINGS) },
+            { assertContainsNot(parseArgs(arrayOf("--json")).outputs, Output.SETTINGS) },
         )
 
     @Test
@@ -203,12 +194,18 @@ class CliOptimizerTest {
 
         assertAll(
             { assertTrue(text.startsWith("settings\n"), text) },
-            { assertTrue(text.contains("  material: advanced-circuit"), text) },
-            { assertTrue(text.contains("  belt: express-transport-belt"), text) },
-            { assertTrue(text.contains("  inserter: stack-inserter"), text) },
-            { assertTrue(text.contains("  beltLanes: 2"), text) },
-            { assertTrue(text.contains("  beltStack: 4"), text) },
-            { assertTrue(text.contains("  factories: assembling-machine-3, foundry"), text) },
+            {
+                assertTableOf(
+                    "  material: advanced-circuit",
+                    "  belt: express-transport-belt",
+                    "  inserter: stack-inserter",
+                    "  beltLanes: 2",
+                    "  beltStack: 4",
+                    "  factories: assembling-machine-3, foundry",
+                ) { expected ->
+                    assertContains(text, expected, message = text)
+                }
+            },
         )
     }
 }

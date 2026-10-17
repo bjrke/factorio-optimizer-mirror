@@ -1,9 +1,11 @@
 package de.bjrke.factorio.optimizer.common.model
 
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -93,38 +95,24 @@ class FactoryTest {
 
     @Test
     fun urlRoundTrip() =
-        assertAll(
-            { assertEquals(base.defaults, base.fromUrl(base.toUrlParam(base.defaults))) },
-            {
-                assertEquals(
-                    spaceAge.defaults,
-                    spaceAge.fromUrl(spaceAge.toUrlParam(spaceAge.defaults)),
-                )
-            },
-        )
+        assertTable(listOf(base, spaceAge)) { config ->
+            assertEquals(config.defaults, config.fromUrl(config.toUrlParam(config.defaults)))
+        }
 
     @Test
     fun urlDecodingIgnoresTheSurfaceBeltAndFlagCodes() =
-        assertAll(
-            {
-                assertEquals(
-                    base.defaults,
-                    base.fromUrl(base.toUrlParam(base.defaults) + "opteySL"),
-                )
-            },
-            {
-                assertEquals(
-                    spaceAge.defaults,
-                    spaceAge.fromUrl(spaceAge.toUrlParam(spaceAge.defaults) + "opteySL"),
-                )
-            },
-        )
+        assertTable(listOf(base, spaceAge)) { config ->
+            assertEquals(
+                config.defaults,
+                config.fromUrl(config.toUrlParam(config.defaults) + "opteySL"),
+            )
+        }
 
     @Test
     fun urlRoundTripKeepsAlwaysEnabledFactories() {
         val decoded = base.fromUrl(base.toUrlParam(base.defaults))
         assertTableOf(Factory.PUMPJACK, Factory.OFFSHORE_PUMP) { factory ->
-            assertTrue(factory in decoded, "$factory")
+            assertContains(decoded, factory)
         }
     }
 
@@ -146,12 +134,14 @@ class FactoryTest {
 
     @Test
     fun absentSelectionTurnsOnTheDefaultMachines() =
-        assertAll(
-            { assertEquals(base.defaults, base.fromUrl(null)) },
-            { assertEquals(base.defaults, base.fromUrl("")) },
-            { assertEquals(spaceAge.defaults, spaceAge.fromUrl(null)) },
-            { assertEquals(spaceAge.defaults, spaceAge.fromUrl("")) },
-        )
+        assertTableOf<Pair<FactoryConfig, String?>>(
+            base to null,
+            base to "",
+            spaceAge to null,
+            spaceAge to "",
+        ) { (config, selection) ->
+            assertEquals(config.defaults, config.fromUrl(selection))
+        }
 
     @Test
     fun aSelectionWithoutAMachinesCodeTurnsItOff() =
@@ -161,54 +151,54 @@ class FactoryTest {
     @Test
     fun rocketSiloIsBaseOnlyAndAlwaysOn() =
         assertAll(
-            { assertTrue(Factory.ROCKET_SILO in base.defaults) },
-            { assertTrue(Factory.ROCKET_SILO in base.alwaysEnabled) },
-            { assertFalse(Factory.ROCKET_SILO in base.singles) },
+            { assertContains(base.defaults, Factory.ROCKET_SILO) },
+            { assertContains(base.alwaysEnabled, Factory.ROCKET_SILO) },
+            { assertContainsNot(base.singles, Factory.ROCKET_SILO) },
             { assertEquals(base.defaults, base.remove(base.defaults, Factory.ROCKET_SILO)) },
-            { assertFalse(Factory.ROCKET_SILO in spaceAge.available) },
-            { assertFalse(Factory.ROCKET_SILO in spaceAge.defaults) },
+            { assertContainsNot(spaceAge.available, Factory.ROCKET_SILO) },
+            { assertContainsNot(spaceAge.defaults, Factory.ROCKET_SILO) },
         )
 
     @Test
     fun scienceLabIsAlwaysOn() =
         assertAll(
-            { assertTrue(Factory.SCIENCE_LAB in base.available) },
-            { assertTrue(Factory.SCIENCE_LAB in spaceAge.available) },
-            { assertTrue(Factory.SCIENCE_LAB in base.defaults) },
-            { assertTrue(Factory.SCIENCE_LAB in spaceAge.defaults) },
-            { assertFalse(Factory.SCIENCE_LAB in base.singles) },
-            { assertFalse(Factory.SCIENCE_LAB in spaceAge.singles) },
+            { assertContains(base.available, Factory.SCIENCE_LAB) },
+            { assertContains(spaceAge.available, Factory.SCIENCE_LAB) },
+            { assertContains(base.defaults, Factory.SCIENCE_LAB) },
+            { assertContains(spaceAge.defaults, Factory.SCIENCE_LAB) },
+            { assertContainsNot(base.singles, Factory.SCIENCE_LAB) },
+            { assertContainsNot(spaceAge.singles, Factory.SCIENCE_LAB) },
         )
 
     @Test
     fun spaceAgeMachinesAreHiddenWithoutSpaceAge() =
         assertTable(spaceAgeOnlyFactories) { factory ->
-            assertFalse(factory in base.available, "$factory")
+            assertContainsNot(base.available, factory)
         }
 
     @Test
     fun spaceAgeMachinesAreAvailableWithSpaceAge() =
         assertTable(spaceAgeOnlyFactories) { factory ->
-            assertTrue(factory in spaceAge.available, "$factory")
+            assertContains(spaceAge.available, factory)
         }
 
     @Test
     fun recyclerIsSpaceAgeOnly() =
         assertAll(
-            { assertFalse(Factory.RECYCLER in base.available) },
-            { assertTrue(Factory.RECYCLER in spaceAge.available) },
+            { assertContainsNot(base.available, Factory.RECYCLER) },
+            { assertContains(spaceAge.available, Factory.RECYCLER) },
         )
 
     @Test
     fun alwaysEnabledMachinesAreSelectedByDefault() =
         assertTable(baseAlwaysOnFactories) { factory ->
-            assertTrue(factory in base.defaults, "$factory")
+            assertContains(base.defaults, factory)
         }
 
     @Test
     fun alwaysEnabledMachinesAreNotSingles() =
         assertTable(baseAlwaysOnFactories) { factory ->
-            assertFalse(factory in base.singles, "$factory")
+            assertContainsNot(base.singles, factory)
         }
 
     @Test
@@ -220,13 +210,13 @@ class FactoryTest {
     @Test
     fun spaceAgeAlwaysEnabledMachinesAreSelectedByDefault() =
         assertTable(spaceAgeAlwaysOnFactories) { factory ->
-            assertTrue(factory in spaceAge.defaults, "$factory")
+            assertContains(spaceAge.defaults, factory)
         }
 
     @Test
     fun spaceAgeAlwaysEnabledMachinesAreNotSingles() =
         assertTable(spaceAgeAlwaysOnFactories) { factory ->
-            assertFalse(factory in spaceAge.singles, "$factory")
+            assertContainsNot(spaceAge.singles, factory)
         }
 
     @Test
