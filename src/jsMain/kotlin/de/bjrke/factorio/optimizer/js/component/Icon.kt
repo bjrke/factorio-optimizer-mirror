@@ -21,6 +21,13 @@ external interface IconProps : Props {
     var size: Int?
     var alt: String?
 
+    /**
+     * Draws the icon into an explicit box, overriding [size]. Used for non-square footprints, where
+     * the icon is stretched to fill the entity's area.
+     */
+    var width: Double?
+    var height: Double?
+
     /** Rotates the icon this many degrees clockwise, e.g. to turn a belt into a machine. */
     var rotation: Int?
 
@@ -39,6 +46,8 @@ private fun iconTransform(rotation: Int?, flipHorizontal: Boolean?): Transform? 
 private val iconX =
     FC<IconProps>("icon") { props ->
         val size = props.size ?: 32
+        val iconWidth = props.width ?: size.toDouble()
+        val iconHeight = props.height ?: size.toDouble()
         val label = props.alt ?: props.name
         val transform = iconTransform(props.rotation, props.flipHorizontal)
         val layers = iconLayers(props.name)
@@ -47,8 +56,8 @@ private val iconX =
                 src = "icons/${layers.single().file}.png"
                 alt = label
                 title = label
-                width = size.toDouble()
-                height = size.toDouble()
+                width = iconWidth
+                height = iconHeight
                 css {
                     verticalAlign = VerticalAlign.middle
                     transform?.let { this.transform = it }
@@ -60,22 +69,23 @@ private val iconX =
                 css {
                     position = Position.relative
                     display = Display.inlineBlock
-                    width = size.px
-                    height = size.px
+                    width = iconWidth.px
+                    height = iconHeight.px
                     verticalAlign = VerticalAlign.middle
                     transform?.let { this.transform = it }
                 }
                 for ((index, layer) in layers.withIndex()) {
-                    val layerSize = size * layer.scale
-                    val left = layer.left?.times(size) ?: (size - layerSize) / 2.0
-                    val top = layer.top?.times(size) ?: (size - layerSize) / 2.0
+                    val layerWidth = iconWidth * layer.scale
+                    val layerHeight = iconHeight * layer.scale
+                    val left = layer.left?.times(iconWidth) ?: ((iconWidth - layerWidth) / 2.0)
+                    val top = layer.top?.times(iconHeight) ?: ((iconHeight - layerHeight) / 2.0)
                     img {
                         src = "icons/${layer.file}.png"
                         alt = if (index == 0) label else ""
                         css {
                             position = Position.absolute
-                            width = layerSize.px
-                            height = layerSize.px
+                            width = layerWidth.px
+                            height = layerHeight.px
                             this.left = left.px
                             this.top = top.px
                         }

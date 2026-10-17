@@ -16,6 +16,8 @@ private external interface IconHostProps : Props {
     var name: String
     var size: Int?
     var alt: String?
+    var width: Double?
+    var height: Double?
     var rotation: Int?
     var flipHorizontal: Boolean?
 }
@@ -25,6 +27,8 @@ private val iconHost =
         icon(props.name) {
             size = props.size
             alt = props.alt
+            width = props.width
+            height = props.height
             rotation = props.rotation
             flipHorizontal = props.flipHorizontal
         }
@@ -42,6 +46,8 @@ class IconTest : ComponentTest() {
         name: String,
         size: Int? = null,
         alt: String? = null,
+        width: Double? = null,
+        height: Double? = null,
         rotation: Int? = null,
         flipHorizontal: Boolean? = null,
     ) =
@@ -50,6 +56,8 @@ class IconTest : ComponentTest() {
                 this.name = name
                 this.size = size
                 this.alt = alt
+                this.width = width
+                this.height = height
                 this.rotation = rotation
                 this.flipHorizontal = flipHorizontal
             },
@@ -147,6 +155,20 @@ class IconTest : ComponentTest() {
 
     private fun computedWidth(element: Element?) =
         js("(function (el) { return getComputedStyle(el).width; })")(element)
+
+    @Test
+    fun explicitWidthAndHeightAllowNonSquareIcons() {
+        val single = renderIcon("iron-gear-wheel", size = 64, width = 48.0, height = 24.0)
+        val layered = renderIcon("scrap-recycling", width = 60.0, height = 20.0)
+
+        assertAll(
+            { assertEquals("48", single.images().single().getAttribute("width")) },
+            { assertEquals("24", single.images().single().getAttribute("height")) },
+            { assertEquals("60px", computedWidth(layered.container.querySelector("span"))) },
+            // the recycled item layer keeps the 0.6 scale in both dimensions
+            { assertEquals("36px", computedWidth(layered.images()[1])) },
+        )
+    }
 
     private fun computedTransform(element: Element?) =
         js("(function (el) { return getComputedStyle(el).transform; })")(element)

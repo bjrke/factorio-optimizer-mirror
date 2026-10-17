@@ -2,7 +2,9 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.*
 import de.bjrke.factorio.optimizer.common.model.Blueprint
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.toJson
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
@@ -10,11 +12,15 @@ import react.*
 import react.dom.aria.AriaRole
 import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.textarea
+import react.dom.svg.ReactSVG.foreignObject
+import react.dom.svg.ReactSVG.svg
 import web.cssom.ClassName
+import web.cssom.Display
 import web.cssom.Position
+import web.cssom.pct
 import web.cssom.px
-import web.cssom.rem
 
 private const val TILE = 24.0
 
@@ -28,6 +34,27 @@ private fun rotationDegrees(direction: Direction?): Int? = direction?.let {
     }
 }
 
+/**
+ * The clockwise rotation the entity's icon needs on screen. Most icons face east, but a loader's
+ * arrow points north and a splitter's arrows point west; an underground exit opens the other way
+ * than the belt it feeds. The blueprint itself is never changed, only the preview.
+ */
+internal fun blueprintDisplayRotation(entity: BlueprintEntity): Int? {
+    val base = rotationDegrees(entity.direction) ?: return null
+    val extra =
+        when {
+            entity.name.endsWith("loader") -> 90
+            entity.name.endsWith("splitter") -> 180
+            entity.name.endsWith("underground-belt") && entity.type == Io.OUTPUT -> 180
+            else -> 0
+        }
+    return ((base + extra) % 360).takeIf { it != 0 }
+}
+
+/** The recipe or material signal an entity displays, or null when it shows nothing. */
+internal fun blueprintOverlay(entity: BlueprintEntity): String? =
+    entity.recipe ?: entity.marker?.name ?: entity.infinity?.item?.name
+
 private fun copyToClipboard(text: String) {
     js("navigator.clipboard && navigator.clipboard.writeText(text)")
 }
@@ -36,7 +63,12 @@ external interface BlueprintViewProps : Props {
     var blueprint: Blueprint
 }
 
-/** Renders the blueprint as an icon grid: each entity drawn at its tile position, belts rotated. */
+/**
+ * Renders the blueprint as an icon grid inside an SVG, so the whole plan scales down to whatever
+ * space the dialog offers. Each entity's icon fills its tiles; a directional entity is rotated to
+ * point the way its blueprinted [Direction] runs without changing the blueprint, and one carrying a
+ * recipe or material shows that signal centred on top.
+ */
 internal val blueprintView =
     FC<BlueprintViewProps>("blueprintView") { props ->
         val entities = props.blueprint.entities
@@ -44,29 +76,79 @@ internal val blueprintView =
         val minY = entities.minOfOrNull { it.area.topLeft.y } ?: 0
         val maxX = entities.maxOfOrNull { it.area.bottomRight.x } ?: 0
         val maxY = entities.maxOfOrNull { it.area.bottomRight.y } ?: 0
+        val gridWidth = ((maxX - minX) * TILE).coerceAtLeast(TILE)
+        val gridHeight = ((maxY - minY) * TILE).coerceAtLeast(TILE)
 
-        div {
-            className = ClassName("blueprint-view")
+        svg {
+            viewBox = "0 0 $gridWidth $gridHeight"
+            preserveAspectRatio = "xMidYMid meet"
             css {
-                position = Position.relative
-                width = ((maxX - minX) * TILE).px
-                height = ((maxY - minY) * TILE).px
-                backgroundColor = web.cssom.Color("var(--factory-panel, #fff)")
+                width = 100.pct
+                height = 100.pct
+                display = Display.block
             }
-            for ((index, entity) in entities.withIndex()) {
+            foreignObject {
+                this.width = gridWidth
+                this.height = gridHeight
                 div {
-                    key = Key(index.toString())
-                    val area = entity.area
+                    className = ClassName("blueprint-view")
                     css {
-                        position = Position.absolute
-                        left = ((area.topLeft.x - minX) * TILE).px
-                        top = ((area.topLeft.y - minY) * TILE).px
-                        width = (area.width * TILE).px
-                        height = (area.height * TILE).px
+                        position = Position.relative
+                        width = gridWidth.px
+                        height = gridHeight.px
+                        backgroundColor = web.cssom.Color("var(--factory-panel, #fff)")
                     }
-                    icon(entity.name) {
-                        size = (minOf(area.width, area.height) * TILE).toInt()
-                        rotationDegrees(entity.direction)?.let { rotation = it }
+                    for ((index, entity) in entities.withIndex()) {
+                        val cell = entity.area
+                        val cellWidth = cell.width * TILE
+                        val cellHeight = cell.height * TILE
+                        val iconRotation = blueprintDisplayRotation(entity)
+                        // a quarter turn swaps the icon's box, so the rotated icon still fills the
+                        // cell
+                        val quarterTurn = iconRotation != null && iconRotation % 180 != 0
+                        val iconWidth = if (quarterTurn) cellHeight else cellWidth
+                        val iconHeight = if (quarterTurn) cellWidth else cellHeight
+                        div {
+                            key = Key(index.toString())
+                            css {
+                                position = Position.absolute
+                                left = ((cell.topLeft.x - minX) * TILE).px
+                                top = ((cell.topLeft.y - minY) * TILE).px
+                                width = cellWidth.px
+                                height = cellHeight.px
+                            }
+                            div {
+                                css {
+                                    position = Position.absolute
+                                    left = ((cellWidth - iconWidth) / 2).px
+                                    top = ((cellHeight - iconHeight) / 2).px
+                                    width = iconWidth.px
+                                    height = iconHeight.px
+                                }
+                                icon(entity.name) {
+                                    width = iconWidth
+                                    height = iconHeight
+                                    iconRotation?.let { rotation = it }
+                                }
+                            }
+                            blueprintOverlay(entity)?.let { overlay ->
+                                // the overlay stays square: an unstretched tile on a scaled entity,
+                                // otherwise half the entity, centred on it in both cases
+                                val overlaySize =
+                                    if (cellWidth == cellHeight) cellWidth / 2 else TILE
+                                div {
+                                    className = ClassName("blueprint-overlay-icon")
+                                    css {
+                                        position = Position.absolute
+                                        left = ((cellWidth - overlaySize) / 2).px
+                                        top = ((cellHeight - overlaySize) / 2).px
+                                        width = overlaySize.px
+                                        height = overlaySize.px
+                                    }
+                                    icon(overlay) { size = overlaySize.toInt() }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -83,32 +165,36 @@ external interface BlueprintDialogProps : Props {
 internal val blueprintDialog =
     FC<BlueprintDialogProps>("blueprintDialog") { props ->
         div {
-            className = ClassName("license-overlay")
+            className = ClassName("blueprint-overlay")
             role = AriaRole.dialog
             onClick = { props.onClose() }
             div {
-                className = ClassName("license-dialog")
+                className = ClassName("blueprint-dialog")
                 onClick = { it.stopPropagation() }
-                button {
-                    className = ClassName("license-close")
-                    onClick = { props.onClose() }
-                    +"Close"
+                div {
+                    className = ClassName("blueprint-toolbar")
+                    span {
+                        className = ClassName("blueprint-label")
+                        +props.label
+                    }
+                    button {
+                        onClick = { copyToClipboard(props.text) }
+                        +"Copy"
+                    }
+                    button {
+                        onClick = { props.onClose() }
+                        +"Close"
+                    }
                 }
-                div { +props.label }
                 textarea {
                     className = ClassName("blueprint-string")
                     readOnly = true
                     value = props.text
-                    css {
-                        width = 30.rem
-                        height = 6.rem
-                    }
                 }
-                button {
-                    onClick = { copyToClipboard(props.text) }
-                    +"Copy"
+                div {
+                    className = ClassName("blueprint-preview")
+                    blueprintView { blueprint = props.blueprint }
                 }
-                blueprintView { blueprint = props.blueprint }
             }
         }
     }

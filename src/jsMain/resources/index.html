@@ -44,7 +44,7 @@
             background: var(--bg); color: var(--fg);
         }
         a { color: var(--link); }
-        .app-root { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+        .app-root { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
         .app-layout { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
         .app-header {
             display: flex; align-items: center; flex-shrink: 0; flex-wrap: wrap;
@@ -71,6 +71,23 @@
         }
         .license-dialog pre { margin: 0; white-space: pre-wrap; font: inherit; }
         .license-close { float: right; }
+        /* The blueprint dialog fills the app area (everything above the footer); the preview inside
+           scales the plan down to whatever room is left. */
+        .blueprint-overlay {
+            position: absolute; inset: 0; z-index: 100;
+            display: flex; align-items: stretch; justify-content: stretch;
+            background: rgba(0, 0, 0, .5);
+        }
+        .blueprint-dialog {
+            flex: 1 1 auto; min-width: 0; min-height: 0;
+            box-sizing: border-box; display: flex; flex-direction: column; gap: .5rem;
+            padding: .75rem;
+            background: var(--dropdown-bg); color: var(--fg);
+        }
+        .blueprint-toolbar { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+        .blueprint-label { margin-right: auto; font-weight: bold; }
+        .blueprint-string { width: 100%; height: 4rem; box-sizing: border-box; font: inherit; }
+        .blueprint-preview { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
         .material-selector { position: relative; display: inline-block; margin-right: 2px; }
         .material-selector-input {
             width: 16rem; height: 2.5rem; box-sizing: border-box;
