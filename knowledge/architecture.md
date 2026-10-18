@@ -26,6 +26,26 @@ CLI (JVM) from one shared core.
 `commonMain` compiles to both targets, so platform differences belong in the
 target-specific `loadRecipe.kt`/`index.kt` files.
 
+## Blueprint layout
+
+`business/BlueprintLayout.kt` turns a `BlueprintPlan` plus a `LogisticsCalculator`
+into a `Blueprint` (`model/Blueprint.kt`). `buildBlueprint(plan, logistics,
+beltEnd)` runs `RowLayout` in ordered passes — recipe rows, target output, imports,
+routes, fluid feeds, trim import prefixes, stretch underground runs, compaction,
+poles, pole wires — and returns a `Blueprint` whose `entities` become the
+`entities` array (numbered by list position) and whose `wires` become the
+top-level `wires` array.
+
+A solid belt's end is a `BeltEnd` (`model/BeltEnd.kt`): the constant-combinator
+label (default), the infinity chest, or a chest the inserters feed
+(`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it and
+`connectorWidth`/`connectorLeft` keep the routing corridors aligned; a fluid belt
+always keeps the combinator/pipe label. `toJson` writes the optional
+`request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
+`infinity_settings` and top-level `wires` fields. See
+`tasks/20261018-record-chest-belt-end-2fsg.md` for the geometry and
+`knowledge/pitfalls.md` for the wire and pole traps.
+
 ## Generated data — do not hand-edit
 
 - `src/commonMain/resources/prototypes/{base,space-age}.json` are `data.raw`

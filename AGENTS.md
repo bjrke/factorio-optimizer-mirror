@@ -14,8 +14,8 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 | --- | --- |
 | `./gradlew jsBrowserDevelopmentRun --continuous` / `jsBrowserProductionRun --continuous` | Web UI dev server |
 | `./gradlew jvmTest` | kotlin-test suites (commonTest + jvmTest); filter with `--tests "*RecipeParserTest*"` |
-| `./gradlew check` | Formatting check + all tests; CI: `gradle --no-daemon clean check jsBrowserDistribution` (adds `jsBrowserTest`, real headless Chrome) |
-| `./gradlew spotlessApply` | Fix formatting (Spotless/ktfmt `kotlinlangStyle`, `src/**/*.kt` + `build.gradle.kts`) |
+| `./gradlew check` | Formatting check + `jvmTest` + `jsBrowserTest` (headless Chrome); CI adds `clean` + `jsBrowserDistribution` |
+| `./gradlew spotlessApply` | Fix formatting (Spotless/ktfmt `kotlinlangStyle`) for `src/**` and the build scripts; run it as `./gradlew spotlessApply check` |
 | `./gradlew run` | Run the CLI (`CliOptimizerKt`); takes a material plus settings (`--planet`, `--factory`, `--belt`, `--inserter`, `--full-belt`, …) or a pasted web-UI URL, and outputs via `--settings`/`--listing`/`--layout`/`--json`/`--blueprint`; `./gradlew buildFatJar` makes a runnable fat jar |
 
 ## Tasks and knowledge (`knowledge/`)
@@ -61,9 +61,18 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 
 ## Testing
 
+- Run Gradle only when the branch changes something the build consumes:
+  - **application code / resources / build scripts** (`src/**`, `build.gradle.kts`,
+    `buildSrc/**`, `gradle/**`, `settings.gradle.kts`) → iterate with
+    `./gradlew jvmTest`, finish with `./gradlew spotlessApply check` (one
+    invocation, one Gradle process);
+  - **docs / knowledge only** (`*.md`, `knowledge/`, `AGENTS.md`) → **no Gradle**
+    at all; Markdown is not a build input;
+  - **agent tooling only** (`.opencode/**`) → **no Gradle**; use the tooling's own
+    checks (`agents selftest`).
+  A branch that mixes both follows the code rule.
 - Every behavior change or new logic gets tests **without being asked**; a missing
-  test means the task is incomplete. Iterate with `./gradlew jvmTest`; finish with
-  `./gradlew check` + `./gradlew spotlessApply`.
+  test means the task is incomplete.
 - The full rules — the `de.bjrke.test` assertion helpers, collection/emptiness
   checks, table-driven cases, source-set choice and the `jsTest` component-test
   harness — live in `knowledge/conventions.md`. Read it before writing or changing
@@ -140,9 +149,11 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 - Commit after the work is done (no explicit request needed). Headline ≤ 50
   chars; body wrapped at 72 chars. No task trailer — task and commit are linked
   through the task file's history.
-- When asked to squash, follow the recipe in `knowledge/conventions.md` (choose
-  the upstream that is ahead with `git merge-base`, then `git reset --soft` plus
-  one commit). The squash commit contains only the branch's changes.
+- When asked to squash, do exactly that and nothing else, following the recipe in
+  `knowledge/conventions.md`: choose the upstream that is ahead with
+  `git merge-base`, then `git reset --soft` plus one commit whose message is
+  rewritten from the squashed content. The squash commit contains only the
+  branch's changes.
 
 ## Generated data — do not hand-edit
 

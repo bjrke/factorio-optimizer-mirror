@@ -44,3 +44,31 @@ here only with evidence, and should say how to recognise it.
   current — and compact deliberately at a natural boundary rather than waiting for
   the hard limit. The estimate is `JSON.stringify(messages)` characters ÷ 4, so it tracks
   the outgoing request size, not the model's true token count.
+- **A blueprint does not rebuild circuit wires — store them in `wires`.** The
+  top-level `blueprint.wires` array lists `[entity, connector, entity, connector]`
+  quadruples; the game draws nothing from proximity. A chest-connector inserter
+  needs it: its `circuit_condition` (e.g. `electronic-circuit < 200`) reads the
+  chest's contents, which only works with a wire from the inserter to the chest
+  (connector `1` on both ends). `BlueprintLayout.chestWires()` derives them from the
+  final placed entities and `Blueprint.toJson()` emits the array; pole copper wires
+  are the same idea, stored per pole in `neighbours`. Verified by generating and
+  decoding a `buffer-chest` layout: `wires: [[29,1,31,1],[31,1,30,1]]`.
+- **`poleWestBound` keeps poles out of the import extension.** The pole pass
+  (`bestPoleSpot`, `freeNear`) places a pole only at `x >= poleWestBound`, which
+  `importSource`/`trimImportPrefixes`/`fluidMarker` raise to the import connector's
+  east edge. A chest marker's inserters sit *inside* that zone, so the bound must be
+  skipped when `beltEnd.isChest` — in all four places, including the compacted
+  import shift — or `assertPolesCoverAndConnect` fails for the connector inserters.
+- **A chest needs ground; a space platform allows only the label.**
+  `BeltEnd.allowedOn(Surface.SPACE)` is false for every chest. The UI disables those
+  radio options and both entry points (`BeltEnd.fromSelection`, the CLI) clamp a
+  chest code to `constant-combinator`; do not special-case the label again
+  elsewhere.
+- **A cold Gradle daemon can fail build-script compilation with `Unresolved
+  reference 'de'`.** After the daemon was stopped, `./gradlew` reported the
+  `de.bjrke.factorio.optimizer.buildlogic.*` imports in `build.gradle.kts` as
+  unresolved even though `buildSrc/build/libs/buildSrc.jar` contained the classes.
+  It is a stale script classpath, not a code error: a straight retry (or clearing
+  `.gradle/<version>` plus `buildSrc/build`) rebuilds `buildSrc` and succeeds — do
+  not start editing `build.gradle.kts` over it. (Distinct from the Kotlin daemon
+  compile failure recorded in `tasks/20261018-task-knowledge-system-8067.md`.)

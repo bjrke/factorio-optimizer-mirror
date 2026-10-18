@@ -4,6 +4,33 @@ Significant technical/process decisions and their rationale. Newest first. When 
 decision is superseded, keep the entry and mark it superseded rather than deleting
 it, so history stays readable.
 
+## 2026-10-18 — Belt end is a `BeltEnd` selection, not a cheats flag
+
+**Context.** The web UI had one "test chests" checkbox (`SelectionFlag.CHEATS`)
+that only switched the infinity chest on. The request was to pick the solid belt's
+end marker from icons and to add real chest connectors reproducing blueprints the
+user had pasted.
+
+**Decision.** Replace the boolean with a `BeltEnd` enum whose values each carry a
+URL `code` and a prototype `identifier`: `constant-combinator` (no code, the
+default), `infinity-chest` (`X`, the old cheats mode), `buffer-chest` (`H`),
+`storage-chest` (`G`), `wooden-chest` (`W`) and `steel-chest` (`D`). A chest marker
+is a five-tile connector — `UG-in · inserter · chest · inserter · UG-out`, the belt
+tunnelling under the chest; an input marker feeds the belt out of the chest, an
+output marker fills it, and the plain chests buffer both ways. `infinity-chest`
+keeps the `X` code and the `--cheats` CLI alias, so existing links and scripts keep
+working.
+
+**Consequences.** `selectionString` gains a `beltEnd` parameter and
+`SelectionFlag` drops `CHEATS`. The blueprint model grows `mirror`, `bar`,
+`requestFilter`, `circuitCondition` and `circuitConditionEnabled` to reproduce the
+pasted blueprints faithfully (`import_from` is deliberately omitted — it is a
+space-platform field). Connector inserters are powered, so the pole bound that
+normally keeps poles out of the import extension is skipped for a chest marker
+(see `pitfalls.md`). Chests need ground, so a space platform offers only the label
+and any chest code in a URL or `--belt-end` clamps to it. Merged as `9560a5d`
+(`!145`); see `tasks/20261018-record-chest-belt-end-2fsg.md`.
+
 ## 2026-10-18 — No commit trailer; task ↔ commit is the task file's history
 
 **Context.** A `Task-ID:` trailer is only a promise — nothing guarantees a commit

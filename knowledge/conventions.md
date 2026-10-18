@@ -37,8 +37,17 @@ up.
   already print it. Keep only messages that add context.
 - `commonTest` runs on JVM **and** JS: keep it platform-neutral; target specifics
   go in `src/jvmTest` / `src/jsTest`.
-- Iterate with `./gradlew jvmTest`; finish with `./gradlew check` +
-  `./gradlew spotlessApply`.
+- Run Gradle only when the change reaches the build. `./gradlew check` runs
+  `spotlessCheck` plus `jvmTest` and `jsBrowserTest` (headless Chrome), so it is
+  needed only when the branch touches `src/**` (code or resources),
+  `build.gradle.kts`, `buildSrc/**`, `gradle/**` or `settings.gradle.kts`: iterate
+  with `./gradlew jvmTest`, finish with `./gradlew spotlessApply check` — a single
+  invocation, one Gradle process.
+- A docs-only or tooling-only branch runs **no** Gradle task: `knowledge/**`,
+  `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is verified
+  by its own checks (`agents validate`, `agents selftest`, `plugin-test.mjs`).
+  `spotlessApply` would be a no-op there anyway. A branch that mixes code and docs
+  follows the code rule.
 - **Never test agent tooling from the app suites.** Everything outside the
   application — `AGENTS.md`, `knowledge/`, `.opencode/`, `tmp/` — is verified by
   the tooling's own checks (`agents selftest`, `plugin-test.mjs`), not by
@@ -64,16 +73,21 @@ up.
 ## Git
 
 - Commit after the work is done (no explicit request needed). Headline ≤ 50 chars;
-  body wrapped at 72 chars; keep the existing `<Subject> !<MR>` headline style. No
-  task trailer: task ↔ commit is read from the task file's own history
+  body wrapped at 72 chars. No `!<MR>` suffix: GitLab appends the MR number when it
+  merges. No task trailer: task ↔ commit is read from the task file's own history
   (`agents commits <TASK-ID>` / `agents tasks <rev>`).
-- When asked to squash, choose the upstream that is ahead:
+- **A squash request means exactly one thing**: one commit on top of the current
+  upstream, with a rewritten message. Choose the upstream that is ahead:
   `base=main; git merge-base --is-ancestor main origin/main && base=origin/main`
   — rebase the branch onto `$base`, then fold the branch's own commits with
   `git reset --soft "$base"` plus a single `git commit`. The squash commit must
   contain only the branch's changes; commits already in `$base` are never
-  re-added. After the squash, `agents tasks <squash-commit>` lists every task the
-  branch added.
+  re-added, and nothing is pushed. Do nothing else — no content edits, no extra
+  commits, no rebase past `$base`.
+- Write the squash message from the squashed content as the source of truth, not
+  from the work log: state the branch's final state and drop anything that only
+  applied to an intermediate state (superseded wording, abandoned attempts). After
+  the squash, `agents tasks <squash-commit>` lists every task the branch added.
 
 ## Knowledge promotion
 
