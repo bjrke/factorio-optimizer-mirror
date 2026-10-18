@@ -75,4 +75,22 @@ class LayoutAsciiTest {
     @Test
     fun anEmptyLayoutRendersNothingButAHeader() =
         assertEquals("layout: empty\n", layoutAscii(LayoutDump(emptyList(), emptyList())))
+
+    @Test
+    fun chestMarkersGetTheirOwnGlyphAndLegend() {
+        val dump =
+            LayoutDump(
+                entities =
+                    listOf(
+                        ChestEntity(Coordinate(0, 0).area(), "buffer-chest"),
+                        ChestEntity(Coordinate(1, 0).area(), "wooden-chest"),
+                    ),
+                failures = emptyList(),
+            )
+        val text = layoutAscii(dump)
+
+        assertTableOf("BW", "B = buffer-chest", "W = wooden-chest") { expected ->
+            assertContains(text, expected, message = text)
+        }
+    }
 }

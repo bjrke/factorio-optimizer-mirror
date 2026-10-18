@@ -43,6 +43,16 @@ data class BlueprintEntity(
     val neighbours: List<Int> = emptyList(),
     /** Set on an infinity chest: the item it provides or the fact that it voids everything. */
     val infinity: InfinitySettings? = null,
+    /** Set on a chest: the logistic request it keeps in stock. */
+    val requestFilter: RequestFilter? = null,
+    /** Set on a chest: the inventory bar limit, e.g. the four slots a wooden chest is capped to. */
+    val bar: Int? = null,
+    /** Set on an inserter: it is the mirrored variant of the one facing [direction]. */
+    val mirror: Boolean = false,
+    /** Set on an inserter: the circuit condition that enables it. */
+    val circuitCondition: CircuitCondition? = null,
+    /** Set on a chest: whether its own circuit condition is enabled. */
+    val circuitConditionEnabled: Boolean? = null,
 ) {
 
     constructor(
@@ -56,6 +66,18 @@ data class BlueprintEntity(
         neighbours: List<Int> = emptyList(),
         /** Set on an infinity chest: the item it provides or the fact that it voids everything. */
         infinity: InfinitySettings? = null,
+        /** Set on a chest: the logistic request it keeps in stock. */
+        requestFilter: RequestFilter? = null,
+        /**
+         * Set on a chest: the inventory bar limit, e.g. the four slots a wooden chest is capped to.
+         */
+        bar: Int? = null,
+        /** Set on an inserter: it is the mirrored variant of the one facing [direction]. */
+        mirror: Boolean = false,
+        /** Set on an inserter: the circuit condition that enables it. */
+        circuitCondition: CircuitCondition? = null,
+        /** Set on a chest: whether its own circuit condition is enabled. */
+        circuitConditionEnabled: Boolean? = null,
     ) : this(
         name = name,
         area = topLeft.area(1, 1),
@@ -66,6 +88,11 @@ data class BlueprintEntity(
         markerFluid = markerFluid,
         neighbours = neighbours,
         infinity = infinity,
+        requestFilter = requestFilter,
+        bar = bar,
+        mirror = mirror,
+        circuitCondition = circuitCondition,
+        circuitConditionEnabled = circuitConditionEnabled,
     )
 
     fun isPowered(): Boolean = recipe != null || name.endsWith("inserter")
@@ -77,11 +104,41 @@ data class BlueprintEntity(
  */
 data class InfinitySettings(val item: Material? = null, val removeUnfiltered: Boolean = false)
 
-/** A whole blueprint: its [label], an optional [icon] signal and its [entities]. */
+/**
+ * A chest's logistic request: it keeps [count] of the item [name] available (a buffer chest
+ * requests it, a storage chest filters it). [trashNotRequested] mirrors the buffer chest's "trash
+ * unrequested" flag.
+ */
+data class RequestFilter(
+    val name: String,
+    val count: Int,
+    val trashNotRequested: Boolean = false,
+)
+
+/**
+ * An inserter's circuit condition: it runs while the item [name] compares [comparator] to
+ * [constant].
+ */
+data class CircuitCondition(val name: String, val comparator: String, val constant: Int)
+
+/**
+ * One circuit network wire: the two entities it joins (their `entity_number`) and the connector
+ * each end plugs into. A chest's circuit condition reads its contents, so the inserters reading it
+ * must be wired to it. A wire is undirected; [first] and [second] just name its ends.
+ */
+data class BlueprintWire(
+    val first: Int,
+    val firstConnector: Int,
+    val second: Int,
+    val secondConnector: Int,
+)
+
+/** A whole blueprint: its [label], an optional [icon] signal, its [entities] and their [wires]. */
 data class Blueprint(
     val label: String,
     val icon: Material? = null,
     val entities: List<BlueprintEntity> = emptyList(),
+    val wires: List<BlueprintWire> = emptyList(),
 )
 
 /**
@@ -104,6 +161,18 @@ fun Blueprint.toJson(): String = buildJsonObject {
         putJsonArray("entities") {
             entities.forEachIndexed { index, entity ->
                 add(entity.toJson(index + 1))
+            }
+        }
+        if (wires.isNotEmpty()) {
+            putJsonArray("wires") {
+                wires.forEach { wire ->
+                    addJsonArray {
+                        add(wire.first)
+                        add(wire.firstConnector)
+                        add(wire.second)
+                        add(wire.secondConnector)
+                    }
+                }
             }
         }
     }
@@ -155,10 +224,44 @@ private fun BlueprintEntity.toJson(entityNumber: Int) = buildJsonObject {
             }
         }
     }
+    requestFilter?.let { filter ->
+        putJsonObject("request_filters") {
+            putJsonArray("sections") {
+                addJsonObject {
+                    put("index", 1)
+                    putJsonArray("filters") {
+                        addJsonObject {
+                            put("index", 1)
+                            put("name", filter.name)
+                            put("quality", "normal")
+                            put("comparator", "=")
+                            put("count", filter.count)
+                        }
+                    }
+                }
+            }
+            if (filter.trashNotRequested) put("trash_not_requested", true)
+        }
+    }
+    bar?.let { put("bar", it) }
+    if (mirror) put("mirror", true)
     if (neighbours.isNotEmpty()) {
         putJsonArray("neighbours") { neighbours.forEach { add(JsonPrimitive(it)) } }
     }
     marker?.let { put("control_behavior", markerControlBehavior(it, markerFluid)) }
+    circuitCondition?.let { condition ->
+        putJsonObject("control_behavior") {
+            put("circuit_enabled", true)
+            putJsonObject("circuit_condition") {
+                putJsonObject("first_signal") { put("name", condition.name) }
+                put("constant", condition.constant)
+                put("comparator", condition.comparator)
+            }
+        }
+    }
+    circuitConditionEnabled?.let { enabled ->
+        putJsonObject("control_behavior") { put("circuit_condition_enabled", enabled) }
+    }
 }
 
 /** Integral values are written as integers so e.g. `1.0` becomes the shorter `1`. */

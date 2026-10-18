@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Blueprint
 import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -202,7 +203,7 @@ internal val blueprintDialog =
 external interface BlueprintButtonProps : Props {
     var outcome: BlueprintPlanResult
     var logistics: LogisticsCalculator
-    var cheats: Boolean
+    var beltEnd: BeltEnd
 }
 
 internal const val BUTTON_TEXT = "Blueprint(beta)"
@@ -223,7 +224,7 @@ internal val blueprintButton =
                     +BUTTON_TEXT
                 }
                 if (open) {
-                    val blueprint = buildBlueprint(outcome.plan, props.logistics, props.cheats)
+                    val blueprint = buildBlueprint(outcome.plan, props.logistics, props.beltEnd)
                     blueprintDialog {
                         label = outcome.plan.label
                         text = blueprintString(blueprint.toJson())
@@ -239,6 +240,6 @@ fun ChildrenBuilder.urlBlueprintButton(props: FactorioOptimizerProps) {
     blueprintButton {
         outcome = blueprintPlan(props.optimizationResult, props.logistics, props.normalizeTarget)
         logistics = props.logistics
-        cheats = props.cheats
+        beltEnd = props.beltEnd
     }
 }

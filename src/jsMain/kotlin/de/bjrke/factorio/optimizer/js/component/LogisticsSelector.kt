@@ -1,8 +1,10 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder
@@ -19,12 +21,13 @@ import web.html.radio
 
 external interface LogisticsSelectorStateProps : Props {
     var config: LogisticsConfig
+    var surface: Surface
     var selectedBelt: BeltTier
     var selectedInserter: InserterTier
     var beltLanes: Int
     var beltStack: Int
     var inserterStack: Int
-    var cheats: Boolean
+    var beltEnd: BeltEnd
 }
 
 external interface LogisticsSelectorDispatchProps : Props {
@@ -33,7 +36,7 @@ external interface LogisticsSelectorDispatchProps : Props {
     var selectBeltLanes: (Int) -> Unit
     var selectBeltStack: (Int) -> Unit
     var selectInserterStack: (Int) -> Unit
-    var selectCheats: (Boolean) -> Unit
+    var selectBeltEnd: (BeltEnd) -> Unit
 }
 
 external interface LogisticsSelectorProps :
@@ -96,16 +99,17 @@ internal val logisticsSelector =
             maximum = props.config.maxStack(props.selectedInserter),
             onValue = props.selectInserterStack,
         )
-        // cheat items: off by default, they only help testing a blueprint
-        label {
-            title = "add infinity-chest test inputs and outputs"
-            css { marginLeft = 0.5.ch }
-            input {
-                type = InputType.checkbox
-                checked = props.cheats
-                onChange = { props.selectCheats(it.target.checked) }
-            }
-            +" test chests"
+        // how a solid belt ends: a label, a cheat chest or a chest marker. A space platform has no
+        // ground for a chest, so only the constant-combinator label is available there.
+        for (beltEnd in BeltEnd.entries) {
+            selectableIcon(
+                name = beltEnd.identifier,
+                selected = props.beltEnd == beltEnd,
+                inputType = InputType.radio,
+                groupName = "belt-end",
+                disabled = !beltEnd.allowedOn(props.surface),
+                onChange = { props.selectBeltEnd(beltEnd) },
+            )
         }
     }
 
@@ -132,17 +136,18 @@ private fun ChildrenBuilder.stackInput(
 fun ChildrenBuilder.urlLogisticsSelector(props: FactorioOptimizerProps) {
     logisticsSelector {
         config = props.logisticsConfig
+        surface = props.surface
         selectedBelt = props.belt
         selectedInserter = props.inserter
         beltLanes = props.beltLanes
         beltStack = props.beltStack
         inserterStack = props.inserterStack
-        cheats = props.cheats
+        beltEnd = props.beltEnd
         selectBelt = { props.changeUrl { belt = it } }
         selectInserter = { props.changeUrl { inserter = it } }
         selectBeltLanes = { props.changeUrl { beltLanes = it } }
         selectBeltStack = { props.changeUrl { beltStack = it } }
         selectInserterStack = { props.changeUrl { inserterStack = it } }
-        selectCheats = { props.changeUrl { cheats = it } }
+        selectBeltEnd = { props.changeUrl { beltEnd = it } }
     }
 }

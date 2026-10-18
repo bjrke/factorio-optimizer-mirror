@@ -7,10 +7,7 @@ package de.bjrke.factorio.optimizer.common.model
  */
 enum class SelectionFlag(val code: Char) {
     SPACE_AGE('S'),
-    FULL_BELT('L'),
-
-    /** Add infinity-chest test inputs/outputs to the blueprint; off by default (cheat items). */
-    CHEATS('X');
+    FULL_BELT('L');
 
     fun enabledIn(selection: String?) = selection != null && code in selection
 }
@@ -36,13 +33,13 @@ fun selectionString(
     fullBelt: Boolean,
     belt: BeltTier,
     inserter: InserterTier,
-    cheats: Boolean = false,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) = buildList {
     addAll(FactoryConfig(spaceAge).toUrlParam(factories).toList())
     if (spaceAge) add(SelectionFlag.SPACE_AGE.code)
     surface.code?.let { add(it) }
     if (fullBelt) add(SelectionFlag.FULL_BELT.code)
-    if (cheats) add(SelectionFlag.CHEATS.code)
+    beltEnd.code?.let { add(it) }
     belt.code?.let { add(it) }
     inserter.code?.let { add(it) }
 }

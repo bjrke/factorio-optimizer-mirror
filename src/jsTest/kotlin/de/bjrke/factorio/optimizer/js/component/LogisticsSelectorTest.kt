@@ -1,10 +1,13 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.testLogistics
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.model.Surface
 import de.bjrke.test.ComponentTest
+import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo
 import de.bjrke.test.fireEvent
 import de.bjrke.test.named
@@ -12,8 +15,10 @@ import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import react.create
 import web.html.HTMLInputElement
 
@@ -24,28 +29,34 @@ class LogisticsSelectorTest : ComponentTest() {
     private val lanes = mutableListOf<Int>()
     private val beltStacks = mutableListOf<Int>()
     private val inserterStacks = mutableListOf<Int>()
+    private val beltEnds = mutableListOf<BeltEnd>()
 
     private fun renderSelector(
         usedConfig: LogisticsConfig = logisticsConfig,
+        surface: Surface = Surface.NAUVIS,
         belt: BeltTier = usedConfig.defaultBelt,
         inserter: InserterTier = usedConfig.defaultInserter,
         beltLanes: Int = 1,
         beltStack: Int = usedConfig.beltStackMin(inserter),
         inserterStack: Int = 1,
+        beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
     ) =
         render(
             logisticsSelector.create {
                 config = usedConfig
+                this.surface = surface
                 selectedBelt = belt
                 selectedInserter = inserter
                 this.beltLanes = beltLanes
                 this.beltStack = beltStack
                 this.inserterStack = inserterStack
+                this.beltEnd = beltEnd
                 selectBelt = { belts += it }
                 selectInserter = { inserters += it }
                 selectBeltLanes = { lanes += it }
                 selectBeltStack = { beltStacks += it }
                 selectInserterStack = { inserterStacks += it }
+                selectBeltEnd = { beltEnds += it }
             },
         )
 
@@ -160,5 +171,30 @@ class LogisticsSelectorTest : ComponentTest() {
         renderSelector(usedConfig = LogisticsConfig(testLogistics, spaceAge = false))
 
         assertNull(screen.queryByTitle("belt stack"))
+    }
+
+    @Test
+    fun selectingABeltEndReportsIt() {
+        renderSelector()
+
+        fireEvent.click(screen.getByRole("radio", named(BeltEnd.BUFFER_CHEST.identifier)))
+
+        assertEquals(listOf(BeltEnd.BUFFER_CHEST), beltEnds)
+    }
+
+    @Test
+    fun chestBeltEndsAreDisabledInSpace() {
+        renderSelector(surface = Surface.SPACE)
+
+        val buffer =
+            screen.getByRole("radio", named(BeltEnd.BUFFER_CHEST.identifier)) as HTMLInputElement
+        val label =
+            screen.getByRole("radio", named(BeltEnd.CONSTANT_COMBINATOR.identifier))
+                as HTMLInputElement
+
+        assertAll(
+            { assertTrue(buffer.disabled, "a chest marker is disabled on a space platform") },
+            { assertFalse(label.disabled, "the constant-combinator label stays selectable") },
+        )
     }
 }

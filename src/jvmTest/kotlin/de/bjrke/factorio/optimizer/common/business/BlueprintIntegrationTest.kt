@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.factorio.optimizer.jvm.parseArgs
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
+import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
 import java.util.Base64
 import java.util.zip.Inflater
@@ -41,7 +42,7 @@ class BlueprintIntegrationTest {
     private fun planFor(target: String): BlueprintPlan = planAndLogistics(target).first
 
     /** Resolves a pasted web-UI URL exactly like the CLI, so a reported layout can be replayed. */
-    private fun planFromUrl(url: String): Triple<BlueprintPlan, LogisticsCalculator, Boolean> {
+    private fun planFromUrl(url: String): Triple<BlueprintPlan, LogisticsCalculator, BeltEnd> {
         val cli = parseArgs(arrayOf(url))
         val parsedRecipes = RecipeProvider.forActiveMods(cli.spaceAge).forSurface(cli.surface)
         val factoryConfig = FactoryConfig(cli.spaceAge)
@@ -78,7 +79,7 @@ class BlueprintIntegrationTest {
                     blueprintPlan(result, logistics, cli.normalizeTarget),
                 )
                 .plan
-        return Triple(plan, logistics, cli.cheats)
+        return Triple(plan, logistics, cli.beltEnd)
     }
 
     private fun decode(blueprint: String): String {
@@ -173,7 +174,10 @@ class BlueprintIntegrationTest {
         )
     }
 
-    private fun entitiesFor(target: String, cheats: Boolean = false): List<BlueprintEntity> {
+    private fun entitiesFor(
+        target: String,
+        beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
+    ): List<BlueprintEntity> {
         val result = optimize(target)
         val logistics =
             LogisticsCalculator(
@@ -185,7 +189,7 @@ class BlueprintIntegrationTest {
                 inserterStack = 1,
             )
         val planned = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
-        return buildBlueprint(planned, logistics, cheats).entities
+        return buildBlueprint(planned, logistics, beltEnd).entities
     }
 
     @OptIn(ExperimentalKotlinTestApi::class)
@@ -215,7 +219,7 @@ class BlueprintIntegrationTest {
     @Test
     fun realCheatBlueprintsHaveNoOverlappingEntities() =
         assertTableOf("advanced-circuit", "electronic-circuit", "utility-science-pack") {
-            assertNoOverlap(entitiesFor(it, cheats = true))
+            assertNoOverlap(entitiesFor(it, beltEnd = BeltEnd.INFINITY_CHEST))
         }
 
     private fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
@@ -252,9 +256,11 @@ class BlueprintIntegrationTest {
      * into something: an exit is useless when the tile it faces is empty, and an entry is useless
      * when nothing feeds its back.
      */
-    /** An import connector: the label sits above the buried run between the input and output. */
+    /** An import connector: a label, chest or inserter sits right next to the buried run. */
     private fun List<BlueprintEntity>.isImportConnector(entity: BlueprintEntity) = any {
-        it.name == "constant-combinator" && it.area.topLeft.manhattanDist(entity.area.topLeft) == 1
+        (it.name == "constant-combinator" ||
+            it.name.endsWith("chest") ||
+            it.name.endsWith("inserter")) && it.area.topLeft.manhattanDist(entity.area.topLeft) == 1
     }
 
     private fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
@@ -318,9 +324,9 @@ class BlueprintIntegrationTest {
 
     @Test
     fun splitterBranchesStartOnTheSurface() {
-        val (plan, logistics, cheats) =
+        val (plan, logistics, beltEnd) =
             planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-        val entities = buildBlueprint(plan, logistics, cheats).entities
+        val entities = buildBlueprint(plan, logistics, beltEnd).entities
 
         assertAll(
             { assertSplittersOnlyFeedSurface(entities) },
@@ -353,10 +359,10 @@ class BlueprintIntegrationTest {
 
     @Test
     fun reportedUrlKeepsInputLanesAtTheMachineEdge() =
-        assertTableOf(false, true) { cheats ->
+        assertTableOf(BeltEnd.CONSTANT_COMBINATOR, BeltEnd.INFINITY_CHEST) { beltEnd ->
             val (plan, logistics, _) =
                 planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-            val dump = blueprintLayoutDump(plan, logistics, cheats)
+            val dump = blueprintLayoutDump(plan, logistics, beltEnd)
             val entities = dump.entities
             val recipes = plan.recipes.associate { it.recipe.name to it.recipe }
             val belts = entities.filterIsInstance<BeltEntity>()
@@ -394,9 +400,9 @@ class BlueprintIntegrationTest {
 
     @Test
     fun advancedCircuitUrlNeedsNoUndergroundBelts() {
-        val (plan, logistics, cheats) =
+        val (plan, logistics, beltEnd) =
             planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-        val dump = blueprintLayoutDump(plan, logistics, cheats)
+        val dump = blueprintLayoutDump(plan, logistics, beltEnd)
         // the import connectors are fixed marker pairs; only route tunnels are unexpected here
         val routeTunnels =
             dump.entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
@@ -565,6 +571,50 @@ class BlueprintIntegrationTest {
         ) {
             assertPolesCoverAndConnect(entitiesFor(it))
         }
+
+    /** The chest markers the player can pick; each places inserters that need power. */
+    private val chestMarkers =
+        listOf(
+            BeltEnd.BUFFER_CHEST,
+            BeltEnd.STORAGE_CHEST,
+            BeltEnd.WOODEN_CHEST,
+            BeltEnd.STEEL_CHEST,
+        )
+
+    @Test
+    fun realChestMarkerBlueprintsHaveNoOverlappingEntities() =
+        assertTable(chestMarkers) { beltEnd ->
+            assertNoOverlap(entitiesFor("electronic-circuit", beltEnd))
+        }
+
+    @Test
+    fun realChestMarkerBlueprintsHaveConnectedUndergroundBelts() =
+        assertTable(chestMarkers) { beltEnd ->
+            assertConnectedUndergroundBelts(entitiesFor("advanced-circuit", beltEnd))
+        }
+
+    @Test
+    fun realChestMarkerBlueprintsPowerEveryInserter() =
+        assertTable(chestMarkers) { beltEnd ->
+            assertPolesCoverAndConnect(entitiesFor("advanced-circuit", beltEnd))
+        }
+
+    @Test
+    fun theRealChestOutputWiresItsInsertersToTheChest() {
+        val (plan, logistics) = planAndLogistics("advanced-circuit")
+        val blueprint = buildBlueprint(plan, logistics, BeltEnd.BUFFER_CHEST)
+        val chest =
+            blueprint.entities.withIndex().single { (_, entity) ->
+                entity.name == "buffer-chest" && entity.circuitConditionEnabled == false
+            }
+        val chestNumber = chest.index + 1
+        val wired = blueprint.wires.flatMap { listOf(it.first, it.second) }.toSet()
+
+        assertAll(
+            { assertEquals(2, blueprint.wires.size) },
+            { assertEquals(setOf(chestNumber - 2, chestNumber - 1, chestNumber), wired) },
+        )
+    }
 
     /** A blueprint does not rebuild pole wires, so each pole must list the poles it is wired to. */
     private fun assertPolesWired(entities: List<BlueprintEntity>) {

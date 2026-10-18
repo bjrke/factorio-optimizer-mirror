@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InserterTier
@@ -37,6 +38,7 @@ class IconCoverageTest {
         addAll(Factory.entries.map { it.identifier })
         addAll(BeltTier.entries.map { it.identifier })
         addAll(InserterTier.entries.map { it.identifier })
+        addAll(BeltEnd.entries.map { it.identifier })
         // fixed icons the UI renders without a prototype behind them
         addAll(listOf("pipe", "recycling", "recycling-top", "spoilage", "space-age"))
     }

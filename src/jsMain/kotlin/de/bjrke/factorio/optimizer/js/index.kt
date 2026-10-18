@@ -38,7 +38,7 @@ class FactorioOptimizerProps {
     var belt = logisticsConfig.belt(selection)
     var inserter = logisticsConfig.inserter(selection)
     var beltLanes = logisticsConfig.beltLanes(selection)
-    var cheats = SelectionFlag.CHEATS.enabledIn(selection)
+    var beltEnd = BeltEnd.fromSelection(selection, surface)
     var beltStack = logisticsConfig.beltStack(params[ParamName("beltStack")], inserter)
     var inserterStack = logisticsConfig.inserterStack(params[ParamName("inserterStack")], inserter)
     val logistics =
@@ -60,7 +60,8 @@ class FactorioOptimizerProps {
                 fullBelt = beltLanes == BeltTier.MAX_LANES,
                 belt,
                 inserter,
-                cheats = cheats,
+                // a chest marker cannot be built on a space platform; keep the URL honest
+                beltEnd = beltEnd.takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR,
             )
         // the segment is never empty so the route always matches; '-' marks the all-defaults choice
         val selectionSegment = encodedSelection.ifEmpty { EMPTY_SELECTION }

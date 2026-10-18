@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InserterTier
@@ -83,11 +84,33 @@ class CliOptimizerTest {
             { assertEquals("CFSXbmr", args.selection) },
             { assertEquals("1", args.beltStack) },
             { assertEquals("1", args.inserterStack) },
-            // CFSXbmr contains S (Space Age) and X (cheats)
+            // CFSXbmr contains S (Space Age) and X (the infinity chest)
             { assertTrue(args.spaceAge) },
-            { assertTrue(args.cheats) },
+            { assertEquals(BeltEnd.INFINITY_CHEST, args.beltEnd) },
         )
     }
+
+    @Test
+    fun beltEndIsParsedByIdentifierOrCode() =
+        assertAll(
+            {
+                assertEquals(
+                    BeltEnd.BUFFER_CHEST,
+                    parseArgs(arrayOf("--belt-end=buffer-chest")).beltEnd,
+                )
+            },
+            { assertEquals(BeltEnd.BUFFER_CHEST, parseArgs(arrayOf("--belt-end=H")).beltEnd) },
+            // --cheats still selects the infinity chest
+            { assertEquals(BeltEnd.INFINITY_CHEST, parseArgs(arrayOf("--cheats")).beltEnd) },
+            { assertEquals(BeltEnd.CONSTANT_COMBINATOR, parseArgs(emptyArray()).beltEnd) },
+            // a chest marker needs ground, so it falls back to the label on a space platform
+            {
+                assertEquals(
+                    BeltEnd.CONSTANT_COMBINATOR,
+                    parseArgs(arrayOf("--planet=p", "--belt-end=buffer-chest")).beltEnd,
+                )
+            },
+        )
 
     @Test
     fun aBaseGameUrlHasNoSpaceAgeFlag() =
@@ -197,6 +220,7 @@ class CliOptimizerTest {
             {
                 assertTableOf(
                     "  material: advanced-circuit",
+                    "  beltEnd: constant-combinator",
                     "  belt: express-transport-belt",
                     "  inserter: stack-inserter",
                     "  beltLanes: 2",

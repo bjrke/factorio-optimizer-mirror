@@ -17,7 +17,8 @@ class SelectionTest {
             Surface.entries.mapNotNull { it.code } +
             BeltTier.entries.mapNotNull { it.code } +
             InserterTier.entries.mapNotNull { it.code } +
-            SelectionFlag.entries.map { it.code }
+            SelectionFlag.entries.map { it.code } +
+            BeltEnd.entries.mapNotNull { it.code }
 
     private val belt = BeltTier.FAST_TRANSPORT_BELT
     private val inserter = InserterTier.FAST_INSERTER
@@ -111,4 +112,37 @@ class SelectionTest {
         ) { (selection, expected) ->
             assertEquals(expected, SelectionFlag.SPACE_AGE.enabledIn(selection))
         }
+
+    private fun beltEndSelection(spaceAge: Boolean, surface: Surface, beltEnd: BeltEnd) =
+        selectionString(
+            FactoryConfig(spaceAge).defaults,
+            spaceAge,
+            surface,
+            fullBelt = false,
+            belt,
+            inserter,
+            beltEnd = beltEnd,
+        )
+
+    @Test
+    fun theBeltEndSelectionRoundTrips() =
+        assertTable(BeltEnd.entries) { beltEnd ->
+            val selection = beltEndSelection(spaceAge = true, Surface.NAUVIS, beltEnd)
+
+            assertEquals(beltEnd, BeltEnd.fromSelection(selection, Surface.NAUVIS))
+        }
+
+    @Test
+    fun aChestMarkerFallsBackToTheLabelInSpace() =
+        assertTable(BeltEnd.entries) { beltEnd ->
+            val selection = beltEndSelection(spaceAge = true, Surface.SPACE, beltEnd)
+            val expected =
+                if (beltEnd.allowedOn(Surface.SPACE)) beltEnd else BeltEnd.CONSTANT_COMBINATOR
+
+            assertEquals(expected, BeltEnd.fromSelection(selection, Surface.SPACE))
+        }
+
+    @Test
+    fun theOldCheatCodeStillSelectsTheInfinityChest() =
+        assertEquals(BeltEnd.INFINITY_CHEST, BeltEnd.fromSelection("X", Surface.NAUVIS))
 }

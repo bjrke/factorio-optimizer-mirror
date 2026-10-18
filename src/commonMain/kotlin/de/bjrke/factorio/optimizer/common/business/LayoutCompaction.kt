@@ -149,7 +149,10 @@ internal fun validateLayout(entities: List<LayoutEntity>): List<String> {
         val reach = if (inserter.long) 2 else 1
         val source = index.at(inserter.area.topLeft + inserter.direction.step * reach)
         when {
-            source == null || (source !is MachineEntity && source !is TransportEntity) ->
+            source == null ||
+                (source !is MachineEntity &&
+                    source !is TransportEntity &&
+                    source !is ChestLikeEntity) ->
                 errors += "inserter at ${inserter.area.topLeft} has no source"
             source is TransportEntity && source.material != inserter.material ->
                 errors +=
@@ -158,7 +161,8 @@ internal fun validateLayout(entities: List<LayoutEntity>): List<String> {
         }
         val drop = index.at(inserter.area.topLeft - inserter.direction.step)
         when {
-            drop == null || (drop !is MachineEntity && drop !is TransportEntity) ->
+            drop == null ||
+                (drop !is MachineEntity && drop !is TransportEntity && drop !is ChestLikeEntity) ->
                 errors += "inserter at ${inserter.area.topLeft} has no drop"
             drop is TransportEntity && drop.material != inserter.material ->
                 errors +=
@@ -551,6 +555,7 @@ private fun LayoutEntity.shifted(orientation: SeamOrientation, amount: Int): Lay
         is InserterEntity -> copy(area = moved)
         is LoaderEntity -> copy(area = moved)
         is InfinityChestEntity -> copy(area = moved)
+        is ChestEntity -> copy(area = moved)
         is MarkerEntity -> copy(area = moved)
         is PipeEntity -> copy(area = moved)
         is PipeToGroundEntity -> copy(area = moved)

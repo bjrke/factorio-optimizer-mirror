@@ -18,6 +18,15 @@ private fun arrow(direction: Direction) =
         Direction.WEST -> '<'
     }
 
+/** The glyph of a chest marker, one letter per chest type. */
+private fun chestGlyph(name: String) =
+    when {
+        name.startsWith("buffer") -> 'B'
+        name.startsWith("storage") -> 'S'
+        name.startsWith("wooden") -> 'W'
+        else -> 'T'
+    }
+
 /**
  * Renders a [dump] as one character per tile so a layout can be eyeballed in a terminal: machines
  * are digits, belts show the code of the material they carry, and every other entity has its own
@@ -63,6 +72,7 @@ internal fun layoutAscii(dump: LayoutDump): String {
             is SplitterEntity -> '='
             is LoaderEntity -> arrow(entity.direction)
             is InfinityChestEntity -> '#'
+            is ChestEntity -> chestGlyph(entity.name)
             is MarkerEntity -> 'C'
             is PipeEntity -> '-'
             is PipeToGroundEntity -> 'o'
@@ -102,6 +112,12 @@ internal fun layoutAscii(dump: LayoutDump): String {
             .sortedBy { it.name }
             .forEach { append("  C = constant-combinator: ${it.name}\n") }
         if (entities.any { it is InfinityChestEntity }) append("  # = infinity-chest\n")
+        entities
+            .filterIsInstance<ChestEntity>()
+            .map { it.name }
+            .distinct()
+            .sorted()
+            .forEach { append("  ${chestGlyph(it)} = $it\n") }
 
         if (dump.failures.isNotEmpty()) {
             append("\nfailures (${dump.failures.size})\n")

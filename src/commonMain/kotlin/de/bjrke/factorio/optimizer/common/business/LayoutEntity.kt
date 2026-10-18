@@ -89,6 +89,10 @@ data class InserterEntity(
     val direction: Direction,
     /** Whether this is a long-handed inserter (reaches two tiles). */
     val long: Boolean,
+    /** Whether this is the mirrored variant of the inserter facing [direction]. */
+    val mirror: Boolean = false,
+    /** The circuit condition that enables this inserter, if any. */
+    val circuitCondition: CircuitCondition? = null,
 ) : TransportEntity {
     override val isPowered = true
 }
@@ -101,11 +105,25 @@ data class LoaderEntity(
     val direction: Direction,
 ) : TransportEntity
 
+/** A chest the layout places as a belt end marker: its [area] is always one tile. */
+sealed interface ChestLikeEntity : LayoutEntity
+
 data class InfinityChestEntity(
     override val area: Area,
     override val name: String,
     val settings: InfinitySettings,
-) : LayoutEntity
+) : ChestLikeEntity
+
+data class ChestEntity(
+    override val area: Area,
+    override val name: String,
+    /** The logistic request it keeps in stock (a buffer/storage chest). */
+    val requestFilter: RequestFilter? = null,
+    /** The inventory bar limit (a wooden/steel chest). */
+    val bar: Int? = null,
+    /** Whether its own circuit condition is enabled, if it is set at all. */
+    val circuitConditionEnabled: Boolean? = null,
+) : ChestLikeEntity
 
 data class MarkerEntity(
     override val area: Area,
@@ -145,12 +163,23 @@ fun LayoutEntity.toBlueprintEntity(): BlueprintEntity {
     val common = BlueprintEntity(name, area)
     return when (this) {
         is MachineEntity -> common.copy(recipe = recipe)
-        is InserterEntity -> common.copy(direction = direction)
+        is InserterEntity ->
+            common.copy(
+                direction = direction,
+                mirror = mirror,
+                circuitCondition = circuitCondition,
+            )
         is BeltEntity -> common.copy(direction = direction)
         is SplitterEntity -> common.copy(direction = direction)
         is UndergroundBeltEntity -> common.copy(direction = direction, type = io)
         is LoaderEntity -> common.copy(direction = direction, type = io)
         is InfinityChestEntity -> common.copy(infinity = settings)
+        is ChestEntity ->
+            common.copy(
+                requestFilter = requestFilter,
+                bar = bar,
+                circuitConditionEnabled = circuitConditionEnabled,
+            )
         is MarkerEntity -> common.copy(marker = signal.material, markerFluid = signal.fluid)
         is PipeEntity -> common
         is PipeToGroundEntity -> common.copy(direction = direction)

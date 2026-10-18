@@ -4,6 +4,8 @@ import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
+import de.bjrke.test.assertTable
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -818,9 +820,9 @@ class BlueprintLayoutTest {
     }
 
     @Test
-    fun testChestsAreOptIn() {
+    fun infinityChestsAreOptIn() {
         val without = buildBlueprint(plan, logistics).entities
-        val with = buildBlueprint(plan, logistics, cheats = true).entities
+        val with = buildBlueprint(plan, logistics, beltEnd = BeltEnd.INFINITY_CHEST).entities
 
         assertAll(
             { assertTrue(without.none { it.name == "infinity-chest" }, "chests by default") },
@@ -871,4 +873,160 @@ class BlueprintLayoutTest {
             )
         assertEquals(WEST, feed.direction, "the feed does not face the lane")
     }
+
+    @Test
+    fun aChestMarkerFeedsTheBeltOutOfTheChest() {
+        val dump = blueprintLayoutDump(plan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
+        val chest =
+            dump.entities.filterIsInstance<ChestEntity>().single {
+                it.requestFilter?.name == ore.name
+            }
+        val row = chest.area.topLeft.y
+        val left = chest.area.topLeft.x - 2
+        val byTile = dump.entities.associateBy { it.area.topLeft }
+
+        assertAll(
+            { assertEquals(BeltEnd.BUFFER_CHEST.identifier, chest.name) },
+            {
+                assertEquals(
+                    RequestFilter(ore.name, 100, trashNotRequested = true),
+                    chest.requestFilter,
+                )
+            },
+            {
+                assertEquals(
+                    Io.INPUT,
+                    (byTile[Coordinate(left, row)] as? UndergroundBeltEntity)?.io,
+                )
+            },
+            {
+                assertEquals(
+                    Io.OUTPUT,
+                    (byTile[Coordinate(left + 4, row)] as? UndergroundBeltEntity)?.io,
+                )
+            },
+            {
+                assertEquals(
+                    EAST,
+                    (byTile[Coordinate(left + 1, row)] as? InserterEntity)?.direction,
+                )
+            },
+            {
+                val far = byTile[Coordinate(left + 3, row)] as? InserterEntity
+                assertEquals(WEST, far?.direction)
+                assertEquals(true, far?.mirror)
+            },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+        )
+    }
+
+    @Test
+    fun theTargetOutputUsesTheChestOutputVariant() {
+        val dump = blueprintLayoutDump(plan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
+        val chest =
+            dump.entities.filterIsInstance<ChestEntity>().single {
+                it.requestFilter?.name == gear.name
+            }
+        val row = chest.area.topLeft.y
+        val left = chest.area.topLeft.x - 2
+        val byTile = dump.entities.associateBy { it.area.topLeft }
+        val near = byTile[Coordinate(left + 1, row)] as? InserterEntity
+        val far = byTile[Coordinate(left + 3, row)] as? InserterEntity
+        val condition = CircuitCondition(gear.name, "<", 200)
+
+        assertAll(
+            {
+                assertEquals(
+                    RequestFilter(gear.name, 200, trashNotRequested = true),
+                    chest.requestFilter,
+                )
+            },
+            { assertEquals(false, chest.circuitConditionEnabled) },
+            { assertEquals(WEST, near?.direction) },
+            { assertEquals(EAST, far?.direction) },
+            { assertEquals(condition, near?.circuitCondition) },
+            { assertEquals(condition, far?.circuitCondition) },
+        )
+    }
+
+    @Test
+    fun eachFilteredChestMarkerKeepsItsRequest() =
+        assertTable(
+            listOf(BeltEnd.BUFFER_CHEST to 100, BeltEnd.STORAGE_CHEST to 1),
+        ) { (beltEnd, count) ->
+            val chest =
+                buildBlueprint(plan, logistics, beltEnd = beltEnd).entities.single {
+                    it.name == beltEnd.identifier && it.requestFilter?.name == ore.name
+                }
+            assertEquals(
+                RequestFilter(ore.name, count, trashNotRequested = beltEnd == BeltEnd.BUFFER_CHEST),
+                chest.requestFilter,
+            )
+        }
+
+    @Test
+    fun plainChestMarkersAreBarred() =
+        assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST) { beltEnd ->
+            val chests =
+                buildBlueprint(plan, logistics, beltEnd = beltEnd).entities.filter {
+                    it.name == beltEnd.identifier
+                }
+            assertAll(
+                { assertEquals(2, chests.size, "one input and one output chest") },
+                { assertTrue(chests.all { it.bar == 4 }, chests.toString()) },
+                { assertTrue(chests.all { it.requestFilter == null }, chests.toString()) },
+            )
+        }
+
+    @Test
+    fun fluidImportsKeepTheCombinatorLabelEvenWithAChestMarker() {
+        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "water-boil",
+            )
+        val dump = blueprintLayoutDump(fluidPlan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
+        val marker = dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
+
+        assertAll(
+            { assertEquals(water, marker.signal.material) },
+            { assertEquals(emptyList(), dump.failures) },
+        )
+    }
+
+    @Test
+    fun theChestOutputWiresBothInsertersToTheChest() {
+        val blueprint = buildBlueprint(plan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
+        val chest = blueprint.entities.indexOfFirst { it.requestFilter?.name == gear.name } + 1
+
+        assertEquals(
+            listOf(
+                BlueprintWire(chest - 2, 1, chest, 1),
+                BlueprintWire(chest, 1, chest - 1, 1),
+            ),
+            blueprint.wires,
+        )
+    }
+
+    @Test
+    fun theChestInputNeedsNoCircuitWire() =
+        assertTable(listOf(BeltEnd.BUFFER_CHEST, BeltEnd.STORAGE_CHEST)) { beltEnd ->
+            val blueprint = buildBlueprint(plan, logistics, beltEnd = beltEnd)
+            val inputChest =
+                blueprint.entities.indexOfFirst { it.requestFilter?.name == ore.name } + 1
+            val wired = blueprint.wires.flatMap { listOf(it.first, it.second) }
+
+            assertContainsNot(wired, inputChest)
+        }
+
+    @Test
+    fun plainAndCheatMarkersNeedNoCircuitWire() =
+        assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST, BeltEnd.INFINITY_CHEST) { beltEnd
+            ->
+            assertEquals(emptyList<BlueprintWire>(), buildBlueprint(plan, logistics, beltEnd).wires)
+        }
 }

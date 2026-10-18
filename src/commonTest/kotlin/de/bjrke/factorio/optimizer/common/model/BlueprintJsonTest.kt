@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.model
 
+import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,18 +9,17 @@ import kotlinx.serialization.json.*
 
 class BlueprintJsonTest {
 
+    /** The `blueprint` object a [blueprint] serializes to. */
+    private fun blueprintJson(blueprint: Blueprint): JsonObject =
+        Json.parseToJsonElement(blueprint.toJson()).jsonObject.getValue("blueprint").jsonObject
+
     /** The JSON object a single-entity blueprint writes for its only entity. */
-    private fun entityJson(entity: BlueprintEntity): JsonObject {
-        val json = Blueprint("test", entities = listOf(entity)).toJson()
-        return Json.parseToJsonElement(json)
-            .jsonObject
-            .getValue("blueprint")
-            .jsonObject
+    private fun entityJson(entity: BlueprintEntity): JsonObject =
+        blueprintJson(Blueprint("test", entities = listOf(entity)))
             .getValue("entities")
             .jsonArray
             .first()
             .jsonObject
-    }
 
     @Test
     fun directionsSerializeToTheirBlueprintNumbers() =
@@ -55,5 +55,126 @@ class BlueprintJsonTest {
     fun anEntityWithoutIoOmitsTheType() {
         val entity = BlueprintEntity("pipe", AreaTile(0, 0))
         assertNull(entityJson(entity)["type"])
+    }
+
+    @Test
+    fun aChestRequestFilterWritesTheGameSections() {
+        val entity =
+            BlueprintEntity(
+                "buffer-chest",
+                AreaTile(0, 0),
+                requestFilter = RequestFilter("iron-plate", 100, trashNotRequested = true),
+            )
+        val expected = buildJsonObject {
+            putJsonArray("sections") {
+                addJsonObject {
+                    put("index", 1)
+                    putJsonArray("filters") {
+                        addJsonObject {
+                            put("index", 1)
+                            put("name", "iron-plate")
+                            put("quality", "normal")
+                            put("comparator", "=")
+                            put("count", 100)
+                        }
+                    }
+                }
+            }
+            put("trash_not_requested", true)
+        }
+
+        assertEquals(expected, entityJson(entity).getValue("request_filters"))
+    }
+
+    @Test
+    fun aStorageChestRequestFilterOmitsTrashNotRequested() {
+        val entity =
+            BlueprintEntity(
+                "storage-chest",
+                AreaTile(0, 0),
+                requestFilter = RequestFilter("iron-plate", 1),
+            )
+
+        assertNull(entityJson(entity).getValue("request_filters").jsonObject["trash_not_requested"])
+    }
+
+    @Test
+    fun anInserterCircuitConditionWritesItsControlBehavior() {
+        val entity =
+            BlueprintEntity(
+                "fast-inserter",
+                AreaTile(0, 0),
+                circuitCondition = CircuitCondition("advanced-circuit", "<", 200),
+            )
+        val expected = buildJsonObject {
+            put("circuit_enabled", true)
+            putJsonObject("circuit_condition") {
+                putJsonObject("first_signal") { put("name", "advanced-circuit") }
+                put("constant", 200)
+                put("comparator", "<")
+            }
+        }
+
+        assertEquals(expected, entityJson(entity).getValue("control_behavior"))
+    }
+
+    @Test
+    fun aChestCircuitConditionEnabledWritesItsControlBehavior() {
+        val entity =
+            BlueprintEntity("buffer-chest", AreaTile(0, 0), circuitConditionEnabled = false)
+        val expected = buildJsonObject { put("circuit_condition_enabled", false) }
+
+        assertEquals(expected, entityJson(entity).getValue("control_behavior"))
+    }
+
+    @Test
+    fun aChestBarAndAnInserterMirrorAreWrittenOnlyWhenSet() =
+        assertAll(
+            {
+                val entity = BlueprintEntity("wooden-chest", AreaTile(0, 0), bar = 4)
+                assertEquals(JsonPrimitive(4), entityJson(entity)["bar"])
+            },
+            {
+                val entity = BlueprintEntity("wooden-chest", AreaTile(0, 0))
+                assertNull(entityJson(entity)["bar"])
+            },
+            {
+                val entity = BlueprintEntity("fast-inserter", AreaTile(0, 0), mirror = true)
+                assertEquals(JsonPrimitive(true), entityJson(entity)["mirror"])
+            },
+            {
+                val entity = BlueprintEntity("fast-inserter", AreaTile(0, 0))
+                assertNull(entityJson(entity)["mirror"])
+            },
+        )
+
+    @Test
+    fun circuitWiresSerializeAsFlatQuadruples() {
+        val blueprint =
+            Blueprint(
+                "test",
+                wires = listOf(BlueprintWire(2, 1, 3, 1), BlueprintWire(3, 1, 4, 1)),
+            )
+        val expected = buildJsonArray {
+            addJsonArray {
+                add(2)
+                add(1)
+                add(3)
+                add(1)
+            }
+            addJsonArray {
+                add(3)
+                add(1)
+                add(4)
+                add(1)
+            }
+        }
+
+        assertEquals(expected, blueprintJson(blueprint).getValue("wires"))
+    }
+
+    @Test
+    fun aBlueprintWithoutWiresOmitsThem() {
+        assertNull(blueprintJson(Blueprint("test"))["wires"])
     }
 }

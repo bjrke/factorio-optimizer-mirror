@@ -25,7 +25,8 @@ data class CliArgs(
     val material: String = ALL_SCIENCE_PACKS,
     val spaceAge: Boolean = true,
     val surface: Surface = Surface.NAUVIS,
-    val cheats: Boolean = false,
+    /** How a solid belt ends; `--belt-end`/`--cheats` or the URL, clamped to [surface]. */
+    val beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
     val normalizeTarget: Double = DEFAULT_NORMALIZE_TARGET,
     /**
      * The `selection` URL segment, decoded by [FactoryConfig]/[LogisticsConfig]/[surfaceFromUrl].
@@ -47,12 +48,13 @@ data class CliArgs(
 /**
  * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),
  * `--planet=<surface>`, `--factory=<machine>` (repeatable), `--belt=<tier>`, `--inserter=<tier>`,
- * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--normalize=<x>` and `--cheats` are
- * understood; `--settings`, `--listing`, `--layout`, `--json` and `--blueprint` choose the
- * [Output]s. Belt/inserter/machine values are identifiers (`express-transport-belt`, `foundry`) or
- * a single-letter code. Any argument may be replaced by a pasted web UI URL, e.g.
- * `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1`, whose segments fill in the material,
- * selection, normalize target and stack sizes. Explicit flags override it.
+ * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--normalize=<x>`,
+ * `--belt-end=<marker>` and its alias `--cheats` (the infinity chest) are understood; `--settings`,
+ * `--listing`, `--layout`, `--json` and `--blueprint` choose the [Output]s.
+ * Belt/inserter/machine/marker values are identifiers (`express-transport-belt`, `foundry`,
+ * `buffer-chest`) or a single-letter code. Any argument may be replaced by a pasted web UI URL,
+ * e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1`, whose segments fill in the
+ * material, selection, normalize target and stack sizes. Explicit flags override it.
  */
 fun parseArgs(args: Array<String>): CliArgs {
     val url = args.firstNotNullOfOrNull { parseFactorioUrl(it) }
@@ -86,11 +88,20 @@ fun parseArgs(args: Array<String>): CliArgs {
         if (args.any { it == "--json" }) add(Output.JSON)
         if (args.any { it == "--blueprint" }) add(Output.BLUEPRINT)
     }
+    // a chest marker needs ground, so a chest choice on a space platform falls back to the label
+    val beltEnd =
+        (args
+                .firstOrNull { it.startsWith("--belt-end=") }
+                ?.removePrefix("--belt-end=")
+                ?.let { BeltEnd.fromIdentifier(it) }
+                ?: if (args.any { it == "--cheats" }) BeltEnd.INFINITY_CHEST
+                else BeltEnd.fromSelection(url?.selection, surface))
+            .takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR
     return CliArgs(
         material = positional ?: url?.target ?: ALL_SCIENCE_PACKS,
         spaceAge = spaceAge,
         surface = surface,
-        cheats = args.any { it == "--cheats" } || SelectionFlag.CHEATS.enabledIn(url?.selection),
+        beltEnd = beltEnd,
         normalizeTarget = normalizeTarget,
         selection = url?.selection,
         factories =
@@ -184,7 +195,7 @@ fun main(args: Array<String>) {
             }
         is BlueprintPlanResult.Planned ->
             for (output in blueprintOutputs) {
-                sections += { emitBlueprint(output, outcome.plan, logistics, cli.cheats) }
+                sections += { emitBlueprint(output, outcome.plan, logistics, cli.beltEnd) }
             }
     }
     sections.forEach { it() }
@@ -205,7 +216,7 @@ internal fun settingsText(
       material: ${cli.material}
       spaceAge: ${cli.spaceAge}
       surface: ${cli.surface.identifier}
-      cheats: ${cli.cheats}
+      beltEnd: ${cli.beltEnd.identifier}
       normalizeTarget: ${cli.normalizeTarget}
       belt: ${belt.identifier}
       inserter: ${inserter.identifier}
@@ -221,13 +232,13 @@ private fun emitBlueprint(
     output: Output,
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
-    cheats: Boolean,
+    beltEnd: BeltEnd,
 ) =
     when (output) {
-        Output.LAYOUT -> println(layoutAscii(blueprintLayoutDump(plan, logistics, cheats)))
-        Output.JSON -> println(buildBlueprint(plan, logistics, cheats).toJson())
+        Output.LAYOUT -> println(layoutAscii(blueprintLayoutDump(plan, logistics, beltEnd)))
+        Output.JSON -> println(buildBlueprint(plan, logistics, beltEnd).toJson())
         Output.BLUEPRINT ->
-            println(blueprintString(buildBlueprint(plan, logistics, cheats).toJson()))
+            println(blueprintString(buildBlueprint(plan, logistics, beltEnd).toJson()))
         Output.SETTINGS,
         Output.LISTING -> Unit
     }

@@ -103,28 +103,32 @@ private class RouteEntry(
  * splitter on that belt for every further recipe that takes it. Fluids use pipe clusters next to
  * the machines instead of belts.
  *
- * When [cheats] is set, each imported input gets an infinity chest feeding the belt and the target
- * output ends in an infinity chest, so a blueprint can be tested without building the item supply.
- * (Both are cheat items and off by default.)
+ * The [beltEnd] chooses how a solid belt ends: the constant-combinator label (the default), an
+ * infinity chest, or a chest the belt's inserters feed from or to. A fluid belt always keeps the
+ * constant-combinator/pipe label, since a chest cannot carry a fluid.
  */
 fun buildBlueprint(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
-    cheats: Boolean = false,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) =
-    Blueprint(
-        label = plan.label,
-        icon = plan.target,
-        entities = RowLayout(plan, logistics, cheats).build(),
-    )
+    RowLayout(plan, logistics, beltEnd).run {
+        val entities = build()
+        Blueprint(
+            label = plan.label,
+            icon = plan.target,
+            entities = entities,
+            wires = chestWires(),
+        )
+    }
 
 /** Inputs whose belt could not be routed; empty for a valid blueprint. Used by tests. */
 internal fun blueprintFeedFailures(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
-    cheats: Boolean = false,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) =
-    RowLayout(plan, logistics, cheats).run {
+    RowLayout(plan, logistics, beltEnd).run {
         build()
         failures
     }
@@ -135,9 +139,9 @@ internal fun blueprintFeedFailures(
 internal fun blueprintTransportMaterials(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
-    cheats: Boolean = false,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) =
-    RowLayout(plan, logistics, cheats).run {
+    RowLayout(plan, logistics, beltEnd).run {
         build()
         transportMaterials()
     }
@@ -146,9 +150,9 @@ internal fun blueprintTransportMaterials(
 internal fun blueprintPipeFluids(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
-    cheats: Boolean = false,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) =
-    RowLayout(plan, logistics, cheats).run {
+    RowLayout(plan, logistics, beltEnd).run {
         build()
         pipeFluids()
     }
@@ -157,9 +161,9 @@ internal fun blueprintPipeFluids(
 internal fun blueprintLayoutDump(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
-    cheats: Boolean = false,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) =
-    RowLayout(plan, logistics, cheats).run {
+    RowLayout(plan, logistics, beltEnd).run {
         build()
         LayoutDump(placedEntities(), failures.toList())
     }
@@ -167,7 +171,7 @@ internal fun blueprintLayoutDump(
 private class RowLayout(
     private val plan: BlueprintPlan,
     private val logistics: LogisticsCalculator,
-    private val cheats: Boolean,
+    private val beltEnd: BeltEnd,
 ) {
     private val belt = logistics.belt.identifier
     private val inserter = logistics.inserter.identifier
@@ -177,6 +181,25 @@ private class RowLayout(
 
     /** The loader of the same tier as the belt, used as a test input/output. */
     private val loader = belt.replace("transport-belt", "loader")
+
+    /**
+     * How many tiles the solid belt connector occupies left of the feed: three for a label or a
+     * cheat chest, five for a chest the inserters feed.
+     */
+    private val connectorWidth
+        get() =
+            when (beltEnd) {
+                BeltEnd.CONSTANT_COMBINATOR,
+                BeltEnd.INFINITY_CHEST -> 3
+                else -> 5
+            }
+
+    /**
+     * The column a solid connector starts on. A cheat chest sits two tiles in so its loader fits
+     * before the feed; every other connector starts at the west edge.
+     */
+    private val connectorLeft
+        get() = if (beltEnd == BeltEnd.INFINITY_CHEST) 2 else 0
 
     /** Maximum length of an underground run, matching the prototype's `max_distance`. */
     private val undergroundRange =
@@ -191,7 +214,7 @@ private class RowLayout(
 
     /**
      * Belts tunnel only over an obstacle, so surface stays their first choice; a slight per-tile
-     * discount keeps a blocked tile tunnelled rather than detoured, while [stretchUndergroundRuns]
+     * discount keeps a blocked tile tunneled rather than detoured, while [stretchUndergroundRuns]
      * decides how long the run becomes.
      */
     private val beltProfile =
@@ -229,7 +252,7 @@ private class RowLayout(
         var edgeFluid: Material? = null
 
         /**
-         * The underground runs tunnelling over this tile, one key per run. Two runs may share the
+         * The underground runs tunneling over this tile, one key per run. Two runs may share the
          * tile when their axes differ, or when their types differ, so only a matching key clashes.
          */
         val tunnels = mutableSetOf<TunnelKey>()
@@ -257,7 +280,7 @@ private class RowLayout(
     private val markerRows = mutableSetOf<Int>()
 
     /**
-     * One imported input: its three-tile connector (marker or cheat chest/loader) and the tile its
+     * One imported input: its belt connector (label, cheat chest or chest marker) and the tile its
      * belt starts on. The prefix between the two is trimmed after routing, so the import bus does
      * not have to cross the whole layout before the compactor sees it.
      */
@@ -267,11 +290,7 @@ private class RowLayout(
         val row: Int,
         /** The lane tile the route feeds; the trim must never eat into the lane beyond it. */
         val feed: Coordinate,
-    ) {
-        /** The connector before the belt: input/chest, marker/loader, output. */
-        val connector
-            get() = (start.x - 3)..(start.x - 1)
-    }
+    )
 
     private val importFeeds = mutableListOf<ImportFeed>()
 
@@ -416,48 +435,33 @@ private class RowLayout(
      */
     private fun trimImportPrefixes() {
         if (importFeeds.isEmpty()) return
-        val oldColumn = if (cheats) 2 else 0
-        // the connector takes three tiles, so the new marker column is the straight run's end - 3
-        val common = importFeeds.minOf { feed -> lastStraightEast(feed) - 3 }
-        var trimmed = common > oldColumn
+        val width = connectorWidth
+        // the connector takes `width` tiles, so its column is the straight run's end - width
+        val common = importFeeds.minOf { feed -> lastStraightEast(feed) - width }
+        var trimmed = common > connectorLeft
         if (trimmed) {
             val saved = placed.toList()
             for (feed in importFeeds) {
-                for (x in feed.connector) removeAt(Coordinate(x, feed.row))
-                for (x in feed.start.x..(common + 2)) removeAt(Coordinate(x, feed.row))
-                if (cheats) {
-                    placeInfinityChest(
-                        Coordinate(common, feed.row),
-                        InfinitySettings(item = feed.material),
-                    )
-                    placeLoader(
-                        Coordinate(common + 1, feed.row),
-                        EAST,
-                        OUTPUT,
-                        feed.material,
-                    )
-                } else {
-                    placeEnd(feed.material, Coordinate(common, feed.row), EAST, INPUT)
-                    placeMarker(Coordinate(common + 1, feed.row), Signal(feed.material))
-                    placeEnd(feed.material, Coordinate(common + 2, feed.row), EAST, OUTPUT)
-                    markTunnel(
-                        Coordinate(common, feed.row),
-                        Coordinate(common + 2, feed.row),
-                        endName(feed.material),
-                    )
+                for (x in (feed.start.x - width) until feed.start.x) {
+                    removeAt(Coordinate(x, feed.row))
                 }
-                reserve(Coordinate(common + 3, feed.row), feed.material)
+                for (x in feed.start.x until common + width) {
+                    removeAt(Coordinate(x, feed.row))
+                }
+                placeSolidConnector(feed.material, common, feed.row, input = true)
+                reserve(Coordinate(common + width, feed.row), feed.material)
             }
             if (validateLayout(placed).isNotEmpty()) {
                 replaceAll(saved)
                 trimmed = false
             }
         }
-        if (trimmed) poleWestBound = maxOf(poleWestBound, common + 3)
+        // a chest marker is powered, so its poles may sit in the import extension
+        if (trimmed && !beltEnd.isChest) poleWestBound = maxOf(poleWestBound, common + width)
         // keep the whole connector and the first belt together, so the markers keep one column
         for (feed in importFeeds) {
-            val connectorStart = if (trimmed) common else feed.start.x - 3
-            for (x in connectorStart..(connectorStart + 3)) {
+            val connectorStart = if (trimmed) common else feed.start.x - width
+            for (x in connectorStart..(connectorStart + width)) {
                 pinnedImportTiles += Coordinate(x, feed.row)
             }
         }
@@ -482,7 +486,7 @@ private class RowLayout(
 
     /**
      * Removes empty or spliceable corridors from the layout until none is left. Every corridor is
-     * validated before it is kept; electricity is placed afterwards, so poles follow the compacted
+     * validated before it is kept; electricity is placed afterward, so poles follow the compacted
      * geometry.
      */
     private fun compact() {
@@ -512,7 +516,7 @@ private class RowLayout(
             }
             // the whole import group moved together, so its pins and the no-pole zone move with it
             if (chosen.pinnedShift != 0) {
-                poleWestBound += chosen.pinnedShift
+                if (!beltEnd.isChest) poleWestBound += chosen.pinnedShift
                 val moved =
                     pinnedImportTiles.mapTo(mutableSetOf()) { tile ->
                         if (chosen.orientation == SeamOrientation.VERTICAL) {
@@ -566,6 +570,39 @@ private class RowLayout(
                 }
             }
         }
+    }
+
+    /**
+     * The circuit wires a chest marker needs: the output marker's inserters read the chest through
+     * their circuit condition, so each has to be wired to it. A blueprint does not rebuild a
+     * circuit wire on its own (just like a pole wire), so the connection must be part of it.
+     */
+    fun chestWires(): List<BlueprintWire> {
+        val wires = mutableListOf<BlueprintWire>()
+        placed.forEachIndexed { index, entity ->
+            // only the output marker reads the chest; the input marker has no circuit condition
+            if (entity !is ChestEntity || entity.circuitConditionEnabled != false) {
+                return@forEachIndexed
+            }
+            val chest = entity.area.topLeft
+            for (dx in listOf(-1, 1)) {
+                val inserter =
+                    placed.withIndex().firstOrNull { (_, candidate) ->
+                        candidate is InserterEntity &&
+                            candidate.circuitCondition != null &&
+                            candidate.area.topLeft == Coordinate(chest.x + dx, chest.y)
+                    } ?: continue
+                val chestNumber = index + 1
+                val inserterNumber = inserter.index + 1
+                wires +=
+                    if (dx < 0) {
+                        BlueprintWire(inserterNumber, 1, chestNumber, 1)
+                    } else {
+                        BlueprintWire(chestNumber, 1, inserterNumber, 1)
+                    }
+            }
+        }
+        return wires
     }
 
     private fun copiesOf(recipe: PlannedRecipe): Int =
@@ -793,7 +830,7 @@ private class RowLayout(
         return if (outletX(material) <= (row.left + row.right) / 2) EAST else WEST
     }
 
-    /** The tile east of a material's producer output lane, or far east when it is not placed. */
+    /** The tile east of a material's producer output lane, or Far East when it is not placed. */
     private fun outletX(material: Material): Int {
         val producer = producerOf[material] ?: return Int.MAX_VALUE
         val producerRow = rows[producer.recipe] ?: return Int.MAX_VALUE
@@ -818,8 +855,8 @@ private class RowLayout(
     /**
      * Turns the solid sinks into deliveries and places every source up front. An intermediate gets
      * one trunk from its producer to the farthest consumer; the nearer consumers split off that
-     * belt later. An import gets one marker (or cheat chest) per sink, so unrelated consumers are
-     * not tied to one long shared belt.
+     * belt later. An import gets one belt connector per sink, so unrelated consumers are not tied
+     * to one long shared belt.
      */
     private fun prepareSolidDeliveries(sinks: List<Triple<Material, Row, Sink>>): List<Delivery> {
         val grouped = sinks.groupBy { it.first }
@@ -880,34 +917,25 @@ private class RowLayout(
     }
 
     /**
-     * A marker (or, with cheats, an infinity chest and loader) feeding one imported sink. The first
-     * free tile is reserved, so a route placed earlier cannot block this source.
+     * A solid belt connector feeding one imported sink: a constant-combinator label, an infinity
+     * chest or a chest marker. The first free tile is reserved, so a route placed earlier cannot
+     * block this source.
      */
     private fun importSource(material: Material, sink: Sink): Coordinate {
-        val columns = if (cheats) 2..5 else 0..3
+        val width = connectorWidth
+        val columns = connectorLeft..(connectorLeft + width)
         var row = sink.feedRow
         var attempts = 0
         while (
             (row in markerRows || columns.any { !isFree(Coordinate(it, row)) }) && attempts++ < 50
         ) row++
         markerRows += row
-        val start =
-            if (cheats) {
-                // an infinity chest feeds the belt through a loader, so no supply is needed
-                placeInfinityChest(Coordinate(2, row), InfinitySettings(item = material))
-                placeLoader(Coordinate(3, row), EAST, OUTPUT, material)
-                Coordinate(5, row)
-            } else {
-                // the label sits above an underground run, so the supply belt can pass underneath
-                placeEnd(material, Coordinate(0, row), EAST, INPUT)
-                placeMarker(Coordinate(1, row), Signal(material))
-                placeEnd(material, Coordinate(2, row), EAST, OUTPUT)
-                markTunnel(Coordinate(0, row), Coordinate(2, row), endName(material))
-                Coordinate(3, row)
-            }
+        placeSolidConnector(material, connectorLeft, row, input = true)
+        val start = Coordinate(connectorLeft + width, row)
         reserve(start, material)
         importFeeds += ImportFeed(material, start, row, sink.feed)
-        poleWestBound = maxOf(poleWestBound, start.x)
+        // a chest marker is powered, so its poles may sit in the import extension
+        if (!beltEnd.isChest) poleWestBound = maxOf(poleWestBound, start.x)
         compactionWestBound = maxOf(compactionWestBound, sink.target.x)
         return start
     }
@@ -1031,7 +1059,7 @@ private class RowLayout(
     }
 
     /**
-     * How good a split route is: its travelled length plus a penalty for every underground run. A
+     * How good a split route is: its traveled length plus a penalty for every underground run. A
      * slightly longer surface route beats a shorter one that dives under the trunk.
      */
     private fun routeScore(nodes: List<Coordinate>): Int =
@@ -1062,7 +1090,7 @@ private class RowLayout(
         }
     }
 
-    /** The two tiles across [direction] from [tile] that a splitter can use. */
+    /** The two tiles across [direction] from tile that a splitter can use. */
     private fun sides(direction: Direction) =
         when (direction) {
             NORTH,
@@ -1153,8 +1181,7 @@ private class RowLayout(
                     routed = true
                     break
                 }
-                val segment = fluidRoute(start, EAST, sink, group.material)
-                if (segment == null) continue
+                val segment = fluidRoute(start, EAST, sink, group.material) ?: continue
                 placePath(group.material, listOf(start) + segment)
                 network += listOf(start) + segment
                 pending.remove(sink)
@@ -1193,11 +1220,12 @@ private class RowLayout(
         placeMarker(Coordinate(1, row), Signal(material, fluid = true))
         placeEnd(material, Coordinate(2, row), EAST, OUTPUT)
         markTunnel(Coordinate(0, row), Coordinate(2, row), endName(material))
-        poleWestBound = maxOf(poleWestBound, 3)
+        // a chest marker needs poles in the import extension, so the bound only applies without one
+        if (!beltEnd.isChest) poleWestBound = maxOf(poleWestBound, 3)
         return Coordinate(3, row)
     }
 
-    /** Extends the target's output belt and ends it in a marker or a cheat infinity chest. */
+    /** Extends the target's output belt and ends it in the selected solid connector. */
     private fun placeTargetOutput() {
         val targetMaterial = plan.target
         val recipe = plan.recipes.firstOrNull { it.material == targetMaterial } ?: return
@@ -1209,23 +1237,10 @@ private class RowLayout(
             placeBelt(coordinate, targetMaterial, EAST)
             coordinate = coordinate.east()
         }
-        val loaderFits =
-            cheats && isFree(coordinate) && isFree(coordinate.east()) && isFree(coordinate.east(2))
-        if (loaderFits) {
-            // the product belt runs into a loader that voids it in an infinity chest
-            placeLoader(coordinate, EAST, INPUT, targetMaterial)
-            placeInfinityChest(
-                coordinate.east(2),
-                InfinitySettings(removeUnfiltered = true),
-            )
-        } else if (
-            !cheats && isFree(coordinate) && isFree(coordinate.east()) && isFree(coordinate.east(2))
-        ) {
+        val fits = (0 until connectorWidth).all { isFree(coordinate.east(it)) }
+        if (fits) {
             // the output label sits above the product line, just like an imported input
-            placeEnd(targetMaterial, coordinate, EAST, INPUT)
-            placeMarker(coordinate.east(), Signal(targetMaterial))
-            placeEnd(targetMaterial, coordinate.east(2), EAST, OUTPUT)
-            markTunnel(coordinate, coordinate.east(2), endName(targetMaterial))
+            placeSolidConnector(targetMaterial, coordinate.x, coordinate.y, input = false)
         } else {
             val spot = markerSpot(coordinate.west())
             placeMarker(spot, Signal(targetMaterial))
@@ -1373,10 +1388,19 @@ private class RowLayout(
      */
     private fun stretchUndergroundRuns() {
         for (input in placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
-            // the import connector is a fixed three-tile marker, not a route to stretch
-            if (entityAt(input.area.topLeft.east()) is MarkerEntity) continue
+            // the import connector is a fixed marker or chest, not a route to stretch
+            if (isConnectorTunnel(input)) continue
             stretchRun(input)
         }
+    }
+
+    /**
+     * Whether [input] is the buried run of a fixed belt connector: its first tile after the input
+     * is the connector's label or inserter, not a plain belt the run could swallow.
+     */
+    private fun isConnectorTunnel(input: UndergroundEntity): Boolean {
+        val after = entityAt(input.area.topLeft.east())
+        return after is MarkerEntity || after is InserterEntity
     }
 
     /** The output end of the underground run [input] feeds, within the material's reach, if any. */
@@ -1879,6 +1903,125 @@ private class RowLayout(
     /** Places an infinity chest (always one tile) with its [settings]. */
     private fun placeInfinityChest(coordinate: Coordinate, settings: InfinitySettings) {
         place(InfinityChestEntity(coordinate.area(), INFINITY_CHEST, settings))
+    }
+
+    /**
+     * Places the selected solid belt connector for [material] on [row], starting at column [left]:
+     * a constant-combinator label, an infinity chest or a chest the inserters feed. [input] marks a
+     * connector that supplies an imported belt, whose first tile is the tunnel input; the target
+     * output passes `false` so a cheat chest loads from the belt instead.
+     */
+    private fun placeSolidConnector(material: Material, left: Int, row: Int, input: Boolean) {
+        when (beltEnd) {
+            BeltEnd.CONSTANT_COMBINATOR -> {
+                // the label sits above an underground run, so the belt can pass underneath
+                placeEnd(material, Coordinate(left, row), EAST, INPUT)
+                placeMarker(Coordinate(left + 1, row), Signal(material))
+                placeEnd(material, Coordinate(left + 2, row), EAST, OUTPUT)
+                markTunnel(Coordinate(left, row), Coordinate(left + 2, row), endName(material))
+            }
+            BeltEnd.INFINITY_CHEST -> {
+                if (input) {
+                    placeInfinityChest(Coordinate(left, row), InfinitySettings(item = material))
+                    placeLoader(Coordinate(left + 1, row), EAST, OUTPUT, material)
+                } else {
+                    placeLoader(Coordinate(left, row), EAST, INPUT, material)
+                    placeInfinityChest(
+                        Coordinate(left + 2, row),
+                        InfinitySettings(removeUnfiltered = true),
+                    )
+                }
+            }
+            else -> placeChestConnector(material, left, row, input)
+        }
+    }
+
+    /**
+     * Places a chest marker: a five-tile connector whose belt tunnels under the chest, with an
+     * inserter on each side. An input marker feeds the belt out of the chest, an output marker
+     * fills the chest from the belt, and the plain wooden and steel chests do both at once.
+     */
+    private fun placeChestConnector(material: Material, left: Int, row: Int, input: Boolean) {
+        placeEnd(material, Coordinate(left, row), EAST, INPUT)
+        placeEnd(material, Coordinate(left + 4, row), EAST, OUTPUT)
+        markTunnel(Coordinate(left, row), Coordinate(left + 4, row), endName(material))
+        val buffer = beltEnd == BeltEnd.BUFFER_CHEST
+        val count = if (buffer) if (input) 100 else 200 else 1
+        when {
+            beltEnd == BeltEnd.WOODEN_CHEST || beltEnd == BeltEnd.STEEL_CHEST -> {
+                // both inserters face west, so the chest buffers a pass-through belt
+                placeConnectorInserter(material, Coordinate(left + 1, row), WEST)
+                placeConnectorInserter(material, Coordinate(left + 3, row), WEST)
+                placeChest(Coordinate(left + 2, row), bar = 4)
+            }
+            input -> {
+                placeConnectorInserter(material, Coordinate(left + 1, row), EAST)
+                placeConnectorInserter(material, Coordinate(left + 3, row), WEST, mirror = true)
+                placeChest(
+                    Coordinate(left + 2, row),
+                    requestFilter = RequestFilter(material.name, count, buffer),
+                )
+            }
+            else -> {
+                val condition = CircuitCondition(material.name, "<", 200)
+                placeConnectorInserter(
+                    material,
+                    Coordinate(left + 1, row),
+                    WEST,
+                    circuitCondition = condition,
+                )
+                placeConnectorInserter(
+                    material,
+                    Coordinate(left + 3, row),
+                    EAST,
+                    circuitCondition = condition,
+                )
+                placeChest(
+                    Coordinate(left + 2, row),
+                    requestFilter = RequestFilter(material.name, count, buffer),
+                    circuitConditionEnabled = false,
+                )
+            }
+        }
+    }
+
+    /** Places a chest marker's inserter (always one tile) of the selected tier. */
+    private fun placeConnectorInserter(
+        material: Material,
+        coordinate: Coordinate,
+        direction: Direction,
+        mirror: Boolean = false,
+        circuitCondition: CircuitCondition? = null,
+    ) {
+        place(
+            InserterEntity(
+                coordinate.area(),
+                inserter,
+                material,
+                direction,
+                long = false,
+                mirror = mirror,
+                circuitCondition = circuitCondition,
+            ),
+        )
+    }
+
+    /** Places a chest marker (always one tile) of the selected type. */
+    private fun placeChest(
+        coordinate: Coordinate,
+        requestFilter: RequestFilter? = null,
+        bar: Int? = null,
+        circuitConditionEnabled: Boolean? = null,
+    ) {
+        place(
+            ChestEntity(
+                coordinate.area(),
+                beltEnd.identifier,
+                requestFilter = requestFilter,
+                bar = bar,
+                circuitConditionEnabled = circuitConditionEnabled,
+            ),
+        )
     }
 
     /** Places a medium electric pole (always one tile). */
