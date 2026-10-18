@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.util.MinHeap
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -36,6 +37,7 @@ private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
 
 private const val MARKER = "constant-combinator"
 private const val INFINITY_CHEST = "infinity-chest"
+private const val INFINITY_PIPE = "infinity-pipe"
 private const val PIPE = "pipe"
 private const val PIPE_TO_GROUND = "pipe-to-ground"
 private const val POLE = "medium-electric-pole"
@@ -46,11 +48,17 @@ private const val ROUTE_WEST_BOUND = 2
 /** How far past everything placed a route may still search, so A* stays near the blueprint. */
 private const val ROUTE_MARGIN = 24
 
-/** The maximum length of a pipe-to-ground run, matching the prototype's `max_distance`. */
-private const val PIPE_UNDERGROUND_RANGE = 9
+/**
+ * The maximum length of a pipe-to-ground run, matching the prototype's `max_underground_distance`.
+ */
+private const val PIPE_UNDERGROUND_RANGE = 10
 
-/** A search node: a tile, the direction index the route entered it from, and a forced flag. */
-private data class RouteNode(val tile: Coordinate, val heading: Direction, val forced: Boolean)
+/**
+ * A search node: a tile, the direction the route entered it from, and how many more tiles it must
+ * run straight before it may dive again. A landing keeps that straight run so a belt exit is not
+ * immediately followed by the next entrance.
+ */
+private data class RouteNode(val tile: Coordinate, val heading: Direction, val straight: Int)
 
 /**
  * What makes belts and pipes route differently: the tile costs, the tunnel range and whether a
@@ -79,6 +87,12 @@ private class RouteProfile(
     val tunnelOnlyWhenBlocked: Boolean,
     /** Whether the route may immediately reverse into the tile it came from. */
     val forbidReverse: Boolean = true,
+    /**
+     * How many straight surface tiles a tunnel landing must run before the next tunnel may start. A
+     * belt exit only feeds a surface tile, so a belt needs one tile there plus the next entrance; a
+     * pipe-to-ground exit joins its neighbour directly.
+     */
+    val landingStraight: Int = 1,
 )
 
 /** One queued A* entry; ties break on `g` then insertion order, so routes are reproducible. */
@@ -225,6 +239,8 @@ private class RowLayout(
             range = undergroundRange,
             undergroundType = undergroundBelt,
             tunnelOnlyWhenBlocked = true,
+            // a belt exit feeds a surface belt, which then feeds the next entrance
+            landingStraight = 2,
         )
 
     /** Pipes may tunnel anywhere and prefer to: the player walks over a buried pipe, not a pipe. */
@@ -278,6 +294,12 @@ private class RowLayout(
     private var routeMaxY = Int.MIN_VALUE
 
     private val markerRows = mutableSetOf<Int>()
+
+    /**
+     * The machine-port tiles a fluid must reach. An underground run never swallows one, so growing
+     * a run cannot pull a pipe off the machine it feeds.
+     */
+    private val fluidPorts = mutableSetOf<Coordinate>()
 
     /**
      * One imported input: its belt connector (label, cheat chest or chest marker) and the tile its
@@ -740,17 +762,36 @@ private class RowLayout(
             )
         }
 
+        val fluidPorts = blueprintMachineFluidPorts(recipe.factory.identifier)
+        // a fluid pipe sits on the machine edge just outside its port tile; keep those tiles free
+        // of inserters so the fluid can actually connect. A recipe that uses no fluid keeps the
+        // original inserter spread, ports and all.
+        val usesFluid =
+            recipe.recipe.ingredients.keys.any { logistics.isFluid(it) } ||
+                recipe.recipe.result.keys.any { logistics.isFluid(it) }
+        val topPortColumns =
+            if (usesFluid) fluidPorts.filter { it.tile.y == -1 }.mapTo(mutableSetOf()) { it.tile.x }
+            else emptySet()
+        val bottomPortColumns =
+            if (usesFluid) {
+                fluidPorts.filter { it.tile.y == size.height }.mapTo(mutableSetOf()) { it.tile.x }
+            } else {
+                emptySet()
+            }
+
         // a short inserter reaches the near lane one tile up, a long one the far lane two tiles up;
         // a lane whose rate needs more than one inserter gets several, spread over the edge
         val nearCount = if (lanes >= 1) insertersFor(recipe, listOf(solids[0])) else 0
         val farCount = if (lanes >= 2) insertersFor(recipe, listOf(solids[1])) else 0
         val pattern = inserterPattern(nearCount, farCount, size.width)
+        // the machine's last column is left free for a pole; a port there is left free for the pipe
+        val insertColumns = (0 until maxOf(1, size.width - 1)).filterNot(topPortColumns::contains)
         for (copy in 0 until copies) {
             val left = row.left + copy * stride
-            pattern.forEachIndexed { index, long ->
+            insertColumns.zip(pattern).forEach { (column, long) ->
                 // a long inserter reaches the far lane, a short one the near lane
                 placeInserter(
-                    Coordinate(left + index, factoryTop - 1),
+                    Coordinate(left + column, factoryTop - 1),
                     NORTH,
                     if (long) solids[1] else solids[0],
                     long,
@@ -769,12 +810,23 @@ private class RowLayout(
         laneBelowRow?.let { placeLane(it, solids[2]) }
 
         val product = recipe.recipe.result.keys.firstOrNull { !logistics.isFluid(it) }
+        // the product inserter and the extra lane's long inserter keep off the bottom fluid ports
+        val freeBottomColumns = (0 until size.width).filterNot(bottomPortColumns::contains)
+        val productColumn =
+            freeBottomColumns.minByOrNull { abs(it - size.width / 2) } ?: (size.width / 2)
+        val belowPreferred = if (size.width == 2) 0 else size.width - 1
+        val belowColumn =
+            freeBottomColumns
+                .filter { it != productColumn }
+                .minByOrNull {
+                    abs(it - belowPreferred)
+                } ?: belowPreferred
         for (copy in 0 until copies) {
             val left = row.left + copy * stride
             // the product is inserted onto the belt below the row
             product?.let {
                 placeInserter(
-                    Coordinate(left + size.width / 2, row.factoryBottom + 1),
+                    Coordinate(left + productColumn, row.factoryBottom + 1),
                     NORTH,
                     it,
                     false,
@@ -782,9 +834,8 @@ private class RowLayout(
             }
             // a long inserter reaches over the output belt to a third input belt below the row
             if (laneBelowRow != null) {
-                val column = if (size.width == 2) left else left + size.width - 1
                 placeInserter(
-                    Coordinate(column, row.factoryBottom + 1),
+                    Coordinate(left + belowColumn, row.factoryBottom + 1),
                     SOUTH,
                     solids[2],
                     true,
@@ -1131,9 +1182,15 @@ private class RowLayout(
                     .sortedBy { it.name }
             for (material in fluids) {
                 for (copy in 0 until row.copies) {
-                    val tile = fluidEdge(row, copy, material) ?: continue
+                    val tile = fluidEdge(row, copy, material)
+                    if (tile == null) {
+                        failures +=
+                            "${material.name} to ${row.recipe.factory.identifier} (no fluid port)"
+                        continue
+                    }
                     reserve(tile, material)
                     cell(tile).edgeFluid = material
+                    fluidPorts += tile
                     targets.getOrPut(material) { mutableListOf() }.add(tile)
                 }
             }
@@ -1195,34 +1252,68 @@ private class RowLayout(
         }
     }
 
+    /**
+     * The tile a fluid pipe must occupy to feed one copy of [row]'s machine: one of the machine's
+     * input ports (or, without a port table, the left then right edge). Null when all are taken.
+     */
     private fun fluidEdge(row: Row, copy: Int, material: Material): Coordinate? {
         val left = row.left + copy * row.stride
-        for (x in listOf(left - 1, left + row.width)) {
-            for (y in row.factoryTop until row.factoryTop + row.height) {
-                val tile = Coordinate(x, y)
-                if (!isFree(tile) || isReserved(tile)) continue
-                val clash = steps.any { d ->
-                    grid[tile + d]?.edgeFluid.let { it != null && it != material }
-                }
-                if (!clash) return tile
+        val ports =
+            blueprintMachineFluidPorts(row.recipe.factory.identifier)
+                .filter { it.flow != PortFlow.OUTPUT }
+                .map { Coordinate(left + it.tile.x, row.factoryTop + it.tile.y) }
+        val candidates = ports.ifEmpty {
+            listOf(left - 1, left + row.width).flatMap { x ->
+                (row.factoryTop until row.factoryTop + row.height).map { y -> Coordinate(x, y) }
             }
+        }
+        for (tile in candidates) {
+            if (!isFree(tile) || isReserved(tile)) continue
+            val clash = steps.any { d ->
+                grid[tile + d]?.edgeFluid.let { it != null && it != material }
+            }
+            if (!clash) return tile
         }
         return null
     }
 
     /** Places a fluid marker and returns the free tile its pipe lane starts on. */
     private fun fluidMarker(material: Material, target: Coordinate): Coordinate {
+        // The connector sits just west of the sink, so the fluid only runs a short lane. A solid
+        // import keeps a label at the far west and is trimmed after routing; a fluid route is not
+        // straight, so its marker is placed near the machine from the start instead.
+        val source = Coordinate(target.x - 1, target.y)
+        // the connector tiles west of the source: a single infinity pipe or the input/label/output
+        // triple that hides the fluid under the combinator (a chest cannot carry a fluid)
+        val firstColumn = if (beltEnd == BeltEnd.INFINITY_CHEST) source.x - 1 else source.x - 3
+        val columns = (firstColumn..source.x).toList()
+        // keep the connector's buried run clear of any other fluid near the machine
+        fun touchesForeignFluid(row: Int) = columns.any { x ->
+            steps.any { step ->
+                val neighbour = fluidAt(Coordinate(x, row) + step)
+                neighbour != null && neighbour != material
+            }
+        }
         var row = target.y
-        while (row in markerRows || (0..3).any { !isFree(Coordinate(it, row)) }) row++
+        while (
+            row in markerRows ||
+                columns.any { !isFree(Coordinate(it, row)) } ||
+                touchesForeignFluid(row)
+        ) row++
         markerRows += row
+        // the cheat variant replaces the label with a single infinity pipe that supplies the fluid
+        if (beltEnd == BeltEnd.INFINITY_CHEST) {
+            placeInfinityPipe(Coordinate(source.x - 1, row), material)
+            compactionWestBound = maxOf(compactionWestBound, target.x)
+            return Coordinate(source.x, row)
+        }
         // a pipe-to-ground run under the label, so the label does not block the fluid
-        placeEnd(material, Coordinate(0, row), EAST, INPUT)
-        placeMarker(Coordinate(1, row), Signal(material, fluid = true))
-        placeEnd(material, Coordinate(2, row), EAST, OUTPUT)
-        markTunnel(Coordinate(0, row), Coordinate(2, row), endName(material))
-        // a chest marker needs poles in the import extension, so the bound only applies without one
-        if (!beltEnd.isChest) poleWestBound = maxOf(poleWestBound, 3)
-        return Coordinate(3, row)
+        placeEnd(material, Coordinate(source.x - 3, row), EAST, INPUT)
+        placeMarker(Coordinate(source.x - 2, row), Signal(material, fluid = true))
+        placeEnd(material, Coordinate(source.x - 1, row), EAST, OUTPUT)
+        markTunnel(Coordinate(source.x - 3, row), Coordinate(source.x - 1, row), endName(material))
+        compactionWestBound = maxOf(compactionWestBound, target.x)
+        return Coordinate(source.x, row)
     }
 
     /** Extends the target's output belt and ends it in the selected solid connector. */
@@ -1252,12 +1343,24 @@ private class RowLayout(
         if (!logistics.isFluid(plan.target)) return
         val recipe = plan.recipes.firstOrNull { it.material == plan.target } ?: return
         val row = rows[recipe.recipe] ?: return
+        val ports =
+            blueprintMachineFluidPorts(recipe.factory.identifier).filter {
+                it.flow != PortFlow.INPUT
+            }
         for (copy in 0 until row.copies) {
-            val x = row.left + copy * row.stride + row.width
-            for (y in row.factoryTop until row.factoryTop + row.height) {
-                val coordinate = Coordinate(x, y)
+            val left = row.left + copy * row.stride
+            val candidates =
+                ports
+                    .map { Coordinate(left + it.tile.x, row.factoryTop + it.tile.y) }
+                    .ifEmpty {
+                        (row.factoryTop until row.factoryTop + row.height).map { y ->
+                            Coordinate(left + row.width, y)
+                        }
+                    }
+            for (coordinate in candidates) {
                 if (isFree(coordinate)) {
                     placePipe(coordinate, plan.target)
+                    fluidPorts += coordinate
                     break
                 }
             }
@@ -1276,6 +1379,9 @@ private class RowLayout(
             target,
             { tile, _ -> tile == target || pipeAllowed(tile, fluid) },
             pipeProfile,
+            // a segment grows out of an existing plain pipe, which cannot become a tunnel end:
+            // it has to leave the network on the surface for one tile before it may dive
+            strictStart = true,
         )
 
     /** A pipe tile is free only when it touches no pipe carrying a different fluid. */
@@ -1452,16 +1558,27 @@ private class RowLayout(
         if (budget <= 0) return
         val fluid = logistics.isFluid(material)
 
+        // a straight pipe has no plumbing neighbour across the run's axis (a turn has one)
+        fun isStraight(tile: Coordinate): Boolean {
+            val across =
+                if (step.x != 0) listOf(Coordinate.north, Coordinate.south)
+                else listOf(Coordinate.east, Coordinate.west)
+            return across.none { grid[tile + it]?.entity is Plumbing }
+        }
+
         fun swallowable(tile: Coordinate) =
             when (val entity = grid[tile]?.entity) {
                 is BeltEntity ->
                     !fluid && entity.material == material && entity.direction == direction
-                is PipeEntity -> fluid && entity.material == material
+                // a pipe is only swallowable when it is a straight pass-through of the same fluid;
+                // a machine port or a corner must stay a surface tile, or the run would end on it
+                is PipeEntity ->
+                    fluid && entity.material == material && tile !in fluidPorts && isStraight(tile)
                 else -> false
             }
 
-        val maxBack = extension(inputTile, backward, budget, type, ::swallowable)
-        val maxForward = extension(outputTile, step, budget, type, ::swallowable)
+        val maxBack = extension(inputTile, backward, budget, type, fluid, ::swallowable)
+        val maxForward = extension(outputTile, step, budget, type, fluid, ::swallowable)
 
         val (back, forward) = share(budget, maxBack, maxForward)
         if (back == 0 && forward == 0) return
@@ -1481,21 +1598,26 @@ private class RowLayout(
 
     /**
      * How far the end at [start] can grow in [step], at most [budget] tiles: every swallowed tile
-     * must be [swallowable] and leave a belt/pipe beyond the new end, and the tile that becomes
-     * part of the run must not already carry a tunnel of the same [type] on the same axis.
+     * must be [swallowable], it must leave something for the new end to join beyond it (never
+     * another underground end of a belt), and the tile that becomes part of the run must not
+     * already carry a tunnel of the same [type] on the same axis.
      */
     private fun extension(
         start: Coordinate,
         step: Coordinate,
         budget: Int,
         type: String,
+        fluid: Boolean,
         swallowable: (Coordinate) -> Boolean,
     ): Int {
         val key = TunnelKey(axisOf(step), type)
         var count = 0
         while (count < budget) {
             val next = start + step * (count + 1)
-            if (!swallowable(next) || isFree(next + step)) break
+            val beyond = grid[next + step]?.entity
+            if (!swallowable(next) || beyond == null) break
+            // a belt exit/entrance joins a surface belt, not the next run's underground end
+            if (!fluid && beyond is UndergroundBeltEntity) break
             if (key in (grid[start + step * count]?.tunnels ?: emptySet())) break
             count++
         }
@@ -1561,7 +1683,7 @@ private class RowLayout(
         if (from == to) return emptyList()
         if (!inRegion(to)) return null
 
-        val start = RouteNode(from, heading, forced = false)
+        val start = RouteNode(from, heading, straight = 0)
         val gScore = mutableMapOf(start to 0)
         val previous = mutableMapOf<RouteNode, RouteNode>()
         val heap = MinHeap<RouteEntry>()
@@ -1585,8 +1707,9 @@ private class RowLayout(
             if (entry.g > (gScore[current] ?: Int.MAX_VALUE)) continue
             if (current.tile == to) return reconstructRoute(previous, current, start)
 
-            // after surfacing, a belt must run straight for one tile before it can turn
-            val directions = if (current.forced) listOf(current.heading) else Direction.entries
+            // after surfacing, a run must stay on the surface for a while before it may dive again
+            val directions =
+                if (current.straight > 0) listOf(current.heading) else Direction.entries
             for (direction in directions) {
                 val directionStep = direction.step
                 val surface = current.tile + directionStep
@@ -1601,7 +1724,7 @@ private class RowLayout(
                         if (steps.any { isReserved(surface + it) }) profile.keepClearCost else 0
                     relax(
                         current,
-                        RouteNode(surface, direction, forced = false),
+                        RouteNode(surface, direction, straight = maxOf(0, current.straight - 1)),
                         profile.surfaceCost + turn + detour + clear,
                         entry.g,
                     )
@@ -1610,7 +1733,7 @@ private class RowLayout(
                 // branch may not start with one, because the splitter would feed its side
                 if (
                     (strictStart && current == start) ||
-                        current.forced ||
+                        current.straight > 0 ||
                         current.heading != direction
                 )
                     continue
@@ -1630,7 +1753,7 @@ private class RowLayout(
                     }
                     relax(
                         current,
-                        RouteNode(target, direction, forced = true),
+                        RouteNode(target, direction, straight = profile.landingStraight),
                         profile.tunnelEntry + reach * profile.undergroundCost,
                         entry.g,
                     )
@@ -1903,6 +2026,19 @@ private class RowLayout(
     /** Places an infinity chest (always one tile) with its [settings]. */
     private fun placeInfinityChest(coordinate: Coordinate, settings: InfinitySettings) {
         place(InfinityChestEntity(coordinate.area(), INFINITY_CHEST, settings))
+    }
+
+    /**
+     * Places an infinity pipe (always one tile) that supplies [fluid] at its default temperature.
+     */
+    private fun placeInfinityPipe(coordinate: Coordinate, fluid: Material) {
+        place(
+            InfinityPipeEntity(
+                coordinate.area(),
+                INFINITY_PIPE,
+                InfinityPipeSettings(fluid, logistics.fluidTemperature(fluid)),
+            ),
+        )
     }
 
     /**

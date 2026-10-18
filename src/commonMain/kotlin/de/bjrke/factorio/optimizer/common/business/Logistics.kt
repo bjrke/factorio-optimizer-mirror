@@ -34,6 +34,9 @@ class LogisticsCalculator(
     /** Fluids move through pipes and pumps, not on belts. */
     fun isFluid(material: Material) = material in logistics.fluids
 
+    /** The default temperature of a fluid, for an infinity pipe source; 0 when unknown. */
+    fun fluidTemperature(material: Material) = logistics.fluidTemperatures[material] ?: 0
+
     /** Whether the selected inserter can stack items on a belt (only the stack inserter can). */
     fun stacksOnBelt() = inserterStats.stacksOnBelt
 

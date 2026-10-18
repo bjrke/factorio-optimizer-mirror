@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -100,13 +101,32 @@ class LayoutEntityTest {
                     markerFluid = true,
                 ),
             PipeEntity(AreaTile(8, 16), "pipe", water) to BlueprintEntity("pipe", AreaTile(8, 16)),
+            // a pipe-to-ground has no input/output type: the entrance faces back toward its source,
+            // so an eastward run stores EAST but the blueprint gets WEST for the entrance
             PipeToGroundEntity(
                 AreaTile(10, 16),
                 "pipe-to-ground",
                 water,
                 EAST,
                 Io.INPUT,
-            ) to BlueprintEntity("pipe-to-ground", AreaTile(10, 16), EAST),
+            ) to BlueprintEntity("pipe-to-ground", AreaTile(10, 16), WEST),
+            PipeToGroundEntity(
+                AreaTile(11, 16),
+                "pipe-to-ground",
+                water,
+                EAST,
+                OUTPUT,
+            ) to BlueprintEntity("pipe-to-ground", AreaTile(11, 16), EAST),
+            InfinityPipeEntity(
+                AreaTile(14, 16),
+                "infinity-pipe",
+                InfinityPipeSettings(water, temperature = 15),
+            ) to
+                BlueprintEntity(
+                    "infinity-pipe",
+                    AreaTile(14, 16),
+                    infinityPipe = InfinityPipeSettings(water, temperature = 15),
+                ),
             PoleEntity(AreaTile(12, 18), "medium-electric-pole", listOf(2, 5)) to
                 BlueprintEntity(
                     "medium-electric-pole",

@@ -555,6 +555,7 @@ private fun LayoutEntity.shifted(orientation: SeamOrientation, amount: Int): Lay
         is InserterEntity -> copy(area = moved)
         is LoaderEntity -> copy(area = moved)
         is InfinityChestEntity -> copy(area = moved)
+        is InfinityPipeEntity -> copy(area = moved)
         is ChestEntity -> copy(area = moved)
         is MarkerEntity -> copy(area = moved)
         is PipeEntity -> copy(area = moved)
@@ -570,7 +571,7 @@ private fun findUndergroundOutput(
     val step = input.direction.step
     val range =
         when {
-            input is PipeToGroundEntity -> 9
+            input is PipeToGroundEntity -> 10
             input.name.contains("turbo") -> 11
             input.name.contains("express") -> 9
             input.name.contains("fast") -> 7

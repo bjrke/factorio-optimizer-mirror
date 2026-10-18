@@ -137,6 +137,19 @@ data class PipeEntity(
     override val material: Material,
 ) : Plumbing
 
+/**
+ * A cheat fluid source: an infinity pipe that keeps [settings]' fluid at 100%. It connects to pipes
+ * on any side just like a plain pipe, so it stands in for a fluid import marker.
+ */
+data class InfinityPipeEntity(
+    override val area: Area,
+    override val name: String,
+    val settings: InfinityPipeSettings,
+) : Plumbing {
+    override val material: Material
+        get() = settings.fluid
+}
+
 data class PipeToGroundEntity(
     override val area: Area,
     override val name: String,
@@ -174,6 +187,7 @@ fun LayoutEntity.toBlueprintEntity(): BlueprintEntity {
         is UndergroundBeltEntity -> common.copy(direction = direction, type = io)
         is LoaderEntity -> common.copy(direction = direction, type = io)
         is InfinityChestEntity -> common.copy(infinity = settings)
+        is InfinityPipeEntity -> common.copy(infinityPipe = settings)
         is ChestEntity ->
             common.copy(
                 requestFilter = requestFilter,
@@ -182,7 +196,12 @@ fun LayoutEntity.toBlueprintEntity(): BlueprintEntity {
             )
         is MarkerEntity -> common.copy(marker = signal.material, markerFluid = signal.fluid)
         is PipeEntity -> common
-        is PipeToGroundEntity -> common.copy(direction = direction)
+        // A pipe-to-ground carries no input/output `type` in a 2.0 blueprint: the game reads the
+        // `direction` as the side the surface pipe attaches on, so the entrance of an underground
+        // run faces back toward its source while the exit faces on toward the target. Internally
+        // both ends are stored with the run's travel direction, so only the entrance is flipped.
+        is PipeToGroundEntity ->
+            common.copy(direction = if (io == Io.INPUT) direction.opposite() else direction)
         is PoleEntity -> common.copy(neighbours = neighbours)
     }
 }

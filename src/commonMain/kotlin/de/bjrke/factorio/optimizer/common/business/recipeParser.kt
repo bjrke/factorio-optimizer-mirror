@@ -230,12 +230,21 @@ fun logisticsStats(root: JsonObject): Logistics {
             ?.times(60.0)
 
     val fluids = root.table("fluid").keys.mapTo(mutableSetOf()) { Material(it) }
+    val fluidTemperatures =
+        root
+            .table("fluid")
+            .filterValueIsInstance<JsonObject>()
+            .mapNotNull { (name, element) ->
+                element.number("default_temperature")?.toInt()?.let { Material(name) to it }
+            }
+            .toMap()
 
     return Logistics(
         belts = belts,
         inserters = inserters,
         pumpRate = pumpRate,
         fluids = fluids,
+        fluidTemperatures = fluidTemperatures,
     )
 }
 

@@ -39,9 +39,10 @@ private fun planned(
     )
 
 /**
- * The connected pipe networks of [entities]. Pipes connect by touching, and a pipe-to-ground also
- * connects to the next pipe-to-ground straight ahead within its reach, so the two ends of an
- * underground run belong to the same network.
+ * The connected pipe networks of [entities]. Pipes connect by touching. A pipe-to-ground carries
+ * only the side its surface pipe attaches on (the blueprint has no input/output `type` for pipes),
+ * so two ends of an underground run face away from each other: the partner of an end sits one step
+ * in the direction *opposite* its facing, up to the pipe's reach, and itself faces that same way.
  */
 private fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordinate>> {
     val tiles =
@@ -56,11 +57,12 @@ private fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordi
             val next = tile + direction.step
             if (next in tiles) add(next)
         }
-        val direction = grounds[tile]
-        if (direction != null) {
-            for (distance in 1..9) {
-                val next = tile + direction.step * distance
-                if (grounds[next] == direction) {
+        val mouth = grounds[tile]
+        if (mouth != null) {
+            val away = mouth.opposite().step
+            for (distance in 1..10) {
+                val next = tile + away * distance
+                if (grounds[next] == mouth.opposite()) {
                     add(next)
                     break
                 }
@@ -210,6 +212,102 @@ class BlueprintLayoutTest {
             { assertEquals(EAST, input.direction) },
             { assertEquals(EAST, output.direction) },
             { assertEquals(input.material, output.material) },
+        )
+    }
+
+    @Test
+    fun fluidImportMarkerEntranceFacesAwayFromTheLabel() {
+        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "water-boil",
+            )
+        // the pipe-to-ground carries no input/output type, so its direction is the side the
+        // surface pipe attaches on: the entrance faces west (away from the label), the exit east
+        val blueprint = buildBlueprint(fluidPlan, logistics)
+        val label =
+            blueprint.entities.single {
+                it.name == "constant-combinator" && it.markerFluid
+            }
+        val west = blueprint.entities.single { it.area.topLeft == label.area.topLeft.west() }
+        val east = blueprint.entities.single { it.area.topLeft == label.area.topLeft.east() }
+
+        assertAll(
+            { assertEquals("pipe-to-ground", west.name) },
+            { assertEquals(WEST, west.direction) },
+            { assertEquals(EAST, east.direction) },
+        )
+    }
+
+    @Test
+    fun anElectromagneticPlantIsFedOnItsThirdRowPort() {
+        val wire =
+            recipe("electro", Category.ELECTROMAGNETICS, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(wire, gear, Factory.ELECTROMAGNETIC_PLANT)),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "electro",
+            )
+        val dump = blueprintLayoutDump(fluidPlan, logistics)
+        val machine = dump.entities.filterIsInstance<MachineEntity>().single()
+        val left = machine.area.topLeft.x
+        val top = machine.area.topLeft.y
+        // the prototype's west connection is on the third row, not the first
+        val port = Coordinate(left - 1, top + 2)
+
+        assertAll(
+            { assertEquals(emptyList(), dump.failures) },
+            {
+                assertTrue(
+                    dump.entities.any { it is Plumbing && it.area.topLeft == port },
+                    "no pipe at the machine's third-row port $port",
+                )
+            },
+        )
+    }
+
+    @Test
+    fun theCheatFluidSourceIsASingleInfinityPipe() {
+        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "water-boil",
+            )
+        val cheatLogistics =
+            LogisticsCalculator(
+                testLogistics.copy(fluids = setOf(water), fluidTemperatures = mapOf(water to 15)),
+                BeltTier.EXPRESS_TRANSPORT_BELT,
+                InserterTier.FAST_INSERTER,
+                lanes = 1,
+                beltStack = 1,
+                inserterStack = 1,
+            )
+        val entities =
+            buildBlueprint(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).entities
+
+        assertAll(
+            { assertEquals(1, entities.count { it.name == "infinity-pipe" }) },
+            {
+                assertTrue(
+                    entities.none { it.name == "constant-combinator" && it.markerFluid },
+                    "the fluid label should be replaced",
+                )
+            },
+            {
+                val pipe = entities.single { it.name == "infinity-pipe" }
+                assertEquals(InfinityPipeSettings(water, temperature = 15), pipe.infinityPipe)
+            },
         )
     }
 
@@ -798,7 +896,7 @@ class BlueprintLayoutTest {
             val step = input.direction.step
             var output: PipeToGroundEntity? = null
             var reach = 0
-            for (distance in 2..9) {
+            for (distance in 2..10) {
                 val entity = byTile[input.area.topLeft + step * distance] as? PipeToGroundEntity
                 if (entity != null && entity.io == Io.OUTPUT && entity.material == input.material) {
                     output = entity
@@ -806,7 +904,7 @@ class BlueprintLayoutTest {
                     break
                 }
             }
-            if (output == null || reach >= 9) continue
+            if (output == null || reach >= 10) continue
             val back = input.area.topLeft - step
             if (plainPipe(back, input.material) && back - step in byTile) {
                 problems += "input ${input.area.topLeft} can still grow back"
@@ -991,10 +1089,18 @@ class BlueprintLayoutTest {
             )
         val dump = blueprintLayoutDump(fluidPlan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
         val marker = dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
+        // the label still hides the fluid under a buried run that reaches the lane next to it
+        val lane = marker.area.topLeft.east().east()
 
         assertAll(
             { assertEquals(water, marker.signal.material) },
             { assertEquals(emptyList(), dump.failures) },
+            {
+                assertTrue(
+                    dump.entities.any { it is Plumbing && it.area.topLeft == lane },
+                    "the label's buried run does not reach the lane at $lane",
+                )
+            },
         )
     }
 

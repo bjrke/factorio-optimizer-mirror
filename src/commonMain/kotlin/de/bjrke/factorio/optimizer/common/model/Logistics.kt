@@ -14,6 +14,8 @@ data class Logistics(
     val inserters: Map<String, InserterStats> = emptyMap(),
     val pumpRate: Double? = null,
     val fluids: Set<Material> = emptySet(),
+    /** The default temperature of each fluid, used to configure an infinity pipe source. */
+    val fluidTemperatures: Map<Material, Int> = emptyMap(),
 )
 
 /**

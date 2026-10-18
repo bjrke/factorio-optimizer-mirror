@@ -218,9 +218,26 @@ class BlueprintIntegrationTest {
 
     @Test
     fun realCheatBlueprintsHaveNoOverlappingEntities() =
-        assertTableOf("advanced-circuit", "electronic-circuit", "utility-science-pack") {
+        assertTableOf(
+            "advanced-circuit",
+            "electronic-circuit",
+            "utility-science-pack",
+            "processing-unit",
+        ) {
             assertNoOverlap(entitiesFor(it, beltEnd = BeltEnd.INFINITY_CHEST))
         }
+
+    @Test
+    fun theCheatFluidImportIsAnInfinityPipeAtTheFluidsDefaultTemperature() {
+        val entities = entitiesFor("processing-unit", BeltEnd.INFINITY_CHEST)
+        val pipe = entities.singleOrNull { it.name == "infinity-pipe" }
+
+        assertNotNull(pipe) { "no infinity pipe for the imported sulfuric acid" }
+        assertAll(
+            { assertEquals(Material("sulfuric-acid"), pipe.infinityPipe?.fluid) },
+            { assertEquals(25, pipe.infinityPipe?.temperature) },
+        )
+    }
 
     private fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
         val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
@@ -278,10 +295,16 @@ class BlueprintIntegrationTest {
                 val exit = (1..9).any { outputs.contains(topLeft + step * it) }
                 if (!exit) problems += "input $topLeft has no exit ahead"
                 if ((topLeft - step) !in occupied) problems += "input $topLeft is not fed"
+                // an exit empties onto a surface belt; an input right there cannot take it
+                if ((topLeft - step) in outputs)
+                    problems += "input $topLeft is fed by an exit, not a belt"
             } else {
                 val entry = (1..9).any { inputs.contains(topLeft - step * it) }
                 if (!entry) problems += "exit $topLeft has no entry behind"
                 if ((topLeft + step) !in occupied) problems += "exit $topLeft leads nowhere"
+                // an exit feeds a surface belt, never the entrance of the next run directly
+                if ((topLeft + step) in inputs)
+                    problems += "exit $topLeft leads straight into an input"
             }
         }
         assertEquals(emptyList(), problems)
@@ -445,6 +468,8 @@ class BlueprintIntegrationTest {
                 it.name.endsWith("transport-belt") && it.direction == direction
             } == true && materials[tile] == material
 
+        fun underground(tile: Coordinate) = byTile[tile]?.name?.endsWith("underground-belt") == true
+
         val problems = mutableListOf<String>()
         for (input in
             entities.filter { it.name.endsWith("underground-belt") && it.type == Io.INPUT }) {
@@ -466,11 +491,20 @@ class BlueprintIntegrationTest {
             if (output == null || reach >= limit) continue
             val material = materials[input.area.topLeft]
             val back = input.area.topLeft - step
-            if (plainBelt(back, direction, material) && back - step in byTile) {
+            // the new end must still join a surface belt, not the next run's underground end
+            if (
+                plainBelt(back, direction, material) &&
+                    back - step in byTile &&
+                    !underground(back - step)
+            ) {
                 problems += "input ${input.area.topLeft} can still grow back"
             }
             val forward = output.area.topLeft + step
-            if (plainBelt(forward, direction, material) && forward + step in byTile) {
+            if (
+                plainBelt(forward, direction, material) &&
+                    forward + step in byTile &&
+                    !underground(forward + step)
+            ) {
                 problems += "output ${output.area.topLeft} can still grow forward"
             }
         }
@@ -570,6 +604,126 @@ class BlueprintIntegrationTest {
             "lubricant",
         ) {
             assertPolesCoverAndConnect(entitiesFor(it))
+        }
+
+    @Test
+    fun realBlueprintsHaveValidPlumbing() =
+        assertTableOf(
+            "advanced-circuit",
+            "electronic-circuit",
+            "logistic-science-pack",
+            "processing-unit",
+            "utility-science-pack",
+            "lubricant",
+            "plastic-bar",
+        ) { target ->
+            val (plan, logistics) = planAndLogistics(target)
+            val dump = blueprintLayoutDump(plan, logistics)
+            // only the fluid checks here: utility-science-pack has a pre-existing belt side-load
+            val plumbing =
+                validateLayout(dump.entities).filter {
+                    it.contains("fluid") || it.contains("underground")
+                }
+            assertEquals(emptyList(), plumbing)
+        }
+
+    /**
+     * Every fluid's pipe tiles must form one network. A pipe-to-ground only joins on the side its
+     * surface pipe attaches on (plus its buried partner), so a run that turned on an end would
+     * leave part of the fluid unreachable.
+     */
+    private fun fluidNetworkProblems(entities: List<LayoutEntity>): List<String> {
+        val plumbing = entities.filterIsInstance<Plumbing>().associateBy { it.area.topLeft }
+        val reach = 10
+
+        fun mouthOf(pipe: PipeToGroundEntity) =
+            if (pipe.io == Io.INPUT) pipe.direction.opposite() else pipe.direction
+
+        fun links(tile: Coordinate): Set<Coordinate> {
+            val entity = plumbing[tile] ?: return emptySet()
+            val result = mutableSetOf<Coordinate>()
+            when (entity) {
+                is PipeEntity,
+                is InfinityPipeEntity ->
+                    Direction.entries.forEach { direction ->
+                        val next = tile + direction.step
+                        if (next in plumbing) result += next
+                    }
+                is PipeToGroundEntity -> {
+                    val mouth = mouthOf(entity)
+                    val front = tile + mouth.step
+                    val neighbour = plumbing[front]
+                    if (
+                        neighbour is PipeEntity ||
+                            neighbour is InfinityPipeEntity ||
+                            (neighbour is PipeToGroundEntity &&
+                                mouthOf(neighbour) == mouth.opposite())
+                    ) {
+                        result += front
+                    }
+                    for (distance in 2..reach) {
+                        val toward =
+                            if (entity.io == Io.INPUT) entity.direction.step
+                            else entity.direction.step * -1
+                        val other = plumbing[tile + toward * distance]
+                        if (
+                            other is PipeToGroundEntity &&
+                                other.material == entity.material &&
+                                other.direction == entity.direction &&
+                                other.io != entity.io
+                        ) {
+                            result += other.area.topLeft
+                            break
+                        }
+                    }
+                }
+                else -> {}
+            }
+            return result
+        }
+
+        // only mutual links count: a pipe beside a pipe-to-ground's flank does not connect
+        val adjacency =
+            plumbing.keys.associateWith { tile ->
+                links(tile).filter { links(it).contains(tile) }.toSet()
+            }
+        val seen = mutableSetOf<Coordinate>()
+        val component = mutableMapOf<Coordinate, Int>()
+        var components = 0
+        for (tile in plumbing.keys) {
+            if (!seen.add(tile)) continue
+            val queue = ArrayDeque(listOf(tile))
+            while (queue.isNotEmpty()) {
+                val current = queue.removeFirst()
+                component[current] = components
+                for (next in adjacency.getValue(current)) if (seen.add(next)) queue += next
+            }
+            components++
+        }
+
+        return plumbing.values
+            .groupBy { it.material }
+            .flatMap { (material, pipes) ->
+                val parts = pipes.map { component.getValue(it.area.topLeft) }.distinct()
+                if (parts.size <= 1) emptyList()
+                else listOf("${material.name} is split over ${parts.size} networks")
+            }
+    }
+
+    @Test
+    fun realFluidNetworksAreConnected() =
+        assertTableOf(
+            "advanced-circuit",
+            "electronic-circuit",
+            "logistic-science-pack",
+            "processing-unit",
+            "utility-science-pack",
+            "lubricant",
+            "plastic-bar",
+        ) { target ->
+            val (plan, logistics) = planAndLogistics(target)
+            val dump = blueprintLayoutDump(plan, logistics)
+            assertEquals(emptyList(), fluidNetworkProblems(dump.entities))
         }
 
     /** The chest markers the player can pick; each places inserters that need power. */

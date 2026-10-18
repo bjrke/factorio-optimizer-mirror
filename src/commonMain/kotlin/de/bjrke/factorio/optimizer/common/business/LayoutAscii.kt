@@ -75,6 +75,7 @@ internal fun layoutAscii(dump: LayoutDump): String {
             is ChestEntity -> chestGlyph(entity.name)
             is MarkerEntity -> 'C'
             is PipeEntity -> '-'
+            is InfinityPipeEntity -> '*'
             is PipeToGroundEntity -> 'o'
             is PoleEntity -> '+'
         }
@@ -112,6 +113,7 @@ internal fun layoutAscii(dump: LayoutDump): String {
             .sortedBy { it.name }
             .forEach { append("  C = constant-combinator: ${it.name}\n") }
         if (entities.any { it is InfinityChestEntity }) append("  # = infinity-chest\n")
+        if (entities.any { it is InfinityPipeEntity }) append("  * = infinity-pipe\n")
         entities
             .filterIsInstance<ChestEntity>()
             .map { it.name }

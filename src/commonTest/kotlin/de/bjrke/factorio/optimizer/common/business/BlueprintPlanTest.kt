@@ -258,4 +258,38 @@ class BlueprintPlanTest {
         ) { (identifier, expected) ->
             assertEquals(expected, blueprintMachineFootprint(identifier))
         }
+
+    @Test
+    fun fluidPortsMatchThePrototypes() =
+        assertTableOf(
+            // the electromagnetic plant's pipes sit on every side; its west port is on the third
+            // row, its east port on the second, and the north/south ports on the top/bottom edge
+            "electromagnetic-plant" to
+                listOf(
+                    FluidPort(Coordinate(-1, 2), PortFlow.BOTH),
+                    FluidPort(Coordinate(4, 1), PortFlow.BOTH),
+                    FluidPort(Coordinate(2, 4), PortFlow.BOTH),
+                    FluidPort(Coordinate(1, -1), PortFlow.BOTH),
+                ),
+            // the chemical plant takes its fluids on the two top corners, gives them on the bottom
+            "chemical-plant" to
+                listOf(
+                    FluidPort(Coordinate(0, -1), PortFlow.INPUT),
+                    FluidPort(Coordinate(2, -1), PortFlow.INPUT),
+                    FluidPort(Coordinate(0, 3), PortFlow.OUTPUT),
+                    FluidPort(Coordinate(2, 3), PortFlow.OUTPUT),
+                ),
+            // the foundry takes its fluid on the bottom and gives it on the top
+            "foundry" to
+                listOf(
+                    FluidPort(Coordinate(1, 5), PortFlow.INPUT),
+                    FluidPort(Coordinate(3, 5), PortFlow.INPUT),
+                    FluidPort(Coordinate(1, -1), PortFlow.OUTPUT),
+                    FluidPort(Coordinate(3, -1), PortFlow.OUTPUT),
+                ),
+            // a machine without pipes has no ports
+            "electric-furnace" to emptyList(),
+        ) { (identifier, expected) ->
+            assertEquals(expected, blueprintMachineFluidPorts(identifier))
+        }
 }

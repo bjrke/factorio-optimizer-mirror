@@ -10,7 +10,16 @@ enum class Direction(val step: Coordinate) {
     NORTH(Coordinate.north),
     EAST(Coordinate.east),
     SOUTH(Coordinate.south),
-    WEST(Coordinate.west),
+    WEST(Coordinate.west);
+
+    /** The facing 180° away from this one. */
+    fun opposite() =
+        when (this) {
+            NORTH -> SOUTH
+            EAST -> WEST
+            SOUTH -> NORTH
+            WEST -> EAST
+        }
 }
 
 /** Which end of a directional entity (an underground belt or a loader) this is: its `type`. */
@@ -43,6 +52,8 @@ data class BlueprintEntity(
     val neighbours: List<Int> = emptyList(),
     /** Set on an infinity chest: the item it provides or the fact that it voids everything. */
     val infinity: InfinitySettings? = null,
+    /** Set on an infinity pipe: the fluid it supplies. */
+    val infinityPipe: InfinityPipeSettings? = null,
     /** Set on a chest: the logistic request it keeps in stock. */
     val requestFilter: RequestFilter? = null,
     /** Set on a chest: the inventory bar limit, e.g. the four slots a wooden chest is capped to. */
@@ -66,6 +77,8 @@ data class BlueprintEntity(
         neighbours: List<Int> = emptyList(),
         /** Set on an infinity chest: the item it provides or the fact that it voids everything. */
         infinity: InfinitySettings? = null,
+        /** Set on an infinity pipe: the fluid it supplies. */
+        infinityPipe: InfinityPipeSettings? = null,
         /** Set on a chest: the logistic request it keeps in stock. */
         requestFilter: RequestFilter? = null,
         /**
@@ -88,6 +101,7 @@ data class BlueprintEntity(
         markerFluid = markerFluid,
         neighbours = neighbours,
         infinity = infinity,
+        infinityPipe = infinityPipe,
         requestFilter = requestFilter,
         bar = bar,
         mirror = mirror,
@@ -103,6 +117,18 @@ data class BlueprintEntity(
  * without one and [removeUnfiltered] it simply deletes whatever reaches it (a test output).
  */
 data class InfinitySettings(val item: Material? = null, val removeUnfiltered: Boolean = false)
+
+/**
+ * An infinity pipe's settings: it keeps [fluid] available at 100% (the game writes 100% as
+ * `percentage = 1`) and at [temperature]. `at-least` means the pipe tops the fluid up whenever it
+ * drops below the percentage, so a connected factory can always draw from it.
+ */
+data class InfinityPipeSettings(
+    val fluid: Material,
+    val temperature: Int,
+    val percentage: Int = 1,
+    val mode: String = "at-least",
+)
 
 /**
  * A chest's logistic request: it keeps [count] of the item [name] available (a buffer chest
@@ -222,6 +248,14 @@ private fun BlueprintEntity.toJson(entityNumber: Int) = buildJsonObject {
                     }
                 }
             }
+        }
+    }
+    infinityPipe?.let { pipe ->
+        putJsonObject("infinity_settings") {
+            put("name", pipe.fluid.name)
+            put("percentage", pipe.percentage)
+            put("temperature", pipe.temperature)
+            put("mode", pipe.mode)
         }
     }
     requestFilter?.let { filter ->
