@@ -18,58 +18,56 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 | `./gradlew spotlessApply` | Fix formatting (Spotless/ktfmt `kotlinlangStyle`, `src/**/*.kt` + `build.gradle.kts`) |
 | `./gradlew run` | Run the CLI (`CliOptimizerKt`); takes a material plus settings (`--planet`, `--factory`, `--belt`, `--inserter`, `--full-belt`, …) or a pasted web-UI URL, and outputs via `--settings`/`--listing`/`--layout`/`--json`/`--blueprint`; `./gradlew buildFatJar` makes a runnable fat jar |
 
+## Tasks and knowledge (`knowledge/`)
+
+- Non-trivial work runs as a task with an immutable ID
+  `YYYYMMDD-<slug>-<suffix>` (e.g. `20261018-parser-nesting-k7m2`). Create or
+  resume one with `/task`, or
+  `.opencode/skills/task-management/scripts/agents new "<objective>"`.
+- This is automatic — do not make the user remember the steps: if no task is
+  active when non-trivial work starts, create one yourself (a provisional slug is
+  fine) and report its id. Before creating one, run `agents find` and reuse a task
+  that already covers the branch (`agents resume`, or `agents reopen` if it was
+  completed). The `task-context` plugin briefs every session, keeps the workflow in
+  front of you, and steers compaction toward the checkpoint.
+- Every task is one committed file in `knowledge/tasks/<id>.md`; in-progress work
+  is a gitignored symlink under `knowledge/tasks/.active/`, and
+  `knowledge/tasks/.active/.current` names the active task (`agents status`).
+  Never guess it as the newest file.
+- Start a task by reading `knowledge/index.md`, then only the files it points to
+  for this work, then the active checkpoint.
+- Keep the checkpoint to conclusions, evidence, decisions and next actions — not
+  transcripts. Update it after a real discovery, decision, milestone, test result
+  or scope change, not after every tool call.
+- Before `/compact`, a handoff or a pause, update the checkpoint (or run
+  `/handoff`) so a fresh session resumes from verified facts rather than a replay.
+- The `task-context` plugin watches the context budget: past 200k tokens it reminds
+  you to hand off at the next natural boundary — finish the current step, start no
+  new work, update the checkpoint, then compact — past 250k it requests compaction
+  itself, and it registers a `compact_session` tool. Act on the reminder in the turn
+  it appears.
+- Compacting at a natural boundary is always allowed, budget or not: when a unit of
+  work is finished and verified, or before switching to unrelated work, update the
+  checkpoint and compact.
+- Writing or changing tests? Read `knowledge/conventions.md` first.
+- A commit needs no task trailer: the task file's own history links task and
+  commit. Use `agents commits <id>` (task → commits) and `agents tasks <rev>`
+  (commit → tasks); a squash commit owns every task file it added.
+- Finish with `agents complete <id>` — the checkpoint stays in `knowledge/tasks/`
+  and its active symlink is removed. Find older tasks with `agents find` or
+  `grep`; never load the directory whole.
+- Treat checkpoint facts as stale until re-verified against the code, tests and
+  Git state.
+
 ## Testing
 
-- Every behavior change or new logic gets tests **without being asked**, in the
-  matching source set (`commonMain`/`jsMain`/`jvmMain` →
-  `commonTest`/`jsTest`/`jvmTest`); missing test = incomplete task. Exception:
-  pure formatting/docs. Use `kotlin.test`.
-- Multiple independent assertions MUST use the `de.bjrke.test` helpers —
-  `assertAll`, and `assertTable`/`assertTableOf` for table-driven cases.
-  Descriptive names stating expected behavior (e.g.
-  `vulcanusSteelUsesLavaNotChestOre`).
-- Never express a collection check with `assertTrue`; it hides the failing
-  values:
-  - membership → `assertContains(collection, element, message)` (works for
-    `Iterable`, `Map` keys, arrays, sequences, strings and ranges). For strings
-    the message is the fourth parameter, so pass it by name:
-    `assertContains(text, part, message = text)`.
-  - absence → `assertContainsNot(collection, element, message)` from
-    `de.bjrke.test` (`kotlin.test` has no `assertNotContains`).
-  - emptiness → `assertEquals(emptyList(), actual)`, `emptySet()`/`emptyMap()`,
-    `assertEquals("", string)`, `assertContentEquals(emptyArray(), array)`, or
-    `assertEquals(emptyList(), sequence.toList())`. Never
-    `assertTrue(actual.isEmpty())`.
-- `assertTrue`/`assertFalse` are only for genuine predicates (comparisons,
-  flags, `any`/`none` domain rules); use `assertIs`, `assertNotNull`,
-  `assertNull`, `assertEquals` when they express the check.
-- `assertAll` is only for independent assertions about one subject. Repeated
-  assertions over cases MUST use `assertTable`/`assertTableOf` with the case as
-  the element (`String`, `Pair`, `Triple`, local data class). `assertTable`
-  labels each failure with `case: <value>`, so no manual counting is needed; do
-  not collect case lambdas in `assertAll`.
-- Do not append the actual value's `.toString()` to a message; equality
-  assertions already print it. Keep only messages that add context.
-- `commonTest` runs on JVM **and** JS: keep it platform-neutral; target specifics
-  go in `src/jvmTest` / `src/jsTest`.
-- Iterate with `./gradlew jvmTest`; finish with `./gradlew check` +
-  `./gradlew spotlessApply`.
-
-### Component tests (jsTest)
-
-- React components are tested in `src/jsTest` with
-  [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/),
-  running in the real headless-Chrome karma browser used by `jsBrowserTest`.
-- Facade + `ComponentTest` base live in
-  `src/jsTest/kotlin/de/bjrke/test/ReactTestingLibrary.kt`: `render(...)`,
-  `screen`, `fireEvent`, `within(...)`, `changeTo(...)` / `key(...)`, per-test
-  `IS_REACT_ACT_ENVIRONMENT` setup + RTL `cleanup()`. Extend `ComponentTest`.
-- Inner component `FC`s are `internal` so tests render them via
-  `component.create { ... }`, not the `url...` wrappers (which drag in
-  router/recipe context).
-- npm test deps: `implementation(npm("<pkg>", "<version>"))` in `jsTest`, refresh
-  with `./gradlew kotlinUpgradeYarnLock`; run
-  `./gradlew jsBrowserTest --tests "*MaterialSelectorTest*"`.
+- Every behavior change or new logic gets tests **without being asked**; a missing
+  test means the task is incomplete. Iterate with `./gradlew jvmTest`; finish with
+  `./gradlew check` + `./gradlew spotlessApply`.
+- The full rules — the `de.bjrke.test` assertion helpers, collection/emptiness
+  checks, table-driven cases, source-set choice and the `jsTest` component-test
+  harness — live in `knowledge/conventions.md`. Read it before writing or changing
+  tests.
 
 ## Sandbox environment (`sbx run opencode`)
 
@@ -121,26 +119,15 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 
 ## Prerequisites
 
-- JDK 25 is required. `gradle.properties` sets
-  `org.gradle.java.installations.auto-download=false`, so a local JDK 25 must
-  exist; otherwise the build fails with a cryptic error (just the installed
-  version string). CI:
-  `registry.gitlab.com/bjrke/docker-gradle-chrome:latest` (Gradle JDK 25 +
-  Google Chrome for `jsBrowserTest`).
+- JDK 25 is required; a local install must exist or the build fails with a
+  cryptic error (just the installed version string). Details and the CI image are
+  in `knowledge/architecture.md`.
 
-## Code layout (Kotlin Multiplatform)
+## Code layout
 
-- `src/commonMain` — shared logic: recipe parser (`recipeParser.kt`), optimizer
-  (`optimizer.kt`), model, dumped `prototypes/` data
-- `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`,
-  `react-router-dom`); entry `js/index.kt`; `js/business/loadRecipe.kt` pulls
-  dumps via `@JsModule` + webpack config in `webpack.config.d/`
-- `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`; `jvm/business/loadRecipe.kt`
-  loads recipes from the classpath resource
-- `src/commonTest` — shared kotlin-test suites run by both JVM and JS test tasks
-
-`commonMain` compiles to both targets: keep it platform-neutral; platform
-differences belong in target-specific `loadRecipe.kt`/`index.kt` files.
+- `commonMain` holds shared logic; `jsMain` the React UI; `jvmMain` the CLI;
+  `commonTest`/`jsTest`/`jvmTest` the tests. `commonMain` must stay
+  platform-neutral. Full map: `knowledge/architecture.md`.
 
 ## Git workflow
 
@@ -151,25 +138,15 @@ differences belong in target-specific `loadRecipe.kt`/`index.kt` files.
   user's responsibility; an agent that pushes can bind a feature branch to
   `origin/main`.
 - Commit after the work is done (no explicit request needed). Headline ≤ 50
-  chars; body wrapped at 72 chars.
-- When asked to squash: choose the upstream that is ahead —
-  `base=main; git merge-base --is-ancestor main origin/main && base=origin/main`
-  — rebase the branch onto `$base`, then fold the branch's own commits with
-  `git reset --soft "$base"` plus a single `git commit`. The squash commit must
-  contain only the branch's changes; commits already in `$base` are never
-  re-added.
+  chars; body wrapped at 72 chars. No task trailer — task and commit are linked
+  through the task file's history.
+- When asked to squash, follow the recipe in `knowledge/conventions.md` (choose
+  the upstream that is ahead with `git merge-base`, then `git reset --soft` plus
+  one commit). The squash commit contains only the branch's changes.
 
 ## Generated data — do not hand-edit
 
-- `src/commonMain/resources/prototypes/{base,space-age}.json` are `data.raw`
-  dumps from `factorio --dump-data` for base and base + Space Age DLC.
-  Regenerate with `./gradlew dumpPrototypes` (Factorio data stage, isolated
-  config/mod-list, needs a Factorio Steam install). The game resolves the dump,
-  so it includes all `data-updates.lua`/`data-final-fixes.lua` changes; the
-  parser reads only the prototype types it needs. UI and CLI use the base dump,
-  or the Space Age dump when active; parsed results are cached in
-  `RecipeProvider`.
-- `src/jsMain/resources/icons/*.png` are 120x64 crops from a Linux Factorio
-  Steam install. `./gradlew updateImages` requires `imagemagick optipng
-  pngquant` and only copies/optimizes icons whose top-left 64x64 region changed
-  significantly. Don't add icons manually.
+- Do not hand-edit `src/commonMain/resources/prototypes/*.json` or
+  `src/jsMain/resources/icons/*.png`. Regenerate them with
+  `./gradlew dumpPrototypes` / `./gradlew updateImages`; details and caveats are in
+  `knowledge/architecture.md`.
