@@ -1,122 +1,21 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.business.fixtures.*
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.test.assertAll
-import de.bjrke.test.assertContainsNot
-import de.bjrke.test.assertTable
-import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-private val ore = Material("iron-ore")
-private val coal = Material("coal")
-private val plate = Material("iron-plate")
-private val gear = Material("iron-gear-wheel")
-private val water = Material("water")
-private val lubricant = Material("lubricant")
-
-private fun recipe(
-    name: String,
-    category: Category,
-    result: Map<Material, Double>,
-    ingredients: Map<Material, Double> = emptyMap(),
-) = Recipe(name, ingredients, result, 1.0, setOf(category))
-
-private fun planned(
-    recipe: Recipe,
-    material: Material,
-    factory: Factory,
-) =
-    PlannedRecipe(
-        production = FactoryProduction(material, recipe, factory, 1.0, 0),
-        machines = 1.0,
-    )
-
-/**
- * The connected pipe networks of [entities]. Pipes connect by touching. A pipe-to-ground carries
- * only the side its surface pipe attaches on (the blueprint has no input/output `type` for pipes),
- * so two ends of an underground run face away from each other: the partner of an end sits one step
- * in the direction *opposite* its facing, up to the pipe's reach, and itself faces that same way.
- */
-private fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordinate>> {
-    val tiles =
-        entities
-            .filter { it.name == "pipe" || it.name == "pipe-to-ground" }
-            .associateBy { it.area.topLeft }
-    val grounds =
-        tiles.filterValues { it.name == "pipe-to-ground" }.mapValues { it.value.direction }
-
-    fun neighbours(tile: Coordinate): List<Coordinate> = buildList {
-        for (direction in Direction.entries) {
-            val next = tile + direction.step
-            if (next in tiles) add(next)
-        }
-        val mouth = grounds[tile]
-        if (mouth != null) {
-            val away = mouth.opposite().step
-            for (distance in 1..10) {
-                val next = tile + away * distance
-                if (grounds[next] == mouth.opposite()) {
-                    add(next)
-                    break
-                }
-            }
-        }
-    }
-
-    val seen = mutableSetOf<Coordinate>()
-    val components = mutableListOf<Set<Coordinate>>()
-    for (start in tiles.keys) {
-        if (!seen.add(start)) continue
-        val component = mutableSetOf<Coordinate>()
-        val queue = ArrayDeque(listOf(start))
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            component += current
-            for (next in neighbours(current)) if (seen.add(next)) queue += next
-        }
-        components += component
-    }
-    return components
-}
-
+/** Row geometry, belt feeding and compaction of a solid plan. */
 class BlueprintLayoutTest {
-
-    private val logistics =
-        LogisticsCalculator(
-            testLogistics.copy(fluids = setOf(water, lubricant)),
-            BeltTier.EXPRESS_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 2,
-            beltStack = 1,
-            inserterStack = 1,
-        )
-
-    private val smelt =
-        recipe("iron-plate", Category.CRAFTING, mapOf(plate to 1.0), mapOf(ore to 1.0))
-    private val craft =
-        recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
-
-    private val plan =
-        BlueprintPlan(
-            target = gear,
-            recipes =
-                listOf(
-                    planned(craft, gear, Factory.ASSEMBLING_MACHINE_3),
-                    planned(smelt, plate, Factory.ASSEMBLING_MACHINE_1),
-                ),
-            sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
-            scale = 1.0,
-            label = "iron-gear-wheel",
-        )
 
     @Test
     fun noTwoEntitiesOverlap() {
-        val blueprint = buildBlueprint(plan, logistics)
+        val blueprint = buildBlueprint(basePlan, logistics)
         val seen = mutableSetOf<Coordinate>()
         val collisions = blueprint.entities.flatMap { it.area }.filter { !seen.add(it) }
         assertEquals(emptyList(), collisions, "overlapping tiles")
@@ -124,7 +23,7 @@ class BlueprintLayoutTest {
 
     @Test
     fun theTargetIsBuiltWithItsProducerAndSourceLane() {
-        val names = buildBlueprint(plan, logistics).entities.map { it.name }
+        val names = buildBlueprint(basePlan, logistics).entities.map { it.name }
         assertAll(
             { assertEquals(1, names.count { it == Factory.ASSEMBLING_MACHINE_3.identifier }) },
             { assertEquals(1, names.count { it == Factory.ASSEMBLING_MACHINE_1.identifier }) },
@@ -136,336 +35,8 @@ class BlueprintLayoutTest {
     }
 
     @Test
-    fun aBandFeedsItsConsumerMachineToMachine() {
-        val bandPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes =
-                    listOf(
-                        planned(craft, gear, Factory.ASSEMBLING_MACHINE_3),
-                        planned(smelt, plate, Factory.ASSEMBLING_MACHINE_3),
-                    ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
-                scale = 1.0,
-                label = "iron-gear-wheel",
-                // the gear machine takes its plate from the smelter on its right
-                bands =
-                    listOf(
-                        PlannedBand(
-                            machines = listOf(0, 1),
-                            links =
-                                listOf(
-                                    PlannedLink(0, plate, flow = 0.1, producerIsLeft = false),
-                                ),
-                        ),
-                    ),
-            )
-        val blueprint = buildBlueprint(bandPlan, logistics)
-        val materials = blueprintTransportMaterials(bandPlan, logistics)
-        val machines =
-            blueprint.entities.filter { it.name == Factory.ASSEMBLING_MACHINE_3.identifier }
-        val left = machines.minBy { it.area.topLeft.x }
-        val gap = left.area.topLeft.x + left.area.dimension.width
-        val interfaces =
-            blueprint.entities
-                .filter { it.name == InserterTier.FAST_INSERTER.identifier }
-                .filter { it.area.topLeft.x == gap }
-
-        assertAll(
-            { assertEquals(2, machines.size) },
-            { assertEquals(1, machines.map { it.area.topLeft.y }.distinct().size) },
-            // the inserter picks the plate up on the east side, where the producer stands
-            {
-                assertEquals(
-                    setOf(plate),
-                    interfaces.mapNotNull { materials[it.area.topLeft] }.toSet(),
-                )
-            },
-            { assertTrue(interfaces.all { it.direction == EAST }) },
-            // the plate never reaches a belt: it is inserted straight into the consumer
-            {
-                assertEquals(
-                    emptyList(),
-                    blueprint.entities
-                        .filter { it.name.endsWith("transport-belt") }
-                        .mapNotNull { materials[it.area.topLeft] }
-                        .filter { it == plate },
-                )
-            },
-        )
-    }
-
-    @Test
-    fun solidImportMarkersHideTheirBeltUnderTheLabel() {
-        val dump = blueprintLayoutDump(plan, logistics)
-        val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == ore }
-        val input =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
-                it.area.topLeft == marker.area.topLeft.west()
-            }
-        val output =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
-                it.area.topLeft == marker.area.topLeft.east()
-            }
-
-        assertAll(
-            { assertEquals(Io.INPUT, input.io) },
-            { assertEquals(Io.OUTPUT, output.io) },
-            { assertEquals(EAST, input.direction) },
-            { assertEquals(EAST, output.direction) },
-            { assertEquals(input.material, output.material) },
-        )
-    }
-
-    @Test
-    fun targetOutputHidesItsBeltUnderTheLabel() {
-        val dump = blueprintLayoutDump(plan, logistics)
-        val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == gear }
-        val input =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
-                it.area.topLeft == marker.area.topLeft.west()
-            }
-        val output =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
-                it.area.topLeft == marker.area.topLeft.east()
-            }
-
-        assertAll(
-            { assertEquals(Io.INPUT, input.io) },
-            { assertEquals(Io.OUTPUT, output.io) },
-            { assertEquals(EAST, input.direction) },
-            { assertEquals(EAST, output.direction) },
-            { assertEquals(gear, input.material) },
-            { assertEquals(input.material, output.material) },
-        )
-    }
-
-    @Test
-    fun fluidImportMarkersHideTheirPipeUnderTheLabel() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "water-boil",
-            )
-        val dump = blueprintLayoutDump(fluidPlan, logistics)
-        val marker = dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
-        val input =
-            dump.entities.filterIsInstance<PipeToGroundEntity>().single {
-                it.area.topLeft == marker.area.topLeft.west()
-            }
-        val output =
-            dump.entities.filterIsInstance<PipeToGroundEntity>().single {
-                it.area.topLeft == marker.area.topLeft.east()
-            }
-
-        assertAll(
-            { assertEquals(Io.INPUT, input.io) },
-            { assertEquals(Io.OUTPUT, output.io) },
-            { assertEquals(EAST, input.direction) },
-            { assertEquals(EAST, output.direction) },
-            { assertEquals(input.material, output.material) },
-        )
-    }
-
-    @Test
-    fun fluidImportMarkerEntranceFacesAwayFromTheLabel() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "water-boil",
-            )
-        // the pipe-to-ground carries no input/output type, so its direction is the side the
-        // surface pipe attaches on: the entrance faces west (away from the label), the exit east
-        val blueprint = buildBlueprint(fluidPlan, logistics)
-        val label =
-            blueprint.entities.single {
-                it.name == "constant-combinator" && it.markerFluid
-            }
-        val west = blueprint.entities.single { it.area.topLeft == label.area.topLeft.west() }
-        val east = blueprint.entities.single { it.area.topLeft == label.area.topLeft.east() }
-
-        assertAll(
-            { assertEquals("pipe-to-ground", west.name) },
-            { assertEquals(WEST, west.direction) },
-            { assertEquals(EAST, east.direction) },
-        )
-    }
-
-    @Test
-    fun anElectromagneticPlantIsFedOnItsThirdRowPort() {
-        val wire =
-            recipe("electro", Category.ELECTROMAGNETICS, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(wire, gear, Factory.ELECTROMAGNETIC_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "electro",
-            )
-        val dump = blueprintLayoutDump(fluidPlan, logistics)
-        val machine = dump.entities.filterIsInstance<MachineEntity>().single()
-        val left = machine.area.topLeft.x
-        val top = machine.area.topLeft.y
-        // the prototype's west connection is on the third row, not the first
-        val port = Coordinate(left - 1, top + 2)
-
-        assertAll(
-            { assertEquals(emptyList(), dump.failures) },
-            {
-                assertTrue(
-                    dump.entities.any { it is Plumbing && it.area.topLeft == port },
-                    "no pipe at the machine's third-row port $port",
-                )
-            },
-        )
-    }
-
-    @Test
-    fun theCheatFluidSourceIsASingleInfinityPipe() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "water-boil",
-            )
-        val cheatLogistics =
-            LogisticsCalculator(
-                testLogistics.copy(fluids = setOf(water), fluidTemperatures = mapOf(water to 15)),
-                BeltTier.EXPRESS_TRANSPORT_BELT,
-                InserterTier.FAST_INSERTER,
-                lanes = 1,
-                beltStack = 1,
-                inserterStack = 1,
-            )
-        val entities =
-            buildBlueprint(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).entities
-
-        assertAll(
-            { assertEquals(1, entities.count { it.name == "infinity-pipe" }) },
-            {
-                assertTrue(
-                    entities.none { it.name == "constant-combinator" && it.markerFluid },
-                    "the fluid label should be replaced",
-                )
-            },
-            {
-                val pipe = entities.single { it.name == "infinity-pipe" }
-                assertEquals(InfinityPipeSettings(water, temperature = 15), pipe.infinityPipe)
-            },
-        )
-    }
-
-    @Test
-    fun polesStayEastOfTheImportExtension() {
-        val dump = blueprintLayoutDump(plan, logistics)
-        val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == ore }
-        val poles = dump.entities.filterIsInstance<PoleEntity>()
-
-        assertAll(
-            { assertTrue(poles.isNotEmpty(), "no poles were placed") },
-            {
-                assertTrue(
-                    poles.all { it.area.topLeft.x >= marker.area.topLeft.x + 2 },
-                    "a pole sits in the import extension: $poles",
-                )
-            },
-        )
-    }
-
-    @Test
-    fun aFluidSourceBecomesAPipeLane() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "water-boil",
-            )
-
-        val names = buildBlueprint(fluidPlan, logistics).entities.map { it.name }
-        assertContains(names, "pipe-to-ground")
-    }
-
-    @Test
-    fun aFluidTargetGetsAPipeOutputInsteadOfABelt() {
-        val crack =
-            recipe("lubricant", Category.CHEMISTRY, mapOf(lubricant to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = lubricant,
-                recipes = listOf(planned(crack, lubricant, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "lubricant",
-            )
-
-        val names = buildBlueprint(fluidPlan, logistics).entities.map { it.name }
-        assertAll(
-            { assertContains(names, "pipe") },
-            { assertContainsNot(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
-        )
-    }
-
-    @Test
-    fun differentFluidLanesDoNotTouch() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
-                sources =
-                    listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
-                    ),
-                scale = 1.0,
-                label = "coolant",
-            )
-
-        val entities = buildBlueprint(fluidPlan, logistics).entities
-        val fluids = blueprintPipeFluids(fluidPlan, logistics)
-        val components = plumbingComponents(entities)
-
-        // each connected pipe network must carry exactly one fluid, so two fluids never merge
-        assertAll(
-            { assertEquals(setOf(water, lubricant), fluids.values.toSet()) },
-            {
-                assertTrue(
-                    components.all { component ->
-                        component.mapNotNull { fluids[it] }.distinct().size <= 1
-                    },
-                    "two different fluids share one pipe network",
-                )
-            },
-        )
-    }
-
-    @Test
     fun insertersFaceTheMaterialTheyMove() {
-        val dump = blueprintLayoutDump(plan, logistics)
+        val dump = blueprintLayoutDump(basePlan, logistics)
         val byTile = dump.entities.associateBy { it.area.topLeft }
         val occupied = dump.entities.flatMap { it.area }.toSet()
         val inserters = dump.entities.filterIsInstance<InserterEntity>()
@@ -508,7 +79,7 @@ class BlueprintLayoutTest {
                             production =
                                 FactoryProduction(
                                     gear,
-                                    craft,
+                                    craftRecipe,
                                     Factory.ASSEMBLING_MACHINE_3,
                                     1.0,
                                     0,
@@ -539,7 +110,7 @@ class BlueprintLayoutTest {
                             production =
                                 FactoryProduction(
                                     gear,
-                                    craft,
+                                    craftRecipe,
                                     Factory.ASSEMBLING_MACHINE_3,
                                     1.0,
                                     0,
@@ -674,7 +245,7 @@ class BlueprintLayoutTest {
 
     @Test
     fun feedsEndOnTheSurfaceFacingTheirLane() {
-        val dump = blueprintLayoutDump(plan, logistics)
+        val dump = blueprintLayoutDump(basePlan, logistics)
         val craftMachine =
             dump.entities.filterIsInstance<MachineEntity>().single {
                 it.recipe == "iron-gear-wheel"
@@ -720,7 +291,7 @@ class BlueprintLayoutTest {
 
     @Test
     fun importedLaneStartsAtTheMachineEdge() {
-        val dump = blueprintLayoutDump(plan, logistics)
+        val dump = blueprintLayoutDump(basePlan, logistics)
         val smeltMachine =
             dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
         val laneRow = smeltMachine.area.topLeft.y - 2
@@ -740,13 +311,13 @@ class BlueprintLayoutTest {
 
     @Test
     fun aRecipeWithThreeInputsUsesASecondBeltBelow() {
-        val coal = Material("coal")
+        val localCoal = Material("coal")
         val three =
             recipe(
                 "three",
                 Category.CRAFTING,
                 mapOf(gear to 1.0),
-                mapOf(ore to 1.0, plate to 1.0, coal to 1.0),
+                mapOf(ore to 1.0, plate to 1.0, localCoal to 1.0),
             )
         val threePlan =
             BlueprintPlan(
@@ -756,7 +327,7 @@ class BlueprintLayoutTest {
                     listOf(
                         PlannedSource(ore, 1.0, fluid = false),
                         PlannedSource(plate, 1.0, fluid = false),
-                        PlannedSource(coal, 1.0, fluid = false),
+                        PlannedSource(localCoal, 1.0, fluid = false),
                     ),
                 scale = 1.0,
                 label = "three",
@@ -764,7 +335,9 @@ class BlueprintLayoutTest {
 
         // the third input sits on a second belt below the row, reached by a south facing inserter
         val inserters =
-            buildBlueprint(threePlan, logistics).entities.filter { it.name.endsWith("inserter") }
+            buildBlueprint(threePlan, logistics).entities.filter {
+                it.name.endsWith("inserter")
+            }
         assertTrue(
             inserters.any { it.name == "long-handed-inserter" && it.direction == SOUTH },
             inserters.toString(),
@@ -774,7 +347,7 @@ class BlueprintLayoutTest {
     @Test
     fun theTargetOutputIsBeltedAndMarked() {
         val markers =
-            buildBlueprint(plan, logistics)
+            buildBlueprint(basePlan, logistics)
                 .entities
                 .filter { it.name == "constant-combinator" }
                 .map { it.marker }
@@ -784,37 +357,8 @@ class BlueprintLayoutTest {
     }
 
     @Test
-    fun aFluidLaneConnectsToItsMachine() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "water-boil",
-            )
-        val entities = buildBlueprint(fluidPlan, logistics).entities
-        val machineTiles =
-            entities
-                .filter { it.name == Factory.CHEMICAL_PLANT.identifier }
-                .flatMapTo(mutableSetOf()) { it.area }
-        val components = plumbingComponents(entities)
-
-        fun touchesMachine(tile: Coordinate) =
-            listOf(tile.west(), tile.east(), tile.north(), tile.south()).any { it in machineTiles }
-
-        assertAll(
-            { assertEquals(1, components.size, "the fluid lane is split") },
-            {
-                assertTrue(components.single().any(::touchesMachine), "no pipe reaches the machine")
-            },
-        )
-    }
-
-    @Test
     fun feedRoutesStayEastOfTheWestBound() {
-        val entities = blueprintLayoutDump(plan, logistics).entities
+        val entities = blueprintLayoutDump(basePlan, logistics).entities
         // compaction may shift the whole layout, so the import extension is the reference, not x=2
         val westBound = entities.filterIsInstance<MarkerEntity>().minOf { it.area.topLeft.x } - 1
         val belts = entities.filter {
@@ -826,7 +370,7 @@ class BlueprintLayoutTest {
 
     @Test
     fun compactionRemovesMostOfTheEmptySpace() {
-        val dump = blueprintLayoutDump(plan, logistics)
+        val dump = blueprintLayoutDump(basePlan, logistics)
         val minX = dump.entities.minOf { it.area.topLeft.x }
         val maxX = dump.entities.maxOf { it.area.bottomRight.x }
         val minY = dump.entities.minOf { it.area.topLeft.y }
@@ -841,354 +385,4 @@ class BlueprintLayoutTest {
             { assertEquals(emptyList(), validateLayout(dump.entities)) },
         )
     }
-
-    @Test
-    fun importMarkersShareOneColumnAfterThePrefixIsTrimmed() {
-        val twoImports =
-            recipe(
-                "gear",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ore to 1.0, coal to 1.0),
-            )
-        val mixedPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(twoImports, gear, Factory.ASSEMBLING_MACHINE_3)),
-                sources =
-                    listOf(
-                        PlannedSource(ore, 1.0, fluid = false),
-                        PlannedSource(coal, 1.0, fluid = false),
-                    ),
-                scale = 1.0,
-                label = "gear",
-            )
-        val dump = blueprintLayoutDump(mixedPlan, logistics)
-        val markers =
-            dump.entities.filterIsInstance<MarkerEntity>().filter {
-                it.signal.material == ore || it.signal.material == coal
-            }
-        val machine = dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
-
-        assertAll(
-            { assertEquals(2, markers.size, "one marker per imported input") },
-            {
-                assertEquals(
-                    emptyList(),
-                    markers.map { it.area.topLeft.x }.distinct().drop(1),
-                    "import markers share one column",
-                )
-            },
-            { assertTrue(markers.all { it.area.topLeft.x < machine.area.topLeft.x }) },
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
-        )
-    }
-
-    @Test
-    fun fluidRunsUseUndergroundPipes() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
-                sources =
-                    listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
-                    ),
-                scale = 1.0,
-                label = "coolant",
-            )
-        val entities = buildBlueprint(fluidPlan, logistics).entities
-        val grounds = entities.count { it.name == "pipe-to-ground" }
-        val components = plumbingComponents(entities)
-
-        // more pipe-to-ground ends than the two source markers, and one network per fluid
-        assertAll(
-            { assertTrue(grounds > 2, "no underground pipes were used: $grounds") },
-            { assertEquals(2, components.size, "the pipe runs are split") },
-        )
-    }
-
-    @Test
-    fun pipeRunsAreStretched() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
-                sources =
-                    listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
-                    ),
-                scale = 1.0,
-                label = "coolant",
-            )
-        val byTile =
-            blueprintLayoutDump(fluidPlan, logistics).entities.associateBy { it.area.topLeft }
-
-        fun plainPipe(tile: Coordinate, fluid: Material?) =
-            (byTile[tile] as? PipeEntity)?.material == fluid
-
-        val problems = mutableListOf<String>()
-        for (input in
-            byTile.values.filterIsInstance<PipeToGroundEntity>().filter { it.io == Io.INPUT }) {
-            // the import connector is a fixed marker pair, not a route to stretch
-            if (byTile[input.area.topLeft.east()] is MarkerEntity) continue
-            val step = input.direction.step
-            var output: PipeToGroundEntity? = null
-            var reach = 0
-            for (distance in 2..10) {
-                val entity = byTile[input.area.topLeft + step * distance] as? PipeToGroundEntity
-                if (entity != null && entity.io == Io.OUTPUT && entity.material == input.material) {
-                    output = entity
-                    reach = distance
-                    break
-                }
-            }
-            if (output == null || reach >= 10) continue
-            val back = input.area.topLeft - step
-            if (plainPipe(back, input.material) && back - step in byTile) {
-                problems += "input ${input.area.topLeft} can still grow back"
-            }
-            val forward = output.area.topLeft + step
-            if (plainPipe(forward, input.material) && forward + step in byTile) {
-                problems += "output ${output.area.topLeft} can still grow forward"
-            }
-        }
-        assertEquals(emptyList(), problems)
-    }
-
-    @Test
-    fun infinityChestsAreOptIn() {
-        val without = buildBlueprint(plan, logistics).entities
-        val with = buildBlueprint(plan, logistics, beltEnd = BeltEnd.INFINITY_CHEST).entities
-
-        assertAll(
-            { assertTrue(without.none { it.name == "infinity-chest" }, "chests by default") },
-            {
-                assertTrue(
-                    with.any { it.name == "infinity-chest" && it.infinity?.item == ore },
-                    "no input chest for the imported ore",
-                )
-            },
-            { assertTrue(with.any { it.name.endsWith("-loader") }, "no loader") },
-        )
-    }
-
-    @Test
-    fun aProducedLaneIsFedFacingIntoTheLane() {
-        val cable = Material("copper-cable")
-        val top = Material("top")
-        val makeCable =
-            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ore to 1.0))
-        val makeTop = recipe("top", Category.CRAFTING, mapOf(top to 1.0), mapOf(cable to 1.0))
-        val produced =
-            BlueprintPlan(
-                target = top,
-                recipes =
-                    listOf(
-                        planned(makeTop, top, Factory.ASSEMBLING_MACHINE_3),
-                        planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
-                    ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
-                scale = 1.0,
-                label = "top",
-            )
-
-        val entities = blueprintLayoutDump(produced, logistics).entities
-        val machineArea =
-            entities.filterIsInstance<MachineEntity>().single { it.recipe == "top" }.area
-        val laneRow = machineArea.topLeft.y - 2
-
-        // a produced lane runs west into the machine; compaction may shorten it, so take the
-        // eastmost remaining lane belt rather than a fixed coordinate
-        val feed =
-            assertNotNull(
-                entities
-                    .filterIsInstance<BeltEntity>()
-                    .filter { it.material == cable && it.area.topLeft.y == laneRow }
-                    .maxByOrNull { it.area.topLeft.x },
-                "no feed at the produced lane",
-            )
-        assertEquals(WEST, feed.direction, "the feed does not face the lane")
-    }
-
-    @Test
-    fun aChestMarkerFeedsTheBeltOutOfTheChest() {
-        val dump = blueprintLayoutDump(plan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
-        val chest =
-            dump.entities.filterIsInstance<ChestEntity>().single {
-                it.requestFilter?.name == ore.name
-            }
-        val row = chest.area.topLeft.y
-        val left = chest.area.topLeft.x - 2
-        val byTile = dump.entities.associateBy { it.area.topLeft }
-
-        assertAll(
-            { assertEquals(BeltEnd.BUFFER_CHEST.identifier, chest.name) },
-            {
-                assertEquals(
-                    RequestFilter(ore.name, 100, trashNotRequested = true),
-                    chest.requestFilter,
-                )
-            },
-            {
-                assertEquals(
-                    Io.INPUT,
-                    (byTile[Coordinate(left, row)] as? UndergroundBeltEntity)?.io,
-                )
-            },
-            {
-                assertEquals(
-                    Io.OUTPUT,
-                    (byTile[Coordinate(left + 4, row)] as? UndergroundBeltEntity)?.io,
-                )
-            },
-            {
-                assertEquals(
-                    EAST,
-                    (byTile[Coordinate(left + 1, row)] as? InserterEntity)?.direction,
-                )
-            },
-            {
-                val far = byTile[Coordinate(left + 3, row)] as? InserterEntity
-                assertEquals(WEST, far?.direction)
-                assertEquals(true, far?.mirror)
-            },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
-        )
-    }
-
-    @Test
-    fun theTargetOutputUsesTheChestOutputVariant() {
-        val dump = blueprintLayoutDump(plan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
-        val chest =
-            dump.entities.filterIsInstance<ChestEntity>().single {
-                it.requestFilter?.name == gear.name
-            }
-        val row = chest.area.topLeft.y
-        val left = chest.area.topLeft.x - 2
-        val byTile = dump.entities.associateBy { it.area.topLeft }
-        val near = byTile[Coordinate(left + 1, row)] as? InserterEntity
-        val far = byTile[Coordinate(left + 3, row)] as? InserterEntity
-        val condition = CircuitCondition(gear.name, "<", 200)
-
-        assertAll(
-            {
-                assertEquals(
-                    RequestFilter(gear.name, 200, trashNotRequested = true),
-                    chest.requestFilter,
-                )
-            },
-            { assertEquals(false, chest.circuitConditionEnabled) },
-            { assertEquals(WEST, near?.direction) },
-            { assertEquals(EAST, far?.direction) },
-            { assertEquals(condition, near?.circuitCondition) },
-            { assertEquals(condition, far?.circuitCondition) },
-        )
-    }
-
-    @Test
-    fun eachFilteredChestMarkerKeepsItsRequest() =
-        assertTable(
-            listOf(BeltEnd.BUFFER_CHEST to 100, BeltEnd.STORAGE_CHEST to 1),
-        ) { (beltEnd, count) ->
-            val chest =
-                buildBlueprint(plan, logistics, beltEnd = beltEnd).entities.single {
-                    it.name == beltEnd.identifier && it.requestFilter?.name == ore.name
-                }
-            assertEquals(
-                RequestFilter(ore.name, count, trashNotRequested = beltEnd == BeltEnd.BUFFER_CHEST),
-                chest.requestFilter,
-            )
-        }
-
-    @Test
-    fun plainChestMarkersAreBarred() =
-        assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST) { beltEnd ->
-            val chests =
-                buildBlueprint(plan, logistics, beltEnd = beltEnd).entities.filter {
-                    it.name == beltEnd.identifier
-                }
-            assertAll(
-                { assertEquals(2, chests.size, "one input and one output chest") },
-                { assertTrue(chests.all { it.bar == 4 }, chests.toString()) },
-                { assertTrue(chests.all { it.requestFilter == null }, chests.toString()) },
-            )
-        }
-
-    @Test
-    fun fluidImportsKeepTheCombinatorLabelEvenWithAChestMarker() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-        val fluidPlan =
-            BlueprintPlan(
-                target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
-                scale = 1.0,
-                label = "water-boil",
-            )
-        val dump = blueprintLayoutDump(fluidPlan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
-        val marker = dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
-        // the label still hides the fluid under a buried run that reaches the lane next to it
-        val lane = marker.area.topLeft.east().east()
-
-        assertAll(
-            { assertEquals(water, marker.signal.material) },
-            { assertEquals(emptyList(), dump.failures) },
-            {
-                assertTrue(
-                    dump.entities.any { it is Plumbing && it.area.topLeft == lane },
-                    "the label's buried run does not reach the lane at $lane",
-                )
-            },
-        )
-    }
-
-    @Test
-    fun theChestOutputWiresBothInsertersToTheChest() {
-        val blueprint = buildBlueprint(plan, logistics, beltEnd = BeltEnd.BUFFER_CHEST)
-        val chest = blueprint.entities.indexOfFirst { it.requestFilter?.name == gear.name } + 1
-
-        assertEquals(
-            listOf(
-                BlueprintWire(chest - 2, 1, chest, 1),
-                BlueprintWire(chest, 1, chest - 1, 1),
-            ),
-            blueprint.wires,
-        )
-    }
-
-    @Test
-    fun theChestInputNeedsNoCircuitWire() =
-        assertTable(listOf(BeltEnd.BUFFER_CHEST, BeltEnd.STORAGE_CHEST)) { beltEnd ->
-            val blueprint = buildBlueprint(plan, logistics, beltEnd = beltEnd)
-            val inputChest =
-                blueprint.entities.indexOfFirst { it.requestFilter?.name == ore.name } + 1
-            val wired = blueprint.wires.flatMap { listOf(it.first, it.second) }
-
-            assertContainsNot(wired, inputChest)
-        }
-
-    @Test
-    fun plainAndCheatMarkersNeedNoCircuitWire() =
-        assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST, BeltEnd.INFINITY_CHEST) { beltEnd
-            ->
-            assertEquals(emptyList<BlueprintWire>(), buildBlueprint(plan, logistics, beltEnd).wires)
-        }
 }

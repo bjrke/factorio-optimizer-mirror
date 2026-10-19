@@ -34,7 +34,21 @@ beltEnd)` runs `RowLayout` in ordered passes — recipe rows, target output, imp
 routes, fluid feeds, trim import prefixes, stretch underground runs, compaction,
 poles, pole wires — and returns a `Blueprint` whose `entities` become the
 `entities` array (numbered by list position) and whose `wires` become the
-top-level `wires` array.
+top-level `wires` array. The order is load-bearing: pipes go before belts, the
+import trim before the underground stretch, compaction before the poles.
+
+The layout is split into a small mutable kernel plus stages:
+
+- `business/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
+  the tile/placement primitives. Every stage shares this one board instead of a
+  second copy of the grid or tunnel index.
+- `business/LayoutRouter.kt` — the weighted A* router (`RouteProfile`,
+  `RouteNode`, tunnel-cost rules) for belts and pipes.
+- `business/UndergroundStretcher.kt` — grows underground runs along their own
+  straight surface run.
+- `business/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`.
+- `RowLayout` keeps the plan-level state (rows, sinks, deliveries, import feeds,
+  networks) and the ordered pipeline.
 
 `business/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
 a **direct-feed band**: a solid material whose producer and consumer stand in a
@@ -50,10 +64,18 @@ A solid belt's end is a `BeltEnd` (`model/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
 (`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it and
 `connectorWidth`/`connectorLeft` keep the routing corridors aligned; a fluid belt
-always keeps the combinator/pipe label. `toJson` writes the optional
-`request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
-`infinity_settings` and top-level `wires` fields. See `decisions.md` (2026-10-18)
-for the geometry and `pitfalls.md` for the wire and pole traps.
+always keeps the combinator/pipe label. `model/BlueprintJson.kt` writes the
+optional `request_filters`, `bar`, `mirror`, `control_behavior` (circuit
+condition), `infinity_settings` and top-level `wires` fields. See `decisions.md`
+(2026-10-18) for the geometry and `pitfalls.md` for the wire and pole traps.
+
+The layout tests are grouped by scenario (`BlueprintLayoutTest`,
+`BlueprintImportTest`, `BlueprintFluidLayoutTest`, `BlueprintBandTest`,
+`BlueprintBeltEndTest`), and the JVM integration suite is split by plan, layout,
+power, fluid, belt end and serialization. `./gradlew checkFileSizes` (part of
+`check`) fails when a Kotlin source file grows past 700 lines; existing large
+files are listed in `ci/file-size-baseline.txt`, which is a strict ratchet.
+
 
 ## Generated data — do not hand-edit
 

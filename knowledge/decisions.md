@@ -4,6 +4,39 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-19 — Keep the layout modular with a per-file line budget
+
+**Context.** `BlueprintLayout.kt` had grown to 2,446 lines with one `RowLayout`
+class holding ~90 methods and ~30 mutable fields; `BlueprintLayoutTest` was 1,194
+lines and `BlueprintIntegrationTest` 944. Every layout change forced an agent to
+read and edit the same huge file, which is the dominant token cost.
+
+**Decision.** Split the layout by ownership of state rather than by line count:
+
+- `LayoutBoard` owns the tile grid, placed entities, route bounds, tunnel index and
+  the tile/placement primitives;
+- `LayoutRouter` owns `RouteProfile`/`RouteNode` and the weighted A*;
+- `UndergroundStretcher` owns growing a run along its surface run;
+- `RowLayout` keeps plan-level state (rows, sinks, deliveries, imports, networks)
+  and the ordered `build()` pipeline.
+
+The blueprint model is split the same way (`Material`, `Recipe`, `Category`,
+`Surface`; the wire DTO stays in `Blueprint.kt` while Factorio JSON lives in
+`BlueprintJson.kt`). Tests are grouped by scenario over shared fixtures.
+
+A `checkFileSizes` task (wired into `check`) enforces a 700-line budget. Files
+that predate the rule are listed in `ci/file-size-baseline.txt`, which is a strict
+ratchet: a shrunken file must lower its entry and a file under the budget must
+remove it.
+
+**Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines and
+the baseline records that exact count; all 64 layout tests still pass. The
+remaining plan-level stages (`RowPlanner`, `FeedPlanner`, `FluidPlanner`,
+`PolePlanner`) are the next extraction, and each must lower the baseline. No
+Gradle module split: a KMP multi-module split would duplicate `expect/actual`
+(`loadPrototypeDump`), resource wiring and test targets for ~7k lines of
+`commonMain`, so package/file boundaries are enough at this size.
+
 ## 2026-10-19 — Drop the per-task checkpoint system
 
 **Context.** The task workflow cost more than it returned. Every task file in Git

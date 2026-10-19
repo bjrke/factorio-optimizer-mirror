@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.*
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
-import de.bjrke.factorio.optimizer.common.util.MinHeap
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.round
@@ -31,80 +30,6 @@ private const val SUPPLY_RADIUS = 3
 
 private const val WIRE_REACH = 9
 private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
-
-private const val MARKER = "constant-combinator"
-private const val INFINITY_CHEST = "infinity-chest"
-private const val INFINITY_PIPE = "infinity-pipe"
-private const val PIPE = "pipe"
-private const val PIPE_TO_GROUND = "pipe-to-ground"
-private const val POLE = "medium-electric-pole"
-
-/** West edge no feed route may cross, so a route cannot run around the import lanes. */
-private const val ROUTE_WEST_BOUND = 2
-
-/** How far past everything placed a route may still search, so A* stays near the blueprint. */
-private const val ROUTE_MARGIN = 24
-
-/**
- * The maximum length of a pipe-to-ground run, matching the prototype's `max_underground_distance`.
- */
-private const val PIPE_UNDERGROUND_RANGE = 10
-
-/**
- * A search node: a tile, the direction the route entered it from, and how many more tiles it must
- * run straight before it may dive again. A landing keeps that straight run so a belt exit is not
- * immediately followed by the next entrance.
- */
-private data class RouteNode(val tile: Coordinate, val heading: Direction, val straight: Int)
-
-/**
- * What makes belts and pipes route differently: the tile costs, the tunnel range and whether a
- * tunnel may only be started over an obstacle (belts) or anywhere (pipes).
- */
-private class RouteProfile(
-    /** Cost of one straight surface tile. */
-    val surfaceCost: Int = 4,
-    /** Added when a surface route changes direction, so belts prefer to run straight. */
-    val turnCost: Int = 1,
-    /** Per-tile cost of an underground tile; it differs between belts and pipes. */
-    val undergroundCost: Int,
-    /** Fixed cost of entering an underground run; it differs between belts and pipes. */
-    val tunnelEntry: Int,
-    /**
-     * Added to a surface tile outside the start-to-goal corridor, to prefer a tunnel over a detour.
-     */
-    val detourCost: Int = 2,
-    /** Added next to a reserved feed or source tile, so a route cannot box it in. */
-    val keepClearCost: Int = 6,
-    /** Maximum length of a run, matching the prototype's `max_distance`. */
-    val range: Int,
-    /** The underground entity this profile places. */
-    val undergroundType: String,
-    /** Whether a tunnel may only be started over an obstacle (belts) or anywhere (pipes). */
-    val tunnelOnlyWhenBlocked: Boolean,
-    /** Whether the route may immediately reverse into the tile it came from. */
-    val forbidReverse: Boolean = true,
-    /**
-     * How many straight surface tiles a tunnel landing must run before the next tunnel may start. A
-     * belt exit only feeds a surface tile, so a belt needs one tile there plus the next entrance; a
-     * pipe-to-ground exit joins its neighbor directly.
-     */
-    val landingStraight: Int = 1,
-)
-
-/** One queued A* entry; ties break on `g` then insertion order, so routes are reproducible. */
-private class RouteEntry(
-    val f: Int,
-    val g: Int,
-    val seq: Int,
-    val node: RouteNode,
-) : Comparable<RouteEntry> {
-    override fun compareTo(other: RouteEntry): Int {
-        if (f != other.f) return f.compareTo(other.f)
-        if (g != other.g) return g.compareTo(other.g)
-        return seq.compareTo(other.seq)
-    }
-}
 
 /**
  * Lays out [plan] as rows of connected factories. Every recipe is one row of touching machines, fed
@@ -184,14 +109,34 @@ private class RowLayout(
     private val logistics: LogisticsCalculator,
     private val beltEnd: BeltEnd,
 ) {
-    private val belt = logistics.belt.identifier
-    private val inserter = logistics.inserter.identifier
-    private val longInserter = InserterTier.LONG_HANDED_INSERTER.identifier
-    private val splitter = belt.replace("transport-belt", "splitter")
-    private val undergroundBelt = belt.replace("transport-belt", "underground-belt")
+    private val board =
+        LayoutBoard(
+            LayoutNames(
+                belt = logistics.belt.identifier,
+                inserter = logistics.inserter.identifier,
+                longInserter = InserterTier.LONG_HANDED_INSERTER.identifier,
+            ),
+            undergroundRange =
+                when {
+                    logistics.belt.identifier.contains("turbo") -> 11
+                    logistics.belt.identifier.contains("express") -> 9
+                    logistics.belt.identifier.contains("fast") -> 7
+                    else -> 5
+                },
+            logistics::isFluid,
+            logistics::fluidTemperature,
+        )
+
+    private val router = LayoutRouter(board)
+
+    private val belt = board.names.belt
+    private val inserter = board.names.inserter
+    private val longInserter = board.names.longInserter
+    private val splitter = board.names.splitter
+    private val undergroundBelt = board.names.undergroundBelt
 
     /** The loader of the same tier as the belt, used as a test input/output. */
-    private val loader = belt.replace("transport-belt", "loader")
+    private val loader = board.names.loader
 
     /**
      * How many tiles the solid belt connector occupies left of the feed: three for a label or a
@@ -212,83 +157,14 @@ private class RowLayout(
     private val connectorLeft
         get() = if (beltEnd == BeltEnd.INFINITY_CHEST) 2 else 0
 
-    /** Maximum length of an underground run, matching the prototype's `max_distance`. */
-    private val undergroundRange =
-        when {
-            belt.contains("turbo") -> 11
-            belt.contains("express") -> 9
-            belt.contains("fast") -> 7
-            else -> 5
-        }
+    private val placed
+        get() = board.placed
 
-    private val placed = mutableListOf<LayoutEntity>()
+    private val beltProfile
+        get() = router.beltProfile
 
-    /**
-     * Belts tunnel only over an obstacle, so surface stays their first choice; a slight per-tile
-     * discount keeps a blocked tile tunneled rather than detoured, while [stretchUndergroundRuns]
-     * decides how long the run becomes.
-     */
-    private val beltProfile =
-        RouteProfile(
-            undergroundCost = 3,
-            tunnelEntry = 1,
-            detourCost = 0,
-            range = undergroundRange,
-            undergroundType = undergroundBelt,
-            tunnelOnlyWhenBlocked = true,
-            // a belt exit feeds a surface belt, which then feeds the next entrance
-            landingStraight = 2,
-        )
-
-    /** Pipes may tunnel anywhere and prefer to: the player walks over a buried pipe, not a pipe. */
-    private val pipeProfile =
-        RouteProfile(
-            undergroundCost = 2,
-            tunnelEntry = 2,
-            range = PIPE_UNDERGROUND_RANGE,
-            undergroundType = PIPE_TO_GROUND,
-            tunnelOnlyWhenBlocked = false,
-            forbidReverse = false,
-        )
-
-    /**
-     * One tile of the layout: the entity that covers it and the planner's flags for the tile. A
-     * tile with no [entity] is free; the flags only matter while the layout is being built.
-     */
-    private class Cell {
-        var entity: LayoutEntity? = null
-
-        /** A feed will need this tile; no route may run through it first. */
-        var reserved = false
-
-        /** The fluid a machine-edge pipe is reserved for here, so two fluids never touch edges. */
-        var edgeFluid: Material? = null
-
-        /**
-         * The underground runs tunneling over this tile, one key per run. Two runs may share the
-         * tile when their axes differ, or when their types differ, so only a matching key clashes.
-         */
-        val tunnels = mutableSetOf<TunnelKey>()
-    }
-
-    /** The axis an underground run travels along; only a same-axis run can clash. */
-    private enum class TunnelAxis {
-        HORIZONTAL,
-        VERTICAL,
-    }
-
-    /**
-     * Identifies an underground run: its axis and its underground prototype (belt tier or pipe).
-     */
-    private data class TunnelKey(val axis: TunnelAxis, val type: String)
-
-    private val grid = mutableMapOf<Coordinate, Cell>()
-
-    /** The extent of everything placed, so a route search stays near the blueprint. */
-    private var routeMinX = Int.MAX_VALUE
-    private var routeMaxX = Int.MIN_VALUE
-    private var routeMinY = Int.MAX_VALUE
-    private var routeMaxY = Int.MIN_VALUE
+    private val pipeProfile
+        get() = router.pipeProfile
 
     private val markerRows = mutableSetOf<Int>()
 
@@ -339,9 +215,6 @@ private class RowLayout(
 
     /** The route tiles of each produced material, where a later consumer can split off. */
     private val networks = mutableMapOf<Material, MutableSet<Coordinate>>()
-
-    /** The material each reserved tile serves, so only a foreign belt is kept away from it. */
-    private val reservedFor = mutableMapOf<Coordinate, Material>()
 
     /** Inputs whose belt could not be routed; a non-empty list means the blueprint is broken. */
     val failures = mutableListOf<String>()
@@ -575,27 +448,6 @@ private class RowLayout(
                 pinnedImportTiles.clear()
                 pinnedImportTiles += moved
             }
-        }
-    }
-
-    /** Replaces the whole layout and rebuilds the tile grid and tunnel marks from the entities. */
-    private fun replaceAll(entities: List<LayoutEntity>) {
-        placed.clear()
-        grid.clear()
-        routeMinX = Int.MAX_VALUE
-        routeMaxX = Int.MIN_VALUE
-        routeMinY = Int.MAX_VALUE
-        routeMaxY = Int.MIN_VALUE
-        entities.forEach { place(it) }
-        rebuildTunnels()
-    }
-
-    /** Re-marks every underground run after the grid was rebuilt. */
-    private fun rebuildTunnels() {
-        for (cell in grid.values) cell.tunnels.clear()
-        for (input in placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
-            val output = undergroundOutputOf(input) ?: continue
-            markTunnel(input.area.topLeft, output.area.topLeft, endName(input.material))
         }
     }
 
@@ -1401,7 +1253,7 @@ private class RowLayout(
                         continue
                     }
                     reserve(tile, material)
-                    cell(tile).edgeFluid = material
+                    board.setEdgeFluid(tile, material)
                     fluidPorts += tile
                     targets.getOrPut(material) { mutableListOf() }.add(tile)
                 }
@@ -1482,7 +1334,7 @@ private class RowLayout(
         for (tile in candidates) {
             if (!isFree(tile) || isReserved(tile)) continue
             val clash = steps.any { d ->
-                grid[tile + d]?.edgeFluid.let { it != null && it != material }
+                board.edgeFluidAt(tile + d).let { it != null && it != material }
             }
             if (!clash) return tile
         }
@@ -1606,7 +1458,7 @@ private class RowLayout(
             steps.none { d ->
                 val cd = coordinate + d
                 val placedFluid = fluidAt(cd)
-                val reservedFor = grid[cd]?.edgeFluid
+                val reservedFor = board.edgeFluidAt(cd)
                 (placedFluid != null && placedFluid != fluid) ||
                     (reservedFor != null && reservedFor != fluid)
             }
@@ -1685,178 +1537,6 @@ private class RowLayout(
         return roles
     }
 
-    /** Records every underground run of [nodes], so a later route sees the tiles under it. */
-    private fun markTunnels(nodes: List<Coordinate>, type: String) {
-        nodes.zipWithNext().forEach { (from, to) ->
-            if (!from.adjacent(to)) markTunnel(from, to, type)
-        }
-    }
-
-    /** Records the underground run from [from] to [to] on every tile it passes under. */
-    private fun markTunnel(from: Coordinate, to: Coordinate, type: String) {
-        val d = to - from
-        val step = d.direction
-        val key = TunnelKey(axisOf(step), type)
-        for (k in 1 until d.chebyshevLen) {
-            cell(from + step * k).tunnels += key
-        }
-    }
-
-    /**
-     * Lengthens every underground run along its own straight surface run, up to the tier's reach.
-     * It runs after all feeding and before electricity, so it may rewrite belts and pipes; a run
-     * only grows by swallowing the plain belts/pipes of its own material that already continue it.
-     */
-    private fun stretchUndergroundRuns() {
-        for (input in placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
-            // the import connector is a fixed marker or chest, not a route to stretch
-            if (isConnectorTunnel(input)) continue
-            stretchRun(input)
-        }
-    }
-
-    /**
-     * Whether [input] is the buried run of a fixed belt connector: its first tile after the input
-     * is the connector's label or inserter, not a plain belt the run could swallow.
-     */
-    private fun isConnectorTunnel(input: UndergroundEntity): Boolean {
-        val after = entityAt(input.area.topLeft.east())
-        return after is MarkerEntity || after is InserterEntity
-    }
-
-    /** The output end of the underground run [input] feeds, within the material's reach, if any. */
-    private fun undergroundOutputOf(input: UndergroundEntity): UndergroundEntity? {
-        val step = input.direction.step
-        for (reach in 2..range(input.material)) {
-            val entity = grid[input.area.topLeft + step * reach]?.entity
-            if (
-                entity is UndergroundEntity &&
-                    entity.io == OUTPUT &&
-                    entity.direction == input.direction &&
-                    entity.material == input.material
-            ) {
-                return entity
-            }
-        }
-        return null
-    }
-
-    /** How far [material] may travel underground: a pipe's own reach or the belt tier's. */
-    private fun range(material: Material) =
-        if (logistics.isFluid(material)) PIPE_UNDERGROUND_RANGE else undergroundRange
-
-    /** The name of an underground end of [material]: a pipe-to-ground or the belt tier's. */
-    private fun endName(material: Material) =
-        if (logistics.isFluid(material)) PIPE_TO_GROUND else undergroundBelt
-
-    /**
-     * Grows one underground run, at most [range] tiles long, by spreading the extra tiles evenly
-     * between its two ends; when one end runs out the other takes the remainder, so the run grows
-     * toward the end that still has plain material to swallow (fewer free tiles). The end entities
-     * are re-placed and the swallowed tiles become part of the run.
-     */
-    private fun stretchRun(input: UndergroundEntity) {
-        if (input !in placed) return
-        val output = undergroundOutputOf(input) ?: return
-
-        val inputTile = input.area.topLeft
-        val outputTile = output.area.topLeft
-
-        val direction = input.direction
-        val material = input.material
-        val range = range(material)
-        val type = endName(material)
-
-        val step = direction.step
-        val backward = step * -1
-        val budget = range - inputTile.manhattanDist(outputTile)
-        if (budget <= 0) return
-        val fluid = logistics.isFluid(material)
-
-        // a straight pipe has no plumbing neighbor across the run's axis (a turn has one)
-        fun isStraight(tile: Coordinate): Boolean {
-            val across =
-                if (step.x != 0) listOf(Coordinate.north, Coordinate.south)
-                else listOf(Coordinate.east, Coordinate.west)
-            return across.none { grid[tile + it]?.entity is Plumbing }
-        }
-
-        fun swallowable(tile: Coordinate) =
-            when (val entity = grid[tile]?.entity) {
-                is BeltEntity ->
-                    !fluid && entity.material == material && entity.direction == direction
-                // a pipe is only swallowable when it is a straight pass-through of the same fluid;
-                // a machine port or a corner must stay a surface tile, or the run would end on it
-                is PipeEntity ->
-                    fluid && entity.material == material && tile !in fluidPorts && isStraight(tile)
-                else -> false
-            }
-
-        val maxBack = extension(inputTile, backward, budget, type, fluid, ::swallowable)
-        val maxForward = extension(outputTile, step, budget, type, fluid, ::swallowable)
-
-        val (back, forward) = share(budget, maxBack, maxForward)
-        if (back == 0 && forward == 0) return
-
-        for (i in 1..back) removeAt(inputTile + backward * i)
-        for (i in 1..forward) removeAt(outputTile + step * i)
-        removeAt(inputTile)
-        removeAt(outputTile)
-        val newInput = inputTile + backward * back
-        val newOutput = outputTile + step * forward
-
-        placeEnd(material, newInput, input.direction, INPUT)
-        placeEnd(material, newOutput, input.direction, OUTPUT)
-
-        markTunnel(newInput, newOutput, type)
-    }
-
-    /**
-     * How far the end at [start] can grow in [step], at most [budget] tiles: every swallowed tile
-     * must be [swallowable], it must leave something for the new end to join beyond it (never
-     * another underground end of a belt), and the tile that becomes part of the run must not
-     * already carry a tunnel of the same [type] on the same axis.
-     */
-    private fun extension(
-        start: Coordinate,
-        step: Coordinate,
-        budget: Int,
-        type: String,
-        fluid: Boolean,
-        swallowable: (Coordinate) -> Boolean,
-    ): Int {
-        val key = TunnelKey(axisOf(step), type)
-        var count = 0
-        while (count < budget) {
-            val next = start + step * (count + 1)
-            val beyond = grid[next + step]?.entity
-            if (!swallowable(next) || beyond == null) break
-            // a belt exit/entrance joins a surface belt, not the next run's underground end
-            if (!fluid && beyond is UndergroundBeltEntity) break
-            if (key in (grid[start + step * count]?.tunnels ?: emptySet())) break
-            count++
-        }
-        return count
-    }
-
-    /**
-     * Splits [budget] extra tiles as evenly as possible, the remainder to the end with more room.
-     */
-    private fun share(budget: Int, maxBack: Int, maxForward: Int): Pair<Int, Int> {
-        var back = minOf(maxBack, budget / 2)
-        val forward = minOf(maxForward, budget - back)
-        val left = budget - back - forward
-        if (left > 0) back = minOf(maxBack, back + left)
-        return back to forward
-    }
-
-    /** Removes the entity covering [tile], if any, from [placed] and the grid. */
-    private fun removeAt(tile: Coordinate) {
-        val entity = grid[tile]?.entity ?: return
-        placed.remove(entity)
-        entity.area.forEach { if (grid[it]?.entity === entity) grid[it]?.entity = null }
-    }
-
     private fun directionBetween(from: Coordinate, to: Coordinate) =
         when {
             to.x > from.x -> EAST
@@ -1864,170 +1544,6 @@ private class RowLayout(
             to.y > from.y -> SOUTH
             else -> NORTH
         }
-
-    /**
-     * A weighted A* route for belts: a straight surface run is cheapest, a turn costs a little, and
-     * a straight underground run under an obstacle is preferred over routing around it. The route
-     * never steps west of [ROUTE_WEST_BOUND], and surface tiles outside the start-to-goal corridor
-     * pay [RouteProfile.detourCost].
-     */
-    private fun findRoute(
-        from: Coordinate,
-        fromDirection: Direction,
-        to: Coordinate,
-        allowed: (Coordinate, Direction) -> Boolean,
-        strictStart: Boolean = false,
-    ) = route(from, fromDirection, to, allowed, beltProfile, strictStart)
-
-    /**
-     * A weighted A* route. A tile costs [RouteProfile.surfaceCost], a turn adds
-     * [RouteProfile.turnCost], and a straight underground run costs [RouteProfile.tunnelEntry] plus
-     * [RouteProfile.undergroundCost] per tile, so a started tunnel runs long. A tunnel is entered
-     * only straight, and (for belts) only over an obstacle so surface stays the first choice. The
-     * goal is always reached on the surface; the caller decides which way the goal entity faces.
-     * Manhattan times the cheapest tile is the (admissible) heuristic.
-     */
-    private fun route(
-        from: Coordinate,
-        heading: Direction,
-        to: Coordinate,
-        allowed: (Coordinate, Direction) -> Boolean,
-        profile: RouteProfile,
-        strictStart: Boolean = false,
-    ): List<Coordinate>? {
-        if (from == to) return emptyList()
-        if (!inRegion(to)) return null
-
-        val start = RouteNode(from, heading, straight = 0)
-        val gScore = mutableMapOf(start to 0)
-        val previous = mutableMapOf<RouteNode, RouteNode>()
-        val heap = MinHeap<RouteEntry>()
-        var seq = 0
-        heap.add(RouteEntry(heuristic(from, to, profile), 0, seq++, start))
-
-        fun relax(current: RouteNode, next: RouteNode, cost: Int, g: Int) {
-            val tentative = g + cost
-            if (tentative >= (gScore[next] ?: Int.MAX_VALUE)) return
-            gScore[next] = tentative
-            previous[next] = current
-            heap.add(
-                RouteEntry(tentative + heuristic(next.tile, to, profile), tentative, seq++, next),
-            )
-        }
-
-        var popped = 0
-        while (!heap.isEmpty() && popped++ < 1_000_000) {
-            val entry = heap.poll()
-            val current = entry.node
-            if (entry.g > (gScore[current] ?: Int.MAX_VALUE)) continue
-            if (current.tile == to) return reconstructRoute(previous, current, start)
-
-            // after surfacing, a run must stay on the surface for a while before it may dive again
-            val directions =
-                if (current.straight > 0) listOf(current.heading) else Direction.entries
-            for (direction in directions) {
-                val directionStep = direction.step
-                val surface = current.tile + directionStep
-                // a belt cannot turn back into the tile it just came from
-                if (profile.forbidReverse && direction == opposite(current.heading)) continue
-                // a split route must not step back onto its start: that would leave a dead end
-                if (strictStart && surface == from) continue
-                if (inRegion(surface) && allowed(surface, direction)) {
-                    val turn = if (current.heading != direction) profile.turnCost else 0
-                    val detour = if (inCorridor(surface, from, to)) 0 else profile.detourCost
-                    val clear =
-                        if (steps.any { isReserved(surface + it) }) profile.keepClearCost else 0
-                    relax(
-                        current,
-                        RouteNode(surface, direction, straight = maxOf(0, current.straight - 1)),
-                        profile.surfaceCost + turn + detour + clear,
-                        entry.g,
-                    )
-                }
-                // a tunnel is only entered straight, never right after surfacing; a splitter
-                // branch may not start with one, because the splitter would feed its side
-                if (
-                    (strictStart && current == start) ||
-                        current.straight > 0 ||
-                        current.heading != direction
-                )
-                    continue
-                // a belt tunnels only to cross an obstacle: if the tile ahead is free, step there
-                if (
-                    profile.tunnelOnlyWhenBlocked &&
-                        allowed(current.tile + directionStep, direction)
-                )
-                    continue
-                for (reach in 2..profile.range) {
-                    val target = current.tile + directionStep * reach
-                    // a feed must reach its sink on the surface, so its last belt faces the lane
-                    if (target == to || (strictStart && target == from)) continue
-                    if (!inRegion(target) || !allowed(target, direction)) continue
-                    if (!tunnelFree(current.tile, directionStep, reach, profile.undergroundType)) {
-                        continue
-                    }
-                    relax(
-                        current,
-                        RouteNode(target, direction, straight = profile.landingStraight),
-                        profile.tunnelEntry + reach * profile.undergroundCost,
-                        entry.g,
-                    )
-                }
-            }
-        }
-        return null
-    }
-
-    private fun reconstructRoute(
-        previous: Map<RouteNode, RouteNode>,
-        goal: RouteNode,
-        start: RouteNode,
-    ) = buildList {
-        var current: RouteNode? = goal
-        while (current != null && current != start) {
-            add(current.tile)
-            current = previous[current]
-        }
-    }
-        .asReversed()
-
-    private fun heuristic(tile: Coordinate, to: Coordinate, profile: RouteProfile) =
-        minOf(profile.surfaceCost, profile.undergroundCost) * tile.manhattanDist(to)
-
-    /** Within the start-to-goal corridor, where a surface tile costs no extra detour penalty. */
-    private fun inCorridor(tile: Coordinate, from: Coordinate, to: Coordinate) =
-        tile.x in minOf(from.x, to.x)..maxOf(from.x, to.x) &&
-            tile.y in minOf(from.y, to.y)..maxOf(from.y, to.y)
-
-    /**
-     * Whether a route may use [coordinate]: east of [ROUTE_WEST_BOUND], and within [ROUTE_MARGIN]
-     * of everything placed, so the search stays near the blueprint instead of roaming forever.
-     */
-    private fun inRegion(coordinate: Coordinate) =
-        coordinate.x >= ROUTE_WEST_BOUND &&
-            coordinate.x <= routeMaxX + ROUTE_MARGIN &&
-            coordinate.y >= routeMinY - ROUTE_MARGIN &&
-            coordinate.y <= routeMaxY + ROUTE_MARGIN
-
-    /**
-     * True when a tunnel of [reach] tiles in [direction] clashes with a tunnel already there. Two
-     * runs may share a tile on different axes, or with a different underground type.
-     */
-    private fun tunnelFree(
-        from: Coordinate,
-        direction: Coordinate,
-        reach: Int,
-        type: String,
-    ): Boolean {
-        val key = TunnelKey(axisOf(direction), type)
-        for (k in 1 until reach) {
-            if (key in (grid[from + direction * k]?.tunnels ?: emptySet())) return false
-        }
-        return true
-    }
-
-    private fun axisOf(direction: Coordinate) =
-        if (direction.x != 0) TunnelAxis.HORIZONTAL else TunnelAxis.VERTICAL
 
     /** Covers every machine, inserter and loader with a pole and wires the poles together. */
     private fun placePoles() {
@@ -2157,105 +1673,6 @@ private class RowLayout(
 
     private fun routable(coordinate: Coordinate) = isFree(coordinate) && !isReserved(coordinate)
 
-    /** Records [entity] and marks every tile it covers as occupied. */
-    private fun place(entity: LayoutEntity) {
-        placed += entity
-        entity.area.forEach { cell(it).entity = entity }
-        val area = entity.area
-        routeMinX = minOf(routeMinX, area.x)
-        routeMaxX = maxOf(routeMaxX, area.bottomRight.x)
-        routeMinY = minOf(routeMinY, area.y)
-        routeMaxY = maxOf(routeMaxY, area.bottomRight.y)
-    }
-
-    // The entity kinds that are placed often get their own helper, so the tile size and prototype
-    // name live in one place rather than at every call site.
-
-    /** Places a belt (always one tile) carrying [material] and facing [direction]. */
-    private fun placeBelt(
-        coordinate: Coordinate,
-        material: Material,
-        direction: Direction,
-    ) {
-        place(BeltEntity(coordinate.area(), belt, material, direction))
-    }
-
-    /** Places a belt or a pipe, whichever [material] rides: a fluid goes through a pipe. */
-    private fun placeSurface(material: Material, coordinate: Coordinate, direction: Direction) {
-        if (logistics.isFluid(material)) placePipe(coordinate, material)
-        else placeBelt(coordinate, material, direction)
-    }
-
-    /** Places an underground belt or pipe-to-ground end (always one tile) for [material]. */
-    private fun placeEnd(
-        material: Material,
-        coordinate: Coordinate,
-        direction: Direction,
-        io: Io,
-    ) {
-        place(
-            if (logistics.isFluid(material))
-                PipeToGroundEntity(coordinate.area(), PIPE_TO_GROUND, material, direction, io)
-            else UndergroundBeltEntity(coordinate.area(), undergroundBelt, material, direction, io),
-        )
-    }
-
-    /** Places an inserter (always one tile) of the selected tier, long when [long]. */
-    private fun placeInserter(
-        coordinate: Coordinate,
-        direction: Direction,
-        material: Material,
-        long: Boolean,
-    ) {
-        place(
-            InserterEntity(
-                coordinate.area(),
-                if (long) longInserter else inserter,
-                material,
-                direction,
-                long,
-            ),
-        )
-    }
-
-    /** Places a loader (two tiles across the belt it serves) with its input/output [io]. */
-    private fun placeLoader(
-        coordinate: Coordinate,
-        direction: Direction,
-        io: Io,
-        material: Material,
-    ) {
-        place(LoaderEntity(coordinate.area(2, 1), loader, material, io, direction))
-    }
-
-    /** Places a constant-combinator marker (always one tile) showing [signal]. */
-    private fun placeMarker(coordinate: Coordinate, signal: Signal) {
-        place(MarkerEntity(coordinate.area(), MARKER, signal))
-    }
-
-    /** Places a pipe (always one tile) carrying [fluid]. */
-    private fun placePipe(coordinate: Coordinate, fluid: Material) {
-        place(PipeEntity(coordinate.area(), PIPE, fluid))
-    }
-
-    /** Places an infinity chest (always one tile) with its [settings]. */
-    private fun placeInfinityChest(coordinate: Coordinate, settings: InfinitySettings) {
-        place(InfinityChestEntity(coordinate.area(), INFINITY_CHEST, settings))
-    }
-
-    /**
-     * Places an infinity pipe (always one tile) that supplies [fluid] at its default temperature.
-     */
-    private fun placeInfinityPipe(coordinate: Coordinate, fluid: Material) {
-        place(
-            InfinityPipeEntity(
-                coordinate.area(),
-                INFINITY_PIPE,
-                InfinityPipeSettings(fluid, logistics.fluidTemperature(fluid)),
-            ),
-        )
-    }
-
     /**
      * Places the selected solid belt connector for [material] on [row], starting at column [left]:
      * a constant-combinator label, an infinity chest or a chest the inserters feed. [input] marks a
@@ -2375,11 +1792,6 @@ private class RowLayout(
         )
     }
 
-    /** Places a medium electric pole (always one tile). */
-    private fun placePole(coordinate: Coordinate) {
-        place(PoleEntity(coordinate.area(), POLE))
-    }
-
     /** True when a belt next to [coordinate] pours a different material into that tile. */
     private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean = steps.any { d ->
         val neighbor = coordinate + d
@@ -2414,33 +1826,100 @@ private class RowLayout(
     ): Boolean {
         val ahead = coordinate + direction.step
         if (ahead == ownFeed) return false
-        val reserved = reservedFor[ahead] ?: return false
+        val reserved = board.reservedMaterialAt(ahead) ?: return false
         // the same material may join its own feed; a foreign one would merge or block it
         return reserved != material
     }
 
-    private fun opposite(direction: Direction) =
-        when (direction) {
-            NORTH -> SOUTH
-            EAST -> WEST
-            SOUTH -> NORTH
-            WEST -> EAST
-        }
+    private fun opposite(direction: Direction) = direction.opposite()
 
-    private fun cell(coordinate: Coordinate) = grid.getOrPut(coordinate) { Cell() }
+    // The board owns the grid and the tile primitives; these delegates keep the layout code
+    // reading as if it placed entities directly.
 
-    private fun entityAt(coordinate: Coordinate) = grid[coordinate]?.entity
+    private fun place(entity: LayoutEntity) = board.place(entity)
+
+    private fun placeBelt(coordinate: Coordinate, material: Material, direction: Direction) =
+        board.placeBelt(coordinate, material, direction)
+
+    private fun placeSurface(material: Material, coordinate: Coordinate, direction: Direction) =
+        board.placeSurface(material, coordinate, direction)
+
+    private fun placeEnd(
+        material: Material,
+        coordinate: Coordinate,
+        direction: Direction,
+        io: Io,
+    ) = board.placeEnd(material, coordinate, direction, io)
+
+    private fun placeInserter(
+        coordinate: Coordinate,
+        direction: Direction,
+        material: Material,
+        long: Boolean,
+    ) = board.placeInserter(coordinate, direction, material, long)
+
+    private fun placeLoader(
+        coordinate: Coordinate,
+        direction: Direction,
+        io: Io,
+        material: Material,
+    ) = board.placeLoader(coordinate, direction, io, material)
+
+    private fun placeMarker(coordinate: Coordinate, signal: Signal) =
+        board.placeMarker(coordinate, signal)
+
+    private fun placePipe(coordinate: Coordinate, fluid: Material) =
+        board.placePipe(coordinate, fluid)
+
+    private fun placeInfinityChest(coordinate: Coordinate, settings: InfinitySettings) =
+        board.placeInfinityChest(coordinate, settings)
+
+    private fun placeInfinityPipe(coordinate: Coordinate, fluid: Material) =
+        board.placeInfinityPipe(coordinate, fluid)
+
+    private fun placePole(coordinate: Coordinate) = board.placePole(coordinate)
+
+    private fun removeAt(tile: Coordinate) = board.removeAt(tile)
+
+    private fun replaceAll(entities: List<LayoutEntity>) = board.replaceAll(entities)
+
+    private fun rebuildTunnels() = board.rebuildTunnels()
+
+    private fun markTunnel(from: Coordinate, to: Coordinate, type: String) =
+        board.markTunnel(from, to, type)
+
+    private fun markTunnels(nodes: List<Coordinate>, type: String) = board.markTunnels(nodes, type)
+
+    private fun endName(material: Material) = board.endName(material)
+
+    private fun stretchUndergroundRuns() = UndergroundStretcher(board, fluidPorts).stretchAll()
+
+    private fun findRoute(
+        from: Coordinate,
+        fromDirection: Direction,
+        to: Coordinate,
+        allowed: (Coordinate, Direction) -> Boolean,
+        strictStart: Boolean = false,
+    ) = router.findRoute(from, fromDirection, to, allowed, strictStart)
+
+    private fun route(
+        from: Coordinate,
+        heading: Direction,
+        to: Coordinate,
+        allowed: (Coordinate, Direction) -> Boolean,
+        profile: RouteProfile,
+        strictStart: Boolean = false,
+    ) = router.route(from, heading, to, allowed, profile, strictStart)
+
+    private fun entityAt(coordinate: Coordinate) = board.entityAt(coordinate)
 
     /** The fluid the pipe or pipe-to-ground at [coordinate] carries, if any. */
-    private fun fluidAt(coordinate: Coordinate) = (entityAt(coordinate) as? Plumbing)?.material
+    private fun fluidAt(coordinate: Coordinate) = board.fluidAt(coordinate)
 
-    private fun isFree(coordinate: Coordinate) = grid[coordinate]?.entity == null
+    private fun isFree(coordinate: Coordinate) = board.isFree(coordinate)
 
-    private fun isReserved(coordinate: Coordinate) = grid[coordinate]?.reserved == true
+    private fun isReserved(coordinate: Coordinate) = board.isReserved(coordinate)
 
-    /** Marks [coordinate] as needed by a feed or source of [material]. */
-    private fun reserve(coordinate: Coordinate, material: Material) {
-        cell(coordinate).reserved = true
-        reservedFor[coordinate] = material
-    }
+    private fun reserve(coordinate: Coordinate, material: Material) =
+        board.reserve(coordinate, material)
 }

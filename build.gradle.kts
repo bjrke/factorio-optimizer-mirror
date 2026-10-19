@@ -1,3 +1,4 @@
+import de.bjrke.factorio.optimizer.buildlogic.checkFileSizes
 import de.bjrke.factorio.optimizer.buildlogic.dumpPrototypes
 import de.bjrke.factorio.optimizer.buildlogic.sanitizePrototypes
 import de.bjrke.factorio.optimizer.buildlogic.updateImages
@@ -121,6 +122,23 @@ tasks.named<Test>("jvmTest") {
 
     reports { html.required.set(true) }
 }
+
+val checkSourceSizes =
+    tasks.register("checkFileSizes") {
+        group = "verification"
+        description = "fails when a Kotlin source file outgrows the line budget"
+
+        val sourceRoot = layout.projectDirectory.dir("src")
+        val baseline = layout.projectDirectory.file("ci/file-size-baseline.txt")
+        inputs.files(fileTree("src") { include("**/*.kt") })
+        inputs.file(baseline)
+
+        doLast {
+            checkFileSizes(sourceRoot.asFile, baseline.asFile) { logger.error(it) }
+        }
+    }
+
+tasks.named("check") { dependsOn(checkSourceSizes) }
 
 tasks.register<JavaExec>("run") {
     group = "run"

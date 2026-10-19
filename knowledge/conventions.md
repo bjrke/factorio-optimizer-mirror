@@ -5,6 +5,27 @@ not belong in the always-loaded `AGENTS.md`, but they are binding when they appl
 Read this file before writing or changing tests, and when a workflow question comes
 up.
 
+## Code size and file layout
+
+- Keep Kotlin source files under **700 lines**. `./gradlew checkFileSizes` (part
+  of `check`) fails when a file outgrows it. Existing offenders are listed in
+  `ci/file-size-baseline.txt`; that baseline is a **strict ratchet**: a file that
+  shrinks must lower its entry, and a file that reaches the budget must drop it.
+  Verify with `./gradlew checkFileSizes`.
+- Split by responsibility, not by line count. The layout shows the target shape:
+  `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
+  `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
+  pipeline. Components take the board (or plain data) instead of sharing a second
+  copy of the state.
+- Group test suites by scenario and keep shared fixtures in their own file. A
+  fixtures file in the **same package** must live in a subpackage (e.g.
+  `common/business/fixtures/`): an `internal` top-level fixture with the same name
+  as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
+  Kotlin does not allow star-importing an `object`. Use `import …fixtures.*`.
+- Prefer data that can be tested alone: `LayoutCompaction` already takes a
+  `List<LayoutEntity>` and `LayoutRouter` only reads the board, so neither needs a
+  full `BlueprintPlan` to test.
+
 ## Testing
 
 - Every behavior change or new logic gets tests **without being asked**, in the
