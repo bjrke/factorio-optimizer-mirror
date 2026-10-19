@@ -18,46 +18,20 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 | `./gradlew spotlessApply` | Fix formatting (Spotless/ktfmt `kotlinlangStyle`) for `src/**` and the build scripts; run it as `./gradlew spotlessApply check` |
 | `./gradlew run` | Run the CLI (`CliOptimizerKt`); takes a material plus settings (`--planet`, `--factory`, `--belt`, `--inserter`, `--full-belt`, …) or a pasted web-UI URL, and outputs via `--settings`/`--listing`/`--layout`/`--json`/`--blueprint`; `./gradlew buildFatJar` makes a runnable fat jar |
 
-## Tasks and knowledge (`knowledge/`)
+## Knowledge (`knowledge/`)
 
-- Non-trivial work runs as a task with an immutable ID
-  `YYYYMMDD-<slug>-<suffix>` (e.g. `20261018-parser-nesting-k7m2`). Create or
-  resume one with `/task`, or
-  `.opencode/skills/task-management/scripts/agents new "<objective>"`.
-- This is automatic — do not make the user remember the steps: if no task is
-  active when non-trivial work starts, create one yourself (a provisional slug is
-  fine) and report its id. Before creating one, run `agents find` and reuse a task
-  that already covers the branch (`agents resume`, or `agents reopen` if it was
-  completed). The `task-context` plugin briefs every session, keeps the workflow in
-  front of you, and steers compaction toward the checkpoint.
-- Every task is one committed file in `knowledge/tasks/<id>.md`; in-progress work
-  is a gitignored symlink under `knowledge/tasks/.active/`, and
-  `knowledge/tasks/.active/.current` names the active task (`agents status`).
-  Never guess it as the newest file.
-- Start a task by reading `knowledge/index.md`, then only the files it points to
-  for this work, then the active checkpoint.
-- Keep the checkpoint to conclusions, evidence, decisions and next actions — not
-  transcripts. Update it after a real discovery, decision, milestone, test result
-  or scope change, not after every tool call.
-- Before `/compact`, a handoff or a pause, update the checkpoint (or run
-  `/handoff`) so a fresh session resumes from verified facts rather than a replay.
-- The `task-context` plugin watches the context budget: past 200k tokens it reminds
-  you to hand off at the next natural boundary — finish the current step, start no
-  new work, update the checkpoint, then compact — past 250k it requests compaction
-  itself, and it registers a `compact_session` tool. Act on the reminder in the turn
-  it appears.
-- Compacting at a natural boundary is always allowed, budget or not: when a unit of
-  work is finished and verified, or before switching to unrelated work, update the
-  checkpoint and compact.
+- Start by reading `knowledge/index.md`, then only the files it points to for this
+  work. Verify their claims against the current code, tests and Git state — notes
+  go stale.
+- Promote reusable, stable, verified findings into `knowledge/`: architecture
+  facts into `architecture.md`, conventions into `conventions.md`, traps and
+  diagnostic dead ends into `pitfalls.md`, consequential choices into
+  `decisions.md`. Leave per-change detail in the commit message.
+- Before `/compact`, a handoff or a pause, run `/handoff` (or state the same
+  points yourself) so the summary carries the verified state, decisions and next
+  action. The `compaction` plugin steers the summarizer; the agent never compacts
+  on its own.
 - Writing or changing tests? Read `knowledge/conventions.md` first.
-- A commit needs no task trailer: the task file's own history links task and
-  commit. Use `agents commits <id>` (task → commits) and `agents tasks <rev>`
-  (commit → tasks); a squash commit owns every task file it added.
-- Finish with `agents complete <id>` — the checkpoint stays in `knowledge/tasks/`
-  and its active symlink is removed. Find older tasks with `agents find` or
-  `grep`; never load the directory whole.
-- Treat checkpoint facts as stale until re-verified against the code, tests and
-  Git state.
 
 ## Testing
 
@@ -68,11 +42,11 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
     invocation, one Gradle process);
   - **docs / knowledge only** (`*.md`, `knowledge/`, `AGENTS.md`) → **no Gradle**
     at all; Markdown is not a build input;
-  - **agent tooling only** (`.opencode/**`) → **no Gradle**; use the tooling's own
-    checks (`agents selftest`).
+  - **agent tooling only** (`.opencode/**`) → **no Gradle**; syntax-check plugins
+    with `node --check`.
   A branch that mixes both follows the code rule.
 - Every behavior change or new logic gets tests **without being asked**; a missing
-  test means the task is incomplete.
+  test means the change is incomplete.
 - The full rules — the `de.bjrke.test` assertion helpers, collection/emptiness
   checks, table-driven cases, source-set choice and the `jsTest` component-test
   harness — live in `knowledge/conventions.md`. Read it before writing or changing
@@ -147,8 +121,8 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   user's responsibility; an agent that pushes can bind a feature branch to
   `origin/main`.
 - Commit after the work is done (no explicit request needed). Headline ≤ 50
-  chars; body wrapped at 72 chars. No task trailer — task and commit are linked
-  through the task file's history.
+  chars; body wrapped at 72 chars, explaining why and recording findings that do
+  not belong in `knowledge/`.
 - When asked to squash, do exactly that and nothing else, following the recipe in
   `knowledge/conventions.md`: choose the upstream that is ahead with
   `git merge-base`, then `git reset --soft` plus one commit whose message is

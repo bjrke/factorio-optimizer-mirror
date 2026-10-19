@@ -52,9 +52,8 @@ label (default), the infinity chest, or a chest the inserters feed
 `connectorWidth`/`connectorLeft` keep the routing corridors aligned; a fluid belt
 always keeps the combinator/pipe label. `toJson` writes the optional
 `request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
-`infinity_settings` and top-level `wires` fields. See
-`tasks/20261018-record-chest-belt-end-2fsg.md` for the geometry and
-`knowledge/pitfalls.md` for the wire and pole traps.
+`infinity_settings` and top-level `wires` fields. See `decisions.md` (2026-10-18)
+for the geometry and `pitfalls.md` for the wire and pole traps.
 
 ## Generated data — do not hand-edit
 
@@ -83,5 +82,6 @@ always keeps the combinator/pipe label. `toJson` writes the optional
 
 - `buildSrc/` — Gradle build logic (`dumpPrototypes`, `sanitizePrototypes`,
   `updateImages` are the `factorio` group tasks).
-- `.opencode/skills/` — agent skills, including `task-management` (this
-  workflow) and the Factorio blueprint/optimizer skills.
+- `.opencode/skills/` — the Factorio blueprint and optimizer skills.
+  `.opencode/plugins/compaction.js` steers the compaction summary; `/handoff` is
+  the manual counterpart.

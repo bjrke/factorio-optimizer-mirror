@@ -9,7 +9,7 @@ up.
 
 - Every behavior change or new logic gets tests **without being asked**, in the
   matching source set (`commonMain`/`jsMain`/`jvmMain` →
-  `commonTest`/`jsTest`/`jvmTest`); a missing test means the task is incomplete.
+  `commonTest`/`jsTest`/`jvmTest`); a missing test means the change is incomplete.
   Exception: pure formatting/docs. Use `kotlin.test`.
 - Multiple independent assertions MUST use the `de.bjrke.test` helpers —
   `assertAll`, and `assertTable`/`assertTableOf` for table-driven cases.
@@ -44,15 +44,13 @@ up.
   with `./gradlew jvmTest`, finish with `./gradlew spotlessApply check` — a single
   invocation, one Gradle process.
 - A docs-only or tooling-only branch runs **no** Gradle task: `knowledge/**`,
-  `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is verified
-  by its own checks (`agents validate`, `agents selftest`, `plugin-test.mjs`).
-  `spotlessApply` would be a no-op there anyway. A branch that mixes code and docs
-  follows the code rule.
+  `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent
+  tooling. `spotlessApply` would be a no-op there anyway. A branch that mixes code
+  and docs follows the code rule.
 - **Never test agent tooling from the app suites.** Everything outside the
-  application — `AGENTS.md`, `knowledge/`, `.opencode/`, `tmp/` — is verified by
-  the tooling's own checks (`agents selftest`, `plugin-test.mjs`), not by
-  `src/*Test` that shells out to `bash` or reaches into `.opencode/`.
-  `./gradlew check` covers the app only.
+  application — `AGENTS.md`, `knowledge/`, `.opencode/`, `tmp/` — is not part of
+  the build; `./gradlew check` covers the app only. Plugins can be syntax-checked
+  with `node --check`.
 
 ## Component tests (jsTest)
 
@@ -73,9 +71,9 @@ up.
 ## Git
 
 - Commit after the work is done (no explicit request needed). Headline ≤ 50 chars;
-  body wrapped at 72 chars. No `!<MR>` suffix: GitLab appends the MR number when it
-  merges. No task trailer: task ↔ commit is read from the task file's own history
-  (`agents commits <TASK-ID>` / `agents tasks <rev>`).
+  body wrapped at 72 chars, explaining why and recording findings that do not
+  belong in `knowledge/`. No `!<MR>` suffix: GitLab appends the MR number when it
+  merges.
 - **A squash request means exactly one thing**: one commit on top of the current
   upstream, with a rewritten message. Choose the upstream that is ahead:
   `base=main; git merge-base --is-ancestor main origin/main && base=origin/main`
@@ -86,16 +84,15 @@ up.
   commits, no rebase past `$base`.
 - Write the squash message from the squashed content as the source of truth, not
   from the work log: state the branch's final state and drop anything that only
-  applied to an intermediate state (superseded wording, abandoned attempts). After
-  the squash, `agents tasks <squash-commit>` lists every task the branch added.
+  applied to an intermediate state (superseded wording, abandoned attempts).
 
 ## Knowledge promotion
 
 Promote a finding into `knowledge/` only when it is reusable, stable and verified:
 
-- reusable across tasks, likely to prevent repeated investigation, a stable
+- reusable across changes, likely to prevent repeated investigation, a stable
   architectural/behavioral fact, a verified convention, or a consequential decision.
-- Put task-specific detail in the checkpoint, not in `knowledge/`.
+- Put per-change detail in the commit message, not in `knowledge/`.
 - Mark uncertain items as hypotheses until verified. Cite the evidence (file path,
   test name, command) where practical.
 - Prefer updating the existing authoritative file over adding a new one; check for
