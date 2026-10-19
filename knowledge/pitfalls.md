@@ -92,3 +92,19 @@ here only with evidence, and should say how to recognise it.
   first run after that may still hit the stale-classpath entry above). Verified by
   the 21:1x buildSrc failures on `bjrke/direct-insertion-groups` when a source-dir
   `touch` produced no rebuild, ruling a host `--continuous` build out.
+- **Compaction does not summarize the newest reply.** OpenCode's checkpoint
+  summary covers the transcript *before* the retained recent tail; the tail is
+  kept verbatim. At 2026-10-19 18:57 the manual compaction of session
+  `ses_eab214006ffexOwJWcjfeWwQX3` produced a summary that still said "No code
+  changes made" with the pre-implementation `Next Move`, while its `recent` field
+  began at the `ok` message (seq 194) and ended with the just-written handoff
+  reply. A `/handoff` reply is therefore *in the tail, not in the summary*, so
+  running `/handoff` and `/compact` alone cannot update it. The repo plugin
+  (`.opencode/plugins/compaction.js`) now lifts the newest assistant reply's
+  `## Handoff state` block into `event.result.summary`; run `/handoff` immediately
+  before `/compact` and put the durable state under that exact heading.
+- **V2 ignores `compaction.tail_turns`.** `opencode.json` still had the V1 key;
+  the server logged `path=$.compaction.tail_turns kind=unsupported action="omitted
+  unsupported legacy setting"` and used the default retention instead. Configure
+  `compaction.keep.tokens` (default 15000), not `tail_turns`; `opencode.json` is
+  gitignored, so this is a local fix and needs `opencode service restart`.

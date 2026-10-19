@@ -28,9 +28,11 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   diagnostic dead ends into `pitfalls.md`, consequential choices into
   `decisions.md`. Leave per-change detail in the commit message.
 - Before `/compact`, a handoff or a pause, run `/handoff` (or state the same
-  points yourself) so the summary carries the verified state, decisions and next
-  action. The `compaction` plugin steers the summarizer; the agent never compacts
-  on its own.
+  points yourself). The compaction plugin uses the newest assistant reply's
+  `## Handoff state` block as the summary, so that reply must be the last thing
+  before `/compact` and must carry the verified state, decisions and next action.
+  Without the block the plugin only steers the summarizer; the agent never
+  compacts on its own.
 - Writing or changing tests? Read `knowledge/conventions.md` first.
 
 ## Testing

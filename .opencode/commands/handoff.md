@@ -15,5 +15,12 @@ Before the context is compacted, or the session is handed off or paused:
    - open questions and assumptions;
    - the single next concrete action.
 
+Start the durable part of the reply with the exact heading `## Handoff state`.
+The compaction plugin uses the newest assistant reply's block from that heading
+as the summary, so run `/compact` immediately after this reply and do no other
+work in between. Without the heading the plugin falls back to steering the
+normal summarizer, which only covers the transcript before the retained tail and
+therefore keeps stale state.
+
 Do not create a handoff file: durable facts live in `knowledge/`, and per-change
 history belongs in the commit message.
