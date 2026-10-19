@@ -70,6 +70,7 @@ class DirectFeedTest {
                 0.5 to (1 to 2),
                 20.0 to null,
                 0.05 to null,
+                0.66 to (2 to 3),
             ),
         ) { (ratio, expected) ->
             assertEquals(expected, cycleRatio(ratio))

@@ -87,7 +87,7 @@ private class RouteProfile(
     /**
      * How many straight surface tiles a tunnel landing must run before the next tunnel may start. A
      * belt exit only feeds a surface tile, so a belt needs one tile there plus the next entrance; a
-     * pipe-to-ground exit joins its neighbour directly.
+     * pipe-to-ground exit joins its neighbor directly.
      */
     val landingStraight: Int = 1,
 )
@@ -1013,9 +1013,9 @@ private class RowLayout(
     /** Ends the row with an output belt when one of its machines makes something for outside. */
     private fun placeProduct(row: Row, internal: Set<Material>) {
         val product =
-            row.machines
-                .mapNotNull { externalProduct(plan.recipes[it.allocation], internal) }
-                .firstOrNull()
+            row.machines.firstNotNullOfOrNull {
+                externalProduct(plan.recipes[it.allocation], internal)
+            }
         product?.let {
             for (x in row.left..row.right) {
                 placeBelt(Coordinate(x, row.outputLaneRow), it, EAST)
@@ -1026,9 +1026,10 @@ private class RowLayout(
     /** The machine rows [machine] keeps free for a fluid port on the side facing the gap. */
     private fun portRows(row: Row, machine: PlacedMachine, east: Boolean): Set<Int> {
         val allocation = plan.recipes[machine.allocation]
+        val recipe = allocation.recipe
         val usesFluid =
-            allocation.recipe.ingredients.keys.any { logistics.isFluid(it) } ||
-                allocation.recipe.result.keys.any { logistics.isFluid(it) }
+            recipe.ingredients.keys.any { logistics.isFluid(it) } ||
+                recipe.result.keys.any { logistics.isFluid(it) }
         if (!usesFluid) return emptySet()
         val edge = if (east) row.width else -1
         return blueprintMachineFluidPorts(allocation.factory.identifier)
@@ -1039,7 +1040,7 @@ private class RowLayout(
     /**
      * Places the inserters that move a band's internal material straight from one machine into the
      * next. They sit in the gap column between the two machines, on every machine row that neither
-     * neighbour needs for a fluid port, as many as fit.
+     * neighbor needs for a fluid port, as many as fit.
      */
     private fun placeInterfaces(row: Row) {
         for (link in row.interfaces) {
@@ -1501,8 +1502,8 @@ private class RowLayout(
         // keep the connector's buried run clear of any other fluid near the machine
         fun touchesForeignFluid(row: Int) = columns.any { x ->
             steps.any { step ->
-                val neighbour = fluidAt(Coordinate(x, row) + step)
-                neighbour != null && neighbour != material
+                val neighbor = fluidAt(Coordinate(x, row) + step)
+                neighbor != null && neighbor != material
             }
         }
         var row = target.y
@@ -1772,7 +1773,7 @@ private class RowLayout(
         if (budget <= 0) return
         val fluid = logistics.isFluid(material)
 
-        // a straight pipe has no plumbing neighbour across the run's axis (a turn has one)
+        // a straight pipe has no plumbing neighbor across the run's axis (a turn has one)
         fun isStraight(tile: Coordinate): Boolean {
             val across =
                 if (step.x != 0) listOf(Coordinate.north, Coordinate.south)
@@ -2381,10 +2382,10 @@ private class RowLayout(
 
     /** True when a belt next to [coordinate] pours a different material into that tile. */
     private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean = steps.any { d ->
-        val neighbour = coordinate + d
-        val belt = entityAt(neighbour) as? ConveyorEntity
+        val neighbor = coordinate + d
+        val belt = entityAt(neighbor) as? ConveyorEntity
         belt != null &&
-            belt.direction == directionBetween(neighbour, coordinate) &&
+            belt.direction == directionBetween(neighbor, coordinate) &&
             belt.material != material
     }
 
