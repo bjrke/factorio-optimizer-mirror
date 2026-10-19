@@ -30,12 +30,10 @@ private fun planned(
     recipe: Recipe,
     material: Material,
     factory: Factory,
-    directInsert: Set<Material> = emptySet(),
 ) =
     PlannedRecipe(
         production = FactoryProduction(material, recipe, factory, 1.0, 0),
         machines = 1.0,
-        directInsert = directInsert,
     )
 
 /**
@@ -108,7 +106,7 @@ class BlueprintLayoutTest {
             target = gear,
             recipes =
                 listOf(
-                    planned(craft, gear, Factory.ASSEMBLING_MACHINE_3, directInsert = setOf(plate)),
+                    planned(craft, gear, Factory.ASSEMBLING_MACHINE_3),
                     planned(smelt, plate, Factory.ASSEMBLING_MACHINE_1),
                 ),
             sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
@@ -134,6 +132,66 @@ class BlueprintLayoutTest {
             { assertContains(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
             { assertContains(names, "constant-combinator") },
             { assertContains(names, "medium-electric-pole") },
+        )
+    }
+
+    @Test
+    fun aBandFeedsItsConsumerMachineToMachine() {
+        val bandPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes =
+                    listOf(
+                        planned(craft, gear, Factory.ASSEMBLING_MACHINE_3),
+                        planned(smelt, plate, Factory.ASSEMBLING_MACHINE_3),
+                    ),
+                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                scale = 1.0,
+                label = "iron-gear-wheel",
+                // the gear machine takes its plate from the smelter on its right
+                bands =
+                    listOf(
+                        PlannedBand(
+                            machines = listOf(0, 1),
+                            links =
+                                listOf(
+                                    PlannedLink(0, plate, flow = 0.1, producerIsLeft = false),
+                                ),
+                        ),
+                    ),
+            )
+        val blueprint = buildBlueprint(bandPlan, logistics)
+        val materials = blueprintTransportMaterials(bandPlan, logistics)
+        val machines =
+            blueprint.entities.filter { it.name == Factory.ASSEMBLING_MACHINE_3.identifier }
+        val left = machines.minBy { it.area.topLeft.x }
+        val gap = left.area.topLeft.x + left.area.dimension.width
+        val interfaces =
+            blueprint.entities
+                .filter { it.name == InserterTier.FAST_INSERTER.identifier }
+                .filter { it.area.topLeft.x == gap }
+
+        assertAll(
+            { assertEquals(2, machines.size) },
+            { assertEquals(1, machines.map { it.area.topLeft.y }.distinct().size) },
+            // the inserter picks the plate up on the east side, where the producer stands
+            {
+                assertEquals(
+                    setOf(plate),
+                    interfaces.mapNotNull { materials[it.area.topLeft] }.toSet(),
+                )
+            },
+            { assertTrue(interfaces.all { it.direction == EAST }) },
+            // the plate never reaches a belt: it is inserted straight into the consumer
+            {
+                assertEquals(
+                    emptyList(),
+                    blueprint.entities
+                        .filter { it.name.endsWith("transport-belt") }
+                        .mapNotNull { materials[it.area.topLeft] }
+                        .filter { it == plate },
+                )
+            },
         )
     }
 
@@ -456,7 +514,6 @@ class BlueprintLayoutTest {
                                     0,
                                 ),
                             machines = 2.5,
-                            directInsert = emptySet(),
                         ),
                     ),
                 sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
@@ -488,7 +545,6 @@ class BlueprintLayoutTest {
                                     0,
                                 ),
                             machines = 3.0,
-                            directInsert = emptySet(),
                         ),
                     ),
                 sources = listOf(PlannedSource(plate, 1.0, fluid = false)),

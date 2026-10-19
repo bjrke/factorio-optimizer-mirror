@@ -44,6 +44,30 @@ here only with evidence, and should say how to recognise it.
   current — and compact deliberately at a natural boundary rather than waiting for
   the hard limit. The estimate is `JSON.stringify(messages)` characters ÷ 4, so it tracks
   the outgoing request size, not the model's true token count.
+- **A band's fluid port sits in a gap column the fluid feed cannot reach.** A
+  direct-feed band interleaves its machines, so a member that takes a fluid has its
+  port between two machines instead of on the row's outside edge; `feedFluids` then
+  routes around it and the pipe network splits ("sulfuric-acid is split over 3
+  networks" in `realFluidNetworksAreConnected` for processing-unit and
+  utility-science-pack). Recognise it as a band/fluid interaction, not a routing
+  regression. `DirectFeed.kt` therefore skips any recipe that takes a fluid, as
+  producer *and* as consumer, until the fluid feed is reworked (see
+  `decisions.md`, 2026-10-18).
+- **A band stands in one row of up to 18 machines, so a wide band forces belt
+  crossings.** `GROUP_MAX_MACHINES = 18` (`DirectFeed.kt`) is what a band may hold;
+  rows above a band then have to reach past it, and a belt that crosses another belt
+  can only tunnel. Evidence: the reported `advanced-circuit` URL went from "no
+  underground belts" to two copper-cable tunnels once its cable row joined a band
+  (`advancedCircuitUrlOnlyTunnelsForItsCableFeed` locks the new state in). Line
+  breaking a band too wide is a deferred follow-up, not a bug in the router.
+- **An underground run's far end must be matched by material, not by position.**
+  Two runs can tunnel in the same column, so a test that looks for "the next
+  underground belt in this direction" finds a *foreign* one and reports a phantom
+  violation. `realBlueprintsStretchUndergroundRuns` did exactly that for
+  `advanced-circuit` ("input (38,22) can still grow back") after the band reshaped
+  the layout; the layout's own `undergroundOutputOf` compares the material, and the
+  test now does too. Match material (or `blueprintTransportMaterials`' map) whenever
+  you search along a run.
 - **A blueprint does not rebuild circuit wires — store them in `wires`.** The
   top-level `blueprint.wires` array lists `[entity, connector, entity, connector]`
   quadruples; the game draws nothing from proximity. A chest-connector inserter
@@ -72,3 +96,14 @@ here only with evidence, and should say how to recognise it.
   `.gradle/<version>` plus `buildSrc/build`) rebuilds `buildSrc` and succeeds — do
   not start editing `build.gradle.kts` over it. (Distinct from the Kotlin daemon
   compile failure recorded in `tasks/20261018-task-knowledge-system-8067.md`.)
+- **Never delete `buildSrc/build/kotlin` while a Kotlin daemon from an earlier run
+  is still alive.** A Kotlin compile daemon outlives the Gradle daemon that started
+  it (seen: one from 20:02 still writing at 21:13, hours after `--stop`). Removing
+  the cache directory underneath it makes the *next* builds fail with
+  `Could not close incremental caches … NoSuchFileException` or `Can't write logical
+  size … caches-jvm/inputs` / `Failed to clean up output files`, i.e. directories
+  vanishing mid-write. Cure, in order: `./gradlew --stop`,
+  `pkill -f '[K]otlinCompileDaemon'`, `rm -rf buildSrc/build`, then run again (the
+  first run after that may still hit the stale-classpath entry above). Verified by
+  the 21:1x buildSrc failures on `bjrke/direct-insertion-groups` when a source-dir
+  `touch` produced no rebuild, ruling a host `--continuous` build out.

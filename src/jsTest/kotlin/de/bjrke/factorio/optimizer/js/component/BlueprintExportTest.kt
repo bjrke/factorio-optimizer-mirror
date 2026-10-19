@@ -33,7 +33,6 @@ private val plan =
                     production =
                         FactoryProduction(gear, craft, Factory.ASSEMBLING_MACHINE_3, 1.0, 0),
                     machines = 1.0,
-                    directInsert = emptySet(),
                 ),
             ),
         sources = listOf(PlannedSource(plate, 1.0, fluid = false)),

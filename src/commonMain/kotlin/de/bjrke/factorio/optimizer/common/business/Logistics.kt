@@ -1,10 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.BeltTier
-import de.bjrke.factorio.optimizer.common.model.InserterStats
-import de.bjrke.factorio.optimizer.common.model.InserterTier
-import de.bjrke.factorio.optimizer.common.model.Logistics
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.*
 
 private const val TICKS_PER_SECOND = 60.0
 
@@ -51,7 +47,7 @@ class LogisticsCalculator(
     fun beltThroughput() = beltThroughput(beltStack)
 
     /** Items per second a single inserter moves between storages, one turn being one cycle. */
-    fun inserterThroughput(): Double = inserterStats.rotationSpeed * TICKS_PER_SECOND * handSize
+    fun inserterThroughput() = inserterStats.rotationSpeed * TICKS_PER_SECOND * handSize
 
     /** Ticks the belt needs to move past the space a single item occupies on a lane. */
     private fun beltSlotTicks() =
@@ -78,7 +74,13 @@ class LogisticsCalculator(
 
     /** Inserters needed for [rate]; [ontoBelt] uses the slower belt-limited placing rate. */
     fun inserterCount(rate: Double, ontoBelt: Boolean = false) =
-        rate / if (ontoBelt) placingThroughput() else inserterThroughput()
+        if (ontoBelt) beltInserterCount(rate) else directInserterCount(rate)
+
+    /** Inserters needed for [rate]; uses the slower belt-limited placing rate. */
+    fun beltInserterCount(rate: Double): Double = rate / placingThroughput()
+
+    /** Inserters needed for [rate]; uses the faster direct inserting rate. */
+    fun directInserterCount(rate: Double): Double = rate / inserterThroughput()
 
     fun pumpCount(rate: Double): Double? = pumpThroughput()?.let { rate / it }
 }

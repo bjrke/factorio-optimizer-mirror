@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.Direction.*
+import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.jvm.parseArgs
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -269,6 +269,78 @@ class BlueprintIntegrationTest {
         }
 
     /**
+     * A material must reach a belt from one allocation only. `producerOf` in the layout has one
+     * belt source per material, so a second belt-fed producer would be built with a product belt no
+     * delivery ever uses — the "factory with an unconnected output belt" a band already covers.
+     */
+    private fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
+        // a band inserts its link machine to machine, so that producer never puts material on a
+        // belt
+        val inserted =
+            plan.bands.flatMapTo(mutableSetOf()) { band ->
+                band.links.map { link ->
+                    val machine = if (link.producerIsLeft) link.gap else link.gap + 1
+                    band.machines[machine] to link.material
+                }
+            }
+        val sources =
+            plan.recipes
+                .withIndex()
+                .flatMap { (index, allocation) ->
+                    allocation.recipe.result.keys.map { index to it }
+                }
+                .filterNot { it in inserted }
+                .groupBy({ it.second }, { it.first })
+        val doubled = sources.filterValues { it.size > 1 }
+
+        assertEquals(emptyMap(), doubled, "material put on a belt by more than one allocation")
+    }
+
+    @Test
+    fun realBlueprintsPutEveryMaterialOnAtMostOneBelt() =
+        assertTableOf(
+            "advanced-circuit",
+            "electronic-circuit",
+            "logistic-science-pack",
+            "processing-unit",
+            "utility-science-pack",
+            "lubricant",
+        ) {
+            assertOneBeltSourcePerMaterial(planFor(it))
+        }
+
+    @Test
+    fun theReportedLogisticSciencePackUrlBuildsNoRedundantFactory() {
+        val (plan, _, _) =
+            planFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1")
+        val machines =
+            plan.recipes
+                .groupingBy { it.recipe.name }
+                .fold(0) { sum, allocation -> sum + allocation.machines.toInt() }
+
+        assertAll(
+            { assertOneBeltSourcePerMaterial(plan) },
+            // cable + EC and gear + inserter are the direct-feed bands; the inserter band's output
+            // already feeds the science row, so no second EC or inserter factory is built, and the
+            // foundry takes a single belt-fed gear machine instead of one per whole consumer
+            // machine
+            {
+                assertEquals(
+                    mapOf(
+                        "copper-cable" to 1,
+                        "electronic-circuit" to 1,
+                        "iron-gear-wheel" to 2,
+                        "inserter" to 1,
+                        "transport-belt" to 1,
+                        "logistic-science-pack" to 9,
+                    ),
+                    machines,
+                )
+            },
+        )
+    }
+
+    /**
      * Every underground belt must pair up (input with the output up to nine tiles ahead) and lead
      * into something: an exit is useless when the tile it faces is empty, and an entry is useless
      * when nothing feeds its back.
@@ -421,12 +493,18 @@ class BlueprintIntegrationTest {
             )
         }
 
+    /**
+     * The reported advanced-circuit URL must still replay without a single failed feed. It is built
+     * as a direct-feed band now, which puts the two cable rows in the feed corridor west of the
+     * machines; only the band's own copper-cable feed needs to tunnel there, every other material
+     * still reaches its lane on the surface.
+     */
     @Test
-    fun advancedCircuitUrlNeedsNoUndergroundBelts() {
+    fun advancedCircuitUrlOnlyTunnelsForItsCableFeed() {
         val (plan, logistics, beltEnd) =
             planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
         val dump = blueprintLayoutDump(plan, logistics, beltEnd)
-        // the import connectors are fixed marker pairs; only route tunnels are unexpected here
+        // the import connectors are fixed marker pairs; only route tunnels are checked here
         val routeTunnels =
             dump.entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
                 dump.entities.none {
@@ -438,9 +516,9 @@ class BlueprintIntegrationTest {
             { assertEquals(emptyList(), dump.failures) },
             {
                 assertEquals(
-                    emptyList(),
-                    routeTunnels,
-                    "unexpected underground belts",
+                    listOf(Material("copper-cable")),
+                    routeTunnels.map { it.material }.distinct(),
+                    "only the band's cable feed may need an underground belt",
                 )
             },
         )
@@ -482,7 +560,13 @@ class BlueprintIntegrationTest {
             var output: BlueprintEntity? = null
             for (k in 2..limit) {
                 val entity = byTile[input.area.topLeft + step * k]
-                if (entity != null && entity.type == Io.OUTPUT && entity.name == input.name) {
+                // the partner carries the same material: another run may tunnel in the same column
+                if (
+                    entity != null &&
+                        entity.type == Io.OUTPUT &&
+                        entity.name == input.name &&
+                        materials[entity.area.topLeft] == materials[input.area.topLeft]
+                ) {
                     reach = k
                     output = entity
                     break
@@ -677,7 +761,6 @@ class BlueprintIntegrationTest {
                         }
                     }
                 }
-                else -> {}
             }
             return result
         }

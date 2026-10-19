@@ -36,6 +36,16 @@ poles, pole wires — and returns a `Blueprint` whose `entities` become the
 `entities` array (numbered by list position) and whose `wires` become the
 top-level `wires` array.
 
+`business/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
+a **direct-feed band**: a solid material whose producer and consumer stand in a
+small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
+inserted machine to machine, the recipes become one interleaved row, and
+`BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth
+for it. `RowLayout` places a band with `placeBand`; only belted allocations feed
+belts, lanes and sinks, so a band's internal material never gets a belt. See
+`decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
+follow-ups.
+
 A solid belt's end is a `BeltEnd` (`model/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
 (`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it and

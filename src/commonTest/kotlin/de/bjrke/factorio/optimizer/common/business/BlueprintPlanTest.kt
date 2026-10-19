@@ -194,8 +194,8 @@ class BlueprintPlanTest {
             )
 
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
-        // the cap counts every built recipe: the target plus its deepest direct-insertion chain
-        assertEquals(MAX_BLUEPRINT_RECIPES, planned.recipes.size)
+        // the cap counts every built recipe, not the allocations a recipe may be split into
+        assertEquals(MAX_BLUEPRINT_RECIPES, planned.recipes.map { it.recipe }.distinct().size)
     }
 
     @Test
@@ -209,14 +209,23 @@ class BlueprintPlanTest {
                 gear,
                 craft,
                 listOf(
-                    production(smelt, plate, Factory.ASSEMBLING_MACHINE_1, level = 1),
+                    production(smelt, plate, Factory.ASSEMBLING_MACHINE_3, level = 1),
                     production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 2),
                 ),
             )
 
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
-        val gearRecipe = planned.recipes.single { it.material == gear }
-        assertContains(gearRecipe.directInsert, plate)
+        val band = planned.bands.single()
+        assertAll(
+            // the one gear machine takes its plates straight from the two smelters beside it
+            {
+                assertEquals(
+                    setOf(smelt, craft),
+                    band.machines.mapTo(mutableSetOf()) { planned.recipes[it].recipe },
+                )
+            },
+            { assertEquals(setOf(plate), band.links.mapTo(mutableSetOf()) { it.material }) },
+        )
     }
 
     @Test
