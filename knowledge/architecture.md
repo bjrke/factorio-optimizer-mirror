@@ -48,6 +48,9 @@ The layout is split into a small mutable kernel plus stages:
   runs, and `directionBetween`; shared by belt and pipe routes.
 - `business/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run.
+- `business/RowPlanner.kt` — the plan-level row order: the band-aware producer
+  map, allocation depth, row units and the pure sizing helpers (`copiesOf`,
+  `inserterPattern`).
 - `business/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`.
 - `business/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry.

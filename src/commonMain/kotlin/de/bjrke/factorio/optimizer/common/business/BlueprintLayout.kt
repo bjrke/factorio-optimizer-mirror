@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
@@ -181,8 +180,8 @@ private class RowLayout(
      */
     private var compactionWestBound = Int.MIN_VALUE
 
-    private val producerOf = mutableMapOf<Material, Int>()
-    private val depth = mutableMapOf<Int, Int>()
+    private val planner = RowPlanner(plan, logistics)
+
     private val rows = mutableMapOf<Int, Row>()
 
     /** Every row once, in placement order; a band row serves all of its allocations. */
@@ -260,28 +259,8 @@ private class RowLayout(
             get() = start.manhattanDist(sink.feed)
     }
 
-    init {
-        // a band inserts its intermediate material machine to machine, so its producer allocation
-        // must not act as a belt source: only a belted allocation may, which keeps the internal
-        // material out of the lanes, sinks and deliveries
-        val internal = mutableSetOf<Pair<Int, Material>>()
-        for (band in plan.bands) {
-            for (link in band.links) {
-                val machine = if (link.producerIsLeft) link.gap else link.gap + 1
-                internal += band.machines[machine] to link.material
-            }
-        }
-        for ((index, recipe) in plan.recipes.withIndex()) {
-            for (material in recipe.recipe.result.keys) {
-                if ((index to material) in internal) continue
-                producerOf.getOrPut(material) { index }
-            }
-        }
-    }
-
     fun build(): List<BlueprintEntity> {
         if (plan.recipes.isNotEmpty()) {
-            computeDepth()
             placeRows()
             placeTargetOutput()
             val sinks = allSolidSinks()
@@ -425,126 +404,9 @@ private class RowLayout(
     /** The circuit wires a chest marker needs, relative to the final entity order. */
     fun blueprintWires(): List<BlueprintWire> = chestWires(placed)
 
-    private fun copiesOf(recipe: PlannedRecipe): Int =
-        // a machine count that should be whole but carries floating point noise must not round up
-        ceil(recipe.machines - 1e-6).toInt().coerceIn(1, MAX_COPIES)
-
-    private fun footprint(recipe: PlannedRecipe) =
-        blueprintMachineFootprint(recipe.factory.identifier)
-
-    /** How many inserters one machine needs to pull [materials] out of its lane. */
-    private fun insertersFor(recipe: PlannedRecipe, materials: List<Material>): Int {
-        if (materials.isEmpty()) return 0
-        val rate = materials.sumOf { inputPerMachine(recipe.production, it) }
-        return maxOf(1, ceil(logistics.beltInserterCount(rate)).toInt())
-    }
-
-    /**
-     * A list of inserters per machine edge: one entry per inserter, `true` for a long one (the far
-     * lane). The two lanes are interleaved; when the edge is too short for both, the counts are
-     * scaled down fairly.
-     */
-    private fun inserterPattern(near: Int, far: Int, width: Int): List<Boolean> {
-        var short = near
-        var long = far
-        // leave the machine's last column free: a pole can sit there and reach the machine row
-        val edge = maxOf(1, width - 1)
-        if (short + long > edge) {
-            short = (short.toDouble() * edge / (short + long)).roundToInt().coerceIn(0, edge)
-            long = edge - short
-            if (near == 0) {
-                short = 0
-                long = edge
-            }
-            if (far == 0) {
-                short = edge
-                long = 0
-            }
-        }
-        val pattern = mutableListOf<Boolean>()
-        while (short > 0 || long > 0) {
-            if (short > 0) {
-                pattern += false
-                short--
-            }
-            if (long > 0) {
-                pattern += true
-                long--
-            }
-        }
-        return pattern
-    }
-
-    /**
-     * The depth of every allocation: how many production steps away from the sources it is, used to
-     * order the rows. Band links count like any other input, so a band still sits below what feeds
-     * it, and a cycle cannot recurse forever.
-     */
-    private fun computeDepth() {
-        val producer = mutableMapOf<Material, Int>()
-        for ((index, recipe) in plan.recipes.withIndex()) {
-            for (material in recipe.recipe.result.keys) producer.getOrPut(material) { index }
-        }
-        val visiting = mutableSetOf<Recipe>()
-        fun depthOf(index: Int): Int {
-            depth[index]?.let {
-                return it
-            }
-            val allocation = plan.recipes[index]
-            if (!visiting.add(allocation.recipe)) return 0
-            val inputs =
-                allocation.recipe.ingredients.keys.filter {
-                    it in producer && producer.getValue(it) != index
-                }
-            val value =
-                if (inputs.isEmpty()) 0 else 1 + inputs.maxOf { depthOf(producer.getValue(it)) }
-            visiting.remove(allocation.recipe)
-            depth[index] = value
-            return value
-        }
-        for (index in plan.recipes.indices) depthOf(index)
-    }
-
-    /** One row to place: a direct-feed band, or a single allocation built on its own. */
-    private class RowUnit(
-        /** What the row is built from, so two rows with the same depth keep a stable order. */
-        val label: String,
-        val depth: Int,
-        val band: PlannedBand?,
-        val allocation: Int,
-    )
-
-    /** The rows to place, top to bottom: the deepest consumers first, then by name. */
-    private fun rowUnits(): List<RowUnit> {
-        val inBand = mutableSetOf<Int>()
-        for (band in plan.bands) inBand += band.machines
-        val units = mutableListOf<RowUnit>()
-        for (band in plan.bands) {
-            val members = band.machines.distinct()
-            units +=
-                RowUnit(
-                    label = members.map { plan.recipes[it].recipe.name }.sorted().joinToString("+"),
-                    depth = members.maxOf { depth[it] ?: 0 },
-                    band = band,
-                    allocation = members.first(),
-                )
-        }
-        for (index in plan.recipes.indices) {
-            if (index in inBand) continue
-            units +=
-                RowUnit(
-                    label = plan.recipes[index].recipe.name,
-                    depth = depth[index] ?: 0,
-                    band = null,
-                    allocation = index,
-                )
-        }
-        return units.sortedWith(compareBy({ it.depth }, { it.label }))
-    }
-
     private fun placeRows() {
         var y = 0
-        for (unit in rowUnits()) {
+        for (unit in planner.units) {
             val row =
                 if (unit.band != null) placeBand(unit.band, y) else placeRow(unit.allocation, y)
             for (machine in row.machines.distinctBy { it.allocation }) rows[machine.allocation] =
@@ -585,8 +447,8 @@ private class RowLayout(
     /** Builds one allocation as a row of [copies] touching machines of the same recipe. */
     private fun placeRow(allocation: Int, bandTop: Int): Row {
         val recipe = plan.recipes[allocation]
-        val size = footprint(recipe)
-        val copies = copiesOf(recipe)
+        val size = planner.footprint(recipe)
+        val copies = planner.copiesOf(recipe)
         val solids =
             recipe.recipe.ingredients.keys.filter { !logistics.isFluid(it) }.sortedBy { it.name }
         val shape = rowShape(solids, size.height, bandTop)
@@ -631,7 +493,7 @@ private class RowLayout(
     private fun placeBand(band: PlannedBand, bandTop: Int): Row {
         val internal = band.links.mapTo(mutableSetOf()) { it.material }
         val allocations = band.machines.distinct().map { plan.recipes[it] }
-        val size = footprint(allocations.first())
+        val size = planner.footprint(allocations.first())
         val solids =
             allocations
                 .flatMap { it.recipe.ingredients.keys }
@@ -711,9 +573,9 @@ private class RowLayout(
             val near = row.solids.getOrNull(0)?.takeIf { it in recipe.ingredients }
             val far = row.solids.getOrNull(1)?.takeIf { it in recipe.ingredients }
             val pattern =
-                inserterPattern(
-                    near?.let { insertersFor(allocation, listOf(it)) } ?: 0,
-                    far?.let { insertersFor(allocation, listOf(it)) } ?: 0,
+                planner.inserterPattern(
+                    near?.let { planner.insertersFor(allocation, listOf(it)) } ?: 0,
+                    far?.let { planner.insertersFor(allocation, listOf(it)) } ?: 0,
                     row.width,
                 )
             // the machine's last column is left free for a pole; a port there stays free for the
@@ -856,8 +718,8 @@ private class RowLayout(
      * into one row do not have to cross. A lone produced input picks the nearer end.
      */
     private fun laneDirection(row: Row, material: Material): Direction {
-        if (material !in producerOf) return EAST
-        val produced = row.solids.filter { it in producerOf }.sortedBy { outletX(it) }
+        if (material !in planner.producerOf) return EAST
+        val produced = row.solids.filter { it in planner.producerOf }.sortedBy { outletX(it) }
         val index = produced.indexOf(material)
         val middle = produced.size / 2
         if (index in 0 until middle) return EAST
@@ -867,7 +729,7 @@ private class RowLayout(
 
     /** The tile east of a material's producer output lane, or Far East when it is not placed. */
     private fun outletX(material: Material): Int {
-        val producer = producerOf[material] ?: return Int.MAX_VALUE
+        val producer = planner.producerOf[material] ?: return Int.MAX_VALUE
         val producerRow = rows[producer] ?: return Int.MAX_VALUE
         return producerRow.right + 1
     }
@@ -897,7 +759,7 @@ private class RowLayout(
         val grouped = sinks.groupBy { it.first }
         val deliveries = mutableListOf<Delivery>()
         for ((material, list) in grouped.entries.sortedBy { it.key.name }) {
-            val producer = producerOf[material]
+            val producer = planner.producerOf[material]
             if (producer != null) {
                 val producerRow = rows[producer] ?: continue
                 val start = outputStart(producerRow, material)
@@ -1042,7 +904,7 @@ private class RowLayout(
 
     /** Remembers the tiles of a produced material's belt, so a nearer consumer can split off it. */
     private fun recordNetwork(material: Material, nodes: List<Coordinate>, sink: Sink) {
-        if (material !in producerOf) return
+        if (material !in planner.producerOf) return
         networks.getOrPut(material) { mutableSetOf() } += nodes.filter { it != sink.feed }
     }
 
@@ -1304,7 +1166,7 @@ private class RowLayout(
     /** Extends the target's output belt and ends it in the selected solid connector. */
     private fun placeTargetOutput() {
         val targetMaterial = plan.target
-        val producer = producerOf[targetMaterial] ?: return
+        val producer = planner.producerOf[targetMaterial] ?: return
         val recipe = plan.recipes[producer]
         val row = rows[producer] ?: return
         if (!recipe.recipe.result.keys.any { !logistics.isFluid(it) }) return
@@ -1327,7 +1189,7 @@ private class RowLayout(
     /** Connects a fluid output pipe to each target machine, so its product has somewhere to go. */
     private fun placeTargetFluidOutput() {
         if (!logistics.isFluid(plan.target)) return
-        val producer = producerOf[plan.target] ?: return
+        val producer = planner.producerOf[plan.target] ?: return
         val recipe = plan.recipes[producer]
         val row = rows[producer] ?: return
         val ports =
