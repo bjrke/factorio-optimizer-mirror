@@ -6,9 +6,7 @@ import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.round
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
@@ -24,12 +22,6 @@ private const val SPLIT_CANDIDATES = 12
 
 /** Extra cost of an underground run when comparing two split points, so surface wins when close. */
 private const val SPLIT_TUNNEL_PENALTY = 12
-
-/** Medium poles supply a 7x7 area (radius 3) and reach 9 tiles of wire. */
-private const val SUPPLY_RADIUS = 3
-
-private const val WIRE_REACH = 9
-private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
 
 /**
  * Lays out [plan] as rows of connected factories. Every recipe is one row of touching machines, fed
@@ -54,7 +46,7 @@ fun buildBlueprint(
             label = plan.label,
             icon = plan.target,
             entities = entities,
-            wires = chestWires(),
+            wires = blueprintWires(),
         )
     }
 
@@ -138,24 +130,7 @@ private class RowLayout(
     /** The loader of the same tier as the belt, used as a test input/output. */
     private val loader = board.names.loader
 
-    /**
-     * How many tiles the solid belt connector occupies left of the feed: three for a label or a
-     * cheat chest, five for a chest the inserters feed.
-     */
-    private val connectorWidth
-        get() =
-            when (beltEnd) {
-                BeltEnd.CONSTANT_COMBINATOR,
-                BeltEnd.INFINITY_CHEST -> 3
-                else -> 5
-            }
-
-    /**
-     * The column a solid connector starts on. A cheat chest sits two tiles in so its loader fits
-     * before the feed; every other connector starts at the west edge.
-     */
-    private val connectorLeft
-        get() = if (beltEnd == BeltEnd.INFINITY_CHEST) 2 else 0
+    private val connector = BeltEndConnector(board, beltEnd)
 
     private val placed
         get() = board.placed
@@ -218,9 +193,6 @@ private class RowLayout(
 
     /** Inputs whose belt could not be routed; a non-empty list means the blueprint is broken. */
     val failures = mutableListOf<String>()
-
-    /** All the directions, Clock-wise EAST first, like most of the stuff has to be delivered. */
-    private val steps = Direction.entries.map { it.step }
 
     /** One machine of a row: the allocation it builds and the column it starts on. */
     private class PlacedMachine(val allocation: Int, val left: Int)
@@ -326,8 +298,7 @@ private class RowLayout(
             trimImportPrefixes()
             stretchUndergroundRuns()
             compact()
-            placePoles()
-            wirePoles()
+            PowerPlacer(board, poleWestBound).place()
         }
         return placed.map { it.toBlueprintEntity() }
     }
@@ -355,10 +326,10 @@ private class RowLayout(
      */
     private fun trimImportPrefixes() {
         if (importFeeds.isEmpty()) return
-        val width = connectorWidth
+        val width = connector.width
         // the connector takes `width` tiles, so its column is the straight run's end - width
         val common = importFeeds.minOf { feed -> lastStraightEast(feed) - width }
-        var trimmed = common > connectorLeft
+        var trimmed = common > connector.left
         if (trimmed) {
             val saved = placed.toList()
             for (feed in importFeeds) {
@@ -368,7 +339,7 @@ private class RowLayout(
                 for (x in feed.start.x until common + width) {
                     removeAt(Coordinate(x, feed.row))
                 }
-                placeSolidConnector(feed.material, common, feed.row, input = true)
+                connector.placeSolidConnector(feed.material, common, feed.row, input = true)
                 reserve(Coordinate(common + width, feed.row), feed.material)
             }
             if (validateLayout(placed).isNotEmpty()) {
@@ -451,58 +422,8 @@ private class RowLayout(
         }
     }
 
-    /**
-     * Wires every pair of poles within reach. A blueprint does not rebuild pole wires on its own,
-     * so they have to be part of it.
-     */
-    private fun wirePoles() {
-        val poles = placed.withIndex().filter { it.value is PoleEntity }
-        for (i in poles.indices) {
-            for (j in i + 1 until poles.size) {
-                val a = poles[i]
-                val b = poles[j]
-                if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= WIRE_REACH_SQ) {
-                    val first = placed[a.index] as PoleEntity
-                    val second = placed[b.index] as PoleEntity
-                    placed[a.index] = first.copy(neighbours = first.neighbours + (b.index + 1))
-                    placed[b.index] = second.copy(neighbours = second.neighbours + (a.index + 1))
-                }
-            }
-        }
-    }
-
-    /**
-     * The circuit wires a chest marker needs: the output marker's inserters read the chest through
-     * their circuit condition, so each has to be wired to it. A blueprint does not rebuild a
-     * circuit wire on its own (just like a pole wire), so the connection must be part of it.
-     */
-    fun chestWires(): List<BlueprintWire> {
-        val wires = mutableListOf<BlueprintWire>()
-        placed.forEachIndexed { index, entity ->
-            // only the output marker reads the chest; the input marker has no circuit condition
-            if (entity !is ChestEntity || entity.circuitConditionEnabled != false) {
-                return@forEachIndexed
-            }
-            val chest = entity.area.topLeft
-            for (dx in listOf(-1, 1)) {
-                val inserter =
-                    placed.withIndex().firstOrNull { (_, candidate) ->
-                        candidate is InserterEntity &&
-                            candidate.circuitCondition != null &&
-                            candidate.area.topLeft == Coordinate(chest.x + dx, chest.y)
-                    } ?: continue
-                val chestNumber = index + 1
-                val inserterNumber = inserter.index + 1
-                wires +=
-                    if (dx < 0) {
-                        BlueprintWire(inserterNumber, 1, chestNumber, 1)
-                    } else {
-                        BlueprintWire(chestNumber, 1, inserterNumber, 1)
-                    }
-            }
-        }
-        return wires
-    }
+    /** The circuit wires a chest marker needs, relative to the final entity order. */
+    fun blueprintWires(): List<BlueprintWire> = chestWires(placed)
 
     private fun copiesOf(recipe: PlannedRecipe): Int =
         // a machine count that should be whole but carries floating point noise must not round up
@@ -1036,16 +957,16 @@ private class RowLayout(
      * block this source.
      */
     private fun importSource(material: Material, sink: Sink): Coordinate {
-        val width = connectorWidth
-        val columns = connectorLeft..(connectorLeft + width)
+        val width = connector.width
+        val columns = connector.left..(connector.left + width)
         var row = sink.feedRow
         var attempts = 0
         while (
             (row in markerRows || columns.any { !isFree(Coordinate(it, row)) }) && attempts++ < 50
         ) row++
         markerRows += row
-        placeSolidConnector(material, connectorLeft, row, input = true)
-        val start = Coordinate(connectorLeft + width, row)
+        connector.placeSolidConnector(material, connector.left, row, input = true)
+        val start = Coordinate(connector.left + width, row)
         reserve(start, material)
         importFeeds += ImportFeed(material, start, row, sink.feed)
         // a chest marker is powered, so its poles may sit in the import extension
@@ -1095,7 +1016,7 @@ private class RowLayout(
             add(start)
             addAll(segment)
         }
-        placePath(material, nodes, sink.heading)
+        placePath(board, material, nodes, sink.heading)
         recordNetwork(material, nodes, sink)
         return true
     }
@@ -1167,7 +1088,7 @@ private class RowLayout(
 
         split(candidate, material)
         val nodes = listOf(candidate.exit) + segment
-        placePath(material, nodes, sink.heading)
+        placePath(board, material, nodes, sink.heading)
         recordNetwork(material, nodes, sink)
         return true
     }
@@ -1303,7 +1224,7 @@ private class RowLayout(
                     break
                 }
                 val segment = fluidRoute(start, EAST, sink, group.material) ?: continue
-                placePath(group.material, listOf(start) + segment)
+                placePath(board, group.material, listOf(start) + segment)
                 network += listOf(start) + segment
                 pending.remove(sink)
                 routed = true
@@ -1333,7 +1254,7 @@ private class RowLayout(
         }
         for (tile in candidates) {
             if (!isFree(tile) || isReserved(tile)) continue
-            val clash = steps.any { d ->
+            val clash = DIRECTION_STEPS.any { d ->
                 board.edgeFluidAt(tile + d).let { it != null && it != material }
             }
             if (!clash) return tile
@@ -1353,7 +1274,7 @@ private class RowLayout(
         val columns = (firstColumn..source.x).toList()
         // keep the connector's buried run clear of any other fluid near the machine
         fun touchesForeignFluid(row: Int) = columns.any { x ->
-            steps.any { step ->
+            DIRECTION_STEPS.any { step ->
                 val neighbor = fluidAt(Coordinate(x, row) + step)
                 neighbor != null && neighbor != material
             }
@@ -1393,10 +1314,10 @@ private class RowLayout(
             placeBelt(coordinate, targetMaterial, EAST)
             coordinate = coordinate.east()
         }
-        val fits = (0 until connectorWidth).all { isFree(coordinate.east(it)) }
+        val fits = (0 until connector.width).all { isFree(coordinate.east(it)) }
         if (fits) {
             // the output label sits above the product line, just like an imported input
-            placeSolidConnector(targetMaterial, coordinate.x, coordinate.y, input = false)
+            connector.placeSolidConnector(targetMaterial, coordinate.x, coordinate.y, input = false)
         } else {
             val spot = markerSpot(coordinate.west())
             placeMarker(spot, Signal(targetMaterial))
@@ -1455,7 +1376,7 @@ private class RowLayout(
     private fun pipeAllowed(coordinate: Coordinate, fluid: Material) =
         isFree(coordinate) &&
             !isReserved(coordinate) &&
-            steps.none { d ->
+            DIRECTION_STEPS.none { d ->
                 val cd = coordinate + d
                 val placedFluid = fluidAt(cd)
                 val reservedFor = board.edgeFluidAt(cd)
@@ -1463,343 +1384,15 @@ private class RowLayout(
                     (reservedFor != null && reservedFor != fluid)
             }
 
-    /** A tile's role in a route: a plain belt, a tunnel input or a tunnel output, all facing. */
-    private sealed interface PathRole {
-        val direction: Direction
-    }
-
-    private data class SurfaceRole(override val direction: Direction) : PathRole
-
-    private data class TunnelInputRole(override val direction: Direction) : PathRole
-
-    private data class TunnelOutputRole(override val direction: Direction) : PathRole
-
-    /**
-     * Draws the transport entities of [material] along [nodes]; a jump becomes an underground run.
-     * A route may revisit a tile: to enter a tunnel a belt must already head straight, so the
-     * search can step back onto a tile to turn first. A tile carries one entity, so each gets its
-     * final role from [roles] before anything is placed. A fluid material routes as pipes.
-     */
-    private fun placePath(
-        material: Material,
-        nodes: List<Coordinate>,
-        finalHeading: Direction? = null,
-    ) {
-        for ((tile, role) in roles(nodes, finalHeading)) {
-            if (!isFree(tile)) continue
-            when (role) {
-                is SurfaceRole -> placeSurface(material, tile, role.direction)
-                is TunnelInputRole -> placeEnd(material, tile, role.direction, INPUT)
-                is TunnelOutputRole -> placeEnd(material, tile, role.direction, OUTPUT)
-            }
-        }
-        markTunnels(nodes, endName(material))
-    }
-
-    /**
-     * The role of every tile in [nodes], keyed by tile. A tunnel end beats a plain belt, so a
-     * revisit never breaks a paired run; otherwise the last occurrence wins. [finalHeading] is the
-     * direction the last tile must face, so a feed can turn onto its target regardless of the side
-     * the route arrived from.
-     */
-    private fun roles(
-        nodes: List<Coordinate>,
-        finalHeading: Direction?,
-    ): Map<Coordinate, PathRole> {
-        if (nodes.size <= 1) return emptyMap()
-
-        val roles = LinkedHashMap<Coordinate, PathRole>()
-
-        fun canBeAssigned(tile: Coordinate) =
-            when (roles[tile]) {
-                is TunnelInputRole,
-                is TunnelOutputRole -> false
-                else -> true
-            }
-
-        fun assign(tile: Coordinate, role: SurfaceRole) {
-            if (canBeAssigned(tile)) roles[tile] = role
-        }
-
-        for ((tile, next) in nodes.zipWithNext()) {
-            val direction = directionBetween(tile, next)
-            if (tile.adjacent(next)) {
-                val surfaceRole = SurfaceRole(direction)
-                assign(tile, surfaceRole)
-                assign(next, surfaceRole)
-            } else {
-                roles[tile] = TunnelInputRole(direction)
-                roles[next] = TunnelOutputRole(direction)
-            }
-        }
-        if (finalHeading != null) roles[nodes.last()] = SurfaceRole(finalHeading)
-
-        return roles
-    }
-
-    private fun directionBetween(from: Coordinate, to: Coordinate) =
-        when {
-            to.x > from.x -> EAST
-            to.x < from.x -> WEST
-            to.y > from.y -> SOUTH
-            else -> NORTH
-        }
-
-    /** Covers every machine, inserter and loader with a pole and wires the poles together. */
-    private fun placePoles() {
-        val machineAreas =
-            placed.filter { it.isPowered }.map { it.area }.sortedWith(compareBy({ it.y }, { it.x }))
-        if (machineAreas.isEmpty()) return
-
-        val covered = mutableSetOf<Coordinate>()
-        val poles = mutableSetOf<Coordinate>()
-        for (area in machineAreas) {
-            if (!area.any(covered::contains)) {
-                val spot = bestPoleSpot(area, covered) ?: continue
-                poles += spot
-                placePole(spot)
-                covered.addAll(spot.area().grow(SUPPLY_RADIUS))
-            }
-        }
-        connectPoles(poles)
-    }
-
-    /** The free tile near [tile] that powers the most not-yet-[covered] machines, if any. */
-    private fun bestPoleSpot(tile: Area, covered: Set<Coordinate>) =
-        tile
-            .grow(SUPPLY_RADIUS)
-            .filter { isFree(it) && it.x >= poleWestBound }
-            .maxByOrNull {
-                it.area().grow(SUPPLY_RADIUS).sumOf { other ->
-                    when {
-                        other in covered -> 0
-                        entityAt(other)?.isPowered == true -> 2
-                        else -> 1
-                    }
-                }
-            }
-
-    /** Adds poles until every pole can reach another, so the whole set is one wire network. */
-    private fun connectPoles(poles: MutableSet<Coordinate>) {
-        val components = poleComponents(poles)
-        repeat(40) {
-            if (components.size <= 1) return
-
-            var bestDistanceSq = Long.MAX_VALUE
-            var from: Coordinate? = null
-            var to: Coordinate? = null
-            var fromIndex = -1
-            var toIndex = -1
-
-            for (i in components.indices) {
-                for (j in i + 1 until components.size) {
-                    for (a in components[i]) {
-                        for (b in components[j]) {
-                            val distanceSq = a.distanceSq(b)
-                            if (distanceSq < bestDistanceSq) {
-                                bestDistanceSq = distanceSq
-                                from = a
-                                to = b
-                                fromIndex = i
-                                toIndex = j
-                            }
-                        }
-                    }
-                }
-            }
-            if (from == null || to == null) return
-
-            val steps =
-                ceil(sqrt(bestDistanceSq.toDouble()) / (WIRE_REACH - 1)).toInt().coerceAtLeast(1)
-            var added = false
-
-            for (step in 1 until steps) {
-                val fraction = step.toDouble() / steps
-                val x = round(from.x + (to.x - from.x) * fraction).toInt()
-                val y = round(from.y + (to.y - from.y) * fraction).toInt()
-                val spot = freeNear(Coordinate(x, y)) ?: continue
-                poles += spot
-                placePole(spot)
-                components[fromIndex] += spot
-                added = true
-            }
-            if (!added) return
-
-            components[fromIndex] += components[toIndex]
-            components.removeAt(toIndex)
-        }
-    }
-
-    /** The wire-connected groups of [poles], two poles being connected within the wire reach. */
-    private fun poleComponents(poles: Set<Coordinate>): MutableList<MutableList<Coordinate>> {
-        val seen = mutableSetOf<Coordinate>()
-        val components = mutableListOf<MutableList<Coordinate>>()
-        for (pole in poles) {
-            if (!seen.add(pole)) continue
-            val component = mutableListOf<Coordinate>()
-            val queue = ArrayDeque<Coordinate>()
-            var current: Coordinate? = pole
-            while (current != null) {
-                component += current
-                // this is a job for a quadtree!
-                for (other in poles) {
-                    if (other !in seen) {
-                        val reach = current.distanceSq(other)
-                        if (reach <= WIRE_REACH_SQ) {
-                            seen += other
-                            queue += other
-                        }
-                    }
-                }
-                current = queue.removeFirstOrNull()
-            }
-            components += component
-        }
-        return components
-    }
-
-    /** The nearest free tile within one tile of ([c]), if any. */
-    private fun freeNear(c: Coordinate): Coordinate? {
-        for (radius in 0..1) {
-            for (dx in -radius..radius) {
-                for (dy in -radius..radius) {
-                    val toTest = Coordinate(c.x + dx, c.y + dy)
-                    if (isFree(toTest) && toTest.x >= poleWestBound) return toTest
-                }
-            }
-        }
-        return null
-    }
-
-    private fun routable(coordinate: Coordinate) = isFree(coordinate) && !isReserved(coordinate)
-
-    /**
-     * Places the selected solid belt connector for [material] on [row], starting at column [left]:
-     * a constant-combinator label, an infinity chest or a chest the inserters feed. [input] marks a
-     * connector that supplies an imported belt, whose first tile is the tunnel input; the target
-     * output passes `false` so a cheat chest loads from the belt instead.
-     */
-    private fun placeSolidConnector(material: Material, left: Int, row: Int, input: Boolean) {
-        when (beltEnd) {
-            BeltEnd.CONSTANT_COMBINATOR -> {
-                // the label sits above an underground run, so the belt can pass underneath
-                placeEnd(material, Coordinate(left, row), EAST, INPUT)
-                placeMarker(Coordinate(left + 1, row), Signal(material))
-                placeEnd(material, Coordinate(left + 2, row), EAST, OUTPUT)
-                markTunnel(Coordinate(left, row), Coordinate(left + 2, row), endName(material))
-            }
-            BeltEnd.INFINITY_CHEST -> {
-                if (input) {
-                    placeInfinityChest(Coordinate(left, row), InfinitySettings(item = material))
-                    placeLoader(Coordinate(left + 1, row), EAST, OUTPUT, material)
-                } else {
-                    placeLoader(Coordinate(left, row), EAST, INPUT, material)
-                    placeInfinityChest(
-                        Coordinate(left + 2, row),
-                        InfinitySettings(removeUnfiltered = true),
-                    )
-                }
-            }
-            else -> placeChestConnector(material, left, row, input)
-        }
-    }
-
-    /**
-     * Places a chest marker: a five-tile connector whose belt tunnels under the chest, with an
-     * inserter on each side. An input marker feeds the belt out of the chest, an output marker
-     * fills the chest from the belt, and the plain wooden and steel chests do both at once.
-     */
-    private fun placeChestConnector(material: Material, left: Int, row: Int, input: Boolean) {
-        placeEnd(material, Coordinate(left, row), EAST, INPUT)
-        placeEnd(material, Coordinate(left + 4, row), EAST, OUTPUT)
-        markTunnel(Coordinate(left, row), Coordinate(left + 4, row), endName(material))
-        val buffer = beltEnd == BeltEnd.BUFFER_CHEST
-        val count = if (buffer) if (input) 100 else 200 else 1
-        when {
-            beltEnd == BeltEnd.WOODEN_CHEST || beltEnd == BeltEnd.STEEL_CHEST -> {
-                // both inserters face west, so the chest buffers a pass-through belt
-                placeConnectorInserter(material, Coordinate(left + 1, row), WEST)
-                placeConnectorInserter(material, Coordinate(left + 3, row), WEST)
-                placeChest(Coordinate(left + 2, row), bar = 4)
-            }
-            input -> {
-                placeConnectorInserter(material, Coordinate(left + 1, row), EAST)
-                placeConnectorInserter(material, Coordinate(left + 3, row), WEST, mirror = true)
-                placeChest(
-                    Coordinate(left + 2, row),
-                    requestFilter = RequestFilter(material.name, count, buffer),
-                )
-            }
-            else -> {
-                val condition = CircuitCondition(material.name, "<", 200)
-                placeConnectorInserter(
-                    material,
-                    Coordinate(left + 1, row),
-                    WEST,
-                    circuitCondition = condition,
-                )
-                placeConnectorInserter(
-                    material,
-                    Coordinate(left + 3, row),
-                    EAST,
-                    circuitCondition = condition,
-                )
-                placeChest(
-                    Coordinate(left + 2, row),
-                    requestFilter = RequestFilter(material.name, count, buffer),
-                    circuitConditionEnabled = false,
-                )
-            }
-        }
-    }
-
-    /** Places a chest marker's inserter (always one tile) of the selected tier. */
-    private fun placeConnectorInserter(
-        material: Material,
-        coordinate: Coordinate,
-        direction: Direction,
-        mirror: Boolean = false,
-        circuitCondition: CircuitCondition? = null,
-    ) {
-        place(
-            InserterEntity(
-                coordinate.area(),
-                inserter,
-                material,
-                direction,
-                long = false,
-                mirror = mirror,
-                circuitCondition = circuitCondition,
-            ),
-        )
-    }
-
-    /** Places a chest marker (always one tile) of the selected type. */
-    private fun placeChest(
-        coordinate: Coordinate,
-        requestFilter: RequestFilter? = null,
-        bar: Int? = null,
-        circuitConditionEnabled: Boolean? = null,
-    ) {
-        place(
-            ChestEntity(
-                coordinate.area(),
-                beltEnd.identifier,
-                requestFilter = requestFilter,
-                bar = bar,
-                circuitConditionEnabled = circuitConditionEnabled,
-            ),
-        )
-    }
-
     /** True when a belt next to [coordinate] pours a different material into that tile. */
-    private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean = steps.any { d ->
-        val neighbor = coordinate + d
-        val belt = entityAt(neighbor) as? ConveyorEntity
-        belt != null &&
-            belt.direction == directionBetween(neighbor, coordinate) &&
-            belt.material != material
-    }
+    private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean =
+        DIRECTION_STEPS.any { d ->
+            val neighbor = coordinate + d
+            val belt = entityAt(neighbor) as? ConveyorEntity
+            belt != null &&
+                belt.direction == directionBetween(neighbor, coordinate) &&
+                belt.material != material
+        }
 
     /** True when a belt at [coordinate] leaving in [direction] would side-load a foreign belt. */
     private fun poursIntoSide(
@@ -1858,26 +1451,14 @@ private class RowLayout(
         long: Boolean,
     ) = board.placeInserter(coordinate, direction, material, long)
 
-    private fun placeLoader(
-        coordinate: Coordinate,
-        direction: Direction,
-        io: Io,
-        material: Material,
-    ) = board.placeLoader(coordinate, direction, io, material)
-
     private fun placeMarker(coordinate: Coordinate, signal: Signal) =
         board.placeMarker(coordinate, signal)
 
     private fun placePipe(coordinate: Coordinate, fluid: Material) =
         board.placePipe(coordinate, fluid)
 
-    private fun placeInfinityChest(coordinate: Coordinate, settings: InfinitySettings) =
-        board.placeInfinityChest(coordinate, settings)
-
     private fun placeInfinityPipe(coordinate: Coordinate, fluid: Material) =
         board.placeInfinityPipe(coordinate, fluid)
-
-    private fun placePole(coordinate: Coordinate) = board.placePole(coordinate)
 
     private fun removeAt(tile: Coordinate) = board.removeAt(tile)
 
@@ -1919,6 +1500,8 @@ private class RowLayout(
     private fun isFree(coordinate: Coordinate) = board.isFree(coordinate)
 
     private fun isReserved(coordinate: Coordinate) = board.isReserved(coordinate)
+
+    private fun routable(coordinate: Coordinate) = isFree(coordinate) && !isReserved(coordinate)
 
     private fun reserve(coordinate: Coordinate, material: Material) =
         board.reserve(coordinate, material)

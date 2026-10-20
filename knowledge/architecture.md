@@ -44,9 +44,15 @@ The layout is split into a small mutable kernel plus stages:
   second copy of the grid or tunnel index.
 - `business/LayoutRouter.kt` — the weighted A* router (`RouteProfile`,
   `RouteNode`, tunnel-cost rules) for belts and pipes.
+- `business/PathPlacer.kt` — `placePath`, the tile roles for plain and underground
+  runs, and `directionBetween`; shared by belt and pipe routes.
 - `business/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run.
 - `business/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`.
+- `business/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
+  final geometry.
+- `business/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
+  their connector width/offset, and the chest circuit wires.
 - `RowLayout` keeps the plan-level state (rows, sinks, deliveries, import feeds,
   networks) and the ordered pipeline.
 
@@ -71,10 +77,12 @@ condition), `infinity_settings` and top-level `wires` fields. See `decisions.md`
 
 The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintImportTest`, `BlueprintFluidLayoutTest`, `BlueprintBandTest`,
-`BlueprintBeltEndTest`), and the JVM integration suite is split by plan, layout,
-power, fluid, belt end and serialization. `./gradlew checkFileSizes` (part of
-`check`) fails when a Kotlin source file grows past 700 lines; existing large
-files are listed in `ci/file-size-baseline.txt`, which is a strict ratchet.
+`BlueprintBeltEndTest`), and `BlueprintLayoutSnapshotTest` pins the exact entity
+order for representative plans while the layout is being split into stages. The
+JVM integration suite is split by plan, layout, power, fluid, belt end and
+serialization. `./gradlew checkFileSizes` (part of `check`) fails when a Kotlin
+source file grows past 700 lines; existing large files are listed in
+`ci/file-size-baseline.txt`, which is a strict ratchet.
 
 
 ## Generated data — do not hand-edit
