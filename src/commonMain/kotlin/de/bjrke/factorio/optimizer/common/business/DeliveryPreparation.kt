@@ -67,21 +67,19 @@ internal class DeliveryPreparation(
         return prepareSolidDeliveries(sinks)
     }
 
-    private fun sinkOf(row: Row, material: Material): Sink? {
-        val index = row.solids.indexOf(material)
-        if (index < 0) return null
-        return when (index) {
-            0 -> laneSink(row, row.laneNearRow ?: return null, material)
-            1 -> laneSink(row, row.laneFarRow ?: return null, material)
-            2 -> laneSink(row, row.laneBelowRow ?: return null, material)
-            else -> {
+    private fun sinkOf(row: Row, material: Material): Sink? =
+        when (val index = row.solids.indexOf(material)) {
+            -1 -> null
+            0 -> row.laneNearRow?.let { laneSink(row, it, material) }
+            1 -> row.laneFarRow?.let { laneSink(row, it, material) }
+            2 -> row.laneBelowRow?.let { laneSink(row, it, material) }
+            else ->
                 // any further input side-loads the lower belt from below
-                val y = row.laneBelowRow ?: return null
-                val x = row.left + (index - 3)
-                Sink(Coordinate(x, y), Coordinate(x, y + 1), NORTH)
-            }
+                row.laneBelowRow?.let {
+                    val x = row.left + (index - 3)
+                    Sink(Coordinate(x, it), Coordinate(x, it + 1), NORTH)
+                }
         }
-    }
 
     private fun laneSink(row: Row, y: Int, material: Material): Sink =
         if (rowPlacer.laneDirection(row, material) == EAST) {

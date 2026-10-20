@@ -20,13 +20,14 @@ private const val IMPORT_DISPLAY_EPSILON = 1e-4
  */
 class Optimizer(
     private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(),
-    private val factories: Set<Factory> = FactoryConfig().defaults,
+    factories: Set<Factory> = FactoryConfig().defaults,
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()
+    private val machine = MachineCatalog(parsedRecipe, factories)
 
     /** Recipes that run on this surface with one of the selected machines. */
     private val enabledRecipes: List<Recipe> =
-        parsedRecipe.recipes.filter { findFactory(it) != null }
+        parsedRecipe.recipes.filter { machine.findFactory(it) != null }
 
     /**
      * Materials a recycling recipe yields. Crafting them would model production that does not
@@ -42,51 +43,6 @@ class Optimizer(
         Category.RECYCLING in recipe.categories ||
             recipe.result.keys.none { it in recyclingSupplied }
     }
-
-    /**
-     * The machine's categories, from the dump when present, otherwise the curated [Factory]
-     * fallback.
-     */
-    private fun categoriesOf(factory: Factory) =
-        parsedRecipe.machineStats[factory.identifier]?.categories ?: factory.categories
-
-    private fun speedOfFactory(factory: Factory) =
-        parsedRecipe.machineStats[factory.identifier]?.speed ?: factory.speed
-
-    private fun productivityOfFactory(factory: Factory) =
-        parsedRecipe.machineStats[factory.identifier]?.productivity ?: factory.productivity
-
-    /**
-     * The machine that runs [recipe]: of all selected machines that accept any of the recipe's
-     * categories, prefer the Space Age speciality machines, then the one with the highest
-     * productivity, then speed. The identifier keeps the choice deterministic.
-     */
-    private fun findFactory(recipe: Recipe) =
-        factories
-            .filter { factory -> categoriesOf(factory).any { it in recipe.categories } }
-            .maxWithOrNull(
-                compareBy(
-                    { it.preferred },
-                    { productivityOfFactory(it) },
-                    { speedOfFactory(it) },
-                    { it.identifier },
-                ),
-            )
-
-    private fun speedOf(recipe: Recipe) = findFactory(recipe)?.let(::speedOfFactory) ?: 1.0
-
-    private fun productivityOf(recipe: Recipe) =
-        findFactory(recipe)?.let(::productivityOfFactory) ?: 0.0
-
-    /** Units of [amount] consumed per second by one machine running [recipe]. */
-    private fun inputRate(amount: Double, recipe: Recipe) = speedOf(recipe) * amount / recipe.time
-
-    /**
-     * Units of [amount] produced per second by one machine running [recipe]; the machine's built-in
-     * productivity bonus increases the output without increasing the inputs.
-     */
-    private fun outputRate(amount: Double, recipe: Recipe) =
-        speedOf(recipe) * (1.0 + productivityOf(recipe)) * amount / recipe.time
 
     /**
      * Every material reachable from [target] by following recipes through to their inputs. Only
@@ -195,9 +151,10 @@ class Optimizer(
                     if (column < recipeVariables) {
                         val recipe = recipes[column]
                         val production =
-                            recipe.result[material]?.let { outputRate(it, recipe) } ?: 0.0
+                            recipe.result[material]?.let { machine.outputRate(it, recipe) } ?: 0.0
                         val consumption =
-                            recipe.ingredients[material]?.let { inputRate(it, recipe) } ?: 0.0
+                            recipe.ingredients[material]?.let { machine.inputRate(it, recipe) }
+                                ?: 0.0
                         consumption - production
                     } else if (importMaterials[column - recipeVariables] == material) {
                         -1.0
@@ -228,9 +185,7 @@ class Optimizer(
         }
 
         val imports = stage(emptyList(), emptyList(), importRow) ?: return null
-        val cheapest =
-            stage(listOf(importRow), listOf(imports.value + SLACK), machineRow) ?: return null
-        return cheapest.solution
+        return stage(listOf(importRow), listOf(imports.value + SLACK), machineRow)?.solution
     }
 
     /** Builds the per-recipe machine counts from the LP solution, one entry per running recipe. */
@@ -242,60 +197,22 @@ class Optimizer(
         solution: DoubleArray,
     ): Map<Recipe, FactoryProduction> {
         val recipeVariables = recipes.size
-
-        // total consumption per material in the LP solution, used to label multi-output recipes
-        val consumption = mutableMapOf<Material, Double>()
-        recipes.forEachIndexed { index, recipe ->
-            val amount = solution[index]
-            if (amount <= EPSILON) return@forEachIndexed
-            recipe.ingredients.forEach { (material, quantity) ->
-                consumption[material] =
-                    (consumption[material] ?: 0.0) + inputRate(quantity, recipe) * amount
-            }
-        }
-
-        fun representativeOf(recipe: Recipe): Material {
-            val outputs = recipe.result.keys.filter { it in materials }
-            if (target in outputs) return target
-            return outputs.maxWithOrNull(compareBy({ consumption[it] ?: 0.0 }, { it.name }))
-                ?: recipe.result.keys.first()
-        }
-
-        // depth of a material in the (byproduct-aware) production graph, used for display ordering
-        val effectiveProducer = mutableMapOf<Material, Recipe>()
-        recipes.forEachIndexed { index, recipe ->
-            if (solution[index] <= EPSILON) return@forEachIndexed
-            recipe.result.keys.forEach { result -> effectiveProducer.getOrPut(result) { recipe } }
-        }
-        val depths = mutableMapOf<Material, Int>()
-        fun depth(material: Material, path: MutableSet<Material>): Int {
-            depths[material]?.let {
-                return it
-            }
-            if (!path.add(material)) return 0
-            val producer = effectiveProducer[material]
-            val value =
-                if (producer == null) 1
-                else 1 + (producer.ingredients.keys.maxOfOrNull { depth(it, path) } ?: 0)
-            path.remove(material)
-            depths[material] = value
-            return value
-        }
-
+        val consumption = consumptionOf(recipes, solution)
+        val effectiveProducer = effectiveProducersOf(recipes, solution)
+        val depth = DepthIndex(effectiveProducer)
         val productions = mutableMapOf<Recipe, FactoryProduction>()
+
         recipes.forEachIndexed { index, recipe ->
             val amount = solution[index]
             if (amount <= EPSILON) return@forEachIndexed
-            val representative = representativeOf(recipe)
+            val material = representativeOf(recipe, materials, target, consumption)
             productions[recipe] =
-                FactoryProduction(
-                    material = representative,
-                    recipe = recipe,
-                    factory = findFactory(recipe) ?: Factory.NO_FACTORY,
-                    amount = amount,
-                    level = depth(representative, mutableSetOf()),
-                    speed = speedOf(recipe),
-                    productivity = productivityOf(recipe),
+                productionOf(
+                    material,
+                    recipe,
+                    machine.findFactory(recipe) ?: Factory.NO_FACTORY,
+                    amount,
+                    depth,
                 )
         }
         importMaterials.forEachIndexed { index, material ->
@@ -304,27 +221,99 @@ class Optimizer(
             if (imported <= IMPORT_DISPLAY_EPSILON) return@forEachIndexed
             val recipe = freeSource(material)
             productions[recipe] =
-                FactoryProduction(
-                    material = material,
-                    recipe = recipe,
-                    factory = Factory.NO_FACTORY,
-                    amount = imported,
-                    level = depth(material, mutableSetOf()),
-                )
+                productionOf(material, recipe, Factory.NO_FACTORY, imported, depth)
         }
         return productions
     }
 
-    /** A pseudo recipe representing an imported material (the old "chest" source). */
-    private fun freeSource(material: Material) =
-        Recipe(
-            name = material.name,
-            ingredients = mapOf(),
-            result = mapOf(material to 1.0),
-            time = 1.0,
-            subgroup = Subgroup(),
-            categories = setOf(Category.NO_CATEGORY),
+    /** Total consumption per material in the LP solution, used to label multi-output recipes. */
+    private fun consumptionOf(recipes: List<Recipe>, solution: DoubleArray) = buildMap {
+        recipes.forEachIndexed { index, recipe ->
+            val amount = solution[index]
+            if (amount <= EPSILON) return@forEachIndexed
+            recipe.ingredients.forEach { (material, quantity) ->
+                this[material] =
+                    (this[material] ?: 0.0) + machine.inputRate(quantity, recipe) * amount
+            }
+        }
+    }
+
+    /** The producer that actually runs for each material, used for the display depth. */
+    private fun effectiveProducersOf(
+        recipes: List<Recipe>,
+        solution: DoubleArray,
+    ): Map<Material, Recipe> = buildMap {
+        recipes.forEachIndexed { index, recipe ->
+            if (solution[index] <= EPSILON) return@forEachIndexed
+            recipe.result.keys.forEach { result -> getOrPut(result) { recipe } }
+        }
+    }
+
+    /**
+     * The material a multi-output recipe is labelled with: the target, else its most-consumed
+     * output.
+     */
+    private fun representativeOf(
+        recipe: Recipe,
+        materials: List<Material>,
+        target: Material,
+        consumption: Map<Material, Double>,
+    ): Material =
+        recipe.result.keys
+            .filter { it in materials }
+            .let { outputs ->
+                if (target in outputs) target
+                else
+                    outputs.maxWithOrNull(compareBy({ consumption[it] ?: 0.0 }, { it.name }))
+                        ?: recipe.result.keys.first()
+            }
+
+    private fun productionOf(
+        material: Material,
+        recipe: Recipe,
+        factory: Factory,
+        amount: Double,
+        depth: DepthIndex,
+    ) =
+        FactoryProduction(
+            material = material,
+            recipe = recipe,
+            factory = factory,
+            amount = amount,
+            level = depth.of(material),
+            speed = machine.speedOf(recipe),
+            productivity = machine.productivityOf(recipe),
         )
 
     operator fun get(target: Material) = cache.getOrPut(target) { compute(target) }
+}
+
+/** A pseudo recipe representing an imported material (the old "chest" source). */
+private fun freeSource(material: Material) =
+    Recipe(
+        name = material.name,
+        ingredients = mapOf(),
+        result = mapOf(material to 1.0),
+        time = 1.0,
+        subgroup = Subgroup(),
+        categories = setOf(Category.NO_CATEGORY),
+    )
+
+/** Memoized display depth in the byproduct-aware production graph, safe on cycles. */
+private class DepthIndex(private val producer: Map<Material, Recipe>) {
+    private val depths = mutableMapOf<Material, Int>()
+    private val path = mutableSetOf<Material>()
+
+    fun of(material: Material): Int = depths[material] ?: enter(material)
+
+    private fun enter(material: Material): Int {
+        if (!path.add(material)) return 0
+        val value =
+            producer[material]?.let { recipe ->
+                1 + (recipe.ingredients.keys.maxOfOrNull(::of) ?: 0)
+            } ?: 1
+        path.remove(material)
+        depths[material] = value
+        return value
+    }
 }

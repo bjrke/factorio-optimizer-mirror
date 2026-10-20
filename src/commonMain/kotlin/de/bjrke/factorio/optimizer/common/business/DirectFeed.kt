@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
 import kotlin.math.ceil
 
@@ -43,54 +44,76 @@ private class DirectFeedBuilder(
             // recipes stay belted
             if (consumer.recipe.ingredients.keys.any { logistics.isFluid(it) }) continue
             for (material in consumer.recipe.ingredients.keys.sortedBy { it.name }) {
-                if (logistics.isFluid(material)) continue
-                val producer = producers[material] ?: continue
-                if (producer.recipe === consumer.recipe) continue
-                if (producer.recipe.ingredients.keys.any { logistics.isFluid(it) }) continue
-                val ratio =
-                    inputPerMachine(consumer, material) / outputPerMachine(producer, material)
-                if (cycleRatio(ratio) != null)
-                    yield(FeedLink(material, producer.recipe, consumer.recipe))
+                linkOf(consumer, material)?.let { yield(it) }
             }
         }
     }
 
+    /**
+     * The link from [material]'s in-plan producer to [consumer], when the producer is a different
+     * solid recipe and the whole-machine ratio is a small cycle.
+     */
+    private fun linkOf(consumer: FactoryProduction, material: Material): FeedLink? {
+        val producer = producers[material] ?: return null
+        val usable =
+            !logistics.isFluid(material) &&
+                producer.recipe !== consumer.recipe &&
+                producer.recipe.ingredients.keys.none { logistics.isFluid(it) } &&
+                cycleRatio(
+                    inputPerMachine(consumer, material) / outputPerMachine(producer, material),
+                ) != null
+        return if (usable) FeedLink(material, producer.recipe, consumer.recipe) else null
+    }
+
     // grow groups greedily: a link joins the group sharing a recipe, and is dropped again
     // when the merged arrangement cannot be built, so it simply stays belted
-    private val builders = buildList {
+    private val builders = groupLinks()
+
+    private fun groupLinks(): List<MutableList<FeedLink>> {
+        val groups = mutableListOf<MutableList<FeedLink>>()
         for (link in candidates) {
             val host =
-                firstOrNull { group ->
-                    group.any {
-                        it.producer == link.producer ||
-                            it.producer == link.consumer ||
-                            it.consumer == link.producer ||
-                            it.consumer == link.consumer
-                    }
-                } ?: mutableListOf<FeedLink>().also { add(it) }
+                groups.firstOrNull { group -> group.any { sharesRecipe(it, link) } }
+                    ?: mutableListOf<FeedLink>().also { groups += it }
             if (host.size >= MAX_BAND_LINKS) continue
             host += link
-            val recipes = host.flatMap { listOf(it.producer, it.consumer) }.distinct()
+            val recipes = host.recipes()
             if (recipes.size > MAX_BAND_RECIPES) {
                 host.remove(link)
                 continue
             }
             if (search.arrange(recipes, host) == null) host.remove(link)
         }
+        return groups
     }
 
     // the arrangements that survived, as bands
     private val bandPlans = builders.mapNotNull { links ->
         if (links.isEmpty()) return@mapNotNull null
-        val recipes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
-        search.arrange(recipes, links)
+        search.arrange(links.recipes(), links)
     }
 
     fun build(): DirectFeed {
         val recipes = mutableListOf<PlannedRecipe>()
+        val bands = buildBands(recipes)
+        val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
+        val built = builtOf(recipes)
+        val onBelt = onBeltOf()
+        val belted =
+            included
+                .sortedBy { it.recipe.name }
+                .mapNotNull {
+                    belted(it, grouped, onBelt, built)
+                }
+        return DirectFeed(recipes + targetRow(built) + belted, bands)
+    }
 
-        val bands = mutableListOf<PlannedBand>()
-        for (plan in bandPlans) {
+    /**
+     * Adds one allocation per recipe a band builds and returns the bands with those allocation
+     * indices.
+     */
+    private fun buildBands(recipes: MutableList<PlannedRecipe>): List<PlannedBand> =
+        bandPlans.map { plan ->
             val allocationOf = buildMap {
                 for (recipe in plan.machines.toSet()) {
                     this[recipe] = recipes.size
@@ -102,81 +125,101 @@ private class DirectFeedBuilder(
                 }
             }
 
-            val machines = plan.machines.map { allocationOf.getValue(it) }
-            bands +=
-                PlannedBand(
-                    machines,
-                    plan.feeds.map {
-                        PlannedLink(it.gap, it.link.material, it.flow, it.producerIsLeft)
-                    },
-                )
+            PlannedBand(
+                plan.machines.map { allocationOf.getValue(it) },
+                plan.feeds.map {
+                    PlannedLink(it.gap, it.link.material, it.flow, it.producerIsLeft)
+                },
+            )
         }
 
-        val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
-        // what every recipe is built as so far, band members included
-        val built =
-            recipes
-                .groupBy { it.recipe }
-                .mapValues { (_, plannedRecipes) -> plannedRecipes.sumOf { it.machines.toInt() } }
+    private fun builtOf(recipes: List<PlannedRecipe>) =
+        recipes
+            .groupBy { it.recipe }
+            .mapValues { (_, plannedRecipes) -> plannedRecipes.sumOf { it.machines.toInt() } }
 
-        // machines a band builds whose product still leaves it over a belt, i.e. the band's output
-        // as opposed to a link that is inserted machine to machine; those already supply the
-        // belted consumers
-        val onBelt = buildMap {
-            for (plan in bandPlans) {
-                val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer }
-                for ((recipe, machines) in plan.machines.groupingBy { it }.eachCount()) {
-                    if (recipe in inserted) continue
-                    this[recipe] = (this[recipe] ?: 0) + machines
-                }
+    // machines a band builds whose product still leaves it over a belt, i.e. the band's output as
+    // opposed to a link that is inserted machine to machine; those already supply the belted
+    // consumers
+    private fun onBeltOf() = buildMap {
+        for (plan in bandPlans) {
+            val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer }
+            for ((recipe, machines) in plan.machines.groupingBy { it }.eachCount()) {
+                if (recipe in inserted) continue
+                this[recipe] = (this[recipe] ?: 0) + machines
             }
         }
-
-        // one belted allocation per recipe: what the consumers that are not direct-fed still
-        // need, at the rate the plan was sized for (the same rate an import draws), less what a
-        // band's own output already puts on a belt. Sizing by whole consumer machines would
-        // over-build: a complete foundry would demand four iron-gear machines although the plan
-        // only ever needs a fraction of its rate, and that row would then have no consumer at all.
-        fun mapBelted(factory: FactoryProduction): PlannedRecipe? {
-            val recipe = factory.recipe
-            var rate = 0.0
-
-            for (consumer in included) {
-                for (material in consumer.recipe.ingredients.keys) {
-                    if (material !in recipe.result.keys) continue
-                    if (logistics.isFluid(material)) continue
-                    if (producers[material]?.recipe !== recipe) continue
-                    if (FeedLink(material, recipe, consumer.recipe) in grouped) continue
-                    rate += consumer.consumption(material) * scale
-                }
-            }
-            // every consumer takes this recipe over a band's insertion, so the band already
-            // builds it
-            if (rate <= 0.0) return null
-            val material = recipe.result.keys.singleOrNull() ?: return null
-            val perMachine = outputPerMachine(factory, material)
-            val demand =
-                if (perMachine > 0.0)
-                    ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[recipe] ?: 0)
-                else 0
-            val leftover = (need.getValue(recipe) - (built[recipe] ?: 0)).coerceAtLeast(0)
-            val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)
-            if (machines <= 0) return null
-            require(factory == production.getValue(recipe))
-            return PlannedRecipe(factory, machines.toDouble())
-        }
-
-        val belted = included.sortedBy { it.recipe.name }.mapNotNull(::mapBelted)
-
-        // the target always needs a row of its own when no band built it
-        val targetRow =
-            if ((built[target] ?: 0) > 0) emptyList()
-            else
-                listOf(PlannedRecipe(production.getValue(target), need.getValue(target).toDouble()))
-
-        return DirectFeed(recipes + targetRow + belted, bands)
     }
+
+    /**
+     * The rate a belted allocation still has to cover: every consumer outside the direct links, at
+     * the rate the plan was sized for.
+     */
+    private fun beltedRate(recipe: Recipe, grouped: Set<FeedLink>) = included.sumOf { consumer ->
+        consumer.recipe.ingredients.keys.sumOf { material ->
+            if (countsForBelt(recipe, consumer, material, grouped)) {
+                consumer.consumption(material) * scale
+            } else {
+                0.0
+            }
+        }
+    }
+
+    /** Whether [consumer] still draws [material] over a belt rather than a band insertion. */
+    private fun countsForBelt(
+        recipe: Recipe,
+        consumer: FactoryProduction,
+        material: Material,
+        grouped: Set<FeedLink>,
+    ) =
+        material in recipe.result.keys &&
+            !logistics.isFluid(material) &&
+            producers[material]?.recipe === recipe &&
+            FeedLink(material, recipe, consumer.recipe) !in grouped
+
+    /**
+     * One belted allocation per recipe: what the consumers that are not direct-fed still need, at
+     * the rate the plan was sized for, less what a band's own output already puts on a belt. Sizing
+     * by whole consumer machines would over-build: a complete foundry would demand four iron-gear
+     * machines although the plan only ever needs a fraction of its rate, and that row would then
+     * have no consumer at all.
+     */
+    private fun belted(
+        factory: FactoryProduction,
+        grouped: Set<FeedLink>,
+        onBelt: Map<Recipe, Int>,
+        built: Map<Recipe, Int>,
+    ): PlannedRecipe? {
+        val recipe = factory.recipe
+        val material = recipe.result.keys.singleOrNull() ?: return null
+        val rate = beltedRate(recipe, grouped)
+        val perMachine = outputPerMachine(factory, material)
+        val demand =
+            if (perMachine > 0.0)
+                ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[recipe] ?: 0)
+            else 0
+        val leftover = (need.getValue(recipe) - (built[recipe] ?: 0)).coerceAtLeast(0)
+        val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)
+        return if (rate <= 0.0 || machines <= 0) null
+        else {
+            require(factory == production.getValue(recipe))
+            PlannedRecipe(factory, machines.toDouble())
+        }
+    }
+
+    /** The target always needs a row of its own when no band built it. */
+    private fun targetRow(built: Map<Recipe, Int>) =
+        if ((built[target] ?: 0) > 0) emptyList()
+        else listOf(PlannedRecipe(production.getValue(target), need.getValue(target).toDouble()))
 }
+
+private fun List<FeedLink>.recipes() = flatMap { listOf(it.producer, it.consumer) }.distinct()
+
+private fun sharesRecipe(first: FeedLink, second: FeedLink) =
+    first.producer == second.producer ||
+        first.producer == second.consumer ||
+        first.consumer == second.producer ||
+        first.consumer == second.consumer
 
 /**
  * Splits a plan's recipes into allocations and direct-feed bands.

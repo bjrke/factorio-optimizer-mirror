@@ -140,24 +140,44 @@ internal class BandSearch(
                     }
 
                 if (!allNeedsFulfilled) continue
-                val feeds = feedsOf(group, machines) ?: continue
+                val feeds = FeedWindow(group, machines, production).feeds() ?: continue
                 return BandPlan(machines, feeds)
             }
         }
         return null
     }
 
-    /**
-     * Splits one window's machines into the insertions between them: the greedy left-to-right flow,
-     * in which every consumer takes from its left neighbor first and then from its right. Null when
-     * a consumer cannot be covered or a producer ends up without a consumer to feed.
-     */
-    private fun feedsOf(
-        group: FeedGroup,
-        machines: List<Recipe>,
-    ): List<BandFeed>? {
-        val links = group.links
-        val supply = DoubleArray(machines.size * links.size)
+    /** How many inserters one machine-to-machine flow needs, at least one. */
+    private fun inserters(flow: Double) = maxOf(1.0, ceil(logistics.directInserterCount(flow)))
+}
+
+/**
+ * One window's greedy left-to-right flow: every consumer takes from its left neighbor first and
+ * then from its right. The window is valid only when every consumer is covered and every producer
+ * slot fed someone, so no machine is left starving or unused.
+ */
+private class FeedWindow(
+    group: FeedGroup,
+    private val machines: List<Recipe>,
+    private val production: Map<Recipe, FactoryProduction>,
+) {
+    private val links = group.links
+    private val supply = DoubleArray(machines.size * links.size)
+    private val used = mutableSetOf<Int>()
+    private val feeds = mutableMapOf<Int, BandFeed>()
+
+    fun feeds(): List<BandFeed>? {
+        seedSupply()
+        for (position in machines.indices) {
+            for ((index, link) in links.withIndex()) {
+                if (machines[position] != link.consumer) continue
+                if (!consume(position, link, index)) return null
+            }
+        }
+        return if (everythingUsed()) feeds.values.sortedBy { it.gap } else null
+    }
+
+    private fun seedSupply() {
         for (position in machines.indices) {
             for ((index, link) in links.withIndex()) {
                 if (machines[position] != link.producer) continue
@@ -165,39 +185,33 @@ internal class BandSearch(
                     outputPerMachine(production.getValue(link.producer), link.material)
             }
         }
-        val used = mutableSetOf<Int>()
-        val feeds = mutableMapOf<Int, BandFeed>()
-        for (position in machines.indices) {
-            for ((index, link) in links.withIndex()) {
-                if (machines[position] != link.consumer) continue
-                var demand = inputPerMachine(production.getValue(link.consumer), link.material)
-                for (side in listOf(position - 1, position + 1)) {
-                    if (side !in machines.indices) continue
-                    if (machines[side] != link.producer) continue
-                    val slot = side * links.size + index
-                    val taken = minOf(supply[slot], demand)
-                    if (taken <= FEED_EPSILON) continue
-                    supply[slot] -= taken
-                    used += slot
-                    val gap = minOf(position, side)
-                    val known = feeds[gap]?.flow ?: 0.0
-                    feeds[gap] = BandFeed(gap, link, known + taken, side < position)
-                    demand -= taken
-                }
-                if (demand > FEED_EPSILON) return null
-            }
-        }
-        for (position in machines.indices) {
-            for ((index, link) in links.withIndex()) {
-                if (machines[position] != link.producer) continue
-                if (position * links.size + index !in used) return null
-            }
-        }
-        return feeds.values.sortedBy { it.gap }
     }
 
-    /** How many inserters one machine-to-machine flow needs, at least one. */
-    private fun inserters(flow: Double) = maxOf(1.0, ceil(logistics.directInserterCount(flow)))
+    private fun consume(position: Int, link: FeedLink, index: Int): Boolean {
+        var demand = inputPerMachine(production.getValue(link.consumer), link.material)
+        for (side in listOf(position - 1, position + 1)) {
+            if (side !in machines.indices) continue
+            if (machines[side] != link.producer) continue
+            val slot = side * links.size + index
+            val taken = minOf(supply[slot], demand)
+            if (taken <= FEED_EPSILON) continue
+            supply[slot] -= taken
+            used += slot
+            val gap = minOf(position, side)
+            val known = feeds[gap]?.flow ?: 0.0
+            feeds[gap] = BandFeed(gap, link, known + taken, side < position)
+            demand -= taken
+        }
+        return demand <= FEED_EPSILON
+    }
+
+    /** Every producer slot must have fed a consumer, or a machine would be built unused. */
+    private fun everythingUsed() =
+        machines.indices.all { position ->
+            links.indices.all { index ->
+                machines[position] != links[index].producer || position * links.size + index in used
+            }
+        }
 }
 
 /** Every way to give [recipes] at least one machine each in [length] machines. */

@@ -4,6 +4,49 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Clean the structural Detekt debt, phase B feed and optimizer
+
+**Context.** After the router/seam slice, 29 typed findings remained; ten were the
+band/feed/optimizer cluster: `BandSearch.feedsOf`, `DirectFeedBuilder.build` and
+`mapBelted`, `Optimizer.factoryProductions`/`solve`/`depth` and the `Optimizer` class
+itself, plus `DeliveryPreparation.sinkOf`.
+
+**Decision.** Give each mixed responsibility a named owner. `FeedWindow` performs
+one band window's greedy supply flow instead of `BandSearch.feedsOf`; `DirectFeed`
+keeps only link discovery, grouping and the belted allocation, with the link,
+band, on-belt and belted-rate steps as methods. `MachineCatalog` owns factory
+choice and machine rates, leaving `Optimizer` to the material balance; its
+production labelling is split into consumption/producer/representative/depth
+helpers, and `DepthIndex` memoizes the cycle-safe display depth. `sinkOf` is a
+pure `when` with nullable lane sinks.
+
+**Consequences.** The typed main baseline drops from 29 to 19 entries and the plain
+baseline from 28 to 18; the test baseline stays empty. `spotlessApply check`
+passes and all optimizer/direct-feed suites pass, so machine counts and band
+shapes are unchanged. The remaining 19 findings are the plan, serializer, CLI,
+ascii, LP, validation, parser and resource-recipe group.
+
+## 2026-10-20 — Clean the structural Detekt debt, phase B router and seam
+
+**Context.** Phase A left 40 typed findings. Eleven of them were the long/cyclic
+`LayoutRouter.route`, its many-parameter `RouteProfile`, the seam dynamic program
+(`findSeam`, `beltCuttable`, `pipeCuttable`) and `LayoutCompaction.applyCorridor`.
+
+**Decision.** Make the search state explicit instead of keeping it in one method:
+`RouteProfile` groups `RouteCosts` and `TunnelRules`, a `RouteRequest` carries the
+start/goal/predicate/profile, and `RouteSearch` owns the A* frontier, relaxation,
+node expansion and the in-region/corridor rules. `LayoutRouter` keeps only the
+belt/pipe profiles and the public entry points. `SeamSearch` owns the seam DP and
+its tie-breaks behind `findSeam`, and `CorridorShift` classifies each entity and
+performs the shift. The belt/pipe cuttable checks are `all`/`none` expressions, so
+they no longer need early returns.
+
+**Consequences.** The typed main baseline drops from 40 to 29 entries and the plain
+baseline from 37 to 28; the test baseline stays empty. `spotlessApply check` passes
+and the four layout snapshot hashes are unchanged, so routing and compaction
+geometry are neutral. The deferred work is the direct-feed/band/optimizer group and
+the serializer/parser/CLI/ascii/LP/validation group.
+
 ## 2026-10-20 — Clean the structural Detekt debt, phase A
 
 **Context.** The structural baselines held 67 typed findings. The layout stages and

@@ -221,14 +221,16 @@ internal class FluidFeeder(
         fluid: Material,
     ) =
         router.route(
-            from,
-            direction,
-            target,
-            { tile, _ -> tile == target || pipeAllowed(tile, fluid) },
-            router.pipeProfile,
-            // a segment grows out of an existing plain pipe, which cannot become a tunnel end:
-            // it has to leave the network on the surface for one tile before it may dive
-            strictStart = true,
+            RouteRequest(
+                from,
+                direction,
+                target,
+                { tile, _ -> tile == target || pipeAllowed(tile, fluid) },
+                router.pipeProfile,
+                // a segment grows out of an existing plain pipe, which cannot become a tunnel end:
+                // it has to leave the network on the surface for one tile before it may dive
+                strictStart = true,
+            ),
         )
 
     /** A pipe tile is free only when it touches no pipe carrying a different fluid. */

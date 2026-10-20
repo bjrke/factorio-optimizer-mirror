@@ -80,7 +80,7 @@ internal fun nextCompaction(
                 continue
             }
             val (candidate, pinnedShift) =
-                applyCorridor(index, corridor, orientation, pinned, width) ?: break
+                CorridorShift(index, corridor, orientation, pinned, width).shift() ?: break
             if (shrinks(index, candidate, orientation) && validateLayout(candidate).isEmpty()) {
                 return CompactionResult(candidate, width, orientation, pinnedShift)
             }
@@ -150,51 +150,72 @@ private fun corridorOf(
     return corridor
 }
 
+/** Which side of the corridor a tile or entity lies on: before it, after it, or inside it. */
+private const val CORRIDOR_BEFORE = -1
+private const val CORRIDOR_AFTER = 1
+private const val CORRIDOR_INSIDE = 2
+
 /**
- * Applies [corridor]: cut the belts/pipes inside it, move everything beyond it [width] tiles
+ * One corridor shift: cut the belts/pipes inside it, move everything beyond it [width] tiles
  * towards the seam and leave the near side in place. An entity is never cut in half; a multi-tile
  * entity that would end up on both sides rejects the corridor.
  */
-private fun applyCorridor(
-    index: LayoutIndex,
-    corridor: Map<Int, IntRange>,
-    orientation: SeamOrientation,
-    pinned: Set<Coordinate>,
-    width: Int,
-): Pair<List<LayoutEntity>, Int>? {
-    val result = ArrayList<LayoutEntity>(index.entities.size)
-    // every import marker/feed tile has to stay on the same side, so the markers keep one column
-    var pinnedSide = 0
-    for (entity in index.entities) {
+private class CorridorShift(
+    private val index: LayoutIndex,
+    private val corridor: Map<Int, IntRange>,
+    private val orientation: SeamOrientation,
+    private val pinned: Set<Coordinate>,
+    private val width: Int,
+) {
+    private val result = ArrayList<LayoutEntity>(index.entities.size)
+    private var pinnedSide = 0
+
+    fun shift(): Pair<List<LayoutEntity>, Int>? {
+        for (entity in index.entities) {
+            val side = sideOf(entity) ?: return null
+            if (side == CORRIDOR_INSIDE) continue
+            if (!accept(entity, side)) return null
+        }
+        return result to if (pinnedSide == CORRIDOR_AFTER) -width else 0
+    }
+
+    /** Keeps [entity] on its side, tracking which side the pinned import group is on. */
+    private fun accept(entity: LayoutEntity, side: Int): Boolean {
+        // every import marker/feed tile has to stay on the same side, so the markers keep one
+        // column
+        if (pinned.any { it in entity.area }) {
+            if (pinnedSide == 0) pinnedSide = side else if (pinnedSide != side) return false
+        }
+        result += if (side == CORRIDOR_AFTER) entity.shifted(orientation, -width) else entity
+        return true
+    }
+
+    /**
+     * The side [entity] lies on, [CORRIDOR_INSIDE] when it is a spliceable belt/pipe to cut, or
+     * null when it straddles the corridor or would be cut though it is not spliceable.
+     */
+    private fun sideOf(entity: LayoutEntity): Int? {
         var side = 0
-        var cut = false
         for (tile in entity.area) {
-            val primary = primaryOf(orientation, tile)
+            val range = corridor[primaryOf(orientation, tile)] ?: return null
             val secondary = secondaryOf(orientation, tile)
-            val range = corridor[primary] ?: return null
             val tileSide =
                 when {
-                    secondary < range.first -> -1
-                    secondary > range.last -> 1
-                    else -> 2
+                    secondary < range.first -> CORRIDOR_BEFORE
+                    secondary > range.last -> CORRIDOR_AFTER
+                    else -> CORRIDOR_INSIDE
                 }
-            if (tileSide == 2) {
+            if (tileSide == CORRIDOR_INSIDE) {
                 // only a plain belt/pipe is cut; every other entity is a wall
                 if (entity !is BeltEntity && entity !is PipeEntity) return null
                 // the import marker and its feed are the connection; never delete them
                 if (pinned.any { it in entity.area }) return null
-                cut = true
-                break
+                return CORRIDOR_INSIDE
             }
             if (side == 0) side = tileSide else if (side != tileSide) return null
         }
-        if (cut) continue
-        if (pinned.any { it in entity.area }) {
-            if (pinnedSide == 0) pinnedSide = side else if (pinnedSide != side) return null
-        }
-        result += if (side == 1) entity.shifted(orientation, -width) else entity
+        return side
     }
-    return result to if (pinnedSide == 1) -width else 0
 }
 
 private fun shrinks(

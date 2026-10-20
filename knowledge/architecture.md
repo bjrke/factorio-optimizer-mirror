@@ -13,7 +13,8 @@ CLI (JVM) from one shared core.
 ## Source layout
 
 - `src/commonMain` — shared logic: recipe parser (`recipeParser.kt`), optimizer
-  (`optimizer.kt`), the model, and the dumped `prototypes/` data.
+  (`Optimizer.kt`, with `MachineCatalog` for the machine choice and rates), the
+  model, and the dumped `prototypes/` data.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`,
   `react-router-dom`); entry `js/index.kt`; `js/business/loadRecipe.kt` pulls the
   dumps via `@JsModule` and the webpack config in `webpack.config.d/`.
@@ -49,8 +50,10 @@ one `business/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   the reserve/place/remove primitives. Entity placement lives in
   `LayoutPlacement.kt`, the tunnel index in `Tunnels.kt` and the underground queries
   in `LayoutUnderground.kt`, all as board extensions.
-- `business/LayoutRouter.kt` — the weighted A* router (`RouteProfile`,
-  `RouteNode`, tunnel-cost rules) for belts and pipes.
+- `business/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
+  `RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
+  the `RouteRequest`, and `RouteSearch.kt` owns the weighted A* frontier and node
+  expansion.
 - `business/PathPlacer.kt` — `placePath`, the tile roles for plain and underground
   runs, and `directionBetween`; shared by belt and pipe routes.
 - `business/UndergroundStretcher.kt` — grows underground runs along their own
@@ -73,7 +76,9 @@ one `business/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   and removes the straight belt prefix in front of it (`lastStraightEast`).
 - `business/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
   underground runs after each corridor and shifts the import pins and bounds.
-- `business/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`.
+- `business/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
+  `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program, and
+  `CorridorShift` cuts one corridor and moves the far side.
 - `business/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry.
 - `business/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
@@ -95,7 +100,8 @@ a **direct-feed band**: a solid material whose producer and consumer stand in a
 small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
 `BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth
-for it. `RowPlacer` places a band with `placeBand`; only belted allocations feed
+for it. `BandSearch` finds the shortest window (`FeedWindow` checks that every
+consumer is covered and every producer feeds someone). `RowPlacer` places a band with `placeBand`; only belted allocations feed
 belts, lanes and sinks, so a band's internal material never gets a belt. See
 `decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
 follow-ups.
