@@ -1,3 +1,4 @@
-# Kotlin files that predate the 700-line budget in buildSrc/.../checkFileSizes.kt.
+# Kotlin files that predate the hard 500-line budget in buildSrc/.../checkFileSizes.kt.
 # The baseline is a ratchet: a split file must lower its entry, and an entry that drops
-# under the budget must be removed.
+# under the hard budget must be removed. Files over the soft 300-line budget (but within
+# the hard one) are only warned about, never listed here.

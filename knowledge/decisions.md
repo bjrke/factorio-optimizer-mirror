@@ -36,13 +36,14 @@ the canonical entity/wire output (FNV-1a) for base, chest, fluid and band plans,
 and the same test run in a clean worktree at the pre-split commit proves each
 slice is behavior-neutral.
 
-**Consequences.** `BlueprintLayout.kt` is at 628 lines
-(1,925 → 1,508 → 1,370 → 1,011 → 628), so it dropped under the 700-line budget
-and its `ci/file-size-baseline.txt` entry is gone. Remaining in the file: the belt
-delivery router (sinks, deliveries, splits, import sources, `networks`,
-`failures`) and the board delegates; delivery goes last because it owns the most
-shared state. Package moves (e.g. `business/blueprint/layout`) are deferred until
-the file split is done, to keep each commit mechanical.
+**Consequences.** `BlueprintLayout.kt` is at 629 lines
+(1,925 → 1,508 → 1,370 → 1,011 → 629) — under the then-700-line budget, and now
+the first entry in `ci/file-size-baseline.txt` under the tighter hard 500-line
+budget. Remaining in the file: the belt delivery router (sinks, deliveries, splits,
+import sources, `networks`, `failures`) and the board delegates; delivery goes last
+because it owns the most shared state. Package moves (e.g.
+`business/blueprint/layout`) are deferred until the file split is done, to keep each
+commit mechanical.
 
 ## 2026-10-19 — Keep the layout modular with a per-file line budget
 
@@ -66,10 +67,11 @@ The blueprint model is split the same way (`Material`, `Recipe`, `Category`,
 split the same way (`OptimizerTest` for synthetic machine/recipe cases,
 `OptimizerSurfaceTest` for real per-surface resolution).
 
-A `checkFileSizes` task (wired into `check`) enforces a 700-line budget. Files
-that predate the rule are listed in `ci/file-size-baseline.txt`, which is a strict
-ratchet: a shrunken file must lower its entry and a file under the budget must
-remove it. The baseline is now empty — every file is under the budget.
+A `checkFileSizes` task (wired into `check`) warns past a **soft 300-line** budget
+and fails past a **hard 500-line** one. Files that predate the limit are listed in
+`ci/file-size-baseline.txt`, a strict ratchet against the hard budget: a shrunken
+file must lower its entry and a file at or under 500 must remove it. That baseline
+doubles as the split roadmap toward an empty file.
 
 **Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines,
 recorded then as a baseline entry; all 64 layout tests still pass. The

@@ -7,12 +7,14 @@ up.
 
 ## Code size and file layout
 
-- Keep Kotlin source files under **700 lines**. `./gradlew checkFileSizes` (part
-  of `check`) fails when a file outgrows it. `ci/file-size-baseline.txt` lists
-  grandfathered offenders and is a **strict ratchet**: a file that shrinks must
-  lower its entry, and a file that reaches the budget must drop it. The goal is an
-  empty baseline; as of 2026-10-20 no file exceeds the budget. Verify with
-  `./gradlew checkFileSizes`.
+- Keep Kotlin source files under the **hard 500-line budget**; a file over the
+  **soft 300-line budget** only warns. `./gradlew checkFileSizes` (part of `check`)
+  logs one warning per soft offender (the next split tier) and fails per hard
+  offender. `ci/file-size-baseline.txt` lists grandfathered hard offenders and is a
+  **strict ratchet**: an entry must match the file's current line count, so a file
+  that shrinks must lower its entry and a file that reaches 500 must drop it. The
+  goal is an empty baseline, and the remaining entries are the split roadmap.
+  Verify with `./gradlew checkFileSizes`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
@@ -22,6 +24,15 @@ up.
   an over-long suite by scenario; when the resulting suites use **disjoint**
   fixtures, leave each suite's `private` helpers and values in place rather than
   forcing a shared file (`OptimizerTest` → `OptimizerTest` + `OptimizerSurfaceTest`).
+  When they share helpers, export them instead: top-level `internal` values and
+  functions in a `fixtures/` subpackage (`LogisticsFixtures.kt` holds
+  `testLogistics`, `TOLERANCE`, `BeltCase` and `calculator`), or an abstract base
+  class for helpers that capture per-test callbacks
+  (`OptimizationResultTestBase`). A base class of a public test class must itself be
+  public, or Kotlin reports "'public' subclass exposes its 'internal' supertype".
+  Prove a split moved no test by diffing the sorted `fun <name>()` list before and
+  after (`grep -oP 'fun \K[a-zA-Z]+(?=\()' | sort`); keep the suite's original name
+  on one part.
   A fixtures file in the **same package** must live in a subpackage (e.g.
   `common/business/fixtures/`): an `internal` top-level fixture with the same name
   as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
@@ -90,6 +101,10 @@ up.
   `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent
   tooling. `spotlessApply` would be a no-op there anyway. A branch that mixes code
   and docs follows the code rule.
+- Build logic (`buildSrc/**`) has its own tests in `buildSrc/src/test`. The root
+  `check` drives buildSrc only up to `jar`, so it does **not** run them: run
+  `./gradlew -p buildSrc test` (wired into CI separately). They are plain
+  `kotlin.test` — the `de.bjrke.test` helpers are app-only.
 - **Never test agent tooling from the app suites.** Everything outside the
   application — `AGENTS.md`, `knowledge/`, `.opencode/`, `tmp/` — is not part of
   the build; `./gradlew check` covers the app only. Plugins can be syntax-checked

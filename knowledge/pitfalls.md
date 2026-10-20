@@ -74,6 +74,21 @@ here only with evidence, and should say how to recognise it.
   radio options and both entry points (`BeltEnd.fromSelection`, the CLI) clamp a
   chest code to `constant-combinator`; do not special-case the label again
   elsewhere.
+- **A `buildSrc` test suite never runs from the root build.** The root build drives
+  buildSrc only through `:classes`/`:jar` (`--info` prints
+  `Tasks to be executed: [… :classes, :jar]`), so `buildSrc/src/test` is dead unless
+  invoked. `tasks.named("jar") { dependsOn(tasks.test) }` fails with a circular
+  dependency (`test → testClasses → compileTestKotlin → jar`), and a root
+  `GradleBuild` task fails with "build name 'buildSrc' … reserved name". Wire it as a
+  CI line (`gradle -p buildSrc test`) plus `./gradlew -p buildSrc test` locally; see
+  `conventions.md`. Evidence: `CheckFileSizesTest` (10 tests) only ran via
+  `-p buildSrc test`.
+- **An `internal` top-level declaration collides with a `private` one of the same
+  name in the package.** Graduating a file-private constant to `internal` to share it
+  broke `:compileKotlinJvm` with `REDECLARATION … EPSILON` against `Optimizer.kt`'s
+  `private const val EPSILON` — a file-private declaration is not exempt from the
+  clash. Rename (`FEED_EPSILON`) or keep it private and pass the value. Verified
+  splitting `DirectFeed.kt` into `DirectFeedModel.kt`.
 - **A cold Gradle daemon can fail build-script compilation with `Unresolved
   reference 'de'`.** After the daemon was stopped, `./gradlew` reported the
   `de.bjrke.factorio.optimizer.buildlogic.*` imports in `build.gradle.kts` as

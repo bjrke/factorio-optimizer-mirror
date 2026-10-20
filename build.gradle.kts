@@ -126,7 +126,7 @@ tasks.named<Test>("jvmTest") {
 val checkSourceSizes =
     tasks.register("checkFileSizes") {
         group = "verification"
-        description = "fails when a Kotlin source file outgrows the line budget"
+        description = "warns past the soft line budget and fails past the hard one"
 
         val sourceRoot = layout.projectDirectory.dir("src")
         val baseline = layout.projectDirectory.file("ci/file-size-baseline.txt")
@@ -134,7 +134,12 @@ val checkSourceSizes =
         inputs.file(baseline)
 
         doLast {
-            checkFileSizes(sourceRoot.asFile, baseline.asFile) { logger.error(it) }
+            checkFileSizes(
+                sourceRoot.asFile,
+                baseline.asFile,
+                report = { logger.error(it) },
+                warn = { logger.warn(it) },
+            )
         }
     }
 

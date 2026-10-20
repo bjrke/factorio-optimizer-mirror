@@ -98,10 +98,10 @@ The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintBeltEndTest`), and `BlueprintLayoutSnapshotTest` pins the exact entity
 order for representative plans while the layout is being split into stages. The
 JVM integration suite is split by plan, layout, power, fluid, belt end and
-serialization. `./gradlew checkFileSizes` (part of `check`) fails when a Kotlin
-source file grows past 700 lines; offenders are listed in
-`ci/file-size-baseline.txt`, a strict ratchet that is now empty (no file exceeds
-the budget).
+serialization. `./gradlew checkFileSizes` (part of `check`) warns when a Kotlin
+source file grows past the soft 300 lines and fails past the hard 500; the
+grandfathered hard offenders are listed in `ci/file-size-baseline.txt`, a strict
+ratchet whose emptiness is the goal.
 
 
 ## Generated data — do not hand-edit

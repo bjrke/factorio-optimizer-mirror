@@ -2,19 +2,25 @@ package de.bjrke.factorio.optimizer.buildlogic
 
 import java.io.File
 
-/** The line budget for one Kotlin source file, so an agent never has to read a huge module. */
-const val MAX_SOURCE_LINES = 700
+/** Above this line count a Kotlin source file warns, so an agent can see what to split next. */
+const val SOFT_SOURCE_LINES = 300
+
+/** The hard line budget for one Kotlin source file; a file over it must be split. */
+const val HARD_SOURCE_LINES = 500
 
 /**
- * Fails when a Kotlin file under [sourceRoot] outgrows [maxLines], unless [baselineFile] lists it.
+ * Fails when a Kotlin file under [sourceRoot] outgrows [hardLines], unless [baselineFile] lists it.
  * The baseline is a strict ratchet: an entry must match the file's current line count, so a file
- * that shrinks has to lower its entry and a file that reaches the budget has to drop it.
+ * that shrinks has to lower its entry and a file that reaches the hard budget has to drop it. A
+ * file over [softLines] but within the hard budget only warns, through [warn].
  */
 fun checkFileSizes(
     sourceRoot: File,
     baselineFile: File,
-    maxLines: Int = MAX_SOURCE_LINES,
+    softLines: Int = SOFT_SOURCE_LINES,
+    hardLines: Int = HARD_SOURCE_LINES,
     report: (String) -> Unit = {},
+    warn: (String) -> Unit = {},
 ) {
     val baseline =
         if (!baselineFile.exists()) emptyMap()
@@ -35,27 +41,30 @@ fun checkFileSizes(
             .toList()
 
     val known = sizes.toMap()
-    val violations =
-        sizes
-            .mapNotNull { (path, lines) ->
-                val allowed = baseline[path]
-                when {
-                    lines <= maxLines -> null
-                    allowed == null -> "$path has $lines lines; split it (budget $maxLines)"
-                    lines > allowed -> "$path grew to $lines lines (baseline $allowed)"
-                    lines < allowed ->
-                        "$path shrank to $lines lines; lower its baseline from $allowed"
-                    else -> null
-                }
+    val violations = mutableListOf<String>()
+    val warnings = mutableListOf<String>()
+    for ((path, lines) in sizes.sortedBy { it.first }) {
+        val allowed = baseline[path]
+        if (lines > hardLines) {
+            when {
+                allowed == null ->
+                    violations += "$path has $lines lines; split it (hard budget $hardLines)"
+                lines > allowed -> violations += "$path grew to $lines lines (baseline $allowed)"
+                lines < allowed ->
+                    violations += "$path shrank to $lines lines; lower its baseline from $allowed"
             }
-            .sorted()
+        } else if (lines > softLines) {
+            warnings += "$path has $lines lines; over the soft budget $softLines"
+        }
+    }
 
     val stale =
         baseline.keys
-            .filter { it !in known || known.getValue(it) <= maxLines }
+            .filter { it !in known || known.getValue(it) <= hardLines }
             .sorted()
             .map { "$it no longer needs a baseline entry; remove it" }
 
+    warnings.forEach(warn)
     if (violations.isNotEmpty() || stale.isNotEmpty()) {
         (violations + stale).forEach(report)
         error("Kotlin source files exceed the line budget")
