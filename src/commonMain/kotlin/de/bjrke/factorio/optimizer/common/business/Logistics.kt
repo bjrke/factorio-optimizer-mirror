@@ -44,8 +44,6 @@ class LogisticsCalculator(
             lanes *
             stack
 
-    fun beltThroughput() = beltThroughput(beltStack)
-
     /** Items per second a single inserter moves between storages, one turn being one cycle. */
     fun inserterThroughput() = inserterStats.rotationSpeed * TICKS_PER_SECOND * handSize
 
@@ -69,8 +67,6 @@ class LogisticsCalculator(
     fun pumpThroughput(): Double? = logistics.pumpRate
 
     fun beltCount(rate: Double, stack: Int) = rate / beltThroughput(stack)
-
-    fun beltCount(rate: Double) = beltCount(rate, beltStack)
 
     /** Inserters needed for [rate]; [ontoBelt] uses the slower belt-limited placing rate. */
     fun inserterCount(rate: Double, ontoBelt: Boolean = false) =

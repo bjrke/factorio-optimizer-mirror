@@ -28,7 +28,6 @@ data class Logistics(
  */
 data class InserterStats(
     val rotationSpeed: Double,
-    val bulk: Boolean,
     val minStack: Int,
     val maxStack: Int,
     /**

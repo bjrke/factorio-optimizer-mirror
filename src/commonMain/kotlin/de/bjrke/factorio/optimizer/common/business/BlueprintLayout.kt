@@ -29,41 +29,6 @@ fun buildBlueprint(
         )
     }
 
-/** Inputs whose belt could not be routed; empty for a valid blueprint. Used by tests. */
-internal fun blueprintFeedFailures(
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-) =
-    RowLayout(plan, logistics, beltEnd).run {
-        build()
-        failures
-    }
-
-/**
- * The material each transport entity carries, keyed by tile. Used by tests to check nothing merges.
- */
-internal fun blueprintTransportMaterials(
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-) =
-    RowLayout(plan, logistics, beltEnd).run {
-        build()
-        transportMaterials()
-    }
-
-/** The fluid each pipe or pipe-to-ground tile carries. Used by tests to check no fluids merge. */
-internal fun blueprintPipeFluids(
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-) =
-    RowLayout(plan, logistics, beltEnd).run {
-        build()
-        pipeFluids()
-    }
-
 /** The placed entities and the feed routes that failed, for the CLI's text layout. */
 internal fun blueprintLayoutDump(
     plan: BlueprintPlan,
@@ -176,18 +141,6 @@ private class RowLayout(
 
     /** The entities placed so far, in placement order. Used by [blueprintLayoutDump]. */
     fun placedEntities(): List<LayoutEntity> = placed.toList()
-
-    /** The material each transport entity carries, keyed by the tile. Used by tests. */
-    fun transportMaterials() =
-        placed.filterIsInstance<TransportEntity>().associate {
-            it.area.topLeft to it.material
-        }
-
-    /** The fluid each pipe or pipe-to-ground tile carries, keyed by the tile. Used by tests. */
-    fun pipeFluids() =
-        placed.filterIsInstance<Plumbing>().associate {
-            it.area.topLeft to it.material
-        }
 
     /** The circuit wires a chest marker needs, relative to the final entity order. */
     fun blueprintWires(): List<BlueprintWire> = chestWires(placed)

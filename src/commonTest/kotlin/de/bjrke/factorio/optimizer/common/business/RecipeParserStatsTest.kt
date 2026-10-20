@@ -85,7 +85,6 @@ class RecipeParserStatsTest {
                 assertEquals(
                     InserterStats(
                         0.014,
-                        bulk = false,
                         minStack = 1,
                         maxStack = 2,
                         stacksOnBelt = false,
@@ -99,7 +98,6 @@ class RecipeParserStatsTest {
                 assertEquals(
                     InserterStats(
                         0.04,
-                        bulk = true,
                         minStack = 6,
                         maxStack = 8,
                         stacksOnBelt = true,

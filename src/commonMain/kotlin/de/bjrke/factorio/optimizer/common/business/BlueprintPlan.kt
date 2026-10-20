@@ -172,9 +172,6 @@ data class PlannedRecipe(
 
     val factory: Factory
         get() = production.factory
-
-    val material: Material
-        get() = production.material
 }
 
 /**

@@ -24,7 +24,6 @@ class LogisticsSelectionTest {
                         "inserter" to
                             InserterStats(
                                 0.014,
-                                bulk = false,
                                 minStack = 1,
                                 maxStack = 3,
                                 stacksOnBelt = false,

@@ -211,7 +211,6 @@ fun logisticsStats(root: JsonObject): Logistics {
                 name to
                     InserterStats(
                         rotationSpeed = rotationSpeed,
-                        bulk = bulk,
                         minStack = minStack,
                         maxStack = minStack + if (bulk) bulkCapacityBonus else stackSizeBonus,
                         // only the stack inserter carries max_belt_stack_size; the bulk inserter

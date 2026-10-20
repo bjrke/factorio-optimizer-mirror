@@ -15,8 +15,6 @@ data class FactoryProduction(
     val speed: Double = factory.speed,
     val productivity: Double = factory.productivity,
 ) {
-    operator fun plus(amount: Double) = copy(amount = this.amount + amount)
-
     fun production(material: Material) =
         speed * (1.0 + productivity) * amount * recipe.result[material]!! / recipe.time
 
@@ -31,15 +29,7 @@ data class OptimizationResult(
     val factories: Map<Recipe, FactoryProduction>,
     // the logistics prototypes the calculator uses to turn rates into belts/inserters/pumps
     val logistics: Logistics = Logistics(),
-) {
-    /** Every recipe that is labeled with [material]. */
-    fun producers(material: Material): List<FactoryProduction> =
-        factories.values.filter { it.material == material }
-
-    /** The recipe entry supplying the most of [material]. */
-    fun production(material: Material): FactoryProduction =
-        producers(material).maxByOrNull { it.amount } ?: error("no producer for ${material.name}")
-}
+)
 
 val factoryProductionComparator =
     compareBy<FactoryProduction>(

@@ -88,7 +88,7 @@ class BlueprintPlanTest {
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         // the drill is place-dependent and the smelter is left out; both become imports
         assertAll(
-            { assertEquals(listOf(gear), planned.recipes.map { it.material }) },
+            { assertEquals(listOf(gear), planned.recipes.map { it.production.material }) },
             { assertEquals(listOf(plate), planned.sources.map { it.material }) },
         )
     }
@@ -162,7 +162,7 @@ class BlueprintPlanTest {
         val targetPlan = assertIs<BlueprintPlanResult.Planned>(asTarget).plan
         assertAll(
             { assertEquals(listOf(petroleum), ingredientPlan.sources.map { it.material }) },
-            { assertEquals(listOf(petroleum), targetPlan.recipes.map { it.material }) },
+            { assertEquals(listOf(petroleum), targetPlan.recipes.map { it.production.material }) },
         )
     }
 

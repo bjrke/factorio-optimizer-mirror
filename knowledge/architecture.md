@@ -36,6 +36,10 @@ poles, pole wires — and returns a `Blueprint` whose `entities` become the
 `entities` array (numbered by list position) and whose `wires` become the
 top-level `wires` array. The order is load-bearing: pipes go before belts, the
 import trim before the underground stretch, compaction before the poles.
+`blueprintLayoutDump` is the one read-back of a finished layout (`LayoutDump`:
+placed `LayoutEntity`s plus failure strings); the CLI's `--layout` renders it and
+the test suites assert on it via `commonTest/…/business/fixtures/BlueprintLayoutAccess.kt`,
+so `RowLayout` and its accessors stay private.
 
 The layout is split into a small mutable kernel plus stages:
 

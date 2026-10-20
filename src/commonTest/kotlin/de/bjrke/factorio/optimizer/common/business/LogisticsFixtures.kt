@@ -22,7 +22,6 @@ internal val testLogistics =
                 "burner-inserter" to
                     InserterStats(
                         0.013,
-                        bulk = false,
                         minStack = 1,
                         maxStack = 3,
                         stacksOnBelt = false,
@@ -30,7 +29,6 @@ internal val testLogistics =
                 "inserter" to
                     InserterStats(
                         0.014,
-                        bulk = false,
                         minStack = 1,
                         maxStack = 3,
                         stacksOnBelt = false,
@@ -38,7 +36,6 @@ internal val testLogistics =
                 "long-handed-inserter" to
                     InserterStats(
                         0.02,
-                        bulk = false,
                         minStack = 1,
                         maxStack = 3,
                         stacksOnBelt = false,
@@ -46,7 +43,6 @@ internal val testLogistics =
                 "fast-inserter" to
                     InserterStats(
                         0.04,
-                        bulk = false,
                         minStack = 1,
                         maxStack = 3,
                         stacksOnBelt = false,
@@ -55,7 +51,6 @@ internal val testLogistics =
                 "bulk-inserter" to
                     InserterStats(
                         0.04,
-                        bulk = true,
                         minStack = 2,
                         maxStack = 12,
                         stacksOnBelt = false,
@@ -63,7 +58,6 @@ internal val testLogistics =
                 "stack-inserter" to
                     InserterStats(
                         0.04,
-                        bulk = true,
                         minStack = 6,
                         maxStack = 16,
                         stacksOnBelt = true,
@@ -88,3 +82,9 @@ internal fun calculator(
     inserterStack: Int = 1,
     logistics: Logistics = testLogistics,
 ) = LogisticsCalculator(logistics, belt, inserter, lanes, beltStack, inserterStack)
+
+/** The items per second a belt carries at the calculator's own stacking. */
+internal fun LogisticsCalculator.beltThroughput() = beltThroughput(beltStack)
+
+/** The belts needed for [rate] at the calculator's own stacking. */
+internal fun LogisticsCalculator.beltCount(rate: Double) = beltCount(rate, beltStack)

@@ -38,6 +38,11 @@ up.
 - Prefer data that can be tested alone: `LayoutCompaction` already takes a
   `List<LayoutEntity>` and `LayoutRouter` only reads the board, so neither needs a
   full `BlueprintPlan` to test.
+- Test-only code lives in the test source set, not in `commonMain`. A stage's test
+  accessors go in a `fixtures/` file built on a production entry point: the layout
+  suites read entities and failures back through `blueprintLayoutDump` (the CLI's
+  `--layout` also uses it), so no production type had to widen its visibility
+  (`RowLayout` stays `private`) or keep a wrapper only tests call.
 
 ## Behavior-preserving refactors
 
