@@ -1,0 +1,8 @@
+# Overrides on top of detekt's default config (see `buildUponDefaultConfig` in
+# build.gradle.kts). The default rule set is kept; only the budgets this project
+# cares about are adjusted here.
+complexity:
+  # This project keeps a source file under 500 lines; a class that outgrows it is
+  # the signal to split the file.
+  LargeClass:
+    allowedLines: 500

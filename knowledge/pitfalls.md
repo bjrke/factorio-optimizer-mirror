@@ -75,19 +75,26 @@ here only with evidence, and should say how to recognise it.
   chest code to `constant-combinator`; do not special-case the label again
   elsewhere.
 - **A `buildSrc` test suite never runs from the root build.** The root build drives
-  buildSrc only through `:classes`/`:jar` (`--info` prints
-  `Tasks to be executed: [… :classes, :jar]`), so `buildSrc/src/test` is dead unless
+  buildSrc only through `:classes`/`:jar`, so `buildSrc/src/test` is dead unless
   invoked. `tasks.named("jar") { dependsOn(tasks.test) }` fails with a circular
   dependency (`test → testClasses → compileTestKotlin → jar`), and a root
-  `GradleBuild` task fails with "build name 'buildSrc' … reserved name". Wire it as a
-  CI line (`gradle -p buildSrc test`) plus `./gradlew -p buildSrc test` locally; see
-  `conventions.md`. Evidence: `CheckFileSizesTest` (7 tests) only ran via
-  `-p buildSrc test`.
-- **`logger.info` is silent in a default Gradle build.** Gradle hides `INFO` and
-  `DEBUG`, so task output meant to be seen every run must use `logger.lifecycle`;
-  reserve `logger.info` for detail behind `--info`. Verified when `checkFileSizes`'s
-  super-soft tier was first logged with `logger.info` and stayed invisible until the
-  callback moved to `logger.lifecycle`.
+  `GradleBuild` task fails with "build name 'buildSrc' … reserved name". buildSrc
+  carries no tests today; wire a CI line plus `./gradlew -p buildSrc test` locally if
+  one is added. See `conventions.md`.
+- **Detekt's type-resolved KMP tasks report `expect`/`actual` compiler errors.** Both
+  `detektMainJvm` and `detektTestJvm` print "There were 3 compiler errors found during
+  analysis. This affects accuracy of reporting." (`debug = true` shows
+  `loadPrototypeDump: expect and corresponding actual are declared in the same
+  module`). detekt analyses `commonMain` and `jvmMain` as one fragment, which is a
+  known detekt limitation (issue #9602), not a project error: type-resolution is
+  degraded for `loadPrototypeDump` and the build still passes. Do not chase it in the
+  source.
+- **A Gradle `baseline` file missing is not an error, but the wrong baseline is.**
+  Detekt's extension baseline defaults to `detekt-baseline.xml`, and the typed tasks
+  prefer `detekt-baseline-main.xml`/`detekt-baseline-test.xml` when they exist. A
+  typed task whose variant baseline is absent silently falls back to the plain
+  baseline and then fails on its extra (type-aware) findings; generate all three with
+  `detektBaseline`, `detektBaselineMainJvm` and `detektBaselineTestJvm`.
 - **An `internal` top-level declaration collides with a `private` one of the same
   name in the package.** Graduating a file-private constant to `internal` to share it
   broke `:compileKotlinJvm` with `REDECLARATION … EPSILON` against `Optimizer.kt`'s

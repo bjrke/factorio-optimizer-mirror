@@ -1,0 +1,263 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:BlueprintLayoutAssertions.kt:entity != null &amp;&amp; entity.type == Io.OUTPUT &amp;&amp; entity.name == input.name &amp;&amp; materials[entity.area.topLeft] == materials[input.area.topLeft]</ID>
+    <ID>ComplexCondition:BlueprintPowerFluidAssertions.kt:neighbour is PipeEntity || neighbour is InfinityPipeEntity || (neighbour is PipeToGroundEntity &amp;&amp; mouthOf(neighbour) == mouth.opposite())</ID>
+    <ID>ComplexCondition:BlueprintPowerFluidAssertions.kt:other is PipeToGroundEntity &amp;&amp; other.material == entity.material &amp;&amp; other.direction == entity.direction &amp;&amp; other.io != entity.io</ID>
+    <ID>ComplexCondition:LayoutBoard.kt:LayoutBoard$entity is UndergroundEntity &amp;&amp; entity.io == OUTPUT &amp;&amp; entity.direction == input.direction &amp;&amp; entity.material == input.material</ID>
+    <ID>ComplexCondition:LayoutRouter.kt:LayoutRouter$(strictStart &amp;&amp; current == start) || current.straight &gt; 0 || current.heading != direction</ID>
+    <ID>CyclomaticComplexMethod:BandSearch.kt:BandSearch$private fun feedsOf: List&lt;BandFeed&gt;?</ID>
+    <ID>CyclomaticComplexMethod:BlueprintFluidLayoutTest.kt:BlueprintFluidLayoutTest$@Test fun pipeRunsAreStretched</ID>
+    <ID>CyclomaticComplexMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
+    <ID>CyclomaticComplexMethod:BlueprintLayoutAssertions.kt:fun assertUndergroundRunsAreStretched</ID>
+    <ID>CyclomaticComplexMethod:BlueprintLayoutFixtures.kt:fun plumbingComponents: List&lt;Set&lt;Coordinate&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:BlueprintPlan.kt:fun blueprintPlan: BlueprintPlanResult</ID>
+    <ID>CyclomaticComplexMethod:BlueprintPowerFluidAssertions.kt:fun fluidNetworkProblems: List&lt;String&gt;</ID>
+    <ID>CyclomaticComplexMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
+    <ID>CyclomaticComplexMethod:DirectFeed.kt:DirectFeedBuilder$fun build: DirectFeed</ID>
+    <ID>CyclomaticComplexMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
+    <ID>CyclomaticComplexMethod:LayoutCompaction.kt:private fun LayoutEntity.shifted: LayoutEntity</ID>
+    <ID>CyclomaticComplexMethod:LayoutCompaction.kt:private fun applyCorridor: Pair&lt;List&lt;LayoutEntity&gt;, Int&gt;?</ID>
+    <ID>CyclomaticComplexMethod:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
+    <ID>CyclomaticComplexMethod:LayoutSerialization.kt:fun LayoutEntity.toBlueprintEntity: BlueprintEntity</ID>
+    <ID>CyclomaticComplexMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
+    <ID>CyclomaticComplexMethod:LayoutValidation.kt:private fun findUndergroundOutput: UndergroundEntity?</ID>
+    <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$fun minimize: LinearProgramResult</ID>
+    <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$private fun simplex: Boolean</ID>
+    <ID>CyclomaticComplexMethod:Optimizer.kt:Optimizer$private fun factoryProductions: Map&lt;Recipe, FactoryProduction&gt;</ID>
+    <ID>CyclomaticComplexMethod:RowPlacer.kt:RowPlacer$private fun placeMachines</ID>
+    <ID>CyclomaticComplexMethod:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
+    <ID>CyclomaticComplexMethod:UndergroundStretcher.kt:UndergroundStretcher$private fun stretchRun</ID>
+    <ID>CyclomaticComplexMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
+    <ID>CyclomaticComplexMethod:resourceRecipes.kt:private fun MutableList&lt;Recipe&gt;.minedResourceRecipes</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:BlueprintExportTest.kt:BlueprintExportTest$(entity, overlay, size, left)</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:LogisticsTest.kt:LogisticsTest$(belt, lanes, stack, expected)</ID>
+    <ID>FunctionNaming:Coordinate.kt:fun AreaTile</ID>
+    <ID>LongMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
+    <ID>LongMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
+    <ID>LongMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
+    <ID>LongMethod:LayoutEntityTest.kt:LayoutEntityTest$@Test fun placedEntitiesMapToTheirBlueprintDto</ID>
+    <ID>LongMethod:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
+    <ID>LongMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
+    <ID>LongMethod:RowPlacer.kt:RowPlacer$private fun placeMachines</ID>
+    <ID>LongMethod:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
+    <ID>LongMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
+    <ID>LoopWithTooManyJumpStatements:BandSearch.kt:BandSearch$for</ID>
+    <ID>LoopWithTooManyJumpStatements:BlueprintFluidLayoutTest.kt:BlueprintFluidLayoutTest$for</ID>
+    <ID>LoopWithTooManyJumpStatements:BlueprintLayoutAssertions.kt:for</ID>
+    <ID>LoopWithTooManyJumpStatements:DirectFeed.kt:DirectFeedBuilder$for</ID>
+    <ID>LoopWithTooManyJumpStatements:DirectFeedModel.kt:for</ID>
+    <ID>LoopWithTooManyJumpStatements:FluidFeeder.kt:FluidFeeder$for</ID>
+    <ID>LoopWithTooManyJumpStatements:LayoutCompaction.kt:while</ID>
+    <ID>LoopWithTooManyJumpStatements:LayoutRouter.kt:LayoutRouter$for</ID>
+    <ID>LoopWithTooManyJumpStatements:LayoutValidation.kt:for</ID>
+    <ID>LoopWithTooManyJumpStatements:SeamGrid.kt:for</ID>
+    <ID>LoopWithTooManyJumpStatements:UndergroundStretcher.kt:UndergroundStretcher$while</ID>
+    <ID>LoopWithTooManyJumpStatements:recipeParser.kt:for</ID>
+    <ID>LoopWithTooManyJumpStatements:resourceRecipes.kt:for</ID>
+    <ID>MagicNumber:BeltEndConnector.kt:BeltEndConnector$3</ID>
+    <ID>MagicNumber:BeltEndConnector.kt:BeltEndConnector$4</ID>
+    <ID>MagicNumber:BlueprintExport.kt:180</ID>
+    <ID>MagicNumber:BlueprintExport.kt:270</ID>
+    <ID>MagicNumber:BlueprintExport.kt:360</ID>
+    <ID>MagicNumber:BlueprintExport.kt:90</ID>
+    <ID>MagicNumber:BlueprintJson.kt:12</ID>
+    <ID>MagicNumber:BlueprintJson.kt:4</ID>
+    <ID>MagicNumber:BlueprintJson.kt:8</ID>
+    <ID>MagicNumber:BlueprintPlan.kt:1e-6</ID>
+    <ID>MagicNumber:BlueprintPlan.kt:3</ID>
+    <ID>MagicNumber:BlueprintPlan.kt:4</ID>
+    <ID>MagicNumber:BlueprintPlan.kt:5</ID>
+    <ID>MagicNumber:BlueprintPlan.kt:9</ID>
+    <ID>MagicNumber:DeliveryPreparation.kt:DeliveryPreparation$50</ID>
+    <ID>MagicNumber:DeliveryPreparation.kt:DeliveryPreparation$60</ID>
+    <ID>MagicNumber:DeliveryRouter.kt:DeliveryRouter$12</ID>
+    <ID>MagicNumber:DeliveryRouter.kt:DeliveryRouter$3</ID>
+    <ID>MagicNumber:Factory.kt:Factory.AGRICULTURAL_TOWER$48.0</ID>
+    <ID>MagicNumber:Factory.kt:Factory.ASSEMBLING_MACHINE_1$0.5</ID>
+    <ID>MagicNumber:Factory.kt:Factory.ASSEMBLING_MACHINE_2$0.75</ID>
+    <ID>MagicNumber:Factory.kt:Factory.ASSEMBLING_MACHINE_3$1.25</ID>
+    <ID>MagicNumber:Factory.kt:Factory.BIG_MINING_DRILL$2.5</ID>
+    <ID>MagicNumber:Factory.kt:Factory.BURNER_MINING_DRILL$0.25</ID>
+    <ID>MagicNumber:Factory.kt:Factory.ELECTRIC_MINING_DRILL$0.5</ID>
+    <ID>MagicNumber:Factory.kt:Factory.FOUNDRY$4.0</ID>
+    <ID>MagicNumber:Factory.kt:Factory.OFFSHORE_PUMP$1200.0</ID>
+    <ID>MagicNumber:FluidFeeder.kt:FluidFeeder$3</ID>
+    <ID>MagicNumber:FluidFeeder.kt:FluidFeeder$8</ID>
+    <ID>MagicNumber:IconLayers.kt:0.5</ID>
+    <ID>MagicNumber:IconLayers.kt:0.6</ID>
+    <ID>MagicNumber:LayoutAscii.kt:10</ID>
+    <ID>MagicNumber:LayoutRouter.kt:LayoutRouter$1_000_000</ID>
+    <ID>MagicNumber:OptimizationResultPresenter.kt:120</ID>
+    <ID>MagicNumber:OptimizationResultPresenter.kt:128</ID>
+    <ID>MagicNumber:PowerPlacer.kt:PowerPlacer$40</ID>
+    <ID>MagicNumber:RowPlacer.kt:RowPlacer$3</ID>
+    <ID>MagicNumber:RowPlanner.kt:RowPlanner$1e-6</ID>
+    <ID>MagicNumber:Surface.kt:Surface.AQUILO$10</ID>
+    <ID>MagicNumber:Surface.kt:Surface.AQUILO$300</ID>
+    <ID>MagicNumber:Surface.kt:Surface.FULGORA$1000</ID>
+    <ID>MagicNumber:Surface.kt:Surface.FULGORA$15</ID>
+    <ID>MagicNumber:Surface.kt:Surface.FULGORA$99</ID>
+    <ID>MagicNumber:Surface.kt:Surface.GLEBA$20</ID>
+    <ID>MagicNumber:Surface.kt:Surface.GLEBA$2000</ID>
+    <ID>MagicNumber:Surface.kt:Surface.NAUVIS$10</ID>
+    <ID>MagicNumber:Surface.kt:Surface.NAUVIS$1000</ID>
+    <ID>MagicNumber:Surface.kt:Surface.VULCANUS$40</ID>
+    <ID>MagicNumber:Surface.kt:Surface.VULCANUS$4000</ID>
+    <ID>MagicNumber:blueprintString.kt:0x3F</ID>
+    <ID>MagicNumber:blueprintString.kt:0xFF</ID>
+    <ID>MagicNumber:blueprintString.kt:12</ID>
+    <ID>MagicNumber:blueprintString.kt:16</ID>
+    <ID>MagicNumber:blueprintString.kt:18</ID>
+    <ID>MagicNumber:blueprintString.kt:24</ID>
+    <ID>MagicNumber:blueprintString.kt:3</ID>
+    <ID>MagicNumber:blueprintString.kt:6</ID>
+    <ID>MagicNumber:blueprintString.kt:8</ID>
+    <ID>MagicNumber:customRecipes.kt:100.0</ID>
+    <ID>MagicNumber:customRecipes.kt:1000.0</ID>
+    <ID>MagicNumber:factorioUrl.kt:3</ID>
+    <ID>MagicNumber:factorioUrl.kt:4</ID>
+    <ID>MagicNumber:resourceRecipes.kt:4.0</ID>
+    <ID>MagicNumber:resourceRecipes.kt:50.0</ID>
+    <ID>MagicNumber:utils.kt:10.0</ID>
+    <ID>MatchingDeclarationName:Icon.kt:IconProps : Props</ID>
+    <ID>MatchingDeclarationName:IconLayers.kt:IconLayer</ID>
+    <ID>MatchingDeclarationName:LayoutAscii.kt:LayoutDump</ID>
+    <ID>MatchingDeclarationName:SelectableIcon.kt:SelectableIconProps : Props</ID>
+    <ID>MatchingDeclarationName:Selection.kt:SelectionFlag</ID>
+    <ID>MatchingDeclarationName:SpaceAgeToggle.kt:SpaceAgeToggleProps : Props</ID>
+    <ID>MatchingDeclarationName:factorioUrl.kt:FactorioUrl</ID>
+    <ID>MatchingDeclarationName:index.kt:FactorioOptimizerProps</ID>
+    <ID>NestedBlockDepth:BlueprintPowerFluidAssertions.kt:fun assertPolesCoverAndConnect</ID>
+    <ID>NestedBlockDepth:PowerPlacer.kt:PowerPlacer$private fun poleComponents: MutableList&lt;MutableList&lt;Coordinate&gt;&gt;</ID>
+    <ID>ReturnCount:BandSearch.kt:BandSearch$private fun feedsOf: List&lt;BandFeed&gt;?</ID>
+    <ID>ReturnCount:BlueprintPlan.kt:fun blueprintPlan: BlueprintPlanResult</ID>
+    <ID>ReturnCount:BlueprintPlan.kt:fun buildable: Boolean</ID>
+    <ID>ReturnCount:DeliveryPreparation.kt:DeliveryPreparation$private fun sinkOf: Sink?</ID>
+    <ID>ReturnCount:DeliveryRouter.kt:DeliveryRouter$fun placeTargetOutput</ID>
+    <ID>ReturnCount:DeliveryRouter.kt:DeliveryRouter$private fun deliver: Boolean</ID>
+    <ID>ReturnCount:DeliveryRouter.kt:DeliveryRouter$private fun facesReservedFeed: Boolean</ID>
+    <ID>ReturnCount:DirectFeed.kt:DirectFeedBuilder$fun mapBelted: PlannedRecipe?</ID>
+    <ID>ReturnCount:DirectFeedModel.kt:internal fun cycleRatio: Pair&lt;Int, Int&gt;?</ID>
+    <ID>ReturnCount:FluidFeeder.kt:FluidFeeder$fun placeTargetOutput</ID>
+    <ID>ReturnCount:ImportTrimmer.kt:ImportTrimmer$private fun lastStraightEast: Int</ID>
+    <ID>ReturnCount:LayoutCompaction.kt:internal fun nextCompaction: CompactionResult?</ID>
+    <ID>ReturnCount:LayoutCompaction.kt:private fun applyCorridor: Pair&lt;List&lt;LayoutEntity&gt;, Int&gt;?</ID>
+    <ID>ReturnCount:LayoutCompaction.kt:private fun corridorOf: Map&lt;Int, IntRange&gt;?</ID>
+    <ID>ReturnCount:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
+    <ID>ReturnCount:LayoutRouter.kt:RouteEntry$override fun compareTo: Int</ID>
+    <ID>ReturnCount:MaterialSearch.kt:private fun isSubsequence: Boolean</ID>
+    <ID>ReturnCount:MinHeap.kt:MinHeap$private tailrec fun siftDown: Int</ID>
+    <ID>ReturnCount:MinHeap.kt:MinHeap$private tailrec fun siftUp: Int</ID>
+    <ID>ReturnCount:Optimizer.kt:Optimizer$fun depth: Int</ID>
+    <ID>ReturnCount:Optimizer.kt:Optimizer$private fun solve: DoubleArray?</ID>
+    <ID>ReturnCount:PowerPlacer.kt:PowerPlacer$private fun connectPoles</ID>
+    <ID>ReturnCount:RowPlacer.kt:RowPlacer$fun laneDirection: Direction</ID>
+    <ID>ReturnCount:RowPlacer.kt:RowPlacer$fun outletX: Int</ID>
+    <ID>ReturnCount:RowPlanner.kt:RowPlanner$fun depthOf: Int</ID>
+    <ID>ReturnCount:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
+    <ID>ReturnCount:SeamGrid.kt:private fun beltCuttable: Boolean</ID>
+    <ID>ReturnCount:SeamGrid.kt:private fun isRemovable: Boolean</ID>
+    <ID>ReturnCount:SeamGrid.kt:private fun pipeCuttable: Boolean</ID>
+    <ID>ReturnCount:UndergroundStretcher.kt:UndergroundStretcher$private fun stretchRun</ID>
+    <ID>ReturnCount:factorioUrl.kt:fun parseFactorioUrl: FactorioUrl?</ID>
+    <ID>TooManyFunctions:Coordinate.kt:Coordinate</ID>
+    <ID>TooManyFunctions:DeliveryRouter.kt:DeliveryRouter</ID>
+    <ID>TooManyFunctions:LayoutBoard.kt:LayoutBoard</ID>
+    <ID>TooManyFunctions:Logistics.kt:LogisticsCalculator</ID>
+    <ID>TooManyFunctions:Optimizer.kt:Optimizer</ID>
+    <ID>TooManyFunctions:RowPlacer.kt:RowPlacer</ID>
+    <ID>TooManyFunctions:recipeParser.kt:de.bjrke.factorio.optimizer.common.business.recipeParser.kt</ID>
+    <ID>UnusedParameter:BlueprintExport.kt:text: String</ID>
+    <ID>UnusedParameter:ReactTestingLibrary.kt:TestingLibrary$callback: () -&gt; dynamic</ID>
+    <ID>UnusedParameter:ReactTestingLibrary.kt:TestingLibrary$element: Element</ID>
+    <ID>UnusedParameter:ReactTestingLibrary.kt:TestingLibrary$options: dynamic = definedExternally</ID>
+    <ID>UnusedParameter:ReactTestingLibrary.kt:TestingLibrary$ui: ReactNode</ID>
+    <ID>WildcardImport:BeltEndConnector.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintBandTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
+    <ID>WildcardImport:BlueprintBandTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintBeltEndIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintBeltEndTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
+    <ID>WildcardImport:BlueprintBeltEndTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintExport.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
+    <ID>WildcardImport:BlueprintExport.kt:import react.*</ID>
+    <ID>WildcardImport:BlueprintExportTest.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
+    <ID>WildcardImport:BlueprintExportTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintExportTest.kt:import de.bjrke.test.*</ID>
+    <ID>WildcardImport:BlueprintFluidLayoutTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
+    <ID>WildcardImport:BlueprintFluidLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintFluidLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:BlueprintImportTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
+    <ID>WildcardImport:BlueprintImportTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintImportTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:BlueprintIntegrationFixtures.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintIntegrationFixtures.kt:import kotlin.test.*</ID>
+    <ID>WildcardImport:BlueprintJson.kt:import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:BlueprintJsonTest.kt:import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:BlueprintLayout.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutAccess.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
+    <ID>WildcardImport:BlueprintLayoutAccess.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutAssertions.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutAssertions.kt:import kotlin.test.*</ID>
+    <ID>WildcardImport:BlueprintLayoutFixtures.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
+    <ID>WildcardImport:BlueprintLayoutFixtures.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutSnapshotTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
+    <ID>WildcardImport:BlueprintLayoutSnapshotTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
+    <ID>WildcardImport:BlueprintLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:BlueprintPlan.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintPlanIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintPlanTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintPowerFluidAssertions.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:BlueprintPowerFluidAssertions.kt:import kotlin.test.*</ID>
+    <ID>WildcardImport:BlueprintSerializationIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:CliOptimizer.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
+    <ID>WildcardImport:CliOptimizer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:DeliveryPreparation.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:DeliveryPreparation.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:DeliveryRouter.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:DeliveryRouter.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:DirectFeedTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:FluidFeeder.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:ImportTrimmer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutBoard.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutCompaction.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutCompactionTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutCompactionTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:LayoutEntity.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutEntityTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutRouter.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutSerialization.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:LayoutValidation.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:Logistics.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:OptimizationResultInteractionTest.kt:import de.bjrke.factorio.optimizer.js.component.fixtures.*</ID>
+    <ID>WildcardImport:OptimizationResultLayoutTest.kt:import de.bjrke.factorio.optimizer.js.component.fixtures.*</ID>
+    <ID>WildcardImport:OptimizationResultLogisticsTest.kt:import de.bjrke.factorio.optimizer.js.component.fixtures.*</ID>
+    <ID>WildcardImport:OptimizationResultPresenter.kt:import web.cssom.*</ID>
+    <ID>WildcardImport:OptimizationResultPresenterTest.kt:import de.bjrke.factorio.optimizer.js.component.fixtures.*</ID>
+    <ID>WildcardImport:Optimizer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:OptimizerMachineTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:OptimizerSpaceTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:OptimizerSurfaceTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:OptimizerTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:PowerPlacer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:RecipeParserMaterialsTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:RecipeParserStatsTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:RecipeParserTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:RowPlacer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:RowPlacer.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
+    <ID>WildcardImport:RowPlanner.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:SeamGrid.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:SurfaceTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:UndergroundStretcher.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:index.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
+    <ID>WildcardImport:index.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:index.kt:import de.bjrke.factorio.optimizer.js.component.*</ID>
+    <ID>WildcardImport:index.kt:import tanstack.react.router.*</ID>
+    <ID>WildcardImport:recipeParser.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
+    <ID>WildcardImport:recipeParser.kt:import kotlinx.serialization.json.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

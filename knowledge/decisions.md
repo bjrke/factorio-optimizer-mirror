@@ -4,37 +4,33 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
-## 2026-10-20 — Three file-size tiers, and no baseline
+## 2026-10-20 — Detekt replaces the custom `checkFileSizes` task
 
-**Context.** The 2026-10-19 budget shipped as two tiers — a soft 300 that warned and
-a hard 500 that failed — plus `ci/file-size-baseline.txt`, a ratchet for
-grandfathered hard offenders. Splitting every listed file (the 2026-10-20 layout
-entry below) emptied the baseline, so the ratchet held nothing; one soft tier also
-failed to separate "getting close" from "split now".
+**Context.** The 2026-10-19 line budget was a small hand-rolled Gradle task
+(`checkFileSizes`) with three tiers and, later, no baseline. It measured only file
+length, and needed its own `buildSrc` function and tests; a standard Kotlin linter
+was wanted instead.
 
-**Decision.** `checkFileSizes` reports three tiers and drops the baseline:
+**Decision.** Apply Detekt (plugin id `dev.detekt`, version `2.0.0-alpha.6` — the
+current 2.0 alpha, accepted as such) and delete `checkFileSizes`, its `buildSrc`
+function and its 7 tests (`ci/file-size-baseline.txt` was already gone). Detekt runs
+with `buildUponDefaultConfig = true`, and `config/detekt/detekt.yml` raises only
+`LargeClass.allowedLines` to 500 to match the project's file budget. The plain
+`detekt` task analyses all of `src` without type resolution; the KMP type-resolved
+`detektMainJvm`/`detektTestJvm` tasks are wired into `check` by hand, because the
+plugin registers but does not wire them. `check` is gated by three committed
+baselines: `detekt-baseline.xml` (plain task) and
+`detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks).
 
-- over **300** lines → `logger.lifecycle` (shown by default), the first hint;
-- over **400** lines → `logger.warn`, the next split;
-- over **500** lines → `logger.error`, then the build fails.
-
-`checkFileSizes` loses its `baselineFile` parameter and the ratchet/stale-entry
-logic, and `ci/file-size-baseline.txt` is deleted, so the root task no longer needs a
-baseline input.
-
-**Consequences.** A default build shows the hint and warning tiers and fails nothing.
-The four files the old soft tier warned about were split under the soft 400 budget:
-`DeliveryRouter.kt` (480) → `DeliveryPreparation.kt` (planning) and
-`DeliveryRouter.kt` (routing); `DirectFeed.kt` (437) → `BandSearch.kt` (the cycle
-search); `OptimizerTest.kt` (445) → `OptimizerTest.kt` plus `OptimizerMachineTest.kt`
-over shared `fixtures/OptimizerFixtures.kt`; and `OptimizerSurfaceTest.kt` (457) →
-the planet surfaces plus `OptimizerSpaceTest.kt`. The same change drops the
-`junit-jupiter-engine` dependency the 2026-10-20 layout change
-had added to `buildSrc`: `useJUnitPlatform()` already resolves `kotlin("test")` to
-`kotlin-test-junit5`, whose module depends on the engine, so the explicit
-`testRuntimeOnly(libs.junit.jupiter.engine)` and its `libs.versions.toml` entries
-were redundant. Verified by re-running `./gradlew -p buildSrc test` without them:
-all 7 `CheckFileSizesTest` cases still run.
+**Consequences.** There is no per-file line rule: `LargeClass` counts a class, so the
+500-line budget is now per class, not per file — keep a file small by responsibility.
+The current light-mode findings (~325) plus the typed tasks' own are absorbed by the
+baselines, so `check` fails only on a new finding; the reports remain the split
+roadmap. Detekt's typed KMP tasks analyse `commonMain` and `jvmMain` as one fragment
+and log three `expect`/`actual` compiler errors (detekt issue #9602), degrading type
+resolution for `loadPrototypeDump` only. Removing the buildSrc test leaves buildSrc
+without tests, so the obsolete CI `gradle -p buildSrc test` line was dropped. See
+`conventions.md` and `pitfalls.md`.
 
 ## 2026-10-20 — Split the layout into explicit stages, verified by layout snapshots
 
@@ -100,7 +96,7 @@ split the same way (`OptimizerTest` for synthetic machine/recipe cases,
 A `checkFileSizes` task (wired into `check`) enforced a per-file line budget with a
 soft 300-line warning and a hard 500-line failure, and listed grandfathered hard
 offenders in `ci/file-size-baseline.txt` as a strict ratchet. The 2026-10-20 entry
-above later replaced the two tiers with three and removed the empty baseline.
+above later replaced the task with Detekt.
 
 **Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines,
 recorded then as a baseline entry; all 64 layout tests still pass. The

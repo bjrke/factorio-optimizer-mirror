@@ -7,12 +7,17 @@ up.
 
 ## Code size and file layout
 
-- Keep Kotlin source files under the **hard 500-line budget**; over the **soft
-  400-line budget** a file warns, and over the **super-soft 300-line budget** it only
-  logs a lifecycle hint. `./gradlew checkFileSizes` (part of `check`) reports one
-  line per tier, all shown by default: lifecycle hint, warning and error (fails the
-  build). There is no baseline — every offender is reported, and the reports are the
-  split roadmap. Verify with `./gradlew checkFileSizes`.
+- Detekt enforces the quality gates and is part of `./gradlew check`. The plain
+  `detekt` task analyses all of `src` without type resolution; `check` additionally
+  runs the type-resolved `detektMainJvm`/`detektTestJvm` (detekt's KMP support
+  registers them but does not wire them into `check`, so `build.gradle.kts` does).
+  `config/detekt/detekt.yml` raises `LargeClass.allowedLines` to **500** to keep a
+  class within this project's budget. Detekt has no per-file line rule — `LargeClass`
+  counts a class, so keep files small by responsibility rather than chasing a line
+  count. Current findings live in the committed `detekt-baseline.xml` (plain task)
+  plus `detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks); a new
+  finding fails the build. Regenerate with `./gradlew detektBaseline` /
+  `detektBaselineMainJvm` / `detektBaselineTestJvm`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
@@ -95,7 +100,7 @@ up.
 - `commonTest` runs on JVM **and** JS: keep it platform-neutral; target specifics
   go in `src/jvmTest` / `src/jsTest`.
 - Run Gradle only when the change reaches the build. `./gradlew check` runs
-  `spotlessCheck` plus `jvmTest` and `jsBrowserTest` (headless Chrome), so it is
+  `spotlessCheck`, Detekt, `jvmTest` and `jsBrowserTest` (headless Chrome), so it is
   needed only when the branch touches `src/**` (code or resources),
   `build.gradle.kts`, `buildSrc/**`, `gradle/**` or `settings.gradle.kts`: iterate
   with `./gradlew jvmTest`, finish with `./gradlew spotlessApply check` — a single
@@ -104,9 +109,9 @@ up.
   `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent
   tooling. `spotlessApply` would be a no-op there anyway. A branch that mixes code
   and docs follows the code rule.
-- Build logic (`buildSrc/**`) has its own tests in `buildSrc/src/test`. The root
-  `check` drives buildSrc only up to `jar`, so it does **not** run them: run
-  `./gradlew -p buildSrc test` (wired into CI separately). They are plain
+- Build logic (`buildSrc/**`) has **no** test suite; the root `check` drives buildSrc
+  only up to `jar`, so a buildSrc test would not run from `check` — wire it in
+  separately (`./gradlew -p buildSrc test`) if one is ever added. Such tests are plain
   `kotlin.test` — the `de.bjrke.test` helpers are app-only. `tasks.test {
   useJUnitPlatform() }` makes `kotlin("test")` resolve to `kotlin-test-junit5`,
   which already brings `junit-jupiter-engine`; never declare the engine explicitly.

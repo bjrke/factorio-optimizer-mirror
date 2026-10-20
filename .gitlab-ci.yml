@@ -9,8 +9,6 @@ test:
     GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   script:
     - gradle --no-daemon clean check jsBrowserDistribution
-    # The root `check` drives buildSrc only up to `jar`, which skips its `check`.
-    - gradle --no-daemon -p buildSrc test
   artifacts:
     expire_in: 1 week
     paths:

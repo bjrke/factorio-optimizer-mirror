@@ -1,4 +1,3 @@
-import de.bjrke.factorio.optimizer.buildlogic.checkFileSizes
 import de.bjrke.factorio.optimizer.buildlogic.dumpPrototypes
 import de.bjrke.factorio.optimizer.buildlogic.sanitizePrototypes
 import de.bjrke.factorio.optimizer.buildlogic.updateImages
@@ -8,6 +7,7 @@ import java.time.temporal.ChronoUnit
 plugins {
     kotlin("multiplatform") version libs.versions.kotlin
     alias(libs.plugins.spotless)
+    alias(libs.plugins.detekt)
 }
 
 group = "de.bjrke.factorio"
@@ -123,25 +123,11 @@ tasks.named<Test>("jvmTest") {
     reports { html.required.set(true) }
 }
 
-val checkSourceSizes =
-    tasks.register("checkFileSizes") {
-        group = "verification"
-        description = "reports the super-soft line budget and fails past the hard one"
-
-        val sourceRoot = layout.projectDirectory.dir("src")
-        inputs.files(fileTree("src") { include("**/*.kt") })
-
-        doLast {
-            checkFileSizes(
-                sourceRoot.asFile,
-                report = { logger.error(it) },
-                warn = { logger.warn(it) },
-                info = { logger.lifecycle(it) },
-            )
-        }
-    }
-
-tasks.named("check") { dependsOn(checkSourceSizes) }
+// Detekt's KMP support registers the type-resolved `detektMainJvm`/`detektTestJvm`
+// tasks but does not wire them into `check`, so do that explicitly. The plain
+// `detekt` task (wired into `check` by the plugin) analyses every source set without
+// type resolution.
+tasks.named("check") { dependsOn("detektMainJvm", "detektTestJvm") }
 
 tasks.register<JavaExec>("run") {
     group = "run"
@@ -161,6 +147,12 @@ spotless {
         ktfmt().kotlinlangStyle()
     }
     kotlinGradle { ktfmt().kotlinlangStyle() }
+}
+
+detekt {
+    source.setFrom(files("src"))
+    buildUponDefaultConfig = true
+    config.setFrom(files("config/detekt/detekt.yml"))
 }
 
 private val factorioDir: File

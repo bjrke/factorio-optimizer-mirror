@@ -102,9 +102,9 @@ The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintBeltEndTest`), and `BlueprintLayoutSnapshotTest` pins the exact entity
 order for representative plans while the layout is being split into stages. The
 JVM integration suite is split by plan, layout, power, fluid, belt end and
-serialization. `./gradlew checkFileSizes` (part of `check`) reports a Kotlin source
-file over the super-soft 300 lines as a lifecycle hint, over the soft 400 lines as a
-warning, and over the hard 500 as an error that fails the build.
+serialization. `./gradlew check` runs Detekt (see `conventions.md`): the plain
+`detekt` task over all of `src` plus the type-resolved `detektMainJvm`/
+`detektTestJvm`, each gated by a committed baseline so only new findings fail.
 
 
 ## Generated data — do not hand-edit
