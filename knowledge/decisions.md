@@ -62,15 +62,17 @@ read and edit the same huge file, which is the dominant token cost.
 
 The blueprint model is split the same way (`Material`, `Recipe`, `Category`,
 `Surface`; the wire DTO stays in `Blueprint.kt` while Factorio JSON lives in
-`BlueprintJson.kt`). Tests are grouped by scenario over shared fixtures.
+`BlueprintJson.kt`). Tests are grouped by scenario, and an over-long suite is
+split the same way (`OptimizerTest` for synthetic machine/recipe cases,
+`OptimizerSurfaceTest` for real per-surface resolution).
 
 A `checkFileSizes` task (wired into `check`) enforces a 700-line budget. Files
 that predate the rule are listed in `ci/file-size-baseline.txt`, which is a strict
 ratchet: a shrunken file must lower its entry and a file under the budget must
-remove it.
+remove it. The baseline is now empty — every file is under the budget.
 
-**Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines and
-the baseline records that exact count; all 64 layout tests still pass. The
+**Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines,
+recorded then as a baseline entry; all 64 layout tests still pass. The
 remaining plan-level stages are extracted one at a time, each lowering the
 baseline (actual names are in the 2026-10-20 entry below). No Gradle module
 split: a KMP multi-module split would duplicate `expect/actual`

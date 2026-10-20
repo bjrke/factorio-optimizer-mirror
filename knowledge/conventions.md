@@ -8,17 +8,21 @@ up.
 ## Code size and file layout
 
 - Keep Kotlin source files under **700 lines**. `./gradlew checkFileSizes` (part
-  of `check`) fails when a file outgrows it. Existing offenders are listed in
-  `ci/file-size-baseline.txt`; that baseline is a **strict ratchet**: a file that
-  shrinks must lower its entry, and a file that reaches the budget must drop it.
-  Verify with `./gradlew checkFileSizes`.
+  of `check`) fails when a file outgrows it. `ci/file-size-baseline.txt` lists
+  grandfathered offenders and is a **strict ratchet**: a file that shrinks must
+  lower its entry, and a file that reaches the budget must drop it. The goal is an
+  empty baseline; as of 2026-10-20 no file exceeds the budget. Verify with
+  `./gradlew checkFileSizes`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
   pipeline. Components take the board (or plain data) instead of sharing a second
   copy of the state.
-- Group test suites by scenario and keep shared fixtures in their own file. A
-  fixtures file in the **same package** must live in a subpackage (e.g.
+- Group test suites by scenario and keep shared fixtures in their own file. Split
+  an over-long suite by scenario; when the resulting suites use **disjoint**
+  fixtures, leave each suite's `private` helpers and values in place rather than
+  forcing a shared file (`OptimizerTest` → `OptimizerTest` + `OptimizerSurfaceTest`).
+  A fixtures file in the **same package** must live in a subpackage (e.g.
   `common/business/fixtures/`): an `internal` top-level fixture with the same name
   as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
   Kotlin does not allow star-importing an `object`. Use `import …fixtures.*`.

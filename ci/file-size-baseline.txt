@@ -1,4 +1,3 @@
 # Kotlin files that predate the 700-line budget in buildSrc/.../checkFileSizes.kt.
 # The baseline is a ratchet: a split file must lower its entry, and an entry that drops
 # under the budget must be removed.
-commonTest/kotlin/de/bjrke/factorio/optimizer/common/business/OptimizerTest.kt=892
