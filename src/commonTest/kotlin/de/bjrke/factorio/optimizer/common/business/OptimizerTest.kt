@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.business.fixtures.factoryOf
 import de.bjrke.factorio.optimizer.common.business.fixtures.testRecipe
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -190,7 +191,7 @@ class OptimizerTest {
         assertAll(
             { assertEquals(1, byproducts.size) },
             // one machine covers both outputs: max, not sum
-            { assertEquals(0.8, byproducts.single().amount, 1e-9) },
+            { assertEquals(0.8, byproducts.single().amount, TOLERANCE) },
         )
     }
 
@@ -246,6 +247,6 @@ class OptimizerTest {
 
         val smelting = result.factories.values.single { it.recipe.name == "smelt" }
         // demand(plate) = 2 * make-x + 3 * make-y, not the max of the two consumers
-        assertEquals(2.5, smelting.amount, 1e-9)
+        assertEquals(2.5, smelting.amount, TOLERANCE)
     }
 }

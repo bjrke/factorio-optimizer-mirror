@@ -9,6 +9,9 @@ private const val ROUTE_WEST_BOUND = 2
 /** How far past everything placed a route may still search, so A* stays near the blueprint. */
 private const val ROUTE_MARGIN = 24
 
+/** Safety cap on A* expansions; a route that needs more is reported as unreachable. */
+private const val MAX_ROUTE_EXPANSIONS = 1_000_000
+
 /**
  * A search node: a tile, the direction the route entered it from, and how many more tiles it must
  * run straight before it may dive again. A landing keeps that straight run so a belt exit is not
@@ -150,7 +153,7 @@ internal class LayoutRouter(private val board: LayoutBoard) {
         }
 
         var popped = 0
-        while (!heap.isEmpty() && popped++ < 1_000_000) {
+        while (!heap.isEmpty() && popped++ < MAX_ROUTE_EXPANSIONS) {
             val entry = heap.poll()
             val current = entry.node
             if (entry.g > (gScore[current] ?: Int.MAX_VALUE)) continue

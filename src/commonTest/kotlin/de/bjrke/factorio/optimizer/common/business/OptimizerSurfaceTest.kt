@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.business.fixtures.production
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
@@ -119,7 +120,7 @@ class OptimizerSurfaceTest {
         val recycler = result.factories.values.single { it.recipe.name == "scrap-recycling" }
         assertAll(
             { assertEquals(0.5, recycler.speed) },
-            { assertEquals(drill.production(scrap), recycler.consumption(scrap), 1e-9) },
+            { assertEquals(drill.production(scrap), recycler.consumption(scrap), TOLERANCE) },
         )
     }
 

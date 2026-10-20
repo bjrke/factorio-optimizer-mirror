@@ -2,6 +2,9 @@ package de.bjrke.test
 
 import kotlin.test.fail
 
+/** Shared absolute delta for floating-point `assertEquals` in tests. */
+internal const val TOLERANCE = 1e-9
+
 fun assertAll(vararg assertions: () -> Unit) = assertAll(assertions.toList())
 
 fun assertAll(assertions: Iterable<() -> Unit>) {

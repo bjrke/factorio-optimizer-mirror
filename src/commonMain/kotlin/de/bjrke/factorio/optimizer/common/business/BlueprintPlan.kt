@@ -11,6 +11,9 @@ const val MAX_BLUEPRINT_RECIPES = 8
 /** Upper bound on the machines of one recipe row, so a huge rate cannot explode the blueprint. */
 internal const val MAX_COPIES = 9
 
+/** Slack for a machine count that should be whole but carries floating-point noise. */
+internal const val MACHINE_COUNT_EPSILON = 1e-6
+
 /**
  * Complex or cyclic processes that are usually done elsewhere and therefore left out of a
  * blueprint; their products become imports. Only kept when the target itself comes from one of
@@ -142,7 +145,7 @@ sealed interface BlueprintPlanResult {
  * point noise must not round up.
  */
 internal fun plannedMachines(production: FactoryProduction, scale: Double): Int =
-    ceil(production.amount * scale - 1e-6).toInt().coerceIn(1, MAX_COPIES)
+    ceil(production.amount * scale - MACHINE_COUNT_EPSILON).toInt().coerceIn(1, MAX_COPIES)
 
 /**
  * The reduced production plan a blueprint is laid out from: the [recipes] to build, the external

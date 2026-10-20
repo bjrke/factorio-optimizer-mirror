@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import kotlin.test.Test
@@ -82,9 +83,9 @@ class DirectFeedTest {
         val machine = production(smelt, product, speed = 2.0, productivity = 0.5)
 
         assertAll(
-            { assertEquals(1.0, inputPerMachine(machine, alpha), 1e-9) },
+            { assertEquals(1.0, inputPerMachine(machine, alpha), TOLERANCE) },
             // the productivity bonus is what a direct-fed consumer really receives
-            { assertEquals(1.5, outputPerMachine(machine, product), 1e-9) },
+            { assertEquals(1.5, outputPerMachine(machine, product), TOLERANCE) },
         )
     }
 
@@ -116,7 +117,7 @@ class DirectFeedTest {
                 )
             },
             { assertEquals(listOf(alpha, alpha, alpha, alpha), band.links.map { it.material }) },
-            { assertEquals(3.0, band.links.sumOf { it.flow }, 1e-9) },
+            { assertEquals(3.0, band.links.sumOf { it.flow }, TOLERANCE) },
             // the cable only feeds the band, so no belt row of it is built
             {
                 assertEquals(

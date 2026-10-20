@@ -119,7 +119,7 @@ internal class RowPlanner(
 
     fun copiesOf(recipe: PlannedRecipe): Int =
         // a machine count that should be whole but carries floating point noise must not round up
-        ceil(recipe.machines - 1e-6).toInt().coerceIn(1, MAX_COPIES)
+        ceil(recipe.machines - MACHINE_COUNT_EPSILON).toInt().coerceIn(1, MAX_COPIES)
 
     fun footprint(recipe: PlannedRecipe) = blueprintMachineFootprint(recipe.factory.identifier)
 

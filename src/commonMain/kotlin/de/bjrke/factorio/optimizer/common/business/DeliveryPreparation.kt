@@ -3,6 +3,12 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Direction.*
 
+/** How far east of a row a free output source is searched for. */
+private const val SOURCE_SEARCH_RANGE = 60
+
+/** How many rows an imported source may be shifted down to avoid an occupied marker row. */
+private const val MAX_SOURCE_ROW_ATTEMPTS = 50
+
 /**
  * Where a material enters a row's lane: the route ends on [feed], the one tile next to [target],
  * and faces [heading] so its belt or pipe points at the lane. [target] is already placed and is
@@ -127,7 +133,7 @@ internal class DeliveryPreparation(
     /** The first free belt tile east of [row]'s output lane, reserved as a source. */
     private fun outputStart(row: Row, material: Material): Coordinate {
         var x = row.right + 1
-        while (x < row.right + 60 && !isFree(Coordinate(x, row.outputLaneRow))) x++
+        while (x < row.right + SOURCE_SEARCH_RANGE && !isFree(Coordinate(x, row.outputLaneRow))) x++
         val start = Coordinate(x, row.outputLaneRow)
         reserve(start, material)
         return start
@@ -145,7 +151,7 @@ internal class DeliveryPreparation(
         var attempts = 0
         while (
             (row in imports.markerRows || columns.any { !isFree(Coordinate(it, row)) }) &&
-                attempts++ < 50
+                attempts++ < MAX_SOURCE_ROW_ATTEMPTS
         ) row++
         imports.markerRows += row
         connector.placeSolidConnector(material, connector.left, row, input = true)

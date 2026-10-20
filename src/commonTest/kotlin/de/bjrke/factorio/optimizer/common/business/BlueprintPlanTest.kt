@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
 import de.bjrke.factorio.optimizer.common.model.Dimension
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -251,7 +252,7 @@ class BlueprintPlanTest {
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         assertAll(
             // even though the import would need more than two belts, the plan builds all three
-            { assertEquals(3.0, planned.recipes.single().machines, 1e-9) },
+            { assertEquals(3.0, planned.recipes.single().machines, TOLERANCE) },
             { assertEquals("iron-gear-wheel", planned.label) },
         )
     }

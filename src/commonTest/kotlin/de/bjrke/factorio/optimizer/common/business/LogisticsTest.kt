@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterStats
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Logistics
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test

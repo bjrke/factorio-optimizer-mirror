@@ -9,6 +9,12 @@ private const val SPLIT_CANDIDATES = 12
 /** Extra cost of an underground run when comparing two split points, so surface wins when close. */
 private const val SPLIT_TUNNEL_PENALTY = 12
 
+/** Belt tiles laid east of the last row before the target's connector may start. */
+private const val OUTPUT_BELT_LEAD = 3
+
+/** How many columns east of a blocked belt a free marker spot is searched for. */
+private const val MARKER_SEARCH_COLUMNS = 12
+
 /**
  * Routes the solid belts of the layout: the target's output belt, the sink of every row input, the
  * producer trunk a material runs on and the splitters that branch off it, and the import
@@ -243,7 +249,7 @@ internal class DeliveryRouter(
         if (!recipe.recipe.result.keys.any { !logistics.isFluid(it) }) return
         var coordinate = Coordinate(row.right + 1, row.outputLaneRow)
 
-        while (coordinate.x <= row.right + 3 && isFree(coordinate)) {
+        while (coordinate.x <= row.right + OUTPUT_BELT_LEAD && isFree(coordinate)) {
             placeBelt(coordinate, targetMaterial, EAST)
             coordinate = coordinate.east()
         }
@@ -261,7 +267,7 @@ internal class DeliveryRouter(
     private fun markerSpot(where: Coordinate): Coordinate {
         val (anchorX, beltRow) = where
 
-        for (dx in 0..12) {
+        for (dx in 0..MARKER_SEARCH_COLUMNS) {
             for (dy in listOf(-1, 1)) {
                 val tile = Coordinate(anchorX + dx, beltRow + dy)
                 if (isFree(tile)) return tile

@@ -6,3 +6,10 @@ complexity:
   # the signal to split the file.
   LargeClass:
     allowedLines: 500
+
+style:
+  # The optimizer is geometry- and math-heavy: tile offsets, degrees and game data
+  # read better in place, and tests need the expected number next to the assertion.
+  # Semantic mappings (directions, rotations) use named model properties instead.
+  MagicNumber:
+    active: false

@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test

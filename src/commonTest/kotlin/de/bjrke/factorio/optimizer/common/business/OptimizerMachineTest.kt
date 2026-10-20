@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.business.fixtures.factoryOf
 import de.bjrke.factorio.optimizer.common.business.fixtures.production
 import de.bjrke.factorio.optimizer.common.business.fixtures.testRecipe
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -204,10 +205,10 @@ class OptimizerMachineTest {
         assertAll(
             { assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory) },
             // one machine produces 2 * 1.5 = 3/s, so 1/s needs 1/3 of a machine
-            { assertEquals(1.0 / 3.0, production.amount, 1e-9) },
-            { assertEquals(1.0, production.production(plate), 1e-9) },
+            { assertEquals(1.0 / 3.0, production.amount, TOLERANCE) },
+            { assertEquals(1.0, production.production(plate), TOLERANCE) },
             // the bonus does not change the input consumption
-            { assertEquals(2.0 / 3.0, production.consumption(ore), 1e-9) },
+            { assertEquals(2.0 / 3.0, production.consumption(ore), TOLERANCE) },
         )
     }
 }

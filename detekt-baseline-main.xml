@@ -53,65 +53,6 @@
     <ID>LoopWithTooManyJumpStatements:UndergroundStretcher.kt:UndergroundStretcher$while</ID>
     <ID>LoopWithTooManyJumpStatements:recipeParser.kt:for</ID>
     <ID>LoopWithTooManyJumpStatements:resourceRecipes.kt:for</ID>
-    <ID>MagicNumber:BeltEndConnector.kt:BeltEndConnector$3</ID>
-    <ID>MagicNumber:BeltEndConnector.kt:BeltEndConnector$4</ID>
-    <ID>MagicNumber:BlueprintJson.kt:12</ID>
-    <ID>MagicNumber:BlueprintJson.kt:4</ID>
-    <ID>MagicNumber:BlueprintJson.kt:8</ID>
-    <ID>MagicNumber:BlueprintPlan.kt:1e-6</ID>
-    <ID>MagicNumber:BlueprintPlan.kt:3</ID>
-    <ID>MagicNumber:BlueprintPlan.kt:4</ID>
-    <ID>MagicNumber:BlueprintPlan.kt:5</ID>
-    <ID>MagicNumber:BlueprintPlan.kt:9</ID>
-    <ID>MagicNumber:DeliveryPreparation.kt:DeliveryPreparation$50</ID>
-    <ID>MagicNumber:DeliveryPreparation.kt:DeliveryPreparation$60</ID>
-    <ID>MagicNumber:DeliveryRouter.kt:DeliveryRouter$12</ID>
-    <ID>MagicNumber:DeliveryRouter.kt:DeliveryRouter$3</ID>
-    <ID>MagicNumber:Factory.kt:Factory.AGRICULTURAL_TOWER$48.0</ID>
-    <ID>MagicNumber:Factory.kt:Factory.ASSEMBLING_MACHINE_1$0.5</ID>
-    <ID>MagicNumber:Factory.kt:Factory.ASSEMBLING_MACHINE_2$0.75</ID>
-    <ID>MagicNumber:Factory.kt:Factory.ASSEMBLING_MACHINE_3$1.25</ID>
-    <ID>MagicNumber:Factory.kt:Factory.BIG_MINING_DRILL$2.5</ID>
-    <ID>MagicNumber:Factory.kt:Factory.BURNER_MINING_DRILL$0.25</ID>
-    <ID>MagicNumber:Factory.kt:Factory.ELECTRIC_MINING_DRILL$0.5</ID>
-    <ID>MagicNumber:Factory.kt:Factory.FOUNDRY$4.0</ID>
-    <ID>MagicNumber:Factory.kt:Factory.OFFSHORE_PUMP$1200.0</ID>
-    <ID>MagicNumber:FluidFeeder.kt:FluidFeeder$3</ID>
-    <ID>MagicNumber:FluidFeeder.kt:FluidFeeder$8</ID>
-    <ID>MagicNumber:IconLayers.kt:0.5</ID>
-    <ID>MagicNumber:IconLayers.kt:0.6</ID>
-    <ID>MagicNumber:LayoutAscii.kt:10</ID>
-    <ID>MagicNumber:LayoutRouter.kt:LayoutRouter$1_000_000</ID>
-    <ID>MagicNumber:PowerPlacer.kt:PowerPlacer$40</ID>
-    <ID>MagicNumber:RowPlacer.kt:RowPlacer$3</ID>
-    <ID>MagicNumber:RowPlanner.kt:RowPlanner$1e-6</ID>
-    <ID>MagicNumber:Surface.kt:Surface.AQUILO$10</ID>
-    <ID>MagicNumber:Surface.kt:Surface.AQUILO$300</ID>
-    <ID>MagicNumber:Surface.kt:Surface.FULGORA$1000</ID>
-    <ID>MagicNumber:Surface.kt:Surface.FULGORA$15</ID>
-    <ID>MagicNumber:Surface.kt:Surface.FULGORA$99</ID>
-    <ID>MagicNumber:Surface.kt:Surface.GLEBA$20</ID>
-    <ID>MagicNumber:Surface.kt:Surface.GLEBA$2000</ID>
-    <ID>MagicNumber:Surface.kt:Surface.NAUVIS$10</ID>
-    <ID>MagicNumber:Surface.kt:Surface.NAUVIS$1000</ID>
-    <ID>MagicNumber:Surface.kt:Surface.VULCANUS$40</ID>
-    <ID>MagicNumber:Surface.kt:Surface.VULCANUS$4000</ID>
-    <ID>MagicNumber:blueprintString.kt:0x3F</ID>
-    <ID>MagicNumber:blueprintString.kt:0xFF</ID>
-    <ID>MagicNumber:blueprintString.kt:12</ID>
-    <ID>MagicNumber:blueprintString.kt:16</ID>
-    <ID>MagicNumber:blueprintString.kt:18</ID>
-    <ID>MagicNumber:blueprintString.kt:24</ID>
-    <ID>MagicNumber:blueprintString.kt:3</ID>
-    <ID>MagicNumber:blueprintString.kt:6</ID>
-    <ID>MagicNumber:blueprintString.kt:8</ID>
-    <ID>MagicNumber:customRecipes.kt:100.0</ID>
-    <ID>MagicNumber:customRecipes.kt:1000.0</ID>
-    <ID>MagicNumber:factorioUrl.kt:3</ID>
-    <ID>MagicNumber:factorioUrl.kt:4</ID>
-    <ID>MagicNumber:resourceRecipes.kt:4.0</ID>
-    <ID>MagicNumber:resourceRecipes.kt:50.0</ID>
-    <ID>MagicNumber:utils.kt:10.0</ID>
     <ID>MapGetWithNotNullAssertionOperator:OptimizationResult.kt:FactoryProduction$recipe.ingredients[material]!!</ID>
     <ID>MapGetWithNotNullAssertionOperator:OptimizationResult.kt:FactoryProduction$recipe.result[material]!!</ID>
     <ID>MatchingDeclarationName:IconLayers.kt:IconLayer</ID>

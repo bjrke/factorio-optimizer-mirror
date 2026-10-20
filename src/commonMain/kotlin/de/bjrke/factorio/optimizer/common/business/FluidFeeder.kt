@@ -5,6 +5,12 @@ import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 
+/** The tiles of a label connector west of the source: input end, marker and output end. */
+private const val PIPE_CONNECTOR_WIDTH = 3
+
+/** How many existing network points are tried before a fluid sink is reported unreachable. */
+private const val MAX_ROUTE_STARTS = 8
+
 /**
  * Routes every fluid in the plan: a pipe cluster next to each demanding machine, one marker per
  * fluid and a pipe network grown from it. Pipes run before belts, so their cheap underground runs
@@ -118,7 +124,7 @@ internal class FluidFeeder(
                     .filter { it == group.source || board.entityAt(it) is PipeEntity }
                     .sortedBy { it.manhattanDist(sink) }
             var routed = false
-            for (start in candidates.take(8)) {
+            for (start in candidates.take(MAX_ROUTE_STARTS)) {
                 if (start == sink) {
                     pending.remove(sink)
                     routed = true
@@ -171,7 +177,8 @@ internal class FluidFeeder(
         val source = Coordinate(target.x - 1, target.y)
         // the connector tiles west of the source: a single infinity pipe or the input/label/output
         // triple that hides the fluid under the combinator (a chest cannot carry a fluid)
-        val firstColumn = if (beltEnd == BeltEnd.INFINITY_CHEST) source.x - 1 else source.x - 3
+        val firstColumn =
+            if (beltEnd == BeltEnd.INFINITY_CHEST) source.x - 1 else source.x - PIPE_CONNECTOR_WIDTH
         val columns = (firstColumn..source.x).toList()
         // keep the connector's buried run clear of any other fluid near the machine
         fun touchesForeignFluid(row: Int) = columns.any { x ->
@@ -194,11 +201,11 @@ internal class FluidFeeder(
             return Coordinate(source.x, row)
         }
         // a pipe-to-ground run under the label, so the label does not block the fluid
-        board.placeEnd(material, Coordinate(source.x - 3, row), EAST, INPUT)
+        board.placeEnd(material, Coordinate(source.x - PIPE_CONNECTOR_WIDTH, row), EAST, INPUT)
         board.placeMarker(Coordinate(source.x - 2, row), Signal(material, fluid = true))
         board.placeEnd(material, Coordinate(source.x - 1, row), EAST, OUTPUT)
         board.markTunnel(
-            Coordinate(source.x - 3, row),
+            Coordinate(source.x - PIPE_CONNECTOR_WIDTH, row),
             Coordinate(source.x - 1, row),
             board.endName(material),
         )

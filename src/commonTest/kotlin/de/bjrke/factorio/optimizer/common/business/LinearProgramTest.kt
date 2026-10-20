@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,8 +20,8 @@ class LinearProgramTest {
 
         val optimal = result as LinearProgramResult.Optimal
         assertAll(
-            { assertEquals(1.0, optimal.value, 1e-6) },
-            { assertEquals(1.0, optimal.solution[0], 1e-6) },
+            { assertEquals(1.0, optimal.value, TOLERANCE) },
+            { assertEquals(1.0, optimal.solution[0], TOLERANCE) },
         )
     }
 
@@ -34,7 +35,7 @@ class LinearProgramTest {
             )
 
         val optimal = result as LinearProgramResult.Optimal
-        assertEquals(2.0, optimal.value, 1e-6)
+        assertEquals(2.0, optimal.value, TOLERANCE)
     }
 
     @Test
@@ -49,9 +50,9 @@ class LinearProgramTest {
 
         val optimal = result as LinearProgramResult.Optimal
         assertAll(
-            { assertEquals(1.0, optimal.value, 1e-6) },
-            { assertEquals(1.0, optimal.solution[0], 1e-6) },
-            { assertEquals(0.0, optimal.solution[1], 1e-6) },
+            { assertEquals(1.0, optimal.value, TOLERANCE) },
+            { assertEquals(1.0, optimal.solution[0], TOLERANCE) },
+            { assertEquals(0.0, optimal.solution[1], TOLERANCE) },
         )
     }
 
@@ -65,7 +66,7 @@ class LinearProgramTest {
                 doubleArrayOf(1.0),
             )
 
-        assertEquals(1.0, (result as LinearProgramResult.Optimal).value, 1e-6)
+        assertEquals(1.0, (result as LinearProgramResult.Optimal).value, TOLERANCE)
     }
 
     @Test

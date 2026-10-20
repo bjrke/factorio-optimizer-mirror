@@ -14,7 +14,9 @@ up.
   `config/detekt/detekt.yml` raises `LargeClass.allowedLines` to **500** to keep a
   class within this project's budget. Detekt has no per-file line rule — `LargeClass`
   counts a class, so keep files small by responsibility rather than chasing a line
-  count. Current findings live in the committed `detekt-baseline.xml` (plain task)
+  count. `MagicNumber` is deliberately disabled: tile offsets, degrees, game data and
+  test expectations read better in place; only opaque algorithm limits get a named
+  constant. Current findings live in the committed `detekt-baseline.xml` (plain task)
   plus `detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks); a new
   finding fails the build. Regenerate with `./gradlew detektBaseline` /
   `detektBaselineMainJvm` / `detektBaselineTestJvm`.
@@ -73,6 +75,10 @@ up.
   matching source set (`commonMain`/`jsMain`/`jvmMain` →
   `commonTest`/`jsTest`/`jvmTest`); a missing test means the change is incomplete.
   Exception: pure formatting/docs. Use `kotlin.test`.
+- Floating-point `assertEquals` uses the shared `TOLERANCE` (`1e-9`) from
+  `de.bjrke.test`, not a per-assert literal. Keep a coarser local delta only when
+  the expectation is deliberately rounded or measured: display/UI pixels, a value
+  already rounded to three decimals, or the URL round-trip's 12-digit precision.
 - Multiple independent assertions MUST use the `de.bjrke.test` helpers —
   `assertAll`, and `assertTable`/`assertTableOf` for table-driven cases.
   Descriptive names stating expected behavior (e.g.

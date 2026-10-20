@@ -11,6 +11,9 @@ private const val SUPPLY_RADIUS = 3
 private const val WIRE_REACH = 9
 private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
 
+/** Bound on the pole-connection rounds, so a gap that cannot be bridged terminates. */
+private const val MAX_POLE_CONNECT_ATTEMPTS = 40
+
 /**
  * Covers every powered entity with a medium pole and wires the poles into one network. Poles stay
  * east of [westBound], which keeps them out of the import extension.
@@ -62,7 +65,7 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
     /** Adds poles until every pole can reach another, so the whole set is one wire network. */
     private fun connectPoles(poles: MutableSet<Coordinate>) {
         val components = poleComponents(poles)
-        repeat(40) {
+        repeat(MAX_POLE_CONNECT_ATTEMPTS) {
             if (components.size <= 1) return
 
             var bestDistanceSq = Long.MAX_VALUE

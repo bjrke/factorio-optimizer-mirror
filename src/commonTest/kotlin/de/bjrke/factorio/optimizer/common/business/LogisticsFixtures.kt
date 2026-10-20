@@ -6,8 +6,6 @@ import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Logistics
 
 /** The prototype stats the real dump provides, plus the calculator the logistics suites build. */
-internal const val TOLERANCE = 1e-9
-
 internal val testLogistics =
     Logistics(
         belts =

@@ -4,6 +4,28 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Allow magic numbers, name only opaque tunables
+
+**Context.** Detekt's introduction absorbed 65 `MagicNumber` findings into the
+baselines. The optimizer is geometry-, vector- and math-heavy, so most literals are
+tile offsets, degrees, prototype/game data or expected values in tests. Replacing
+them with constants would force a lookup away from the assertion or coordinate that
+needs the number, without making the domain clearer.
+
+**Decision.** Disable the `MagicNumber` rule in `config/detekt/detekt.yml` and drop
+its entries from all three baselines. Keep domain values in place: blueprint JSON
+direction values (`0/4/8/12`), display rotations (`90/180/270/360`), fluid-port
+coordinates, factory/surface data, recipe amounts, icon scales, CSS sizes and
+protocol bit operations. Name only the opaque algorithm limits where the value alone
+does not explain the intent: A* expansion cap, pole-connect rounds, source/marker
+search bounds, fluid route-start count, pipe connector width and ASCII ruler step.
+Share one `MACHINE_COUNT_EPSILON` between `BlueprintPlan` and `RowPlanner` instead
+of repeating `1e-6`.
+
+**Consequences.** New numeric literals no longer fail `check`; reviewers judge
+whether a value needs a name from its context. Named constants are for limits and
+thresholds, not for cardinals or test expectations. See `conventions.md`.
+
 ## 2026-10-20 — Detekt replaces the custom `checkFileSizes` task
 
 **Context.** The 2026-10-19 line budget was a small hand-rolled Gradle task

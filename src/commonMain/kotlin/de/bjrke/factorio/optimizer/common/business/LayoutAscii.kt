@@ -9,6 +9,9 @@ internal data class LayoutDump(val entities: List<LayoutEntity>, val failures: L
 /** Codes for the materials on belts and in pipes; cycled if a blueprint ever uses more. */
 private const val MATERIAL_CODES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+/** Columns per ruler digit in the layout header. */
+private const val RULER_STEP = 10
+
 /** Direction arrows for inserters and loaders, which point their material instead of naming it. */
 private fun arrow(direction: Direction) =
     when (direction) {
@@ -91,7 +94,9 @@ internal fun layoutAscii(dump: LayoutDump): String {
         append("layout ${width}x$height\n")
         // x ruler: the tens digit at every tenth column, so a failure's (x, y) can be located
         append(prefix)
-        for (x in minX..maxX) append(if (x % 10 == 0) (x / 10) % 10 else ' ')
+        for (x in minX..maxX) append(
+            if (x % RULER_STEP == 0) (x / RULER_STEP) % RULER_STEP else ' ',
+        )
         append('\n')
         for (row in 0 until height) {
             append((minY + row).toString().padStart(labelWidth))
