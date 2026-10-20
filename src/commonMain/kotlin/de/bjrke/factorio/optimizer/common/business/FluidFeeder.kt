@@ -18,18 +18,19 @@ private const val MAX_ROUTE_STARTS = 8
  * are shared with the underground stretcher through [fluidPorts].
  */
 internal class FluidFeeder(
-    private val board: LayoutBoard,
-    private val plan: BlueprintPlan,
-    private val logistics: LogisticsCalculator,
-    private val planner: RowPlanner,
-    private val rowPlacer: RowPlacer,
-    private val router: LayoutRouter,
+    stage: LayoutStage,
     private val beltEnd: BeltEnd,
     private val imports: ImportExtension,
     /** The machine-port tiles a fluid must reach; an underground run never swallows one. */
     private val fluidPorts: MutableSet<Coordinate>,
     private val failures: MutableList<String>,
 ) {
+    private val board = stage.board
+    private val plan = stage.plan
+    private val logistics = stage.logistics
+    private val planner = stage.planner
+    private val rowPlacer = stage.rowPlacer
+    private val router = stage.router
 
     /** Reserves every fluid machine edge, then routes each fluid from its marker nearest-first. */
     fun feed() {

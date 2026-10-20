@@ -19,29 +19,34 @@ enum class SelectionFlag(val code: Char) {
 const val EMPTY_SELECTION = "-"
 
 /**
- * Encodes the choices into the single `selection` URL parameter. Only non-default choices carry a
- * code (Space Age stays "on" via [SelectionFlag.SPACE_AGE]), every option contributes its unique
- * [code], and sorting keeps the URL canonical. An all-defaults choice returns the empty string;
- * callers substitute [EMPTY_SELECTION] to keep the segment.
- *
- * The numeric stack sizes stay separate URL segments and are not part of this string.
+ * The choices one `selection` URL segment carries. Grouping them keeps [selectionString] and its
+ * callers from passing the same seven-argument tuple around; the numeric stack sizes stay separate
+ * URL segments and are not part of this object.
  */
-fun selectionString(
-    factories: Set<Factory>,
-    spaceAge: Boolean,
-    surface: Surface,
-    fullBelt: Boolean,
-    belt: BeltTier,
-    inserter: InserterTier,
-    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-) = buildList {
-    addAll(FactoryConfig(spaceAge).toUrlParam(factories).toList())
-    if (spaceAge) add(SelectionFlag.SPACE_AGE.code)
-    surface.code?.let { add(it) }
-    if (fullBelt) add(SelectionFlag.FULL_BELT.code)
-    beltEnd.code?.let { add(it) }
-    belt.code?.let { add(it) }
-    inserter.code?.let { add(it) }
+data class Selection(
+    val factories: Set<Factory>,
+    val spaceAge: Boolean,
+    val surface: Surface,
+    val fullBelt: Boolean,
+    val belt: BeltTier,
+    val inserter: InserterTier,
+    val beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
+)
+
+/**
+ * Encodes [selection] into the single URL parameter. Only non-default choices carry a code (Space
+ * Age stays "on" via [SelectionFlag.SPACE_AGE]), every option contributes its unique [code], and
+ * sorting keeps the URL canonical. An all-defaults choice returns the empty string; callers
+ * substitute [EMPTY_SELECTION] to keep the segment.
+ */
+fun selectionString(selection: Selection) = buildList {
+    addAll(FactoryConfig(selection.spaceAge).toUrlParam(selection.factories).toList())
+    if (selection.spaceAge) add(SelectionFlag.SPACE_AGE.code)
+    selection.surface.code?.let { add(it) }
+    if (selection.fullBelt) add(SelectionFlag.FULL_BELT.code)
+    selection.beltEnd.code?.let { add(it) }
+    selection.belt.code?.let { add(it) }
+    selection.inserter.code?.let { add(it) }
 }
     .sorted()
     .joinToString("")

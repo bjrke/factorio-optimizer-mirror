@@ -1,46 +1,16 @@
 package de.bjrke.factorio.optimizer.common.model
 
-import kotlin.math.abs
-import kotlin.math.sign
-
+/**
+ * A tile position. The arithmetic operators stay on the type; the geometry and compass helpers live
+ * in `CoordinateGeometry.kt`, so a tile stays a small value and the helpers can be read as one
+ * vocabulary.
+ */
 data class Coordinate(val x: Int, val y: Int) {
     operator fun plus(other: Coordinate) = Coordinate(x + other.x, y + other.y)
 
     operator fun minus(other: Coordinate) = Coordinate(x - other.x, y - other.y)
 
     operator fun times(factor: Int) = Coordinate(x * factor, y * factor)
-
-    fun distanceSq(b: Coordinate): Long {
-        val dx = x.toLong() - b.x
-        val dy = y.toLong() - b.y
-        return dx * dx + dy * dy
-    }
-
-    val chebyshevLen by lazy { maxOf(abs(x), abs(y)) }
-
-    fun chebyshevDist(b: Coordinate) = (this - b).chebyshevLen
-
-    val manhattanLen by lazy { abs(x) + abs(y) }
-
-    fun manhattanDist(b: Coordinate) = (this - b).manhattanLen
-
-    /** True when [to] is one tile orthogonally next to this. */
-    fun adjacent(to: Coordinate) = manhattanDist(to) == 1
-
-    fun area(dimension: Dimension) = Area(this, dimension)
-
-    /** The one-tile [Area] at this coordinate; the shared [areaTile] single-tile case. */
-    fun area() = areaTile(x, y)
-
-    fun area(width: Int, height: Int) = area(Dimension(width, height))
-
-    fun north(amount: Int = 1) = copy(y = y - amount)
-
-    fun south(amount: Int = 1) = copy(y = y + amount)
-
-    fun east(amount: Int = 1) = copy(x = x + amount)
-
-    fun west(amount: Int = 1) = copy(x = x - amount)
 
     companion object {
         val origin = Coordinate(0, 0)
@@ -49,12 +19,6 @@ data class Coordinate(val x: Int, val y: Int) {
         val south = origin.south()
         val west = origin.west()
         val east = origin.east()
-    }
-
-    val direction by lazy {
-        val newX = x.sign
-        val newY = y.sign
-        if (x == newX && y == newY) this else Coordinate(newX, newY)
     }
 }
 

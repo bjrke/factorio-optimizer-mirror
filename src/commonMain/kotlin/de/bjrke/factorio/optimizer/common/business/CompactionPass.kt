@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.*
 
 /** Upper bound on compaction corridors, so a pathological layout cannot loop forever. */
 private const val MAX_COMPACTION_PASSES = 256

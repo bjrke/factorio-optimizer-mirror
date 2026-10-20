@@ -1,48 +1,34 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import de.bjrke.test.assertAll
 import kotlin.test.*
 
 /** Invariants of the power and fluid networks: pole coverage and wiring, pipe connectivity. */
+private const val SUPPLY_RADIUS = 3
+private const val WIRE_REACH = 9
+private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
+private const val PIPE_REACH = 10
 
 /** Every machine tile must sit in a pole's supply area, and the poles must form one network. */
 fun assertPolesCoverAndConnect(entities: List<BlueprintEntity>) {
     val poles =
-        entities.asSequence().filter { it.name == "medium-electric-pole" }.map { it.area.topLeft }
-
-    val coveredByPoles =
-        poles.flatMapTo(mutableSetOf()) { p ->
-            p.area().grow(3)
-        }
-
+        entities
+            .asSequence()
+            .filter { it.name == "medium-electric-pole" }
+            .map { it.area.topLeft }
+            .toList()
+    val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(SUPPLY_RADIUS) }
     val unpowered = entities.filter {
         it.isPowered() && (it.area intersect coveredByPoles).isEmpty()
     }
-
-    val seen = mutableSetOf<Coordinate>()
-    var components = 0
-    for (pole in poles) {
-        if (!seen.add(pole)) continue
-        components++
-        val queue = ArrayDeque<Coordinate>()
-        var current: Coordinate? = pole
-        while (current != null) {
-            for (other in poles) {
-                if (other !in seen) {
-                    if (current.distanceSq(other) <= 9 * 9) {
-                        seen += other
-                        queue += other
-                    }
-                }
-            }
-            current = queue.removeFirstOrNull()
-        }
-    }
+    val components =
+        connectedComponents(poles) { pole -> poles.filter { it.distanceSq(pole) <= WIRE_REACH_SQ } }
 
     assertAll(
         { assertEquals(emptyList(), unpowered) },
-        { assertTrue(components <= 1, "$components separate power networks") },
+        { assertTrue(components.size <= 1, "${components.size} separate power networks") },
     )
 }
 
@@ -53,76 +39,69 @@ fun assertPolesCoverAndConnect(entities: List<BlueprintEntity>) {
  */
 fun fluidNetworkProblems(entities: List<LayoutEntity>): List<String> {
     val plumbing = entities.filterIsInstance<Plumbing>().associateBy { it.area.topLeft }
-    val reach = 10
-
-    fun mouthOf(pipe: PipeToGroundEntity) =
-        if (pipe.io == Io.INPUT) pipe.direction.opposite() else pipe.direction
-
-    fun links(tile: Coordinate): Set<Coordinate> {
-        val entity = plumbing[tile] ?: return emptySet()
-        val result = mutableSetOf<Coordinate>()
-        when (entity) {
-            is PipeEntity,
-            is InfinityPipeEntity ->
-                Direction.entries.forEach { direction ->
-                    val next = tile + direction.step
-                    if (next in plumbing) result += next
-                }
-            is PipeToGroundEntity -> {
-                val mouth = mouthOf(entity)
-                val front = tile + mouth.step
-                val neighbour = plumbing[front]
-                val connects =
-                    neighbour is PipeEntity ||
-                        neighbour is InfinityPipeEntity ||
-                        (neighbour is PipeToGroundEntity && mouthOf(neighbour) == mouth.opposite())
-                if (connects) result += front
-                for (distance in 2..reach) {
-                    val toward =
-                        if (entity.io == Io.INPUT) entity.direction.step
-                        else entity.direction.step * -1
-                    val other = plumbing[tile + toward * distance]
-                    if (other !is PipeToGroundEntity) continue
-                    val opposite =
-                        other.material == entity.material &&
-                            other.direction == entity.direction &&
-                            other.io != entity.io
-                    if (!opposite) continue
-                    result += other.area.topLeft
-                    break
-                }
-            }
-        }
-        return result
-    }
 
     // only mutual links count: a pipe beside a pipe-to-ground's flank does not connect
     val adjacency =
         plumbing.keys.associateWith { tile ->
-            links(tile).filter { links(it).contains(tile) }.toSet()
+            pipeLinks(tile, plumbing).filter { pipeLinks(it, plumbing).contains(tile) }.toSet()
         }
-    val seen = mutableSetOf<Coordinate>()
-    val component = mutableMapOf<Coordinate, Int>()
-    var components = 0
-    for (tile in plumbing.keys) {
-        if (!seen.add(tile)) continue
-        val queue = ArrayDeque(listOf(tile))
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            component[current] = components
-            for (next in adjacency.getValue(current)) if (seen.add(next)) queue += next
-        }
-        components++
-    }
+    val components = connectedComponents(plumbing.keys) { adjacency.getValue(it) }
+    val componentOf =
+        components.withIndex().flatMap { (index, tiles) -> tiles.map { it to index } }.toMap()
 
     return plumbing.values
         .groupBy { it.material }
         .flatMap { (material, pipes) ->
-            val parts = pipes.map { component.getValue(it.area.topLeft) }.distinct()
+            val parts = pipes.map { componentOf.getValue(it.area.topLeft) }.distinct()
             if (parts.size <= 1) emptyList()
             else listOf("${material.name} is split over ${parts.size} networks")
         }
 }
+
+private fun pipeLinks(tile: Coordinate, plumbing: Map<Coordinate, Plumbing>): Set<Coordinate> {
+    val entity = plumbing[tile] ?: return emptySet()
+    return when (entity) {
+        is PipeEntity,
+        is InfinityPipeEntity -> plainPipeLinks(tile, plumbing)
+        is PipeToGroundEntity -> groundPipeLinks(entity, plumbing)
+    }
+}
+
+private fun plainPipeLinks(tile: Coordinate, plumbing: Map<Coordinate, Plumbing>): Set<Coordinate> =
+    Direction.entries.mapNotNullTo(mutableSetOf()) { direction ->
+        (tile + direction.step).takeIf { it in plumbing }
+    }
+
+private fun groundPipeLinks(
+    pipe: PipeToGroundEntity,
+    plumbing: Map<Coordinate, Plumbing>,
+): Set<Coordinate> {
+    val result = mutableSetOf<Coordinate>()
+    val mouth = mouthOf(pipe)
+    val front = pipe.area.topLeft + mouth.step
+    val neighbour = plumbing[front]
+    val connects =
+        neighbour is PipeEntity ||
+            neighbour is InfinityPipeEntity ||
+            (neighbour is PipeToGroundEntity && mouthOf(neighbour) == mouth.opposite())
+    if (connects) result += front
+    for (distance in 2..PIPE_REACH) {
+        val toward = if (pipe.io == Io.INPUT) pipe.direction.step else pipe.direction.step * -1
+        val other = plumbing[pipe.area.topLeft + toward * distance]
+        if (other !is PipeToGroundEntity) continue
+        val opposite =
+            other.material == pipe.material &&
+                other.direction == pipe.direction &&
+                other.io != pipe.io
+        if (!opposite) continue
+        result += other.area.topLeft
+        break
+    }
+    return result
+}
+
+private fun mouthOf(pipe: PipeToGroundEntity) =
+    if (pipe.io == Io.INPUT) pipe.direction.opposite() else pipe.direction
 
 /** A blueprint does not rebuild pole wires, so each pole must list the poles it is wired to. */
 fun assertPolesWired(entities: List<BlueprintEntity>) {

@@ -3,60 +3,41 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>CyclomaticComplexMethod:BandSearch.kt:BandSearch$private fun feedsOf: List&lt;BandFeed&gt;?</ID>
-    <ID>CyclomaticComplexMethod:BlueprintFluidLayoutTest.kt:BlueprintFluidLayoutTest$@Test fun pipeRunsAreStretched</ID>
     <ID>CyclomaticComplexMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
-    <ID>CyclomaticComplexMethod:BlueprintLayoutAssertions.kt:fun assertUndergroundRunsAreStretched</ID>
-    <ID>CyclomaticComplexMethod:BlueprintLayoutFixtures.kt:fun plumbingComponents: List&lt;Set&lt;Coordinate&gt;&gt;</ID>
     <ID>CyclomaticComplexMethod:BlueprintPlan.kt:fun blueprintPlan: BlueprintPlanResult</ID>
-    <ID>CyclomaticComplexMethod:BlueprintPowerFluidAssertions.kt:fun fluidNetworkProblems: List&lt;String&gt;</ID>
     <ID>CyclomaticComplexMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
     <ID>CyclomaticComplexMethod:DirectFeed.kt:DirectFeedBuilder$fun build: DirectFeed</ID>
     <ID>CyclomaticComplexMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
-    <ID>CyclomaticComplexMethod:LayoutCompaction.kt:private fun LayoutEntity.shifted: LayoutEntity</ID>
     <ID>CyclomaticComplexMethod:LayoutCompaction.kt:private fun applyCorridor: Pair&lt;List&lt;LayoutEntity&gt;, Int&gt;?</ID>
     <ID>CyclomaticComplexMethod:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
-    <ID>CyclomaticComplexMethod:LayoutSerialization.kt:fun LayoutEntity.toBlueprintEntity: BlueprintEntity</ID>
     <ID>CyclomaticComplexMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
     <ID>CyclomaticComplexMethod:LayoutValidation.kt:private fun findUndergroundOutput: UndergroundEntity?</ID>
     <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$fun minimize: LinearProgramResult</ID>
     <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$private fun simplex: Boolean</ID>
     <ID>CyclomaticComplexMethod:Optimizer.kt:Optimizer$private fun factoryProductions: Map&lt;Recipe, FactoryProduction&gt;</ID>
-    <ID>CyclomaticComplexMethod:RowPlacer.kt:RowPlacer$private fun placeMachines</ID>
     <ID>CyclomaticComplexMethod:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
-    <ID>CyclomaticComplexMethod:UndergroundStretcher.kt:UndergroundStretcher$private fun stretchRun</ID>
     <ID>CyclomaticComplexMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
     <ID>CyclomaticComplexMethod:resourceRecipes.kt:private fun MutableList&lt;Recipe&gt;.minedResourceRecipes</ID>
     <ID>LongMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
     <ID>LongMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
     <ID>LongMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
-    <ID>LongMethod:LayoutEntityTest.kt:LayoutEntityTest$@Test fun placedEntitiesMapToTheirBlueprintDto</ID>
     <ID>LongMethod:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
     <ID>LongMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
-    <ID>LongMethod:RowPlacer.kt:RowPlacer$private fun placeMachines</ID>
     <ID>LongMethod:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
     <ID>LongMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
     <ID>LoopWithTooManyJumpStatements:DirectFeed.kt:DirectFeedBuilder$for</ID>
     <ID>LoopWithTooManyJumpStatements:LayoutRouter.kt:LayoutRouter$for</ID>
     <ID>LoopWithTooManyJumpStatements:LayoutValidation.kt:for</ID>
     <ID>LoopWithTooManyJumpStatements:recipeParser.kt:for</ID>
-    <ID>NestedBlockDepth:BlueprintPowerFluidAssertions.kt:fun assertPolesCoverAndConnect</ID>
-    <ID>NestedBlockDepth:PowerPlacer.kt:PowerPlacer$private fun poleComponents: MutableList&lt;MutableList&lt;Coordinate&gt;&gt;</ID>
     <ID>ReturnCount:BandSearch.kt:BandSearch$private fun feedsOf: List&lt;BandFeed&gt;?</ID>
     <ID>ReturnCount:DeliveryPreparation.kt:DeliveryPreparation$private fun sinkOf: Sink?</ID>
     <ID>ReturnCount:DirectFeed.kt:DirectFeedBuilder$fun mapBelted: PlannedRecipe?</ID>
     <ID>ReturnCount:Optimizer.kt:Optimizer$fun depth: Int</ID>
     <ID>ReturnCount:Optimizer.kt:Optimizer$private fun solve: DoubleArray?</ID>
-    <ID>ReturnCount:PowerPlacer.kt:PowerPlacer$private fun connectPoles</ID>
-    <ID>ReturnCount:RowPlanner.kt:RowPlanner$fun depthOf: Int</ID>
     <ID>ReturnCount:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
     <ID>ReturnCount:SeamGrid.kt:private fun beltCuttable: Boolean</ID>
     <ID>ReturnCount:SeamGrid.kt:private fun pipeCuttable: Boolean</ID>
-    <ID>TooManyFunctions:Coordinate.kt:Coordinate</ID>
-    <ID>TooManyFunctions:DeliveryRouter.kt:DeliveryRouter</ID>
-    <ID>TooManyFunctions:LayoutBoard.kt:LayoutBoard</ID>
-    <ID>TooManyFunctions:Logistics.kt:LogisticsCalculator</ID>
     <ID>TooManyFunctions:Optimizer.kt:Optimizer</ID>
-    <ID>TooManyFunctions:RowPlacer.kt:RowPlacer</ID>
     <ID>TooManyFunctions:recipeParser.kt:de.bjrke.factorio.optimizer.common.business.recipeParser.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

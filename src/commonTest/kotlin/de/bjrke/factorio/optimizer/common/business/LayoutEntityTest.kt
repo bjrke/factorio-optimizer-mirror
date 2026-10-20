@@ -17,23 +17,6 @@ class LayoutEntityTest {
     @Test
     fun placedEntitiesMapToTheirBlueprintDto() =
         assertTableOf(
-            MachineEntity(
-                Coordinate(2, 3).area(3, 2),
-                "assembling-machine-3",
-                "iron-gear-wheel",
-            ) to
-                BlueprintEntity(
-                    "assembling-machine-3",
-                    Coordinate(2, 3).area(3, 2),
-                    recipe = "iron-gear-wheel",
-                ),
-            InserterEntity(
-                areaTile(5, 1),
-                "fast-inserter",
-                plate,
-                EAST,
-                long = false,
-            ) to BlueprintEntity("fast-inserter", areaTile(5, 1), EAST),
             BeltEntity(areaTile(7, 2), "transport-belt", plate, EAST) to
                 BlueprintEntity("transport-belt", areaTile(7, 2), EAST),
             SplitterEntity(areaTile(9, 4), "fast-splitter", plate, EAST) to
@@ -77,6 +60,37 @@ class LayoutEntityTest {
                     EAST,
                     type = OUTPUT,
                 ),
+        ) { (entity, expected) ->
+            assertEquals(expected, entity.toBlueprintEntity())
+        }
+
+    @Test
+    fun machinesAndInsertersMapToTheirBlueprintDto() =
+        assertTableOf(
+            MachineEntity(
+                Coordinate(2, 3).area(3, 2),
+                "assembling-machine-3",
+                "iron-gear-wheel",
+            ) to
+                BlueprintEntity(
+                    "assembling-machine-3",
+                    Coordinate(2, 3).area(3, 2),
+                    recipe = "iron-gear-wheel",
+                ),
+            InserterEntity(
+                areaTile(5, 1),
+                "fast-inserter",
+                plate,
+                EAST,
+                long = false,
+            ) to BlueprintEntity("fast-inserter", areaTile(5, 1), EAST),
+        ) { (entity, expected) ->
+            assertEquals(expected, entity.toBlueprintEntity())
+        }
+
+    @Test
+    fun stationaryEntitiesMapToTheirBlueprintDto() =
+        assertTableOf(
             InfinityChestEntity(
                 areaTile(2, 12),
                 "infinity-chest",

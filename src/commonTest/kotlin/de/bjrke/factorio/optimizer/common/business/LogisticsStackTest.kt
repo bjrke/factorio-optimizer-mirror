@@ -21,7 +21,10 @@ class LogisticsStackTest {
             InserterTier.BULK_INSERTER to false,
             InserterTier.STACK_INSERTER to true,
         ) { (inserter, expected) ->
-            assertEquals(expected, calculator(inserter = inserter).stacksOnBelt())
+            assertEquals(
+                expected,
+                calculator(CalculatorSetup(inserter = inserter)).rates.stacksOnBelt,
+            )
         }
 
     @Test
@@ -37,7 +40,8 @@ class LogisticsStackTest {
                 ) { (inserter, handSize) ->
                     assertEquals(
                         handSize,
-                        calculator(inserter = inserter, inserterStack = 1).handSize,
+                        calculator(CalculatorSetup(inserter = inserter, inserterStack = 1))
+                            .handSize,
                     )
                 }
             },
@@ -45,7 +49,12 @@ class LogisticsStackTest {
                 // the raised stack lowers the required inserter count
                 assertEquals(
                     1.0,
-                    calculator(inserter = InserterTier.BULK_INSERTER, inserterStack = 1)
+                    calculator(
+                            CalculatorSetup(
+                                inserter = InserterTier.BULK_INSERTER,
+                                inserterStack = 1,
+                            ),
+                        )
                         .inserterCount(4.8),
                     TOLERANCE,
                 )
@@ -69,7 +78,7 @@ class LogisticsStackTest {
 
     @Test
     fun beltCountCanForceAnUnstackedBelt() {
-        val calculator = calculator(lanes = 1, beltStack = 4)
+        val calculator = calculator(CalculatorSetup(lanes = 1, beltStack = 4))
 
         assertTableOf(
             4 to 1.0,

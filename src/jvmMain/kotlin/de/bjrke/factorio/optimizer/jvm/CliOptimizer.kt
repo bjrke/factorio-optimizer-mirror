@@ -256,7 +256,7 @@ private fun printListing(result: OptimizationResult, logistics: LogisticsCalcula
         }
         // the big mining drill and the recycler drop their product straight onto the belt
         val directOutput = isOutput && factory.outputsDirectly
-        val outputStacks = if (directOutput) factory.stacksOnBelt else logistics.stacksOnBelt()
+        val outputStacks = if (directOutput) factory.stacksOnBelt else logistics.rates.stacksOnBelt
         val stack = if (isOutput && !outputStacks) 1 else logistics.beltStack
         val belts = "${superRound(logistics.beltCount(rate, stack))} belts"
         return if (directOutput) belts

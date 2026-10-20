@@ -14,12 +14,15 @@ data class Signal(val material: Material, val fluid: Boolean = false)
  * of the [BlueprintEntity] wire DTO: it carries only the facts the layout reasons about (a belt's
  * direction and the material it moves, a pipe's fluid, a marker's signal), so a `when` over a
  * [LayoutEntity] is exhaustive. [toBlueprintEntity] is the single place that turns one into the
- * DTO.
+ * DTO; [withArea] is how compaction moves one without knowing its concrete type.
  */
 sealed interface LayoutEntity {
     /** The tiles the entity covers; its position is [Area.topLeft]. */
     val area: Area
     val name: String
+
+    /** The same entity moved to [area], keeping every other field. */
+    fun withArea(area: Area): LayoutEntity
 
     /** Whether a power pole must cover this entity. */
     val isPowered: Boolean
@@ -57,7 +60,9 @@ data class BeltEntity(
     override val name: String,
     override val material: Material,
     override val direction: Direction,
-) : BeltLikeEntity
+) : BeltLikeEntity {
+    override fun withArea(area: Area) = copy(area = area)
+}
 
 data class UndergroundBeltEntity(
     override val area: Area,
@@ -65,21 +70,17 @@ data class UndergroundBeltEntity(
     override val material: Material,
     override val direction: Direction,
     override val io: Io,
-) : BeltLikeEntity, UndergroundEntity
+) : BeltLikeEntity, UndergroundEntity {
+    override fun withArea(area: Area) = copy(area = area)
+}
 
 data class SplitterEntity(
     override val area: Area,
     override val name: String,
     override val material: Material,
     override val direction: Direction,
-) : ConveyorEntity
-
-data class MachineEntity(
-    override val area: Area,
-    override val name: String,
-    val recipe: String,
-) : LayoutEntity {
-    override val isPowered = true
+) : ConveyorEntity {
+    override fun withArea(area: Area) = copy(area = area)
 }
 
 data class InserterEntity(
@@ -95,6 +96,8 @@ data class InserterEntity(
     val circuitCondition: CircuitCondition? = null,
 ) : TransportEntity {
     override val isPowered = true
+
+    override fun withArea(area: Area) = copy(area = area)
 }
 
 data class LoaderEntity(
@@ -103,67 +106,6 @@ data class LoaderEntity(
     override val material: Material,
     val io: Io,
     val direction: Direction,
-) : TransportEntity
-
-/** A chest the layout places as a belt end marker: its [area] is always one tile. */
-sealed interface ChestLikeEntity : LayoutEntity
-
-data class InfinityChestEntity(
-    override val area: Area,
-    override val name: String,
-    val settings: InfinitySettings,
-) : ChestLikeEntity
-
-data class ChestEntity(
-    override val area: Area,
-    override val name: String,
-    /** The logistic request it keeps in stock (a buffer/storage chest). */
-    val requestFilter: RequestFilter? = null,
-    /** The inventory bar limit (a wooden/steel chest). */
-    val bar: Int? = null,
-    /** Whether its own circuit condition is enabled, if it is set at all. */
-    val circuitConditionEnabled: Boolean? = null,
-) : ChestLikeEntity
-
-data class MarkerEntity(
-    override val area: Area,
-    override val name: String,
-    val signal: Signal,
-) : LayoutEntity
-
-data class PipeEntity(
-    override val area: Area,
-    override val name: String,
-    override val material: Material,
-) : Plumbing
-
-/**
- * A cheat fluid source: an infinity pipe that keeps [settings]' fluid at 100%. It connects to pipes
- * on any side just like a plain pipe, so it stands in for a fluid import marker.
- */
-data class InfinityPipeEntity(
-    override val area: Area,
-    override val name: String,
-    val settings: InfinityPipeSettings,
-) : Plumbing {
-    override val material: Material
-        get() = settings.fluid
+) : TransportEntity {
+    override fun withArea(area: Area) = copy(area = area)
 }
-
-data class PipeToGroundEntity(
-    override val area: Area,
-    override val name: String,
-    override val material: Material,
-    override val direction: Direction,
-    /**
-     * Input or output end of the run; a blueprint carries only the direction, so this is internal.
-     */
-    override val io: Io,
-) : Plumbing, UndergroundEntity
-
-data class PoleEntity(
-    override val area: Area,
-    override val name: String,
-    /** The `entity_number`s this pole is wired to; a blueprint does not rebuild wires by itself. */
-    val neighbours: List<Int> = emptyList(),
-) : LayoutEntity

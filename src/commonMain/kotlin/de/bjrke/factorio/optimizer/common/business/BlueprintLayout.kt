@@ -88,37 +88,15 @@ private class RowLayout(
 
     private val rowPlacer = RowPlacer(board, plan, logistics, planner)
 
-    private val fluidFeeder =
-        FluidFeeder(
-            board,
-            plan,
-            logistics,
-            planner,
-            rowPlacer,
-            router,
-            beltEnd,
-            imports,
-            fluidPorts,
-            failures,
-        )
+    private val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, router)
+
+    private val fluidFeeder = FluidFeeder(stage, beltEnd, imports, fluidPorts, failures)
 
     private val importTrimmer = ImportTrimmer(board, connector, beltEnd, imports)
 
     private val compactionPass = CompactionPass(board, beltEnd, imports, fluidPorts)
 
-    private val deliveryRouter =
-        DeliveryRouter(
-            board,
-            plan,
-            logistics,
-            planner,
-            rowPlacer,
-            router,
-            connector,
-            imports,
-            beltEnd,
-            failures,
-        )
+    private val deliveryRouter = DeliveryRouter(stage, connector, imports, beltEnd, failures)
 
     fun build(): List<BlueprintEntity> {
         if (plan.recipes.isNotEmpty()) {

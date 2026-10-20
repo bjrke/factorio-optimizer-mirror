@@ -130,6 +130,15 @@ here only with evidence, and should say how to recognise it.
   first run after that may still hit the stale-classpath entry above). Verified by
   the 21:1x buildSrc failures on `bjrke/direct-insertion-groups` when a source-dir
   `touch` produced no rebuild, ruling a host `--continuous` build out.
+- **`LongParameterList` ignores data-class constructors.** Detekt's default
+  `ignoreDataClasses: true` means a data class may carry many fields without a
+  finding. Use that for a genuine value object (`FactorySpec`, `Selection`,
+  `RowBox`/`RowLanes`) where the fields belong together; do not convert an arbitrary
+  argument tuple into a data class just to silence the rule.
+- **A file with one top-level declaration must be named after it.**
+  `MatchingDeclarationName` flagged `LayoutTunnels.kt` once `Tunnels` was its only
+  type; renaming the file (not suppressing the rule) is the fix. Files with several
+  top-level declarations are exempt.
 - **Compaction does not summarize the newest reply.** OpenCode's checkpoint
   summary covers the transcript *before* the retained recent tail; the tail is
   kept verbatim. At 2026-10-19 18:57 the manual compaction of session

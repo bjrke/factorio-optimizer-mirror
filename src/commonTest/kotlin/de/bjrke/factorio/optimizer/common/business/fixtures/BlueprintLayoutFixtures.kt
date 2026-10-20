@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.business.fixtures
 
 import de.bjrke.factorio.optimizer.common.business.*
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.util.connectedComponents
 
 val ore = Material("iron-ore")
 val coal = Material("coal")
@@ -68,37 +69,25 @@ fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordinate>> {
             .associateBy { it.area.topLeft }
     val grounds =
         tiles.filterValues { it.name == "pipe-to-ground" }.mapValues { it.value.direction }
+    return connectedComponents(tiles.keys) { tile -> plumbingNeighbours(tile, tiles, grounds) }
+}
 
-    fun neighbours(tile: Coordinate): List<Coordinate> = buildList {
-        for (direction in Direction.entries) {
-            val next = tile + direction.step
-            if (next in tiles) add(next)
-        }
-        val mouth = grounds[tile]
-        if (mouth != null) {
-            val away = mouth.opposite().step
-            for (distance in 1..10) {
-                val next = tile + away * distance
-                if (grounds[next] == mouth.opposite()) {
-                    add(next)
-                    break
-                }
-            }
+private fun plumbingNeighbours(
+    tile: Coordinate,
+    tiles: Map<Coordinate, BlueprintEntity>,
+    grounds: Map<Coordinate, Direction?>,
+): List<Coordinate> = buildList {
+    for (direction in Direction.entries) {
+        val next = tile + direction.step
+        if (next in tiles) add(next)
+    }
+    val mouth = grounds[tile] ?: return@buildList
+    val away = mouth.opposite().step
+    for (distance in 1..10) {
+        val next = tile + away * distance
+        if (grounds[next] == mouth.opposite()) {
+            add(next)
+            break
         }
     }
-
-    val seen = mutableSetOf<Coordinate>()
-    val components = mutableListOf<Set<Coordinate>>()
-    for (start in tiles.keys) {
-        if (!seen.add(start)) continue
-        val component = mutableSetOf<Coordinate>()
-        val queue = ArrayDeque(listOf(start))
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            component += current
-            for (next in neighbours(current)) if (seen.add(next)) queue += next
-        }
-        components += component
-    }
-    return components
 }

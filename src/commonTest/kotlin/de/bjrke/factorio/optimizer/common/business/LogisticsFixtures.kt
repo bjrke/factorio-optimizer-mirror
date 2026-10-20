@@ -71,15 +71,28 @@ internal data class BeltCase(
     val expected: Double,
 )
 
+/** The five selected logistics values, so the fixture below takes one tuple instead of five. */
+internal data class CalculatorSetup(
+    val belt: BeltTier = BeltTier.TRANSPORT_BELT,
+    val inserter: InserterTier = InserterTier.INSERTER,
+    val lanes: Int = 1,
+    val beltStack: Int = 1,
+    val inserterStack: Int = 1,
+)
+
 /** The calculator the logistics suites build their cases from. */
 internal fun calculator(
-    belt: BeltTier = BeltTier.TRANSPORT_BELT,
-    inserter: InserterTier = InserterTier.INSERTER,
-    lanes: Int = 1,
-    beltStack: Int = 1,
-    inserterStack: Int = 1,
+    setup: CalculatorSetup = CalculatorSetup(),
     logistics: Logistics = testLogistics,
-) = LogisticsCalculator(logistics, belt, inserter, lanes, beltStack, inserterStack)
+) =
+    LogisticsCalculator(
+        logistics,
+        setup.belt,
+        setup.inserter,
+        setup.lanes,
+        setup.beltStack,
+        setup.inserterStack,
+    )
 
 /** The items per second a belt carries at the calculator's own stacking. */
 internal fun LogisticsCalculator.beltThroughput() = beltThroughput(beltStack)

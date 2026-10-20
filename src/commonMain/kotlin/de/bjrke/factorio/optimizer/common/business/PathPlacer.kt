@@ -1,13 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
-import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
-import de.bjrke.factorio.optimizer.common.model.Direction.WEST
-import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Direction.*
 
 /** All the directions, Clock-wise EAST first, like most of the stuff has to be delivered. */
 internal val DIRECTION_STEPS = Direction.entries.map { it.step }

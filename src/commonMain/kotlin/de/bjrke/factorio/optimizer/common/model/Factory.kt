@@ -8,23 +8,20 @@ private val assembler2Categories = assembler1Categories.plus(Category.CRAFTING_W
 private val smelterCategories = setOf(Category.SMELTING)
 
 /**
- * A machine that can run recipes. Some machines only exist with a certain mod active
- * ([spaceAgeOnly], [baseOnly]), which [FactoryConfig] uses to gate what the user can pick.
- *
- * [productivity] is the machine's built-in productivity bonus (its output is multiplied by `1 +
- * productivity` without consuming more ingredients). [preferred] marks the Space Age speciality
- * machines that should be used whenever they can run a recipe, even without a bonus (the cryogenic
- * plant). These values are curated fallbacks; the optimizer prefers the stats derived from the
- * prototype dump (see [MachineStats]).
+ * The curated stats and gating flags of a [Factory]. [productivity] is the machine's built-in
+ * productivity bonus (its output is multiplied by `1 + productivity` without consuming more
+ * ingredients). [preferred] marks the Space Age speciality machines that should be used whenever
+ * they can run a recipe, even without a bonus (the cryogenic plant). These values are curated
+ * fallbacks; the optimizer prefers the stats derived from the prototype dump (see [MachineStats]).
  *
  * [outputsDirectly] marks machines that place their product straight onto a belt (the mining drills
  * and the recycler): they need no output inserter. [stacksOnBelt] marks the subset that also builds
  * belt stacks (the big mining drill and the recycler); the other drills place single items.
+ *
+ * The flags live in a value object so the enum constant names what the machine *is* (its code,
+ * identifier and categories) and the stats read as one coherent block.
  */
-enum class Factory(
-    val code: Char?,
-    val identifier: String,
-    val categories: Set<Category>,
+data class FactorySpec(
     val speed: Double = 1.0,
     val productivity: Double = 0.0,
     val preferred: Boolean = false,
@@ -32,111 +29,144 @@ enum class Factory(
     val baseOnly: Boolean = false,
     val outputsDirectly: Boolean = false,
     val stacksOnBelt: Boolean = false,
+)
+
+/**
+ * A machine that can run recipes. Some machines only exist with a certain mod active
+ * ([spaceAgeOnly], [baseOnly]), which [FactoryConfig] uses to gate what the user can pick.
+ */
+enum class Factory(
+    val code: Char?,
+    val identifier: String,
+    val categories: Set<Category>,
+    val spec: FactorySpec = FactorySpec(),
 ) {
-    ASSEMBLING_MACHINE_1('1', "assembling-machine-1", assembler1Categories, 0.5),
-    ASSEMBLING_MACHINE_2('2', "assembling-machine-2", assembler2Categories, 0.75),
-    ASSEMBLING_MACHINE_3(null, "assembling-machine-3", assembler2Categories, 1.25),
+    ASSEMBLING_MACHINE_1(
+        '1',
+        "assembling-machine-1",
+        assembler1Categories,
+        FactorySpec(speed = 0.5),
+    ),
+    ASSEMBLING_MACHINE_2(
+        '2',
+        "assembling-machine-2",
+        assembler2Categories,
+        FactorySpec(speed = 0.75),
+    ),
+    ASSEMBLING_MACHINE_3(
+        null,
+        "assembling-machine-3",
+        assembler2Categories,
+        FactorySpec(speed = 1.25),
+    ),
     OIL_REFINERY(null, "oil-refinery", setOf(Category.OIL_PROCESSING)),
     CHEMICAL_PLANT(null, "chemical-plant", setOf(Category.CHEMISTRY)),
     CENTRIFUGE(null, "centrifuge", setOf(Category.CENTRIFUGING)),
     // the rocket silo only builds space science in the base game, so it is always on there
-    ROCKET_SILO(null, "rocket-silo", setOf(Category.ROCKET_BUILDING), baseOnly = true),
+    ROCKET_SILO(null, "rocket-silo", setOf(Category.ROCKET_BUILDING), FactorySpec(baseOnly = true)),
     STONE_FURNACE('f', "stone-furnace", smelterCategories),
-    STEEL_FURNACE('s', "steel-furnace", smelterCategories, 2.0),
-    ELECTRIC_FURNACE(null, "electric-furnace", smelterCategories, 2.0),
+    STEEL_FURNACE('s', "steel-furnace", smelterCategories, FactorySpec(speed = 2.0)),
+    ELECTRIC_FURNACE(null, "electric-furnace", smelterCategories, FactorySpec(speed = 2.0)),
     BIOCHAMBER(
         'b',
         "biochamber",
         setOf(Category.ORGANIC),
-        2.0,
-        productivity = 0.5,
-        preferred = true,
-        spaceAgeOnly = true,
+        FactorySpec(speed = 2.0, productivity = 0.5, preferred = true, spaceAgeOnly = true),
     ),
     FOUNDRY(
         'F',
         "foundry",
         setOf(Category.METALLURGY),
-        4.0,
-        productivity = 0.5,
-        preferred = true,
-        spaceAgeOnly = true,
+        FactorySpec(speed = 4.0, productivity = 0.5, preferred = true, spaceAgeOnly = true),
     ),
     CRYOGENIC_PLANT(
         'C',
         "cryogenic-plant",
         setOf(Category.CRYOGENICS),
-        2.0,
-        preferred = true,
-        spaceAgeOnly = true,
+        FactorySpec(speed = 2.0, preferred = true, spaceAgeOnly = true),
     ),
     ELECTROMAGNETIC_PLANT(
         'm',
         "electromagnetic-plant",
         setOf(Category.ELECTROMAGNETICS),
-        2.0,
-        productivity = 0.5,
-        preferred = true,
-        spaceAgeOnly = true,
+        FactorySpec(speed = 2.0, productivity = 0.5, preferred = true, spaceAgeOnly = true),
     ),
-    CRUSHER(null, "crusher", setOf(Category.CRUSHING), spaceAgeOnly = true),
+    CRUSHER(null, "crusher", setOf(Category.CRUSHING), FactorySpec(spaceAgeOnly = true)),
     ASTEROID_COLLECTOR(
         null,
         "asteroid-collector",
         setOf(Category.ASTEROID_COLLECTION),
-        spaceAgeOnly = true,
+        FactorySpec(spaceAgeOnly = true),
     ),
     RECYCLER(
         'r',
         "recycler",
         setOf(Category.RECYCLING),
-        spaceAgeOnly = true,
-        outputsDirectly = true,
-        stacksOnBelt = true,
+        FactorySpec(spaceAgeOnly = true, outputsDirectly = true, stacksOnBelt = true),
     ),
     CAPTIVE_BITER_SPAWNER(
         null,
         "captive-biter-spawner",
         setOf(Category.CAPTIVE_SPAWNER_PROCESS),
-        spaceAgeOnly = true,
+        FactorySpec(spaceAgeOnly = true),
     ),
     BURNER_MINING_DRILL(
         'B',
         "burner-mining-drill",
         setOf(Category.MINING_BASIC_SOLID),
-        0.25,
-        outputsDirectly = true,
+        FactorySpec(speed = 0.25, outputsDirectly = true),
     ),
     ELECTRIC_MINING_DRILL(
         'E',
         "electric-mining-drill",
         setOf(Category.MINING_BASIC_SOLID),
-        0.5,
-        outputsDirectly = true,
+        FactorySpec(speed = 0.5, outputsDirectly = true),
     ),
     BIG_MINING_DRILL(
         null,
         "big-mining-drill",
         setOf(Category.MINING_BASIC_SOLID, Category.MINING_HARD_SOLID),
-        2.5,
-        spaceAgeOnly = true,
-        outputsDirectly = true,
-        stacksOnBelt = true,
+        FactorySpec(speed = 2.5, spaceAgeOnly = true, outputsDirectly = true, stacksOnBelt = true),
     ),
-    PUMPJACK(null, "pumpjack", setOf(Category.MINING_FLUID), 1.0),
-    OFFSHORE_PUMP(null, "offshore-pump", setOf(Category.OFFSHORE_PUMPING), 1200.0),
+    PUMPJACK(null, "pumpjack", setOf(Category.MINING_FLUID), FactorySpec(speed = 1.0)),
+    OFFSHORE_PUMP(
+        null,
+        "offshore-pump",
+        setOf(Category.OFFSHORE_PUMPING),
+        FactorySpec(speed = 1200.0),
+    ),
     // speed is the number of trees a tower tends; one tree yields 50 fruit per 5 minute growth
     AGRICULTURAL_TOWER(
         null,
         "agricultural-tower",
         setOf(Category.HARVESTING),
-        48.0,
-        spaceAgeOnly = true,
+        FactorySpec(speed = 48.0, spaceAgeOnly = true),
     ),
     SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
     // spoilage only exists in Space Age
-    SPOILING(null, "spoilage", setOf(Category.SPOILING), spaceAgeOnly = true),
-    NO_FACTORY(null, "infinity-chest", setOf()),
+    SPOILING(null, "spoilage", setOf(Category.SPOILING), FactorySpec(spaceAgeOnly = true)),
+    NO_FACTORY(null, "infinity-chest", setOf());
+
+    val speed: Double
+        get() = spec.speed
+
+    val productivity: Double
+        get() = spec.productivity
+
+    val preferred: Boolean
+        get() = spec.preferred
+
+    val spaceAgeOnly: Boolean
+        get() = spec.spaceAgeOnly
+
+    val baseOnly: Boolean
+        get() = spec.baseOnly
+
+    val outputsDirectly: Boolean
+        get() = spec.outputsDirectly
+
+    val stacksOnBelt: Boolean
+        get() = spec.stacksOnBelt
 }
 
 /**

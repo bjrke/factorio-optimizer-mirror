@@ -41,23 +41,28 @@ placed `LayoutEntity`s plus failure strings); the CLI's `--layout` renders it an
 the test suites assert on it via `commonTest/…/business/fixtures/BlueprintLayoutAccess.kt`,
 so `RowLayout` and its accessors stay private.
 
-The layout is split into a small mutable kernel plus stages:
+The layout is split into a small mutable kernel plus stages, and every stage takes
+one `business/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
+`rowPlacer`, `router`) instead of repeating those collaborators:
 
 - `business/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
-  the tile/placement primitives. Every stage shares this one board instead of a
-  second copy of the grid or tunnel index.
+  the reserve/place/remove primitives. Entity placement lives in
+  `LayoutPlacement.kt`, the tunnel index in `Tunnels.kt` and the underground queries
+  in `LayoutUnderground.kt`, all as board extensions.
 - `business/LayoutRouter.kt` — the weighted A* router (`RouteProfile`,
   `RouteNode`, tunnel-cost rules) for belts and pipes.
 - `business/PathPlacer.kt` — `placePath`, the tile roles for plain and underground
   runs, and `directionBetween`; shared by belt and pipe routes.
 - `business/UndergroundStretcher.kt` — grows underground runs along their own
-  straight surface run.
+  straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
+  end sharing.
 - `business/RowPlanner.kt` — the plan-level row order: the band-aware producer
   map, allocation depth, row units and the pure sizing helpers (`copiesOf`,
   `inserterPattern`).
-- `business/RowPlacer.kt` — places the machine rows (`Row`/`PlacedMachine`),
-  bands, lanes, products and band interfaces, and owns the allocation-to-row
-  index and the lane direction.
+- `business/RowPlacer.kt` — places the machine rows (`Row` = `RowBox` +
+  `RowLanes` + machines), the bands, lanes and product, and owns the
+  allocation-to-row index and the lane direction. `MachineInserterPlacer` places
+  the machine-edge inserters and `BandInterfacePlacer` the gap inserters.
 - `business/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
@@ -73,10 +78,17 @@ The layout is split into a small mutable kernel plus stages:
   final geometry.
 - `business/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
-- `RowLayout` keeps the belt delivery router (sinks, deliveries, splits, the
-  produced networks, target output) and the ordered `build()` pipeline; the
-  `RowPlacer`, `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and
-  `CompactionPass` stages own the rest.
+- `business/DeliveryRouter.kt` — orders the solid deliveries and places the
+  target's output connector; `DeliveryPreparation` reserves the sinks and sources,
+  `SplitDeliveryRouter` inserts the branch splitters, `DeliveryNetworks` remembers
+  the produced trunks and `BeltRouteRules` is the belt-tile predicate shared by
+  both routes.
+- `RowLayout` keeps the ordered `build()` pipeline; the `RowPlacer`,
+  `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and `CompactionPass` stages own
+  the rest.
+
+`common/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the
+layout test fixtures instead of a per-suite breadth-first walk.
 
 `business/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
 a **direct-feed band**: a solid material whose producer and consumer stand in a

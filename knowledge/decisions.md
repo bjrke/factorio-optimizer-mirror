@@ -4,6 +4,46 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Clean the structural Detekt debt, phase A
+
+**Context.** The structural baselines held 67 typed findings. The layout stages and
+model types mixed several responsibilities in one constructor or file, which is why
+the findings clustered in `LayoutRouter`, `SeamGrid`, `RowPlacer`, `Optimizer`,
+`recipeParser`, `LayoutBoard`, `DeliveryRouter` and the test helpers. The goal is a
+reviewable baseline of zero, not a relaxed rule set.
+
+**Decision.** Fix the low-risk half first, in behaviour-preserving slices, and keep
+the remaining debt explicit:
+
+- one `LayoutStage` context for `board`, `plan`, `logistics`, `planner`, `rowPlacer`
+  and `router`, so stages stop repeating the same constructor;
+- `LayoutBoard` keeps only grid/reservation/primitives; entity placement is
+  `LayoutPlacement.kt`, the tunnel index is `Tunnels`, underground queries are
+  `LayoutUnderground.kt`;
+- `common.util.connectedComponents` replaces three hand-written breadth-first walks
+  (pole wiring and the test fixtures);
+- value objects for the crowds of parameters: `FactorySpec`, `Selection`, `RowBox` +
+  `RowLanes`, and `RunGrowth` for an underground run;
+- the row stages split by machine edge: `MachineInserterPlacer` and
+  `BandInterfacePlacer`, while `RowPlacer` keeps the row order, lanes and product;
+- delivery splits are their own `SplitDeliveryRouter` with `DeliveryNetworks` and
+  `BeltRouteRules`, so `DeliveryRouter` only orders deliveries and places the
+  target output;
+- `LayoutEntity.withArea` moves the entity-kind switch into the entities, and
+  `CoordinateGeometry.kt` holds the distance/compass helpers as extensions;
+- `BlueprintLayoutAssertions` stays in `jvmTest`; the shared underground-run
+  assertion lives in `commonTest` fixtures and adapts either the DTO or a layout
+  dump.
+
+**Consequences.** The typed main baseline drops from 59 to 40 entries, the plain
+baseline from 56 to 37, and the typed test baseline is empty, so
+`detekt-baseline-test.xml` is deleted. The remaining 40 findings are the deferred
+router/seam, optimizer/band and parser/CLI work; the same clean-up path applies
+(extract a named responsibility, then regenerate the baseline). `LongParameterList`
+still exempts data classes by Detekt default, so each grouping object is a genuine
+value (a machine spec, a URL choice, a row rectangle), not a bag of unrelated
+arguments. See `conventions.md` and `pitfalls.md`.
+
 ## 2026-10-20 — Shrink the Detekt baselines to structural debt
 
 **Context.** The three baselines were fully current — 192 plain, 131 typed-main and

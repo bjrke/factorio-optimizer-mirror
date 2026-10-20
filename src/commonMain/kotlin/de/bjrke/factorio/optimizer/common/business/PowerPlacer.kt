@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.sqrt
@@ -64,81 +65,75 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
 
     /** Adds poles until every pole can reach another, so the whole set is one wire network. */
     private fun connectPoles(poles: MutableSet<Coordinate>) {
-        val components = poleComponents(poles)
-        repeat(MAX_POLE_CONNECT_ATTEMPTS) {
-            if (components.size <= 1) return
-
-            var bestDistanceSq = Long.MAX_VALUE
-            var from: Coordinate? = null
-            var to: Coordinate? = null
-            var fromIndex = -1
-            var toIndex = -1
-
-            for (i in components.indices) {
-                for (j in i + 1 until components.size) {
-                    for (a in components[i]) {
-                        for (b in components[j]) {
-                            val distanceSq = a.distanceSq(b)
-                            if (distanceSq < bestDistanceSq) {
-                                bestDistanceSq = distanceSq
-                                from = a
-                                to = b
-                                fromIndex = i
-                                toIndex = j
-                            }
-                        }
-                    }
+        val components =
+            connectedComponents(poles) { pole ->
+                    poles.filter { it.distanceSq(pole) <= WIRE_REACH_SQ }
                 }
-            }
-            if (from == null || to == null) return
-
-            val steps =
-                ceil(sqrt(bestDistanceSq.toDouble()) / (WIRE_REACH - 1)).toInt().coerceAtLeast(1)
-            var added = false
-
-            for (step in 1 until steps) {
-                val fraction = step.toDouble() / steps
-                val x = round(from.x + (to.x - from.x) * fraction).toInt()
-                val y = round(from.y + (to.y - from.y) * fraction).toInt()
-                val spot = freeNear(Coordinate(x, y)) ?: continue
-                poles += spot
-                board.placePole(spot)
-                components[fromIndex] += spot
-                added = true
-            }
-            if (!added) return
-
-            components[fromIndex] += components[toIndex]
-            components.removeAt(toIndex)
+                .mapTo(mutableListOf()) { it.toMutableSet() }
+        repeat(MAX_POLE_CONNECT_ATTEMPTS) {
+            val bridge = closestBridge(components) ?: return
+            if (!placeBridgeSteps(bridge, poles, components)) return
+            components[bridge.fromIndex] += components[bridge.toIndex]
+            components.removeAt(bridge.toIndex)
         }
     }
 
-    /** The wire-connected groups of [poles], two poles being connected within the wire reach. */
-    private fun poleComponents(poles: Set<Coordinate>): MutableList<MutableList<Coordinate>> {
-        val seen = mutableSetOf<Coordinate>()
-        val components = mutableListOf<MutableList<Coordinate>>()
-        for (pole in poles) {
-            if (!seen.add(pole)) continue
-            val component = mutableListOf<Coordinate>()
-            val queue = ArrayDeque<Coordinate>()
-            var current: Coordinate? = pole
-            while (current != null) {
-                component += current
-                // this is a job for a quadtree!
-                for (other in poles) {
-                    if (other !in seen) {
-                        val reach = current.distanceSq(other)
-                        if (reach <= WIRE_REACH_SQ) {
-                            seen += other
-                            queue += other
-                        }
-                    }
-                }
-                current = queue.removeFirstOrNull()
+    /** The closest pair of poles in two different components, with the components' indices. */
+    private fun closestBridge(components: List<Set<Coordinate>>): Bridge? {
+        var best: Bridge? = null
+        for (i in components.indices) {
+            for (j in i + 1 until components.size) {
+                val bridge = closestPair(components[i], components[j], i, j) ?: continue
+                if (best == null || bridge.distanceSq < best.distanceSq) best = bridge
             }
-            components += component
         }
-        return components
+        return best
+    }
+
+    private fun closestPair(
+        left: Set<Coordinate>,
+        right: Set<Coordinate>,
+        leftIndex: Int,
+        rightIndex: Int,
+    ): Bridge? =
+        left
+            .flatMap { a ->
+                right.map { b -> Bridge(a, b, leftIndex, rightIndex) }
+            }
+            .minByOrNull { it.distanceSq }
+
+    /**
+     * Places the intermediate poles on the line between the bridge ends. Returns whether it placed
+     * any, so a line with no free tile stops the connection rounds instead of looping.
+     */
+    private fun placeBridgeSteps(
+        bridge: Bridge,
+        poles: MutableSet<Coordinate>,
+        components: List<MutableSet<Coordinate>>,
+    ): Boolean {
+        var added = false
+        for (step in 1 until bridge.steps) {
+            val fraction = step.toDouble() / bridge.steps
+            val x = round(bridge.from.x + (bridge.to.x - bridge.from.x) * fraction).toInt()
+            val y = round(bridge.from.y + (bridge.to.y - bridge.from.y) * fraction).toInt()
+            val spot = freeNear(Coordinate(x, y)) ?: continue
+            poles += spot
+            board.placePole(spot)
+            components[bridge.fromIndex] += spot
+            added = true
+        }
+        return added
+    }
+
+    /** The two poles a bridge joins, and how many wire-reach steps the connection needs. */
+    private data class Bridge(
+        val from: Coordinate,
+        val to: Coordinate,
+        val fromIndex: Int,
+        val toIndex: Int,
+    ) {
+        val distanceSq = from.distanceSq(to)
+        val steps = ceil(sqrt(distanceSq.toDouble()) / (WIRE_REACH - 1)).toInt().coerceAtLeast(1)
     }
 
     /** The nearest free tile within one tile of ([c]), if any. */

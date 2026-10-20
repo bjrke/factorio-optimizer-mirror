@@ -47,13 +47,15 @@ internal class Delivery(
  * later delivery needs. Routing the prepared deliveries belongs to [DeliveryRouter].
  */
 internal class DeliveryPreparation(
-    private val board: LayoutBoard,
-    private val planner: RowPlanner,
-    private val rowPlacer: RowPlacer,
+    stage: LayoutStage,
     private val connector: BeltEndConnector,
     private val imports: ImportExtension,
     private val beltEnd: BeltEnd,
 ) {
+    private val board = stage.board
+    private val planner = stage.planner
+    private val rowPlacer = stage.rowPlacer
+
     /**
      * Places every solid source up front and returns the deliveries to route. The sinks' feeds are
      * reserved first, then the sources are placed, so a long early route cannot occupy a marker or

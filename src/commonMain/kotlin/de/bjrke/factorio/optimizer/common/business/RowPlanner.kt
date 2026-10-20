@@ -71,24 +71,35 @@ internal class RowPlanner(
             for (material in recipe.recipe.result.keys) producer.getOrPut(material) { index }
         }
         val visiting = mutableSetOf<Recipe>()
-        fun depthOf(index: Int): Int {
-            depth[index]?.let {
-                return it
-            }
-            val allocation = plan.recipes[index]
-            if (!visiting.add(allocation.recipe)) return 0
-            val inputs =
-                allocation.recipe.ingredients.keys.filter {
-                    it in producer && producer.getValue(it) != index
-                }
-            val value =
-                if (inputs.isEmpty()) 0 else 1 + inputs.maxOf { depthOf(producer.getValue(it)) }
-            visiting.remove(allocation.recipe)
-            depth[index] = value
-            return value
-        }
-        for (index in plan.recipes.indices) depthOf(index)
+        for (index in plan.recipes.indices) depthOf(index, producer, visiting)
     }
+
+    /**
+     * The depth of allocation [index], memoized and cycle-safe: a recipe already on the current
+     * path contributes zero instead of recursing forever.
+     */
+    private fun depthOf(
+        index: Int,
+        producer: Map<Material, Int>,
+        visiting: MutableSet<Recipe>,
+    ): Int =
+        depth[index]
+            ?: run {
+                val allocation = plan.recipes[index]
+                if (!visiting.add(allocation.recipe)) 0
+                else {
+                    val inputs =
+                        allocation.recipe.ingredients.keys.filter {
+                            it in producer && producer.getValue(it) != index
+                        }
+                    val value =
+                        if (inputs.isEmpty()) 0
+                        else 1 + inputs.maxOf { depthOf(producer.getValue(it), producer, visiting) }
+                    visiting.remove(allocation.recipe)
+                    depth[index] = value
+                    value
+                }
+            }
 
     private fun rowUnits(): List<RowUnit> {
         val inBand = mutableSetOf<Int>()

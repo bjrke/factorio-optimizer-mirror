@@ -21,12 +21,14 @@ up.
   project's own packages with a wildcard (`common.model.*`, `business.*`, the
   fixtures, `de.bjrke.test.*`, `kotlin.test.*`), and the JSON code may use
   `kotlinx.serialization.json.*`; spell other third-party imports out.
-  Current findings live in the committed `detekt-baseline.xml` (plain task) plus
-  `detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks); a new finding
-  fails the build. After the 2026-10-20 cleanup they are structural only (cyclomatic
-  complexity, long methods/parameter lists, class size, return/loop counts, nested
-  blocks). Regenerate with
-  `./gradlew detektBaseline` / `detektBaselineMainJvm` / `detektBaselineTestJvm`.
+  Current findings live in the committed `detekt-baseline.xml` (plain task) and
+  `detekt-baseline-main.xml` (typed main task); a new finding fails the build. The
+  typed test task is clean, so its `detekt-baseline-test.xml` is gone. After the
+  phase-A cleanup (see `decisions.md`) the remaining entries are structural only:
+  cyclomatic complexity, long methods/parameter lists, return/loop counts and
+  too-many-functions classes in the router, seam, optimizer and parser layers.
+  Regenerate with `./gradlew detektBaseline` / `detektBaselineMainJvm`; run
+  `detektBaselineTestJvm` too if a test finding ever returns.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered

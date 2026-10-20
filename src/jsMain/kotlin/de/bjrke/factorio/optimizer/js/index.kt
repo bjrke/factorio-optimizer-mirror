@@ -64,14 +64,17 @@ class FactorioOptimizerProps {
     private fun createNewUrl(): String {
         val encodedSelection =
             selectionString(
-                factories,
-                spaceAgeEnabled,
-                surface,
-                fullBelt = beltLanes == BeltTier.MAX_LANES,
-                belt,
-                inserter,
-                // a chest marker cannot be built on a space platform; keep the URL honest
-                beltEnd = beltEnd.takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR,
+                Selection(
+                    factories,
+                    spaceAgeEnabled,
+                    surface,
+                    fullBelt = beltLanes == BeltTier.MAX_LANES,
+                    belt,
+                    inserter,
+                    // a chest marker cannot be built on a space platform; keep the URL honest
+                    beltEnd =
+                        beltEnd.takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR,
+                ),
             )
         // the segment is never empty so the route always matches; '-' marks the all-defaults choice
         val selectionSegment = encodedSelection.ifEmpty { EMPTY_SELECTION }

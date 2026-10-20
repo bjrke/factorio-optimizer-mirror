@@ -33,53 +33,44 @@ internal class UndergroundStretcher(
         return after is MarkerEntity || after is InserterEntity
     }
 
-    /**
-     * Grows one underground run, at most its range, by spreading the extra tiles evenly between its
-     * two ends; when one end runs out the other takes the remainder, so the run grows toward the
-     * end that still has plain material to swallow (fewer free tiles). The end entities are
-     * re-placed and the swallowed tiles become part of the run.
-     */
     private fun stretchRun(input: UndergroundEntity) {
         if (input !in board.placed) return
         val output = board.undergroundOutputOf(input) ?: return
+        RunGrowth(
+                board,
+                input.area.topLeft,
+                output.area.topLeft,
+                input.direction,
+                input.material,
+                fluidPorts,
+            )
+            .stretch()
+    }
+}
 
-        val inputTile = input.area.topLeft
-        val outputTile = output.area.topLeft
+/**
+ * One underground run to grow. Grows both ends at most its reach, spreading the extra tiles evenly;
+ * when one end runs out the other takes the remainder, so the run grows toward the end that still
+ * has plain material to swallow (fewer free tiles). The end entities are re-placed and the
+ * swallowed tiles become part of the run.
+ */
+private class RunGrowth(
+    private val board: LayoutBoard,
+    private val inputTile: Coordinate,
+    private val outputTile: Coordinate,
+    private val direction: Direction,
+    private val material: Material,
+    private val fluidPorts: Set<Coordinate>,
+) {
+    private val step = direction.step
+    private val backward = step * -1
+    private val budget = board.range(material) - inputTile.manhattanDist(outputTile)
+    private val fluid = board.isFluid(material)
+    private val type = board.endName(material)
 
-        val direction = input.direction
-        val material = input.material
-        val range = board.range(material)
-        val type = board.endName(material)
-
-        val step = direction.step
-        val backward = step * -1
-        val budget = range - inputTile.manhattanDist(outputTile)
+    fun stretch() {
         if (budget <= 0) return
-        val fluid = board.isFluid(material)
-
-        // a straight pipe has no plumbing neighbor across the run's axis (a turn has one)
-        fun isStraight(tile: Coordinate): Boolean {
-            val across =
-                if (step.x != 0) listOf(Coordinate.north, Coordinate.south)
-                else listOf(Coordinate.east, Coordinate.west)
-            return across.none { board.entityAt(tile + it) is Plumbing }
-        }
-
-        fun swallowable(tile: Coordinate) =
-            when (val entity = board.entityAt(tile)) {
-                is BeltEntity ->
-                    !fluid && entity.material == material && entity.direction == direction
-                // a pipe is only swallowable when it is a straight pass-through of the same fluid;
-                // a machine port or a corner must stay a surface tile, or the run would end on it
-                is PipeEntity ->
-                    fluid && entity.material == material && tile !in fluidPorts && isStraight(tile)
-                else -> false
-            }
-
-        val maxBack = extension(inputTile, backward, budget, type, fluid, ::swallowable)
-        val maxForward = extension(outputTile, step, budget, type, fluid, ::swallowable)
-
-        val (back, forward) = share(budget, maxBack, maxForward)
+        val (back, forward) = share(budget, length(inputTile, backward), length(outputTile, step))
         if (back == 0 && forward == 0) return
 
         for (i in 1..back) board.removeAt(inputTile + backward * i)
@@ -89,8 +80,8 @@ internal class UndergroundStretcher(
         val newInput = inputTile + backward * back
         val newOutput = outputTile + step * forward
 
-        board.placeEnd(material, newInput, input.direction, INPUT)
-        board.placeEnd(material, newOutput, input.direction, OUTPUT)
+        board.placeEnd(material, newInput, direction, INPUT)
+        board.placeEnd(material, newOutput, direction, OUTPUT)
 
         board.markTunnel(newInput, newOutput, type)
     }
@@ -101,14 +92,7 @@ internal class UndergroundStretcher(
      * another underground end of a belt), and the tile that becomes part of the run must not
      * already carry a tunnel of the same [type] on the same axis.
      */
-    private fun extension(
-        start: Coordinate,
-        step: Coordinate,
-        budget: Int,
-        type: String,
-        fluid: Boolean,
-        swallowable: (Coordinate) -> Boolean,
-    ): Int {
+    private fun length(start: Coordinate, step: Coordinate): Int {
         var count = 0
         while (count < budget) {
             val next = start + step * (count + 1)
@@ -120,6 +104,24 @@ internal class UndergroundStretcher(
             count++
         }
         return count
+    }
+
+    private fun swallowable(tile: Coordinate) =
+        when (val entity = board.entityAt(tile)) {
+            is BeltEntity -> !fluid && entity.material == material && entity.direction == direction
+            // a pipe is only swallowable when it is a straight pass-through of the same fluid;
+            // a machine port or a corner must stay a surface tile, or the run would end on it
+            is PipeEntity ->
+                fluid && entity.material == material && tile !in fluidPorts && isStraight(tile)
+            else -> false
+        }
+
+    /** A straight pipe has no plumbing neighbor across the run's axis (a turn has one). */
+    private fun isStraight(tile: Coordinate): Boolean {
+        val across =
+            if (step.x != 0) listOf(Coordinate.north, Coordinate.south)
+            else listOf(Coordinate.east, Coordinate.west)
+        return across.none { board.entityAt(tile + it) is Plumbing }
     }
 
     /**

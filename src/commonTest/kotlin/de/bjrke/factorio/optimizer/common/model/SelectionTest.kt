@@ -25,12 +25,14 @@ class SelectionTest {
 
     private fun defaultSelection(spaceAge: Boolean) =
         selectionString(
-            FactoryConfig(spaceAge).defaults,
-            spaceAge,
-            Surface.NAUVIS,
-            fullBelt = false,
-            belt,
-            inserter,
+            Selection(
+                FactoryConfig(spaceAge).defaults,
+                spaceAge,
+                Surface.NAUVIS,
+                fullBelt = false,
+                belt,
+                inserter,
+            ),
         )
 
     @Test
@@ -85,12 +87,14 @@ class SelectionTest {
     fun nonDefaultChoicesAreEncodedAndDecodeBack() {
         val selection =
             selectionString(
-                FactoryConfig(false).defaults,
-                spaceAge = false,
-                Surface.VULCANUS,
-                fullBelt = true,
-                BeltTier.EXPRESS_TRANSPORT_BELT,
-                InserterTier.BULK_INSERTER,
+                Selection(
+                    FactoryConfig(false).defaults,
+                    spaceAge = false,
+                    Surface.VULCANUS,
+                    fullBelt = true,
+                    BeltTier.EXPRESS_TRANSPORT_BELT,
+                    InserterTier.BULK_INSERTER,
+                ),
             )
 
         assertAll(
@@ -115,13 +119,15 @@ class SelectionTest {
 
     private fun beltEndSelection(spaceAge: Boolean, surface: Surface, beltEnd: BeltEnd) =
         selectionString(
-            FactoryConfig(spaceAge).defaults,
-            spaceAge,
-            surface,
-            fullBelt = false,
-            belt,
-            inserter,
-            beltEnd = beltEnd,
+            Selection(
+                FactoryConfig(spaceAge).defaults,
+                spaceAge,
+                surface,
+                fullBelt = false,
+                belt,
+                inserter,
+                beltEnd = beltEnd,
+            ),
         )
 
     @Test

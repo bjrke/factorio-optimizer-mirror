@@ -214,19 +214,5 @@ private fun LayoutEntity.shifted(orientation: SeamOrientation, amount: Int): Lay
     val moved =
         if (orientation == SeamOrientation.VERTICAL) area.copy(topLeft = area.topLeft.east(amount))
         else area.copy(topLeft = area.topLeft.south(amount))
-    return when (this) {
-        is BeltEntity -> copy(area = moved)
-        is UndergroundBeltEntity -> copy(area = moved)
-        is SplitterEntity -> copy(area = moved)
-        is MachineEntity -> copy(area = moved)
-        is InserterEntity -> copy(area = moved)
-        is LoaderEntity -> copy(area = moved)
-        is InfinityChestEntity -> copy(area = moved)
-        is InfinityPipeEntity -> copy(area = moved)
-        is ChestEntity -> copy(area = moved)
-        is MarkerEntity -> copy(area = moved)
-        is PipeEntity -> copy(area = moved)
-        is PipeToGroundEntity -> copy(area = moved)
-        is PoleEntity -> copy(area = moved)
-    }
+    return withArea(moved)
 }

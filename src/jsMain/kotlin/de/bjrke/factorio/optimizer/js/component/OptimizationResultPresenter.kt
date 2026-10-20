@@ -229,7 +229,7 @@ private fun ChildrenBuilder.materialLogistics(
 
     val directOutput = isOutput && factory.outputsDirectly
     // a direct output is stacked by the machine itself, any other output by the selected inserter
-    val outputStacks = if (directOutput) factory.stacksOnBelt else calculator.stacksOnBelt()
+    val outputStacks = if (directOutput) factory.stacksOnBelt else calculator.rates.stacksOnBelt
     val stack = if (isOutput && !outputStacks) 1 else calculator.beltStack
     logisticsInputIcon(
         props,

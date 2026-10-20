@@ -30,8 +30,7 @@ private fun production(
     factory: Factory,
     amount: Double = 1.0,
     level: Int = 0,
-    speed: Double = factory.speed,
-) = FactoryProduction(material, recipe, factory, amount, level, speed)
+) = FactoryProduction(material, recipe, factory, amount, level)
 
 private fun result(target: Material, targetRecipe: Recipe, productions: List<FactoryProduction>) =
     OptimizationResult(
@@ -244,7 +243,6 @@ class BlueprintPlanTest {
                         gear,
                         Factory.ASSEMBLING_MACHINE_3,
                         amount = 3.0,
-                        speed = 1.0,
                     ),
                 ),
             )
