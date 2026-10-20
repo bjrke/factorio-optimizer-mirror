@@ -4,6 +4,29 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Clean the structural Detekt debt, phase B serializer and CLI
+
+**Context.** After the feed/optimizer slice, 19 typed findings remained. Five were
+the serializer and CLI pair: `BlueprintEntity.toJson` (long and cyclomatic),
+`parseArgs` (long and cyclomatic) and `settingsText` (long parameter list).
+
+**Decision.** Split both by field and argument group instead of suppressing. The
+blueprint envelope (`label`, `icons`, entity list, wires) stays in
+`BlueprintJson.kt`; `BlueprintEntityJson.kt` owns one entity's position, settings,
+neighbours and control behavior, with the optional fields in named writers. The
+CLI parser moves to `CliArgsParser.kt`, where `valueOption`/`valueOptions` handle
+singular and repeated `--name=` options and one resolver owns each decision
+(space age, surface, normalize target, outputs, belt end). `settingsText` reads the
+resolved belt, inserter, lanes and stacks from the active `LogisticsCalculator`
+instead of taking seven parameters.
+
+**Consequences.** The typed main baseline drops from 19 to 14 entries and the plain
+baseline from 18 to 14; the test baseline stays empty. `spotlessApply check` passes,
+and `BlueprintJsonTest` now covers every extracted entity section (position,
+recipe, infinity chest/pipe, neighbours, marker and the existing filters/wires).
+The remaining 14 findings are the plan, ascii, LP, validation, parser and
+resource-recipe group.
+
 ## 2026-10-20 — Clean the structural Detekt debt, phase B feed and optimizer
 
 **Context.** After the router/seam slice, 29 typed findings remained; ten were the

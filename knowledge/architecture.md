@@ -18,7 +18,8 @@ CLI (JVM) from one shared core.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`,
   `react-router-dom`); entry `js/index.kt`; `js/business/loadRecipe.kt` pulls the
   dumps via `@JsModule` and the webpack config in `webpack.config.d/`.
-- `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`; `jvm/business/loadRecipe.kt`
+- `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`, argument parsing
+  `jvm/CliArgsParser.kt`; `jvm/business/loadRecipe.kt`
   loads recipes from a classpath resource.
 - `src/commonTest` — shared kotlin-test suites, run by both `jvmTest` and
   `jsBrowserTest`; must stay platform-neutral.
@@ -111,9 +112,11 @@ label (default), the infinity chest, or a chest the inserters feed
 (`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it and
 `connectorWidth`/`connectorLeft` keep the routing corridors aligned; a fluid belt
 always keeps the combinator/pipe label. `model/BlueprintJson.kt` writes the
-optional `request_filters`, `bar`, `mirror`, `control_behavior` (circuit
-condition), `infinity_settings` and top-level `wires` fields. See `decisions.md`
-(2026-10-18) for the geometry and `pitfalls.md` for the wire and pole traps.
+blueprint envelope (`label`, `icons`, `entities`, top-level `wires`);
+`model/BlueprintEntityJson.kt` writes each entity's position and optional
+`request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
+`infinity_settings` and `neighbours` fields. See `decisions.md` (2026-10-18) for
+the geometry and `pitfalls.md` for the wire and pole traps.
 
 The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintImportTest`, `BlueprintFluidLayoutTest`, `BlueprintBandTest`,

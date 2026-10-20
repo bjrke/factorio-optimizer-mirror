@@ -45,103 +45,6 @@ data class CliArgs(
     val outputs: Set<Output> = emptySet(),
 )
 
-/**
- * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),
- * `--planet=<surface>`, `--factory=<machine>` (repeatable), `--belt=<tier>`, `--inserter=<tier>`,
- * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--normalize=<x>`,
- * `--belt-end=<marker>` and its alias `--cheats` (the infinity chest) are understood; `--settings`,
- * `--listing`, `--layout`, `--json` and `--blueprint` choose the [Output]s.
- * Belt/inserter/machine/marker values are identifiers (`express-transport-belt`, `foundry`,
- * `buffer-chest`) or a single-letter code. Any argument may be replaced by a pasted web UI URL,
- * e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1`, whose segments fill in the
- * material, selection, normalize target and stack sizes. Explicit flags override it.
- */
-fun parseArgs(args: Array<String>): CliArgs {
-    val url = args.firstNotNullOfOrNull { parseFactorioUrl(it) }
-    // a positional argument that is not the URL overrides its target
-    val positional = args.firstOrNull { !it.startsWith("--") && parseFactorioUrl(it) == null }
-    val spaceAge =
-        when {
-            args.any { it == "--base-game" } -> false
-            url != null -> SelectionFlag.SPACE_AGE.enabledIn(url.selection)
-            else -> true
-        }
-    // base game always runs on Nauvis, mirroring the web UI
-    val surface =
-        if (!spaceAge) Surface.NAUVIS
-        else
-            args
-                .firstOrNull { it.startsWith("--planet=") }
-                ?.removePrefix("--planet=")
-                ?.let { surfaceFromPlanet(it) } ?: surfaceFromUrl(url?.selection) ?: Surface.NAUVIS
-    val normalizeTarget =
-        args
-            .firstOrNull { it.startsWith("--normalize=") }
-            ?.removePrefix("--normalize=")
-            ?.let { validNormalizeTarget(it.toDoubleOrNull()) }
-            ?: url?.normalizeTarget
-            ?: DEFAULT_NORMALIZE_TARGET
-    val outputs = buildSet {
-        if (args.any { it == "--settings" }) add(Output.SETTINGS)
-        if (args.any { it == "--listing" }) add(Output.LISTING)
-        if (args.any { it == "--layout" }) add(Output.LAYOUT)
-        if (args.any { it == "--json" }) add(Output.JSON)
-        if (args.any { it == "--blueprint" }) add(Output.BLUEPRINT)
-    }
-    // a chest marker needs ground, so a chest choice on a space platform falls back to the label
-    val beltEnd =
-        (args
-                .firstOrNull { it.startsWith("--belt-end=") }
-                ?.removePrefix("--belt-end=")
-                ?.let { BeltEnd.fromIdentifier(it) }
-                ?: if (args.any { it == "--cheats" }) BeltEnd.INFINITY_CHEST
-                else BeltEnd.fromSelection(url?.selection, surface))
-            .takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR
-    return CliArgs(
-        material = positional ?: url?.target ?: ALL_SCIENCE_PACKS,
-        spaceAge = spaceAge,
-        surface = surface,
-        beltEnd = beltEnd,
-        normalizeTarget = normalizeTarget,
-        selection = url?.selection,
-        factories =
-            args
-                .filter { it.startsWith("--factory=") }
-                .mapNotNull { machine(it.removePrefix("--factory=")) },
-        belt = beltTier(args.firstOrNull { it.startsWith("--belt=") }?.removePrefix("--belt=")),
-        inserter =
-            inserterTier(
-                args.firstOrNull { it.startsWith("--inserter=") }?.removePrefix("--inserter="),
-            ),
-        fullBelt = if (args.any { it == "--full-belt" }) true else null,
-        beltStack =
-            args.firstOrNull { it.startsWith("--belt-stack=") }?.removePrefix("--belt-stack=")
-                ?: url?.beltStack,
-        inserterStack =
-            args
-                .firstOrNull { it.startsWith("--inserter-stack=") }
-                ?.removePrefix("--inserter-stack=") ?: url?.inserterStack,
-        outputs = outputs,
-    )
-}
-
-/** Resolves `--belt=` by prototype identifier or single-letter code. */
-private fun beltTier(value: String?) = value?.let {
-    BeltTier.entries.firstOrNull { entry -> entry.identifier == it } ?: BeltTier.fromSelection(it)
-}
-
-/** Resolves `--inserter=` by prototype identifier or single-letter code. */
-private fun inserterTier(value: String?) = value?.let {
-    InserterTier.entries.firstOrNull { entry -> entry.identifier == it }
-        ?: InserterTier.fromSelection(it)
-}
-
-/** Resolves `--factory=` by prototype identifier or single-letter code. */
-private fun machine(value: String?) = value?.let {
-    Factory.entries.firstOrNull { entry -> entry.identifier == it }
-        ?: Factory.entries.firstOrNull { entry -> entry.code?.toString() == it }
-}
-
 fun main(args: Array<String>) {
     val cli = parseArgs(args)
     val parsedRecipes = RecipeProvider.forActiveMods(cli.spaceAge).forSurface(cli.surface)
@@ -183,10 +86,7 @@ fun main(args: Array<String>) {
         else blueprintPlan(result, logistics, cli.normalizeTarget)
 
     val sections = mutableListOf<() -> Unit>()
-    if (Output.SETTINGS in outputs)
-        sections += {
-            println(settingsText(cli, factories, belt, inserter, lanes, beltStack, inserterStack))
-        }
+    if (Output.SETTINGS in outputs) sections += { println(settingsText(cli, factories, logistics)) }
     if (Output.LISTING in outputs) sections += { printListing(result, logistics) }
     when (outcome) {
         null -> {}
@@ -205,11 +105,7 @@ fun main(args: Array<String>) {
 internal fun settingsText(
     cli: CliArgs,
     factories: Set<Factory>,
-    belt: BeltTier,
-    inserter: InserterTier,
-    lanes: Int,
-    beltStack: Int,
-    inserterStack: Int,
+    logistics: LogisticsCalculator,
 ) =
     """
     settings
@@ -218,11 +114,11 @@ internal fun settingsText(
       surface: ${cli.surface.identifier}
       beltEnd: ${cli.beltEnd.identifier}
       normalizeTarget: ${cli.normalizeTarget}
-      belt: ${belt.identifier}
-      inserter: ${inserter.identifier}
-      beltLanes: $lanes
-      beltStack: $beltStack
-      inserterStack: $inserterStack
+      belt: ${logistics.belt.identifier}
+      inserter: ${logistics.inserter.identifier}
+      beltLanes: ${logistics.lanes}
+      beltStack: ${logistics.beltStack}
+      inserterStack: ${logistics.inserterStack}
       factories: ${factories.map { it.identifier }.sorted().joinToString(", ")}
     """
         .trimIndent()

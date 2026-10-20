@@ -58,6 +58,125 @@ class BlueprintJsonTest {
     }
 
     @Test
+    fun theEntityCentreIsWrittenAsAnIntegralPosition() {
+        val entity =
+            BlueprintEntity("assembling-machine-1", Area(Coordinate(1, 2), Dimension(2, 2)))
+        val position = entityJson(entity).getValue("position").jsonObject
+
+        assertAll(
+            { assertEquals(JsonPrimitive(2), position["x"]) },
+            { assertEquals(JsonPrimitive(3), position["y"]) },
+        )
+    }
+
+    @Test
+    fun anEntityRecipeIsWritten() {
+        val entity =
+            BlueprintEntity(
+                "assembling-machine-1",
+                areaTile(0, 0),
+                recipe = "iron-gear-wheel",
+            )
+
+        assertEquals(JsonPrimitive("iron-gear-wheel"), entityJson(entity)["recipe"])
+    }
+
+    @Test
+    fun infinityChestSettingsWriteTheirFiltersAndVoidFlag() =
+        assertTableOf(
+            InfinitySettings(Material("iron-plate"), removeUnfiltered = true) to
+                buildJsonObject {
+                    put("remove_unfiltered_items", true)
+                    putJsonArray("filters") {
+                        addJsonObject {
+                            put("name", "iron-plate")
+                            put("count", 100)
+                            put("mode", "at-least")
+                            put("index", 1)
+                        }
+                    }
+                },
+            InfinitySettings(removeUnfiltered = true) to
+                buildJsonObject { put("remove_unfiltered_items", true) },
+        ) { (settings, expected) ->
+            val entity = BlueprintEntity("infinity-chest", areaTile(0, 0), infinity = settings)
+
+            assertEquals(expected, entityJson(entity).getValue("infinity_settings"))
+        }
+
+    @Test
+    fun anInfinityPipeWritesItsFluidSettings() {
+        val entity =
+            BlueprintEntity(
+                "infinity-pipe",
+                areaTile(0, 0),
+                infinityPipe =
+                    InfinityPipeSettings(
+                        Material("water"),
+                        temperature = 25,
+                        percentage = 1,
+                        mode = "at-least",
+                    ),
+            )
+        val expected = buildJsonObject {
+            put("name", "water")
+            put("percentage", 1)
+            put("temperature", 25)
+            put("mode", "at-least")
+        }
+
+        assertEquals(expected, entityJson(entity).getValue("infinity_settings"))
+    }
+
+    @Test
+    fun neighboursSerializeAsEntityNumbers() {
+        val entity =
+            BlueprintEntity("small-electric-pole", areaTile(0, 0), neighbours = listOf(2, 5))
+        val expected = buildJsonArray {
+            add(2)
+            add(5)
+        }
+
+        assertEquals(expected, entityJson(entity).getValue("neighbours"))
+    }
+
+    @Test
+    fun aMarkerWritesAConstantCombinatorFilter() =
+        assertTableOf(
+            Triple(Material("iron-plate"), false, null),
+            Triple(Material("water"), true, JsonPrimitive("fluid")),
+        ) { (material, fluid, expectedType) ->
+            val entity =
+                BlueprintEntity(
+                    "constant-combinator",
+                    areaTile(0, 0),
+                    marker = material,
+                    markerFluid = fluid,
+                )
+            val behavior = entityJson(entity).getValue("control_behavior").jsonObject
+            val filter =
+                behavior
+                    .getValue("sections")
+                    .jsonObject
+                    .getValue("sections")
+                    .jsonArray
+                    .first()
+                    .jsonObject
+                    .getValue("filters")
+                    .jsonArray
+                    .first()
+                    .jsonObject
+
+            assertAll(
+                { assertEquals(JsonPrimitive(true), behavior["is_on"]) },
+                { assertEquals(expectedType, filter["type"]) },
+                { assertEquals(JsonPrimitive("normal"), filter["quality"]) },
+                { assertEquals(JsonPrimitive(1), filter["count"]) },
+                { assertEquals(JsonPrimitive(material.name), filter["name"]) },
+            )
+        }
+
+    @Test
     fun aChestRequestFilterWritesTheGameSections() {
         val entity =
             BlueprintEntity(

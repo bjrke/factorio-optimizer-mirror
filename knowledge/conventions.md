@@ -29,6 +29,11 @@ up.
   too-many-functions classes in the router, seam, optimizer and parser layers.
   Regenerate with `./gradlew detektBaseline` / `detektBaselineMainJvm`; run
   `detektBaselineTestJvm` too if a test finding ever returns.
+- `TooManyFunctions` allows 11 functions per file/class (Detekt default
+  `allowedFunctionsPerFile`/`allowedFunctionsPerClass`). Extracting a long
+  method's helpers into one file can replace its finding with a file-level one:
+  split by responsibility into separate files or classes instead of collecting
+  a dozen writers in one file.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered

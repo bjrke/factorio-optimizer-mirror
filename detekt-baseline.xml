@@ -2,9 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>CyclomaticComplexMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
     <ID>CyclomaticComplexMethod:BlueprintPlan.kt:fun blueprintPlan: BlueprintPlanResult</ID>
-    <ID>CyclomaticComplexMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
     <ID>CyclomaticComplexMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
     <ID>CyclomaticComplexMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
     <ID>CyclomaticComplexMethod:LayoutValidation.kt:private fun findUndergroundOutput: UndergroundEntity?</ID>
@@ -12,8 +10,6 @@
     <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$private fun simplex: Boolean</ID>
     <ID>CyclomaticComplexMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
     <ID>CyclomaticComplexMethod:resourceRecipes.kt:private fun MutableList&lt;Recipe&gt;.minedResourceRecipes</ID>
-    <ID>LongMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
-    <ID>LongMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
     <ID>LongMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
     <ID>LongMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
     <ID>LongMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>

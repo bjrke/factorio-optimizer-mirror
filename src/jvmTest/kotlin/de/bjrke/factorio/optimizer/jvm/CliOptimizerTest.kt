@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.business.CalculatorSetup
+import de.bjrke.factorio.optimizer.common.business.calculator
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Factory
@@ -196,6 +198,16 @@ class CliOptimizerTest {
 
     @Test
     fun settingsTextListsTheResolvedConfiguration() {
+        val logistics =
+            calculator(
+                CalculatorSetup(
+                    belt = BeltTier.EXPRESS_TRANSPORT_BELT,
+                    inserter = InserterTier.STACK_INSERTER,
+                    lanes = 2,
+                    beltStack = 4,
+                    inserterStack = 6,
+                ),
+            )
         val text =
             settingsText(
                 parseArgs(
@@ -208,11 +220,7 @@ class CliOptimizerTest {
                     ),
                 ),
                 factories = setOf(Factory.ASSEMBLING_MACHINE_3, Factory.FOUNDRY),
-                belt = BeltTier.EXPRESS_TRANSPORT_BELT,
-                inserter = InserterTier.STACK_INSERTER,
-                lanes = 2,
-                beltStack = 4,
-                inserterStack = 6,
+                logistics = logistics,
             )
 
         assertAll(
