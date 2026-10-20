@@ -51,20 +51,35 @@ The layout is split into a small mutable kernel plus stages:
 - `business/RowPlanner.kt` — the plan-level row order: the band-aware producer
   map, allocation depth, row units and the pure sizing helpers (`copiesOf`,
   `inserterPattern`).
+- `business/RowPlacer.kt` — places the machine rows (`Row`/`PlacedMachine`),
+  bands, lanes, products and band interfaces, and owns the allocation-to-row
+  index and the lane direction.
+- `business/ImportExtension.kt` — the shared import bookkeeping: the marker rows
+  already claimed, the import feeds to trim, the pinned marker tiles and the
+  pole/compaction west bounds.
+- `business/FluidFeeder.kt` — routes every fluid: the reserved machine-edge pipes,
+  one marker per fluid and the pipe network grown from it (`pipeAllowed`,
+  `fluidEdge`).
+- `business/ImportTrimmer.kt` — moves every import marker to one common column
+  and removes the straight belt prefix in front of it (`lastStraightEast`).
+- `business/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
+  underground runs after each corridor and shifts the import pins and bounds.
 - `business/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`.
 - `business/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry.
 - `business/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
-- `RowLayout` keeps the plan-level state (rows, sinks, deliveries, import feeds,
-  networks) and the ordered pipeline.
+- `RowLayout` keeps the belt delivery router (sinks, deliveries, splits, the
+  produced networks, target output) and the ordered `build()` pipeline; the
+  `RowPlacer`, `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and
+  `CompactionPass` stages own the rest.
 
 `business/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
 a **direct-feed band**: a solid material whose producer and consumer stand in a
 small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
 `BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth
-for it. `RowLayout` places a band with `placeBand`; only belted allocations feed
+for it. `RowPlacer` places a band with `placeBand`; only belted allocations feed
 belts, lanes and sinks, so a band's internal material never gets a belt. See
 `decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
 follow-ups.

@@ -4,6 +4,46 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Split the layout into explicit stages, verified by layout snapshots
+
+**Context.** The 2026-10-19 decision extracted the kernel (`LayoutBoard`,
+`LayoutRouter`, `UndergroundStretcher`, `LayoutCompaction`) but left
+`BlueprintLayout.kt` at 1,925 lines with one `RowLayout` class owning the whole
+pipeline and all plan-level state. Every stage change still meant reading the same
+file.
+
+**Decision.** Extract the remaining pipeline stages as classes in the same package
+(`common.business`), one slice per commit:
+
+- `PathPlacer` — `placePath`, the surface/tunnel roles, `directionBetween`;
+- `PowerPlacer` — pole coverage, pole wires, the west bound;
+- `BeltEndConnector` — connector width/offset, every belt-end marker, chest wires;
+- `RowPlanner` — band-aware producer map, allocation depth, row units,
+  `copiesOf`/`footprint`/`insertersFor`/`inserterPattern`;
+- `RowPlacer` — `Row`/`PlacedMachine`, row/band placement, lanes, products,
+  band interfaces, the allocation-to-row index and the lane direction;
+- `ImportExtension` — the shared import bookkeeping (marker rows, feeds to trim,
+  pinned tiles, pole/compaction west bounds);
+- `FluidFeeder` — fluid edges, markers and pipe networks;
+- `ImportTrimmer` — the common import column and the straight-prefix trim;
+- `CompactionPass` — the compaction loop, the re-stretch and the pin/bound shift.
+
+Each stage takes the board and the state it owns in its constructor and exposes
+what later stages need; `RowLayout` keeps the ordered `build()` and the delivery
+router (sinks, deliveries, splits, target output, networks, failures). No stage
+interface and no DI container. Add `BlueprintLayoutSnapshotTest` first: it hashes
+the canonical entity/wire output (FNV-1a) for base, chest, fluid and band plans,
+and the same test run in a clean worktree at the pre-split commit proves each
+slice is behavior-neutral.
+
+**Consequences.** `BlueprintLayout.kt` is at 628 lines
+(1,925 → 1,508 → 1,370 → 1,011 → 628), so it dropped under the 700-line budget
+and its `ci/file-size-baseline.txt` entry is gone. Remaining in the file: the belt
+delivery router (sinks, deliveries, splits, import sources, `networks`,
+`failures`) and the board delegates; delivery goes last because it owns the most
+shared state. Package moves (e.g. `business/blueprint/layout`) are deferred until
+the file split is done, to keep each commit mechanical.
+
 ## 2026-10-19 — Keep the layout modular with a per-file line budget
 
 **Context.** `BlueprintLayout.kt` had grown to 2,446 lines with one `RowLayout`
@@ -31,9 +71,9 @@ remove it.
 
 **Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines and
 the baseline records that exact count; all 64 layout tests still pass. The
-remaining plan-level stages (`RowPlanner`, `FeedPlanner`, `FluidPlanner`,
-`PolePlanner`) are the next extraction, and each must lower the baseline. No
-Gradle module split: a KMP multi-module split would duplicate `expect/actual`
+remaining plan-level stages are extracted one at a time, each lowering the
+baseline (actual names are in the 2026-10-20 entry below). No Gradle module
+split: a KMP multi-module split would duplicate `expect/actual`
 (`loadPrototypeDump`), resource wiring and test targets for ~7k lines of
 `commonMain`, so package/file boundaries are enough at this size.
 

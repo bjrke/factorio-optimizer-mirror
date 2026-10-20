@@ -26,6 +26,24 @@ up.
   `List<LayoutEntity>` and `LayoutRouter` only reads the board, so neither needs a
   full `BlueprintPlan` to test.
 
+## Behavior-preserving refactors
+
+- Before splitting a layout stage, pin its output with a characterization test.
+  `BlueprintLayoutSnapshotTest` hashes the canonical entity/wire list (each
+  `BlueprintEntity.toString()` plus the wires, FNV-1a) for the base, chest, fluid
+  and band plans. Prove the split is neutral by running the same test in a clean
+  worktree at the pre-change commit (`git worktree add /tmp/opencode/<name> HEAD`),
+  copying the test in and comparing: identical hashes mean unchanged geometry and
+  entity order. Remove the worktree when done.
+- Keep the ordered pipeline explicit. Stages are classes that take the board (or
+  plain data) and the shared state they own in their constructor; there is no
+  stage interface and no DI container, because the `build()` order is
+  load-bearing. A stage owns its state and exposes it to later stages
+  (`RowPlacer.rows`, `RowPlacer.placedRows`). State that several stages must mutate goes
+  in one small holder passed to each (`ImportExtension`), not a lambda or a
+  copied value; a scalar several stages update (`poleWestBound`) is a property of
+  that holder, not a `var` on `RowLayout`.
+
 ## Testing
 
 - Every behavior change or new logic gets tests **without being asked**, in the
