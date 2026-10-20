@@ -126,19 +126,17 @@ tasks.named<Test>("jvmTest") {
 val checkSourceSizes =
     tasks.register("checkFileSizes") {
         group = "verification"
-        description = "warns past the soft line budget and fails past the hard one"
+        description = "reports the super-soft line budget and fails past the hard one"
 
         val sourceRoot = layout.projectDirectory.dir("src")
-        val baseline = layout.projectDirectory.file("ci/file-size-baseline.txt")
         inputs.files(fileTree("src") { include("**/*.kt") })
-        inputs.file(baseline)
 
         doLast {
             checkFileSizes(
                 sourceRoot.asFile,
-                baseline.asFile,
                 report = { logger.error(it) },
                 warn = { logger.warn(it) },
+                info = { logger.lifecycle(it) },
             )
         }
     }

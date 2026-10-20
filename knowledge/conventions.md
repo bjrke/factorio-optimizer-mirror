@@ -7,14 +7,12 @@ up.
 
 ## Code size and file layout
 
-- Keep Kotlin source files under the **hard 500-line budget**; a file over the
-  **soft 300-line budget** only warns. `./gradlew checkFileSizes` (part of `check`)
-  logs one warning per soft offender (the next split tier) and fails per hard
-  offender. `ci/file-size-baseline.txt` lists grandfathered hard offenders and is a
-  **strict ratchet**: an entry must match the file's current line count, so a file
-  that shrinks must lower its entry and a file that reaches 500 must drop it. The
-  goal is an empty baseline, and the remaining entries are the split roadmap.
-  Verify with `./gradlew checkFileSizes`.
+- Keep Kotlin source files under the **hard 500-line budget**; over the **soft
+  400-line budget** a file warns, and over the **super-soft 300-line budget** it only
+  logs a lifecycle hint. `./gradlew checkFileSizes` (part of `check`) reports one
+  line per tier, all shown by default: lifecycle hint, warning and error (fails the
+  build). There is no baseline — every offender is reported, and the reports are the
+  split roadmap. Verify with `./gradlew checkFileSizes`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
@@ -104,7 +102,9 @@ up.
 - Build logic (`buildSrc/**`) has its own tests in `buildSrc/src/test`. The root
   `check` drives buildSrc only up to `jar`, so it does **not** run them: run
   `./gradlew -p buildSrc test` (wired into CI separately). They are plain
-  `kotlin.test` — the `de.bjrke.test` helpers are app-only.
+  `kotlin.test` — the `de.bjrke.test` helpers are app-only. `tasks.test {
+  useJUnitPlatform() }` makes `kotlin("test")` resolve to `kotlin-test-junit5`,
+  which already brings `junit-jupiter-engine`; never declare the engine explicitly.
 - **Never test agent tooling from the app suites.** Everything outside the
   application — `AGENTS.md`, `knowledge/`, `.opencode/`, `tmp/` — is not part of
   the build; `./gradlew check` covers the app only. Plugins can be syntax-checked

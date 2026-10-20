@@ -81,8 +81,13 @@ here only with evidence, and should say how to recognise it.
   dependency (`test → testClasses → compileTestKotlin → jar`), and a root
   `GradleBuild` task fails with "build name 'buildSrc' … reserved name". Wire it as a
   CI line (`gradle -p buildSrc test`) plus `./gradlew -p buildSrc test` locally; see
-  `conventions.md`. Evidence: `CheckFileSizesTest` (10 tests) only ran via
+  `conventions.md`. Evidence: `CheckFileSizesTest` (7 tests) only ran via
   `-p buildSrc test`.
+- **`logger.info` is silent in a default Gradle build.** Gradle hides `INFO` and
+  `DEBUG`, so task output meant to be seen every run must use `logger.lifecycle`;
+  reserve `logger.info` for detail behind `--info`. Verified when `checkFileSizes`'s
+  super-soft tier was first logged with `logger.info` and stayed invisible until the
+  callback moved to `logger.lifecycle`.
 - **An `internal` top-level declaration collides with a `private` one of the same
   name in the package.** Graduating a file-private constant to `internal` to share it
   broke `:compileKotlinJvm` with `REDECLARATION … EPSILON` against `Optimizer.kt`'s

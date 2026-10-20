@@ -4,6 +4,38 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Three file-size tiers, and no baseline
+
+**Context.** The 2026-10-19 budget shipped as two tiers — a soft 300 that warned and
+a hard 500 that failed — plus `ci/file-size-baseline.txt`, a ratchet for
+grandfathered hard offenders. Splitting every listed file (the 2026-10-20 layout
+entry below) emptied the baseline, so the ratchet held nothing; one soft tier also
+failed to separate "getting close" from "split now".
+
+**Decision.** `checkFileSizes` reports three tiers and drops the baseline:
+
+- over **300** lines → `logger.lifecycle` (shown by default), the first hint;
+- over **400** lines → `logger.warn`, the next split;
+- over **500** lines → `logger.error`, then the build fails.
+
+`checkFileSizes` loses its `baselineFile` parameter and the ratchet/stale-entry
+logic, and `ci/file-size-baseline.txt` is deleted, so the root task no longer needs a
+baseline input.
+
+**Consequences.** A default build shows the hint and warning tiers and fails nothing.
+The four files the old soft tier warned about were split under the soft 400 budget:
+`DeliveryRouter.kt` (480) → `DeliveryPreparation.kt` (planning) and
+`DeliveryRouter.kt` (routing); `DirectFeed.kt` (437) → `BandSearch.kt` (the cycle
+search); `OptimizerTest.kt` (445) → `OptimizerTest.kt` plus `OptimizerMachineTest.kt`
+over shared `fixtures/OptimizerFixtures.kt`; and `OptimizerSurfaceTest.kt` (457) →
+the planet surfaces plus `OptimizerSpaceTest.kt`. The same change drops the
+`junit-jupiter-engine` dependency the 2026-10-20 layout change
+had added to `buildSrc`: `useJUnitPlatform()` already resolves `kotlin("test")` to
+`kotlin-test-junit5`, whose module depends on the engine, so the explicit
+`testRuntimeOnly(libs.junit.jupiter.engine)` and its `libs.versions.toml` entries
+were redundant. Verified by re-running `./gradlew -p buildSrc test` without them:
+all 7 `CheckFileSizesTest` cases still run.
+
 ## 2026-10-20 — Split the layout into explicit stages, verified by layout snapshots
 
 **Context.** The 2026-10-19 decision extracted the kernel (`LayoutBoard`,
@@ -36,14 +68,12 @@ the canonical entity/wire output (FNV-1a) for base, chest, fluid and band plans,
 and the same test run in a clean worktree at the pre-split commit proves each
 slice is behavior-neutral.
 
-**Consequences.** `BlueprintLayout.kt` is at 629 lines
-(1,925 → 1,508 → 1,370 → 1,011 → 629) — under the then-700-line budget, and now
-the first entry in `ci/file-size-baseline.txt` under the tighter hard 500-line
-budget. Remaining in the file: the belt delivery router (sinks, deliveries, splits,
-import sources, `networks`, `failures`) and the board delegates; delivery goes last
-because it owns the most shared state. Package moves (e.g.
-`business/blueprint/layout`) are deferred until the file split is done, to keep each
-commit mechanical.
+**Consequences.** The finished split took `BlueprintLayout.kt` from 1,925 to 196
+lines (1,925 → 1,508 → 1,370 → 1,011 → 629 → 196), extracting the belt delivery
+router (sinks, deliveries, splits, import sources, `networks`, `failures`) into
+`DeliveryRouter.kt` (480). Delivery went last because it owns the most shared state.
+Package moves (e.g. `business/blueprint/layout`) are deferred until a further split,
+to keep each commit mechanical.
 
 ## 2026-10-19 — Keep the layout modular with a per-file line budget
 
@@ -67,11 +97,10 @@ The blueprint model is split the same way (`Material`, `Recipe`, `Category`,
 split the same way (`OptimizerTest` for synthetic machine/recipe cases,
 `OptimizerSurfaceTest` for real per-surface resolution).
 
-A `checkFileSizes` task (wired into `check`) warns past a **soft 300-line** budget
-and fails past a **hard 500-line** one. Files that predate the limit are listed in
-`ci/file-size-baseline.txt`, a strict ratchet against the hard budget: a shrunken
-file must lower its entry and a file at or under 500 must remove it. That baseline
-doubles as the split roadmap toward an empty file.
+A `checkFileSizes` task (wired into `check`) enforced a per-file line budget with a
+soft 300-line warning and a hard 500-line failure, and listed grandfathered hard
+offenders in `ci/file-size-baseline.txt` as a strict ratchet. The 2026-10-20 entry
+above later replaced the two tiers with three and removed the empty baseline.
 
 **Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines,
 recorded then as a baseline entry; all 64 layout tests still pass. The

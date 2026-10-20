@@ -3,14 +3,10 @@
 spotless = { id = "com.diffplug.spotless", version = "8.10.4" }
 
 [versions]
-#https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine
-junit-jupiter = "5.10.1"
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-gradle-plugin
 kotlin = "2.4.21"
 
 [libraries]
-#https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
 kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "2026.10.0" }
 #https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-serialization-json
