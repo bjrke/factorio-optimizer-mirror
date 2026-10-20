@@ -13,3 +13,35 @@ style:
   # Semantic mappings (directions, rotations) use named model properties instead.
   MagicNumber:
     active: false
+
+  # Search and geometry helpers reject a case and return early; the guard clauses
+  # are the readable form. Functions with more exits than that stay in the baseline.
+  ReturnCount:
+    excludeGuardClauses: true
+
+  # A* and parser loops skip several candidate cases with `continue`. Three jumps
+  # is the readable ceiling; the messier loops stay in the baseline.
+  LoopWithTooManyJumpStatements:
+    maxJumpCount: 3
+
+  # Four named values in a test case (belt, lanes, stack, expected) still read as a
+  # statement; five or more are a sign the table row should be a data class.
+  DestructuringDeclarationWithTooManyEntries:
+    maxDestructuringEntries: 4
+
+  # The project imports whole domain packages (`common.model`, `business`, the test
+  # fixtures) on purpose: a file usually needs most of the package, and listing the
+  # types would be noise. The serialization DSL is the same: JSON code is a separate
+  # layer that reads as one vocabulary. Other third-party wildcards are still reported.
+  WildcardImport:
+    excludeImports:
+      - 'java.util.*'
+      - 'kotlinx.serialization.json.*'
+      - 'de.bjrke.factorio.optimizer.common.model.*'
+      - 'de.bjrke.factorio.optimizer.common.model.Direction.*'
+      - 'de.bjrke.factorio.optimizer.common.business.*'
+      - 'de.bjrke.factorio.optimizer.common.business.fixtures.*'
+      - 'de.bjrke.factorio.optimizer.js.component.*'
+      - 'de.bjrke.factorio.optimizer.js.component.fixtures.*'
+      - 'de.bjrke.test.*'
+      - 'kotlin.test.*'

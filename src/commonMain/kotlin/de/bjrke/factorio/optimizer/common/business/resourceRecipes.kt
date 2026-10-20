@@ -43,9 +43,10 @@ private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {
         if (result.isEmpty()) continue
 
         val ingredients =
-            minable.string("required_fluid")?.let {
-                mapOf(Material(it) to (minable.number("fluid_amount") ?: 1.0))
-            } ?: emptyMap()
+            minable
+                .string("required_fluid")
+                ?.let { mapOf(Material(it) to (minable.number("fluid_amount") ?: 1.0)) }
+                .orEmpty()
 
         add(
             Recipe(

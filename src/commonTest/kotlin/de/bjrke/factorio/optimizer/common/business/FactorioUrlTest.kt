@@ -55,7 +55,7 @@ class FactorioUrlTest {
             "#/",
             "https://example.com/page",
         ) { text ->
-            assertNull(parseFactorioUrl(text ?: ""), text)
+            assertNull(parseFactorioUrl(text.orEmpty()), text)
         }
 
     @Test

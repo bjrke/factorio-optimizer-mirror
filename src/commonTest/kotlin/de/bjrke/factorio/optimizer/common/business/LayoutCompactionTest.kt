@@ -23,15 +23,15 @@ private val water = Material("water")
 private val oil = Material("crude-oil")
 
 private fun belt(x: Int, y: Int, material: Material = ore, direction: Direction = EAST) =
-    BeltEntity(AreaTile(x, y), BELT, material, direction)
+    BeltEntity(areaTile(x, y), BELT, material, direction)
 
 private fun marker(x: Int, y: Int, material: Material = ore) =
-    MarkerEntity(AreaTile(x, y), MARKER, Signal(material))
+    MarkerEntity(areaTile(x, y), MARKER, Signal(material))
 
 private fun machine(x: Int, y: Int) =
     MachineEntity(Area(Coordinate(x, y), Dimension(3, 3)), MACHINE, "test")
 
-private fun pipe(x: Int, y: Int, fluid: Material = water) = PipeEntity(AreaTile(x, y), PIPE, fluid)
+private fun pipe(x: Int, y: Int, fluid: Material = water) = PipeEntity(areaTile(x, y), PIPE, fluid)
 
 private fun underground(
     x: Int,
@@ -39,7 +39,7 @@ private fun underground(
     direction: Direction,
     io: Io,
     material: Material = ore,
-) = UndergroundBeltEntity(AreaTile(x, y), UNDERGROUND_BELT, material, direction, io)
+) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, material, direction, io)
 
 class LayoutCompactionTest {
 
@@ -152,7 +152,7 @@ class LayoutCompactionTest {
         ) { case ->
             val entities = buildList {
                 add(machine(0, 0))
-                add(InserterEntity(AreaTile(0, -1), "fast-inserter", ore, NORTH, long = false))
+                add(InserterEntity(areaTile(0, -1), "fast-inserter", ore, NORTH, long = false))
                 case.source?.let(::add)
             }
             val errors = validateLayout(entities)

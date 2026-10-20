@@ -2,8 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:LayoutBoard.kt:LayoutBoard$entity is UndergroundEntity &amp;&amp; entity.io == OUTPUT &amp;&amp; entity.direction == input.direction &amp;&amp; entity.material == input.material</ID>
-    <ID>ComplexCondition:LayoutRouter.kt:LayoutRouter$(strictStart &amp;&amp; current == start) || current.straight &gt; 0 || current.heading != direction</ID>
     <ID>CyclomaticComplexMethod:BandSearch.kt:BandSearch$private fun feedsOf: List&lt;BandFeed&gt;?</ID>
     <ID>CyclomaticComplexMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
     <ID>CyclomaticComplexMethod:BlueprintPlan.kt:fun blueprintPlan: BlueprintPlanResult</ID>
@@ -24,7 +22,6 @@
     <ID>CyclomaticComplexMethod:UndergroundStretcher.kt:UndergroundStretcher$private fun stretchRun</ID>
     <ID>CyclomaticComplexMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
     <ID>CyclomaticComplexMethod:resourceRecipes.kt:private fun MutableList&lt;Recipe&gt;.minedResourceRecipes</ID>
-    <ID>FunctionNaming:Coordinate.kt:fun AreaTile</ID>
     <ID>LongMethod:BlueprintJson.kt:private fun BlueprintEntity.toJson</ID>
     <ID>LongMethod:CliOptimizer.kt:fun parseArgs: CliArgs</ID>
     <ID>LongMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
@@ -40,58 +37,23 @@
     <ID>LongParameterList:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
     <ID>LongParameterList:LayoutRouter.kt:RouteProfile</ID>
     <ID>LongParameterList:RowPlacer.kt:Row</ID>
-    <ID>LongParameterList:Selection.kt:fun selectionString</ID>
+    <ID>LongParameterList:SelectionFlag.kt:fun selectionString</ID>
     <ID>LongParameterList:UndergroundStretcher.kt:UndergroundStretcher$private fun extension: Int</ID>
-    <ID>LoopWithTooManyJumpStatements:BandSearch.kt:BandSearch$for</ID>
     <ID>LoopWithTooManyJumpStatements:DirectFeed.kt:DirectFeedBuilder$for</ID>
-    <ID>LoopWithTooManyJumpStatements:DirectFeedModel.kt:for</ID>
-    <ID>LoopWithTooManyJumpStatements:FluidFeeder.kt:FluidFeeder$for</ID>
-    <ID>LoopWithTooManyJumpStatements:LayoutCompaction.kt:while</ID>
     <ID>LoopWithTooManyJumpStatements:LayoutRouter.kt:LayoutRouter$for</ID>
     <ID>LoopWithTooManyJumpStatements:LayoutValidation.kt:for</ID>
-    <ID>LoopWithTooManyJumpStatements:SeamGrid.kt:for</ID>
-    <ID>LoopWithTooManyJumpStatements:UndergroundStretcher.kt:UndergroundStretcher$while</ID>
     <ID>LoopWithTooManyJumpStatements:recipeParser.kt:for</ID>
-    <ID>LoopWithTooManyJumpStatements:resourceRecipes.kt:for</ID>
-    <ID>MapGetWithNotNullAssertionOperator:OptimizationResult.kt:FactoryProduction$recipe.ingredients[material]!!</ID>
-    <ID>MapGetWithNotNullAssertionOperator:OptimizationResult.kt:FactoryProduction$recipe.result[material]!!</ID>
-    <ID>MatchingDeclarationName:IconLayers.kt:IconLayer</ID>
-    <ID>MatchingDeclarationName:LayoutAscii.kt:LayoutDump</ID>
-    <ID>MatchingDeclarationName:Selection.kt:SelectionFlag</ID>
-    <ID>MatchingDeclarationName:factorioUrl.kt:FactorioUrl</ID>
     <ID>NestedBlockDepth:PowerPlacer.kt:PowerPlacer$private fun poleComponents: MutableList&lt;MutableList&lt;Coordinate&gt;&gt;</ID>
-    <ID>NoNameShadowing:LayoutCompaction.kt:{ it.first &lt; westBound }</ID>
     <ID>ReturnCount:BandSearch.kt:BandSearch$private fun feedsOf: List&lt;BandFeed&gt;?</ID>
-    <ID>ReturnCount:BlueprintPlan.kt:fun blueprintPlan: BlueprintPlanResult</ID>
-    <ID>ReturnCount:BlueprintPlan.kt:fun buildable: Boolean</ID>
     <ID>ReturnCount:DeliveryPreparation.kt:DeliveryPreparation$private fun sinkOf: Sink?</ID>
-    <ID>ReturnCount:DeliveryRouter.kt:DeliveryRouter$fun placeTargetOutput</ID>
-    <ID>ReturnCount:DeliveryRouter.kt:DeliveryRouter$private fun deliver: Boolean</ID>
-    <ID>ReturnCount:DeliveryRouter.kt:DeliveryRouter$private fun facesReservedFeed: Boolean</ID>
     <ID>ReturnCount:DirectFeed.kt:DirectFeedBuilder$fun mapBelted: PlannedRecipe?</ID>
-    <ID>ReturnCount:DirectFeedModel.kt:internal fun cycleRatio: Pair&lt;Int, Int&gt;?</ID>
-    <ID>ReturnCount:FluidFeeder.kt:FluidFeeder$fun placeTargetOutput</ID>
-    <ID>ReturnCount:ImportTrimmer.kt:ImportTrimmer$private fun lastStraightEast: Int</ID>
-    <ID>ReturnCount:LayoutCompaction.kt:internal fun nextCompaction: CompactionResult?</ID>
-    <ID>ReturnCount:LayoutCompaction.kt:private fun applyCorridor: Pair&lt;List&lt;LayoutEntity&gt;, Int&gt;?</ID>
-    <ID>ReturnCount:LayoutCompaction.kt:private fun corridorOf: Map&lt;Int, IntRange&gt;?</ID>
-    <ID>ReturnCount:LayoutRouter.kt:LayoutRouter$fun route: List&lt;Coordinate&gt;?</ID>
-    <ID>ReturnCount:LayoutRouter.kt:RouteEntry$override fun compareTo: Int</ID>
-    <ID>ReturnCount:MaterialSearch.kt:private fun isSubsequence: Boolean</ID>
-    <ID>ReturnCount:MinHeap.kt:MinHeap$private tailrec fun siftDown: Int</ID>
-    <ID>ReturnCount:MinHeap.kt:MinHeap$private tailrec fun siftUp: Int</ID>
     <ID>ReturnCount:Optimizer.kt:Optimizer$fun depth: Int</ID>
     <ID>ReturnCount:Optimizer.kt:Optimizer$private fun solve: DoubleArray?</ID>
     <ID>ReturnCount:PowerPlacer.kt:PowerPlacer$private fun connectPoles</ID>
-    <ID>ReturnCount:RowPlacer.kt:RowPlacer$fun laneDirection: Direction</ID>
-    <ID>ReturnCount:RowPlacer.kt:RowPlacer$fun outletX: Int</ID>
     <ID>ReturnCount:RowPlanner.kt:RowPlanner$fun depthOf: Int</ID>
     <ID>ReturnCount:SeamGrid.kt:internal fun findSeam: CompactedSeam?</ID>
     <ID>ReturnCount:SeamGrid.kt:private fun beltCuttable: Boolean</ID>
-    <ID>ReturnCount:SeamGrid.kt:private fun isRemovable: Boolean</ID>
     <ID>ReturnCount:SeamGrid.kt:private fun pipeCuttable: Boolean</ID>
-    <ID>ReturnCount:UndergroundStretcher.kt:UndergroundStretcher$private fun stretchRun</ID>
-    <ID>ReturnCount:factorioUrl.kt:fun parseFactorioUrl: FactorioUrl?</ID>
     <ID>TooManyFunctions:Coordinate.kt:Coordinate</ID>
     <ID>TooManyFunctions:DeliveryRouter.kt:DeliveryRouter</ID>
     <ID>TooManyFunctions:LayoutBoard.kt:LayoutBoard</ID>
@@ -99,39 +61,5 @@
     <ID>TooManyFunctions:Optimizer.kt:Optimizer</ID>
     <ID>TooManyFunctions:RowPlacer.kt:RowPlacer</ID>
     <ID>TooManyFunctions:recipeParser.kt:de.bjrke.factorio.optimizer.common.business.recipeParser.kt</ID>
-    <ID>UnsafeCallOnNullableType:OptimizationResult.kt:FactoryProduction$recipe.ingredients[material]!!</ID>
-    <ID>UnsafeCallOnNullableType:OptimizationResult.kt:FactoryProduction$recipe.result[material]!!</ID>
-    <ID>UnusedPrivateProperty:BlueprintLayout.kt:RowLayout$private val beltEnd: BeltEnd</ID>
-    <ID>UnusedPrivateProperty:BlueprintLayout.kt:RowLayout$private val logistics: LogisticsCalculator</ID>
-    <ID>UseOrEmpty:LayoutBoard.kt:LayoutBoard$grid[coordinate]?.tunnels ?: emptySet()</ID>
-    <ID>UseOrEmpty:resourceRecipes.kt:minable.string("required_fluid")?.let { mapOf(Material(it) to (minable.number("fluid_amount") ?: 1.0)) } ?: emptyMap()</ID>
-    <ID>WildcardImport:BeltEndConnector.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintJson.kt:import kotlinx.serialization.json.*</ID>
-    <ID>WildcardImport:BlueprintLayout.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintPlan.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:CliOptimizer.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
-    <ID>WildcardImport:CliOptimizer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:DeliveryPreparation.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:DeliveryPreparation.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:DeliveryRouter.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:DeliveryRouter.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:FluidFeeder.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:ImportTrimmer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutBoard.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutCompaction.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutEntity.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutRouter.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutSerialization.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutValidation.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:Logistics.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:Optimizer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:PowerPlacer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:RowPlacer.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:RowPlacer.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:RowPlanner.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:SeamGrid.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:UndergroundStretcher.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:recipeParser.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:recipeParser.kt:import kotlinx.serialization.json.*</ID>
   </CurrentIssues>
 </SmellBaseline>

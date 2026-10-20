@@ -185,12 +185,11 @@ internal class LayoutRouter(private val board: LayoutBoard) {
                 }
                 // a tunnel is only entered straight, never right after surfacing; a splitter
                 // branch may not start with one, because the splitter would feed its side
-                if (
+                val cannotTunnel =
                     (strictStart && current == start) ||
                         current.straight > 0 ||
                         current.heading != direction
-                )
-                    continue
+                if (cannotTunnel) continue
                 // a belt tunnels only to cross an obstacle: if the tile ahead is free, step there
                 if (
                     profile.tunnelOnlyWhenBlocked &&

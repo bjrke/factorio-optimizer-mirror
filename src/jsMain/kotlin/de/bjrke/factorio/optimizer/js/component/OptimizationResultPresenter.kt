@@ -16,7 +16,15 @@ import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.span
-import web.cssom.*
+import web.cssom.Border
+import web.cssom.Color
+import web.cssom.Display
+import web.cssom.LineStyle
+import web.cssom.VerticalAlign
+import web.cssom.ch
+import web.cssom.px
+import web.cssom.rem
+import web.cssom.rgb
 import web.html.InputType
 import web.html.number
 import web.mouse.AUXILIARY

@@ -72,27 +72,24 @@ fun fluidNetworkProblems(entities: List<LayoutEntity>): List<String> {
                 val mouth = mouthOf(entity)
                 val front = tile + mouth.step
                 val neighbour = plumbing[front]
-                if (
+                val connects =
                     neighbour is PipeEntity ||
                         neighbour is InfinityPipeEntity ||
                         (neighbour is PipeToGroundEntity && mouthOf(neighbour) == mouth.opposite())
-                ) {
-                    result += front
-                }
+                if (connects) result += front
                 for (distance in 2..reach) {
                     val toward =
                         if (entity.io == Io.INPUT) entity.direction.step
                         else entity.direction.step * -1
                     val other = plumbing[tile + toward * distance]
-                    if (
-                        other is PipeToGroundEntity &&
-                            other.material == entity.material &&
+                    if (other !is PipeToGroundEntity) continue
+                    val opposite =
+                        other.material == entity.material &&
                             other.direction == entity.direction &&
                             other.io != entity.io
-                    ) {
-                        result += other.area.topLeft
-                        break
-                    }
+                    if (!opposite) continue
+                    result += other.area.topLeft
+                    break
                 }
             }
         }

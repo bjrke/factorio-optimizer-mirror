@@ -1,3 +1,6 @@
+// React convention: the file is named after the component, the props type keeps its suffix.
+@file:Suppress("MatchingDeclarationName")
+
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.model.iconLayers

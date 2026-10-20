@@ -16,10 +16,17 @@ up.
   counts a class, so keep files small by responsibility rather than chasing a line
   count. `MagicNumber` is deliberately disabled: tile offsets, degrees, game data and
   test expectations read better in place; only opaque algorithm limits get a named
-  constant. Current findings live in the committed `detekt-baseline.xml` (plain task)
-  plus `detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks); a new
-  finding fails the build. Regenerate with `./gradlew detektBaseline` /
-  `detektBaselineMainJvm` / `detektBaselineTestJvm`.
+  constant. `ReturnCount` ignores guard clauses, a loop may use up to three
+  `break`/`continue` statements, and destructuring may bind four names. Import the
+  project's own packages with a wildcard (`common.model.*`, `business.*`, the
+  fixtures, `de.bjrke.test.*`, `kotlin.test.*`), and the JSON code may use
+  `kotlinx.serialization.json.*`; spell other third-party imports out.
+  Current findings live in the committed `detekt-baseline.xml` (plain task) plus
+  `detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks); a new finding
+  fails the build. After the 2026-10-20 cleanup they are structural only (cyclomatic
+  complexity, long methods/parameter lists, class size, return/loop counts, nested
+  blocks). Regenerate with
+  `./gradlew detektBaseline` / `detektBaselineMainJvm` / `detektBaselineTestJvm`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered

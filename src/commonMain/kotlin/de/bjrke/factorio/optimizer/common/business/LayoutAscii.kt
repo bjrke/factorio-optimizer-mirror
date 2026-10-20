@@ -3,9 +3,6 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 
-/** A built layout plus the feed routes that could not be placed, for the CLI's text rendering. */
-internal data class LayoutDump(val entities: List<LayoutEntity>, val failures: List<String>)
-
 /** Codes for the materials on belts and in pipes; cycled if a blueprint ever uses more. */
 private const val MATERIAL_CODES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

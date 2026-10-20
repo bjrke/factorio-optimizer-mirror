@@ -157,18 +157,16 @@ fun assertUndergroundRunsAreStretched(
         var reach = 0
         var output: BlueprintEntity? = null
         for (k in 2..limit) {
-            val entity = byTile[input.area.topLeft + step * k]
+            val entity = byTile[input.area.topLeft + step * k] ?: continue
             // the partner carries the same material: another run may tunnel in the same column
-            if (
-                entity != null &&
-                    entity.type == Io.OUTPUT &&
+            val sameRun =
+                entity.type == Io.OUTPUT &&
                     entity.name == input.name &&
                     materials[entity.area.topLeft] == materials[input.area.topLeft]
-            ) {
-                reach = k
-                output = entity
-                break
-            }
+            if (!sameRun) continue
+            reach = k
+            output = entity
+            break
         }
         if (output == null || reach >= limit) continue
         val material = materials[input.area.topLeft]

@@ -95,6 +95,17 @@ here only with evidence, and should say how to recognise it.
   typed task whose variant baseline is absent silently falls back to the plain
   baseline and then fails on its extra (type-aware) findings; generate all three with
   `detektBaseline`, `detektBaselineMainJvm` and `detektBaselineTestJvm`.
+- **Detekt's reports exclude baselined findings.** `detekt`, `detektMainJvm` and
+  `detektTestJvm` write only what the baseline does not cover, so a green report is
+  not an inventory of the debt. To see the current findings while cleaning up, point
+  the task's `baseline` at an empty file with an init script and run it, or compare the
+  files written by `detektBaseline`/`detektBaselineMainJvm`/`detektBaselineTestJvm`.
+- **A declaration-level `@Suppress` may not silence a light-mode finding.**
+  `MatchingDeclarationName` is reported on the file and the external-interface
+  `UnusedParameter` on the interface/property; `@Suppress` on the class or property was
+  ignored, while `@file:Suppress(...)` before the package declaration worked for all
+  four React `XProps` files and `BlueprintDialogProps.text`. Check the baseline again
+  after adding a suppression instead of assuming it took.
 - **An `internal` top-level declaration collides with a `private` one of the same
   name in the package.** Graduating a file-private constant to `internal` to share it
   broke `:compileKotlinJvm` with `REDECLARATION … EPSILON` against `Optimizer.kt`'s

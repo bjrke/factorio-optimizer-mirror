@@ -29,8 +29,8 @@ data class Coordinate(val x: Int, val y: Int) {
 
     fun area(dimension: Dimension) = Area(this, dimension)
 
-    /** The one-tile [Area] at this coordinate; the shared [AreaTile] single-tile case. */
-    fun area() = AreaTile(x, y)
+    /** The one-tile [Area] at this coordinate; the shared [areaTile] single-tile case. */
+    fun area() = areaTile(x, y)
 
     fun area(width: Int, height: Int) = area(Dimension(width, height))
 
@@ -117,4 +117,4 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
  * A one-tile area whose only coordinate is ([x], [y]); the single definition of the one-tile case
  * shared by every one-tile entity and by the no-argument `Coordinate.area()`.
  */
-fun AreaTile(x: Int, y: Int) = Area(Coordinate(x, y), Dimension(1, 1))
+fun areaTile(x: Int, y: Int) = Area(Coordinate(x, y), Dimension(1, 1))

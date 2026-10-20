@@ -8,7 +8,7 @@ class AreaTest {
 
     @Test
     fun tileIsAOneTileAreaAtItsTopLeft() {
-        val area = AreaTile(3, 4)
+        val area = areaTile(3, 4)
         assertAll(
             { assertEquals(Coordinate(3, 4), area.topLeft) },
             { assertEquals(1, area.size) },

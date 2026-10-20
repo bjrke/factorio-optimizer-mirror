@@ -1,3 +1,6 @@
+// The dialog props are read below; light-mode detekt cannot see external interface members.
+@file:Suppress("UnusedParameter")
+
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.business.*
@@ -9,7 +12,10 @@ import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.toJson
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
-import react.*
+import react.ChildrenBuilder
+import react.FC
+import react.Key
+import react.Props
 import react.dom.aria.AriaRole
 import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.div
@@ -17,6 +23,7 @@ import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.textarea
 import react.dom.svg.ReactSVG.foreignObject
 import react.dom.svg.ReactSVG.svg
+import react.useState
 import web.cssom.ClassName
 import web.cssom.Display
 import web.cssom.Position
@@ -158,6 +165,8 @@ internal val blueprintView =
 
 external interface BlueprintDialogProps : Props {
     var label: String
+
+    // read by the dialog below; light-mode detekt cannot see external interface members
     var text: String
     var blueprint: Blueprint
     var onClose: () -> Unit

@@ -128,7 +128,7 @@ internal class LayoutBoard(
     /** Whether a run of [type] along [step] already passes under [coordinate]. */
     fun hasTunnel(coordinate: Coordinate, step: Coordinate, type: String): Boolean {
         val key = TunnelKey(axisOf(step), type)
-        return key in (grid[coordinate]?.tunnels ?: emptySet())
+        return key in grid[coordinate]?.tunnels.orEmpty()
     }
 
     /** Records [entity] and marks every tile it covers as occupied. */
@@ -192,17 +192,13 @@ internal class LayoutBoard(
         val step = input.direction.step
         for (reach in 2..range(input.material)) {
             val entity = grid[input.area.topLeft + step * reach]?.entity
-            if (
-                entity is UndergroundEntity &&
-                    entity.io == OUTPUT &&
-                    entity.direction == input.direction &&
-                    entity.material == input.material
-            ) {
-                return entity
-            }
+            if (entity is UndergroundEntity && entity.isOutputOf(input)) return entity
         }
         return null
     }
+
+    private fun UndergroundEntity.isOutputOf(input: UndergroundEntity) =
+        io == OUTPUT && direction == input.direction && material == input.material
 
     /** How far [material] may travel underground: a pipe's own reach or the belt tier's. */
     fun range(material: Material) =

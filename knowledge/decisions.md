@@ -4,6 +4,40 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-20 — Shrink the Detekt baselines to structural debt
+
+**Context.** The three baselines were fully current — 192 plain, 131 typed-main and
+59 typed-test entries — but most were style or false-positive noise (85 wildcard
+imports, 31 return counts, 13 loop jumps, renameable files), not the structural
+complexity the baselines were meant to track. Every entry needs a reviewer to
+distinguish accepted debt from new noise.
+
+**Decision.** Tune the rules that fight legitimate code and fix the rest:
+`ReturnCount.excludeGuardClauses` (31 → 10), `LoopWithTooManyJumpStatements`
+`maxJumpCount: 3` (13 → 4), `DestructuringDeclarationWithTooManyEntries`
+`maxDestructuringEntries: 4` (all 3), and `WildcardImport.excludeImports` for the
+project's own packages (`common.model`, `Direction`, `common.business`, the fixtures,
+`js.component`, `de.bjrke.test`), `kotlin.test.*` and `kotlinx.serialization.json.*`.
+The JSON DSL is a self-contained layer that reads as one vocabulary. The remaining
+third-party wildcards (`react`, `web.cssom`, `tanstack.react.router`) were spelled
+out.
+
+Fix the mechanical findings: `.orEmpty()` instead of `?: emptySet()`/`?: ""`,
+`Map.getValue` instead of `!!`, `RowLayout`'s initializer-only `val`s, the shadowed
+lambda `it`, `AreaTile` → `areaTile`, five extracted `ComplexCondition`s,
+`IconLayers.kt`/`Selection.kt`/`factorioUrl.kt` renamed after their type, `LayoutDump`
+moved to its own file, and `@file:Suppress` for the React `XProps` names and JS
+interop parameters (a file annotation, because the light-mode task reports those on
+the file/interface).
+
+**Consequences.** The baselines now hold only structural debt: 56 plain, 59 main
+and 8 test entries — cyclomatic complexity, long methods, long parameter lists,
+too-many-functions classes, ten return counts, four loop jumps and two nested blocks.
+The remaining split candidates are the eight methods flagged for both `LongMethod`
+and `CyclomaticComplexMethod`. Wildcard imports of the project's own packages and
+the JSON DSL are the house style; other third-party wildcards are still findings.
+See `conventions.md`.
+
 ## 2026-10-20 — Allow magic numbers, name only opaque tunables
 
 **Context.** Detekt's introduction absorbed 65 `MagicNumber` findings into the

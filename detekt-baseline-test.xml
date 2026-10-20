@@ -2,64 +2,13 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ComplexCondition:BlueprintLayoutAssertions.kt:entity != null &amp;&amp; entity.type == Io.OUTPUT &amp;&amp; entity.name == input.name &amp;&amp; materials[entity.area.topLeft] == materials[input.area.topLeft]</ID>
-    <ID>ComplexCondition:BlueprintPowerFluidAssertions.kt:neighbour is PipeEntity || neighbour is InfinityPipeEntity || (neighbour is PipeToGroundEntity &amp;&amp; mouthOf(neighbour) == mouth.opposite())</ID>
-    <ID>ComplexCondition:BlueprintPowerFluidAssertions.kt:other is PipeToGroundEntity &amp;&amp; other.material == entity.material &amp;&amp; other.direction == entity.direction &amp;&amp; other.io != entity.io</ID>
     <ID>CyclomaticComplexMethod:BlueprintFluidLayoutTest.kt:BlueprintFluidLayoutTest$@Test fun pipeRunsAreStretched</ID>
     <ID>CyclomaticComplexMethod:BlueprintLayoutAssertions.kt:fun assertUndergroundRunsAreStretched</ID>
     <ID>CyclomaticComplexMethod:BlueprintLayoutFixtures.kt:fun plumbingComponents: List&lt;Set&lt;Coordinate&gt;&gt;</ID>
     <ID>CyclomaticComplexMethod:BlueprintPowerFluidAssertions.kt:fun fluidNetworkProblems: List&lt;String&gt;</ID>
-    <ID>DestructuringDeclarationWithTooManyEntries:LogisticsTest.kt:LogisticsTest$(belt, lanes, stack, expected)</ID>
     <ID>LongMethod:LayoutEntityTest.kt:LayoutEntityTest$@Test fun placedEntitiesMapToTheirBlueprintDto</ID>
     <ID>LongParameterList:BlueprintPlanTest.kt:private fun production</ID>
     <ID>LongParameterList:LogisticsFixtures.kt:internal fun calculator</ID>
-    <ID>LoopWithTooManyJumpStatements:BlueprintFluidLayoutTest.kt:BlueprintFluidLayoutTest$for</ID>
-    <ID>LoopWithTooManyJumpStatements:BlueprintLayoutAssertions.kt:for</ID>
     <ID>NestedBlockDepth:BlueprintPowerFluidAssertions.kt:fun assertPolesCoverAndConnect</ID>
-    <ID>UseOrEmpty:FactorioUrlTest.kt:FactorioUrlTest$text ?: ""</ID>
-    <ID>UseOrEmpty:shortMessage.kt:frame?.let { "\n at $it" } ?: ""</ID>
-    <ID>WildcardImport:BlueprintBandTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
-    <ID>WildcardImport:BlueprintBandTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintBeltEndIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintBeltEndTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
-    <ID>WildcardImport:BlueprintBeltEndTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintFluidLayoutTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
-    <ID>WildcardImport:BlueprintFluidLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintFluidLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:BlueprintImportTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
-    <ID>WildcardImport:BlueprintImportTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintImportTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:BlueprintIntegrationFixtures.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintIntegrationFixtures.kt:import kotlin.test.*</ID>
-    <ID>WildcardImport:BlueprintJsonTest.kt:import kotlinx.serialization.json.*</ID>
-    <ID>WildcardImport:BlueprintLayoutAccess.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
-    <ID>WildcardImport:BlueprintLayoutAccess.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintLayoutAssertions.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintLayoutAssertions.kt:import kotlin.test.*</ID>
-    <ID>WildcardImport:BlueprintLayoutFixtures.kt:import de.bjrke.factorio.optimizer.common.business.*</ID>
-    <ID>WildcardImport:BlueprintLayoutFixtures.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintLayoutIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintLayoutSnapshotTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
-    <ID>WildcardImport:BlueprintLayoutSnapshotTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintLayoutTest.kt:import de.bjrke.factorio.optimizer.common.business.fixtures.*</ID>
-    <ID>WildcardImport:BlueprintLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintLayoutTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:BlueprintPlanIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintPlanTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintPowerFluidAssertions.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:BlueprintPowerFluidAssertions.kt:import kotlin.test.*</ID>
-    <ID>WildcardImport:BlueprintSerializationIntegrationTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:DirectFeedTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutCompactionTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:LayoutCompactionTest.kt:import de.bjrke.factorio.optimizer.common.model.Direction.*</ID>
-    <ID>WildcardImport:LayoutEntityTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:OptimizerMachineTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:OptimizerSpaceTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:OptimizerSurfaceTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:OptimizerTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:RecipeParserMaterialsTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:RecipeParserStatsTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:RecipeParserTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
-    <ID>WildcardImport:SurfaceTest.kt:import de.bjrke.factorio.optimizer.common.model.*</ID>
   </CurrentIssues>
 </SmellBaseline>

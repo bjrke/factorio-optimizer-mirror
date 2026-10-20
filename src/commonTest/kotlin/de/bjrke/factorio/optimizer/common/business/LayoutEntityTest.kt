@@ -28,18 +28,18 @@ class LayoutEntityTest {
                     recipe = "iron-gear-wheel",
                 ),
             InserterEntity(
-                AreaTile(5, 1),
+                areaTile(5, 1),
                 "fast-inserter",
                 plate,
                 EAST,
                 long = false,
-            ) to BlueprintEntity("fast-inserter", AreaTile(5, 1), EAST),
-            BeltEntity(AreaTile(7, 2), "transport-belt", plate, EAST) to
-                BlueprintEntity("transport-belt", AreaTile(7, 2), EAST),
-            SplitterEntity(AreaTile(9, 4), "fast-splitter", plate, EAST) to
-                BlueprintEntity("fast-splitter", AreaTile(9, 4), EAST),
+            ) to BlueprintEntity("fast-inserter", areaTile(5, 1), EAST),
+            BeltEntity(areaTile(7, 2), "transport-belt", plate, EAST) to
+                BlueprintEntity("transport-belt", areaTile(7, 2), EAST),
+            SplitterEntity(areaTile(9, 4), "fast-splitter", plate, EAST) to
+                BlueprintEntity("fast-splitter", areaTile(9, 4), EAST),
             UndergroundBeltEntity(
-                AreaTile(1, 8),
+                areaTile(1, 8),
                 "transport-belt",
                 plate,
                 EAST,
@@ -47,12 +47,12 @@ class LayoutEntityTest {
             ) to
                 BlueprintEntity(
                     "transport-belt",
-                    AreaTile(1, 8),
+                    areaTile(1, 8),
                     EAST,
                     type = Io.INPUT,
                 ),
             UndergroundBeltEntity(
-                AreaTile(3, 8),
+                areaTile(3, 8),
                 "transport-belt",
                 plate,
                 SOUTH,
@@ -60,7 +60,7 @@ class LayoutEntityTest {
             ) to
                 BlueprintEntity(
                     "transport-belt",
-                    AreaTile(3, 8),
+                    areaTile(3, 8),
                     SOUTH,
                     type = OUTPUT,
                 ),
@@ -78,59 +78,59 @@ class LayoutEntityTest {
                     type = OUTPUT,
                 ),
             InfinityChestEntity(
-                AreaTile(2, 12),
+                areaTile(2, 12),
                 "infinity-chest",
                 InfinitySettings(item = plate),
             ) to
                 BlueprintEntity(
                     "infinity-chest",
-                    AreaTile(2, 12),
+                    areaTile(2, 12),
                     infinity = InfinitySettings(item = plate),
                 ),
-            MarkerEntity(AreaTile(4, 14), "constant-combinator", Signal(plate)) to
-                BlueprintEntity("constant-combinator", AreaTile(4, 14), marker = plate),
+            MarkerEntity(areaTile(4, 14), "constant-combinator", Signal(plate)) to
+                BlueprintEntity("constant-combinator", areaTile(4, 14), marker = plate),
             MarkerEntity(
-                AreaTile(6, 14),
+                areaTile(6, 14),
                 "constant-combinator",
                 Signal(water, fluid = true),
             ) to
                 BlueprintEntity(
                     "constant-combinator",
-                    AreaTile(6, 14),
+                    areaTile(6, 14),
                     marker = water,
                     markerFluid = true,
                 ),
-            PipeEntity(AreaTile(8, 16), "pipe", water) to BlueprintEntity("pipe", AreaTile(8, 16)),
+            PipeEntity(areaTile(8, 16), "pipe", water) to BlueprintEntity("pipe", areaTile(8, 16)),
             // a pipe-to-ground has no input/output type: the entrance faces back toward its source,
             // so an eastward run stores EAST but the blueprint gets WEST for the entrance
             PipeToGroundEntity(
-                AreaTile(10, 16),
+                areaTile(10, 16),
                 "pipe-to-ground",
                 water,
                 EAST,
                 Io.INPUT,
-            ) to BlueprintEntity("pipe-to-ground", AreaTile(10, 16), WEST),
+            ) to BlueprintEntity("pipe-to-ground", areaTile(10, 16), WEST),
             PipeToGroundEntity(
-                AreaTile(11, 16),
+                areaTile(11, 16),
                 "pipe-to-ground",
                 water,
                 EAST,
                 OUTPUT,
-            ) to BlueprintEntity("pipe-to-ground", AreaTile(11, 16), EAST),
+            ) to BlueprintEntity("pipe-to-ground", areaTile(11, 16), EAST),
             InfinityPipeEntity(
-                AreaTile(14, 16),
+                areaTile(14, 16),
                 "infinity-pipe",
                 InfinityPipeSettings(water, temperature = 15),
             ) to
                 BlueprintEntity(
                     "infinity-pipe",
-                    AreaTile(14, 16),
+                    areaTile(14, 16),
                     infinityPipe = InfinityPipeSettings(water, temperature = 15),
                 ),
-            PoleEntity(AreaTile(12, 18), "medium-electric-pole", listOf(2, 5)) to
+            PoleEntity(areaTile(12, 18), "medium-electric-pole", listOf(2, 5)) to
                 BlueprintEntity(
                     "medium-electric-pole",
-                    AreaTile(12, 18),
+                    areaTile(12, 18),
                     neighbours = listOf(2, 5),
                 ),
         ) { (entity, expected) ->

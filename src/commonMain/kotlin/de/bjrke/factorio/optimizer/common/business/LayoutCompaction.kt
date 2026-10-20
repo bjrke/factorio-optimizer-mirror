@@ -74,7 +74,7 @@ internal fun nextCompaction(
             // never pull an imported row's factory edge west of its input lane
             if (
                 orientation == SeamOrientation.VERTICAL &&
-                    corridor.values.any { it.first < westBound }
+                    corridor.values.any { range -> range.first < westBound }
             ) {
                 width--
                 continue

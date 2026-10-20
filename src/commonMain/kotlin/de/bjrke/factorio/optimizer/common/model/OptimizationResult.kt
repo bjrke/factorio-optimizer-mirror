@@ -16,10 +16,10 @@ data class FactoryProduction(
     val productivity: Double = factory.productivity,
 ) {
     fun production(material: Material) =
-        speed * (1.0 + productivity) * amount * recipe.result[material]!! / recipe.time
+        speed * (1.0 + productivity) * amount * recipe.result.getValue(material) / recipe.time
 
     fun consumption(material: Material) =
-        speed * amount * recipe.ingredients[material]!! / recipe.time
+        speed * amount * recipe.ingredients.getValue(material) / recipe.time
 }
 
 data class OptimizationResult(

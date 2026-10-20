@@ -42,8 +42,10 @@ internal fun blueprintLayoutDump(
 
 private class RowLayout(
     private val plan: BlueprintPlan,
-    private val logistics: LogisticsCalculator,
-    private val beltEnd: BeltEnd,
+    // logistics and beltEnd only feed the stage constructors below, so they stay plain
+    // constructor parameters instead of fields.
+    logistics: LogisticsCalculator,
+    beltEnd: BeltEnd,
 ) {
     private val board =
         LayoutBoard(

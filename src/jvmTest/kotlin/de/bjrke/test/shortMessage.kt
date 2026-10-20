@@ -8,5 +8,5 @@ internal actual fun shortMessage(failure: Throwable): String {
                 !it.className.startsWith("AssertionsKt") &&
                 !it.className.startsWith("de.bjrke.test.")
         }
-    return message + (frame?.let { "\n   at $it" } ?: "")
+    return message + frame?.let { "\n   at $it" }.orEmpty()
 }

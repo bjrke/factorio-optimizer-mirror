@@ -29,14 +29,14 @@ class BlueprintJsonTest {
             Direction.SOUTH to 8,
             Direction.WEST to 12,
         ) { (direction, expected) ->
-            val entity = BlueprintEntity("transport-belt", AreaTile(0, 0), direction = direction)
+            val entity = BlueprintEntity("transport-belt", areaTile(0, 0), direction = direction)
             val written = entityJson(entity).getValue("direction").jsonPrimitive.int
             assertEquals(expected, written)
         }
 
     @Test
     fun anEntityWithoutDirectionOmitsIt() {
-        val entity = BlueprintEntity("pipe", AreaTile(0, 0))
+        val entity = BlueprintEntity("pipe", areaTile(0, 0))
         assertNull(entityJson(entity)["direction"])
     }
 
@@ -46,14 +46,14 @@ class BlueprintJsonTest {
             Io.INPUT to "input",
             Io.OUTPUT to "output",
         ) { (io, expected) ->
-            val entity = BlueprintEntity("transport-belt", AreaTile(0, 0), type = io)
+            val entity = BlueprintEntity("transport-belt", areaTile(0, 0), type = io)
             val written = entityJson(entity).getValue("type").jsonPrimitive.content
             assertEquals(expected, written)
         }
 
     @Test
     fun anEntityWithoutIoOmitsTheType() {
-        val entity = BlueprintEntity("pipe", AreaTile(0, 0))
+        val entity = BlueprintEntity("pipe", areaTile(0, 0))
         assertNull(entityJson(entity)["type"])
     }
 
@@ -62,7 +62,7 @@ class BlueprintJsonTest {
         val entity =
             BlueprintEntity(
                 "buffer-chest",
-                AreaTile(0, 0),
+                areaTile(0, 0),
                 requestFilter = RequestFilter("iron-plate", 100, trashNotRequested = true),
             )
         val expected = buildJsonObject {
@@ -91,7 +91,7 @@ class BlueprintJsonTest {
         val entity =
             BlueprintEntity(
                 "storage-chest",
-                AreaTile(0, 0),
+                areaTile(0, 0),
                 requestFilter = RequestFilter("iron-plate", 1),
             )
 
@@ -103,7 +103,7 @@ class BlueprintJsonTest {
         val entity =
             BlueprintEntity(
                 "fast-inserter",
-                AreaTile(0, 0),
+                areaTile(0, 0),
                 circuitCondition = CircuitCondition("advanced-circuit", "<", 200),
             )
         val expected = buildJsonObject {
@@ -121,7 +121,7 @@ class BlueprintJsonTest {
     @Test
     fun aChestCircuitConditionEnabledWritesItsControlBehavior() {
         val entity =
-            BlueprintEntity("buffer-chest", AreaTile(0, 0), circuitConditionEnabled = false)
+            BlueprintEntity("buffer-chest", areaTile(0, 0), circuitConditionEnabled = false)
         val expected = buildJsonObject { put("circuit_condition_enabled", false) }
 
         assertEquals(expected, entityJson(entity).getValue("control_behavior"))
@@ -131,19 +131,19 @@ class BlueprintJsonTest {
     fun aChestBarAndAnInserterMirrorAreWrittenOnlyWhenSet() =
         assertAll(
             {
-                val entity = BlueprintEntity("wooden-chest", AreaTile(0, 0), bar = 4)
+                val entity = BlueprintEntity("wooden-chest", areaTile(0, 0), bar = 4)
                 assertEquals(JsonPrimitive(4), entityJson(entity)["bar"])
             },
             {
-                val entity = BlueprintEntity("wooden-chest", AreaTile(0, 0))
+                val entity = BlueprintEntity("wooden-chest", areaTile(0, 0))
                 assertNull(entityJson(entity)["bar"])
             },
             {
-                val entity = BlueprintEntity("fast-inserter", AreaTile(0, 0), mirror = true)
+                val entity = BlueprintEntity("fast-inserter", areaTile(0, 0), mirror = true)
                 assertEquals(JsonPrimitive(true), entityJson(entity)["mirror"])
             },
             {
-                val entity = BlueprintEntity("fast-inserter", AreaTile(0, 0))
+                val entity = BlueprintEntity("fast-inserter", areaTile(0, 0))
                 assertNull(entityJson(entity)["mirror"])
             },
         )

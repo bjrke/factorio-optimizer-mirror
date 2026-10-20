@@ -1,3 +1,6 @@
+// JS interop signatures mirror the JavaScript API; Kotlin cannot see the arguments used there.
+@file:Suppress("UnusedParameter")
+
 package de.bjrke.test
 
 import kotlin.js.JsNonModule

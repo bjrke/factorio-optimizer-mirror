@@ -1,3 +1,6 @@
+// index.kt is the web entry point; the props type is named after the app component.
+@file:Suppress("MatchingDeclarationName")
+
 package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.business.*
@@ -9,7 +12,14 @@ import react.create
 import react.dom.client.createRoot
 import react.dom.html.ReactHTML.div
 import tanstack.history.createHashHistory
-import tanstack.react.router.*
+import tanstack.react.router.RouteOptions
+import tanstack.react.router.RouterOptions
+import tanstack.react.router.RouterProvider
+import tanstack.react.router.createRootRoute
+import tanstack.react.router.createRoute
+import tanstack.react.router.createRouter
+import tanstack.react.router.useNavigate
+import tanstack.react.router.useParams
 import tanstack.router.core.ParamName
 import tanstack.router.core.RoutePath
 import web.cssom.ClassName
