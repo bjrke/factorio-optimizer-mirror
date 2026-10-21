@@ -89,12 +89,24 @@ here only with evidence, and should say how to recognise it.
   known detekt limitation (issue #9602), not a project error: type-resolution is
   degraded for `loadPrototypeDump` and the build still passes. Do not chase it in the
   source.
-- **A Gradle `baseline` file missing is not an error, but the wrong baseline is.**
-  Detekt's extension baseline defaults to `detekt-baseline.xml`, and the typed tasks
-  prefer `detekt-baseline-main.xml`/`detekt-baseline-test.xml` when they exist. A
-  typed task whose variant baseline is absent silently falls back to the plain
-  baseline and then fails on its extra (type-aware) findings; generate all three with
-  `detektBaseline`, `detektBaselineMainJvm` and `detektBaselineTestJvm`.
+- **A missing Gradle `baseline` file is not an error.** Detekt's extension baseline
+  defaults to `detekt-baseline.xml`, and the typed tasks prefer
+  `detekt-baseline-main.xml`/`detekt-baseline-test.xml` when they exist. With no
+  baseline at all (the current state) every finding is reported, so the build fails
+  on any of them; that is intended. If a baseline is ever reintroduced, generate all
+  three with `detektBaseline`, `detektBaselineMainJvm` and `detektBaselineTestJvm`, or
+  a typed task silently falls back to the plain one.
+- **An exhaustive `when` over every entity reaches Detekt's complexity limit.** The
+  ascii glyph switch over all 14 `LayoutEntity` kinds reports
+  `CyclomaticComplexMethod` (15 > 14). Group first (`ChestLikeEntity`, `Plumbing`)
+  and switch over the group in its own function; the dispatch stays exhaustive.
+- **Phase one of `LinearProgram` is numerically sensitive.** The `d < -EPS` test on
+  the most negative right-hand side is not interchangeable with `d >= 0.0`: the
+  zero test pivots in tiny-negative rows, and the optimizer then reports
+  "no producer for …"/empty plans while every small `LinearProgramTest` case still
+  passes. Keep the `-EPS` form when touching `makeFeasible`, and check the optimizer
+  suites (`OptimizerMachineTest`, the blueprint integration suites), not just the LP
+  unit test.
 - **Detekt's reports exclude baselined findings.** `detekt`, `detektMainJvm` and
   `detektTestJvm` write only what the baseline does not cover, so a green report is
   not an inventory of the debt. To see the current findings while cleaning up, point

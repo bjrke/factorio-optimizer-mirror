@@ -16,8 +16,12 @@ CLI (JVM) from one shared core.
   the dump, `RecipePrototype.kt` reads one recipe, `JsonFields.kt` holds the JSON
   accessors, `prototypeStats.kt` the machine/logistics stats and
   `resourceRecipes.kt` the map extraction recipes), optimizer (`Optimizer.kt`, with
-  `MachineCatalog` for the machine choice and rates), the model, and the dumped
-  `prototypes/` data.
+  `MachineCatalog` for the machine choice and rates), blueprint planning
+  (`BlueprintPlan.kt` holds the plan data and the steps, `BlueprintSelection.kt`
+  picks the recipes and imports, `BlueprintMachine.kt` the footprints and fluid
+  ports, `DirectFeed.kt` the bands), layout inspection (`LayoutValidation*.kt` for the
+  invariant groups, `LayoutAscii*.kt` for the terminal rendering), the model, and the
+  dumped `prototypes/` data.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`,
   `react-router-dom`); entry `js/index.kt`; `js/business/loadRecipe.kt` pulls the
   dumps via `@JsModule` and the webpack config in `webpack.config.d/`.

@@ -4,6 +4,42 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-21 — Clean the structural Detekt debt, phase B plan, layout and LP
+
+**Context.** After the parser/resources slice, the last nine typed findings sat in
+four files: `blueprintPlan` (cyclomatic), `layoutAscii` (cyclomatic and long),
+`validateLayout`/`findUndergroundOutput` (cyclomatic, plus a loop with four jumps in
+`validateLayout`) and `LinearProgram.minimize`/`simplex` (cyclomatic).
+
+**Decision.** With the plan done, every baseline is empty and both
+`detekt-baseline.xml` and `detekt-baseline-main.xml` are deleted; the rules and their
+budgets stay untouched. The four files each split by responsibility:
+
+- `BlueprintPlan.kt` keeps the plan data and `blueprintPlan` as the ordered steps
+  (target check, target factory, recipe walk, direct feed, sources, label);
+  `BlueprintSelection.kt` owns which recipes are built (the buildable/excluded rule,
+  the single-producer walk that caps at `maxRecipes`, the import list) and
+  `BlueprintMachine.kt` the machine geometry (footprints, fluid ports);
+- `LayoutValidation.kt` runs the invariant groups in a fixed order — overlap,
+  materials, undergrounds, inserters — and each group lives in
+  `LayoutValidationTransport.kt`, `LayoutValidationUnderground.kt` or
+  `LayoutValidationInserter.kt`; they append to one shared error list, so the message
+  order is unchanged;
+- `LayoutAscii.kt` only arranges board, legend and failures; the glyph/code tables are
+  `LayoutAsciiBoard.kt` (`AsciiCodes`, shared so legend and grid use one numbering) and
+  `LayoutAsciiLegend.kt`;
+- `LinearProgram` kept its tableau and `pivot`; the entering column, leaving row, phase
+  one (`makeFeasible`) and the artificial-variable cleanup (`dropArtificial`) became
+  named steps.
+
+**Consequences.** Both baselines go from 9 to 0 and are removed (like
+`detekt-baseline-test.xml` in phase A), so `check` now fails on any new finding
+without an allow-list in between: keep extraction the default answer to a finding. `spotlessApply check` passes (`jvmTest`,
+`jsBrowserTest`, all Detekt tasks) with no test changed. Two traps were hit and are in
+`pitfalls.md`: the glyph `when` needed one more split (15 branches) and phase one of
+the simplex is numerically sensitive — an apparently equivalent `>= 0.0` feasibility
+test instead of `< -EPS` made the optimizer report empty plans.
+
 ## 2026-10-21 — Clean the structural Detekt debt, phase B parser and resources
 
 **Context.** After the serializer/CLI slice, 14 typed findings remained. Five were
@@ -23,8 +59,8 @@ four jumps), its file-level `TooManyFunctions`, and `minedResourceRecipes`
 
 **Consequences.** Both baselines drop from 14 to 9 entries, the test baseline stays
 empty, and `spotlessApply check` passes with the existing parser, resource and
-full-dump suites. The remaining nine findings are the plan, ascii, LP and validation
-group.
+full-dump suites. The remaining nine findings were the plan, ascii, LP and validation
+group, cleared in the next slice.
 
 ## 2026-10-20 — Clean the structural Detekt debt, phase B serializer and CLI
 

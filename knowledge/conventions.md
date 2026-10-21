@@ -21,14 +21,11 @@ up.
   project's own packages with a wildcard (`common.model.*`, `business.*`, the
   fixtures, `de.bjrke.test.*`, `kotlin.test.*`), and the JSON code may use
   `kotlinx.serialization.json.*`; spell other third-party imports out.
-  Current findings live in the committed `detekt-baseline.xml` (plain task) and
-  `detekt-baseline-main.xml` (typed main task); a new finding fails the build. The
-  typed test task is clean, so its `detekt-baseline-test.xml` is gone. After the
-  phase-A cleanup (see `decisions.md`) the remaining entries are structural only:
-  cyclomatic complexity, long methods/parameter lists, return/loop counts and
-  too-many-functions classes in the router, seam, optimizer and parser layers.
-  Regenerate with `./gradlew detektBaseline` / `detektBaselineMainJvm`; run
-  `detektBaselineTestJvm` too if a test finding ever returns.
+  There are **no committed Detekt baselines**: after the phase-B cleanup (see
+  `decisions.md`) `detekt-baseline.xml`, `detekt-baseline-main.xml` and
+  `detekt-baseline-test.xml` are all gone, so every finding fails `check`
+  directly. Fix a finding by extracting a named responsibility; only suppress a
+  proven false positive, with a written reason.
 - `TooManyFunctions` allows 11 functions per file/class (Detekt default
   `allowedFunctionsPerFile`/`allowedFunctionsPerClass`). Extracting a long
   method's helpers into one file can replace its finding with a file-level one:

@@ -85,35 +85,57 @@ class LinearProgram(
     private fun simplex(phase: Int): Boolean {
         val objectiveRow = tableau[if (phase == 1) lastRow else rows]
         while (true) {
-            var column = -1
-            for (j in 0..columns) {
-                when {
-                    phase == 2 && nonBasic[j] == -1 -> continue
-                    column == -1 -> column = j
-                    objectiveRow[j] < objectiveRow[column] -> column = j
-                    objectiveRow[j] == objectiveRow[column] && nonBasic[j] < nonBasic[column] ->
-                        column = j
-                }
-            }
+            val column = enteringColumn(objectiveRow, phase == 2)
             if (objectiveRow[column] > -EPS) return true
-            var row = -1
-            for (i in 0 until rows) {
-                when {
-                    tableau[i][column] < EPS -> continue
-                    row == -1 -> row = i
-                    tableau[i][lastCol] / tableau[i][column] <
-                        tableau[row][lastCol] / tableau[row][column] -> row = i
-                    tableau[i][lastCol] / tableau[i][column] ==
-                        tableau[row][lastCol] / tableau[row][column] && basic[i] < basic[row] ->
-                        row = i
-                }
-            }
-            if (row == -1) return false
+            val row = leavingRow(column) ?: return false
             pivot(row, column)
         }
     }
 
-    fun minimize(): LinearProgramResult {
+    /**
+     * The column that improves the objective most: the smallest objective-row entry, ties broken by
+     * the non-basic variable index. Phase two never enters the artificial variable.
+     */
+    private fun enteringColumn(objectiveRow: DoubleArray, lastPhase: Boolean): Int {
+        var column = -1
+        for (j in 0..columns) {
+            when {
+                lastPhase && nonBasic[j] == -1 -> continue
+                column == -1 -> column = j
+                objectiveRow[j] < objectiveRow[column] -> column = j
+                objectiveRow[j] == objectiveRow[column] && nonBasic[j] < nonBasic[column] ->
+                    column = j
+            }
+        }
+        return column
+    }
+
+    /**
+     * The row that blocks [column] from growing: the smallest right-hand side ratio among the rows
+     * with a positive entry, ties broken by the basic variable index. Null means the column is
+     * unbounded.
+     */
+    private fun leavingRow(column: Int): Int? {
+        var row = -1
+        for (i in 0 until rows) {
+            when {
+                tableau[i][column] < EPS -> continue
+                row == -1 -> row = i
+                tableau[i][lastCol] / tableau[i][column] <
+                    tableau[row][lastCol] / tableau[row][column] -> row = i
+                tableau[i][lastCol] / tableau[i][column] ==
+                    tableau[row][lastCol] / tableau[row][column] && basic[i] < basic[row] -> row = i
+            }
+        }
+        return row.takeIf { it >= 0 }
+    }
+
+    /**
+     * Phase one: a negative right-hand side means the origin is not feasible, so the artificial
+     * variable enters on the most negative row and is minimized away. Non-zero residue means the
+     * constraints contradict each other; on zero, the artificial variable is pivoted out again.
+     */
+    private fun makeFeasible(): Boolean {
         var row = 0
         for (i in 1 until rows) {
             if (tableau[i][lastCol] < tableau[row][lastCol]) row = i
@@ -121,23 +143,34 @@ class LinearProgram(
 
         if (tableau[row][lastCol] < -EPS) {
             pivot(row, columns)
-            if (!simplex(1) || tableau[lastRow][lastCol] < -EPS)
-                return LinearProgramResult.Infeasible
-            for (i in 0 until rows) {
-                if (basic[i] != -1) continue
-                var column = 0
-                for (j in 1..columns) {
-                    if (
-                        tableau[i][j] < tableau[i][column] ||
-                            (tableau[i][j] == tableau[i][column] && nonBasic[j] < nonBasic[column])
-                    ) {
-                        column = j
-                    }
-                }
-                pivot(i, column)
-            }
+            if (!simplex(1) || tableau[lastRow][lastCol] < -EPS) return false
+            dropArtificial()
         }
+        return true
+    }
 
+    /**
+     * Pivots the artificial variable out of every row it is still basic in, onto that row's
+     * smallest entry, so phase two starts from a basis of real variables only.
+     */
+    private fun dropArtificial() {
+        for (i in 0 until rows) {
+            if (basic[i] != -1) continue
+            var column = 0
+            for (j in 1..columns) {
+                if (
+                    tableau[i][j] < tableau[i][column] ||
+                        (tableau[i][j] == tableau[i][column] && nonBasic[j] < nonBasic[column])
+                ) {
+                    column = j
+                }
+            }
+            pivot(i, column)
+        }
+    }
+
+    fun minimize(): LinearProgramResult {
+        if (!makeFeasible()) return LinearProgramResult.Infeasible
         return if (simplex(2)) {
             val solution = DoubleArray(columns)
             for (i in 0 until rows) {
