@@ -1,6 +1,11 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.east
+import de.bjrke.factorio.optimizer.common.model.north
+import de.bjrke.factorio.optimizer.common.model.south
+import de.bjrke.factorio.optimizer.common.model.west
 
 /**
  * Finding the widest removable corridor through a layout: [SeamGrid] marks every removable run, and

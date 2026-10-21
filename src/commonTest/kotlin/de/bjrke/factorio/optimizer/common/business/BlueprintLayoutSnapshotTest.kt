@@ -1,7 +1,19 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.business.fixtures.*
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.business.fixtures.basePlan
+import de.bjrke.factorio.optimizer.common.business.fixtures.craftRecipe
+import de.bjrke.factorio.optimizer.common.business.fixtures.gear
+import de.bjrke.factorio.optimizer.common.business.fixtures.logistics
+import de.bjrke.factorio.optimizer.common.business.fixtures.ore
+import de.bjrke.factorio.optimizer.common.business.fixtures.planned
+import de.bjrke.factorio.optimizer.common.business.fixtures.plate
+import de.bjrke.factorio.optimizer.common.business.fixtures.recipe
+import de.bjrke.factorio.optimizer.common.business.fixtures.smeltRecipe
+import de.bjrke.factorio.optimizer.common.business.fixtures.water
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.Blueprint
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Factory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

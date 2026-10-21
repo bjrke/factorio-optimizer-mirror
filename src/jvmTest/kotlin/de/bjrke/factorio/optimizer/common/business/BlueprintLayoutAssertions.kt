@@ -1,8 +1,14 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
-import kotlin.test.*
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.manhattanDist
+import kotlin.test.ExperimentalKotlinTestApi
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** Invariants of the entity grid a plan produces: overlap, inserters, tunnels and belt merges. */
 @OptIn(ExperimentalKotlinTestApi::class)

@@ -1,8 +1,9 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.model.Material
 import kotlin.math.abs
 
 /**

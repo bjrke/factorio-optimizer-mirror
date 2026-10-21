@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.model.Io
 
 /**
  * The one place a placed entity becomes the serializable [BlueprintEntity] DTO. The common part is

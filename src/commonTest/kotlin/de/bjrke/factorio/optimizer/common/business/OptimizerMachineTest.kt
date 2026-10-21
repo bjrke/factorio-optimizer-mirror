@@ -3,7 +3,11 @@ package de.bjrke.factorio.optimizer.common.business
 import de.bjrke.factorio.optimizer.common.business.fixtures.factoryOf
 import de.bjrke.factorio.optimizer.common.business.fixtures.production
 import de.bjrke.factorio.optimizer.common.business.fixtures.testRecipe
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.model.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test

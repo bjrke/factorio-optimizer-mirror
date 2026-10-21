@@ -8,7 +8,13 @@ import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.js.component.fixtures.*
+import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
+import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
+import de.bjrke.factorio.optimizer.js.component.fixtures.gear
+import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe
+import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.js.component.fixtures.ore
+import de.bjrke.factorio.optimizer.js.component.fixtures.plate
 import de.bjrke.test.assertAll
 import de.bjrke.test.screen
 import kotlin.test.Test

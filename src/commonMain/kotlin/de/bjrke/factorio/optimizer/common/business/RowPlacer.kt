@@ -1,7 +1,11 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.Direction.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.area
 
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40

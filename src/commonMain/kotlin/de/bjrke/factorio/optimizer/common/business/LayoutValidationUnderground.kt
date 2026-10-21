@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Io
 
 /**
  * Every underground input needs an output of the same material, direction and kind, within the

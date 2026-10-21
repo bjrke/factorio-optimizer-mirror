@@ -1,6 +1,12 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.model.Subgroup
+import de.bjrke.factorio.optimizer.common.model.SurfaceCondition
+import de.bjrke.factorio.optimizer.common.model.SurfaceProperty
+import de.bjrke.factorio.optimizer.common.model.extractionCategories
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import kotlin.test.Test

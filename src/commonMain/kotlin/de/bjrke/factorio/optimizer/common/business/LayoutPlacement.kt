@@ -1,6 +1,12 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.InfinityPipeSettings
+import de.bjrke.factorio.optimizer.common.model.InfinitySettings
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.area
 
 // The entity kinds that are placed often get their own helper, so the tile size and prototype name
 // live in one place rather than at every call site. They are board extensions so the kernel keeps

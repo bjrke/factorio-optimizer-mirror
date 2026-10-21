@@ -1,6 +1,9 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Area
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.distanceSq
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import kotlin.math.ceil
 import kotlin.math.round

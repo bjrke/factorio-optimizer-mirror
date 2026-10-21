@@ -1,7 +1,12 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-import kotlinx.serialization.json.*
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.model.Subgroup
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Parses the `data.raw` JSON dumped by `factorio --dump-data` (see the `dumpPrototypes` gradle

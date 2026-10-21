@@ -1,7 +1,14 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryConfig
+import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.model.Subgroup
 
 private const val EPSILON = 1e-7
 private const val SLACK = 1e-6

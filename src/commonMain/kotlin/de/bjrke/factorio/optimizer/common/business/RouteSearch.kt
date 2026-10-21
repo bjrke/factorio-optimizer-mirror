@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.util.MinHeap
 
 /** West edge no feed route may cross, so a route cannot run around the import lanes. */

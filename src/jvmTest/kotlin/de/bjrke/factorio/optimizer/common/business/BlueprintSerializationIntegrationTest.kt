@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltTier
+import de.bjrke.factorio.optimizer.common.model.InserterTier
+import de.bjrke.factorio.optimizer.common.model.toJson
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertIs

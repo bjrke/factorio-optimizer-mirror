@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
 
 /**
  * The invariant checks a compacted layout has to keep. It is deliberately absolute rather than a

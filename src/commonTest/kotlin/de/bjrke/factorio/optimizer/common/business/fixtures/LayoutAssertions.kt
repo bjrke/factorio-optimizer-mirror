@@ -1,7 +1,16 @@
 package de.bjrke.factorio.optimizer.common.business.fixtures
 
-import de.bjrke.factorio.optimizer.common.business.*
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.business.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.business.LayoutEntity
+import de.bjrke.factorio.optimizer.common.business.TransportEntity
+import de.bjrke.factorio.optimizer.common.business.UndergroundEntity
+import de.bjrke.factorio.optimizer.common.model.Area
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import kotlin.test.assertEquals
 
 /**

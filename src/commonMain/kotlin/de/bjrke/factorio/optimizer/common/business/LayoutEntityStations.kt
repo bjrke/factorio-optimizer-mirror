@@ -1,6 +1,12 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Area
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.InfinityPipeSettings
+import de.bjrke.factorio.optimizer.common.model.InfinitySettings
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.RequestFilter
 
 data class MachineEntity(
     override val area: Area,

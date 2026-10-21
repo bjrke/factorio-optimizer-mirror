@@ -1,10 +1,18 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.BlueprintWire
+import de.bjrke.factorio.optimizer.common.model.CircuitCondition
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.InfinitySettings
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.RequestFilter
+import de.bjrke.factorio.optimizer.common.model.area
 
 /**
  * Places the solid belt's end marker chosen by [beltEnd]: a constant-combinator label, an infinity

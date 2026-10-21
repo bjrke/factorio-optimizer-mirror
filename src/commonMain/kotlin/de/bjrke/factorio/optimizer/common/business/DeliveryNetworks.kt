@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Material
 
 /**
  * The route tiles of every produced material, so a nearer consumer can split off an existing belt.

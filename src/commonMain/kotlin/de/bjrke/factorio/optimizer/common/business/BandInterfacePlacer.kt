@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import kotlin.math.ceil

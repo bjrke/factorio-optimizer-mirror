@@ -1,6 +1,9 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.adjacent
 
 /** The fluid the pipe or pipe-to-ground at [coordinate] carries, if any. */
 internal fun LayoutBoard.fluidAt(coordinate: Coordinate) =

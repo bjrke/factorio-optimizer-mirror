@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Material
 
 /**
  * What a belt route may do: stay off foreign belts, leave every other sink's feed clear, and avoid

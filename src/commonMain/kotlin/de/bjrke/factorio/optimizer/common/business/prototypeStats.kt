@@ -1,7 +1,12 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-import kotlinx.serialization.json.*
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.InserterStats
+import de.bjrke.factorio.optimizer.common.model.Logistics
+import de.bjrke.factorio.optimizer.common.model.MachineStats
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.category
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Belt speeds (tiles per tick), inserter stats, the fastest pump rate (fluid per second) and the

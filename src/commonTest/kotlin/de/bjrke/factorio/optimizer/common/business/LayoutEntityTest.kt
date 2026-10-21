@@ -1,10 +1,17 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.InfinityPipeSettings
+import de.bjrke.factorio.optimizer.common.model.InfinitySettings
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.areaTile
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -1,6 +1,11 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.Blueprint
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.model.BlueprintWire
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.InserterTier
 
 /**
  * Lays out [plan] as rows of connected factories. Every recipe is one row of touching machines, fed

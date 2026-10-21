@@ -1,6 +1,10 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.Recipe
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 

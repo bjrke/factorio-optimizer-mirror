@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import kotlin.test.Test

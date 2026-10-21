@@ -1,7 +1,12 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.Direction.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.east
+import de.bjrke.factorio.optimizer.common.model.west
 
 /** Belt tiles laid east of the last row before the target's connector may start. */
 private const val OUTPUT_BELT_LEAD = 3

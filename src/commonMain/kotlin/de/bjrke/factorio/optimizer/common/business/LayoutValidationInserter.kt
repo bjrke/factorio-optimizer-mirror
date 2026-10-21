@@ -1,7 +1,5 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-
 /**
  * Every inserter needs a source behind it and a drop in front of it, both a machine, a transport or
  * a chest; a transport must carry the inserter's material.

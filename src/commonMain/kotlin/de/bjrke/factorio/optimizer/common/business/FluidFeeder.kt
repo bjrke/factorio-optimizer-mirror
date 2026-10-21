@@ -1,9 +1,13 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.manhattanDist
 
 /** The tiles of a label connector west of the source: input end, marker and output end. */
 private const val PIPE_CONNECTOR_WIDTH = 3

@@ -1,7 +1,16 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.Direction.*
+import de.bjrke.factorio.optimizer.common.model.Area
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Dimension
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
+import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.areaTile
+import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test

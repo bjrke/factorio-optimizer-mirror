@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import java.util.Base64
+import java.util.*
 import java.util.zip.Inflater
 import kotlin.test.Test
 import kotlin.test.assertEquals

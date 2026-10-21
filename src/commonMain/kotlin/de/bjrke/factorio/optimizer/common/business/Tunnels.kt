@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.chebyshevLen
+import de.bjrke.factorio.optimizer.common.model.direction
 
 /**
  * The underground runs passing under the placed tiles. Two runs may share a tile when their axes

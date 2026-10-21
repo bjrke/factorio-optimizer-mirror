@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.east
+import de.bjrke.factorio.optimizer.common.model.south
 
 /**
  * The two ways a layout is compacted: a vertical seam runs north to south and shrinks the width, a

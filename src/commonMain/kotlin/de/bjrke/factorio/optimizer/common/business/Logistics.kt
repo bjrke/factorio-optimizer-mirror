@@ -1,6 +1,10 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltTier
+import de.bjrke.factorio.optimizer.common.model.InserterStats
+import de.bjrke.factorio.optimizer.common.model.InserterTier
+import de.bjrke.factorio.optimizer.common.model.Logistics
+import de.bjrke.factorio.optimizer.common.model.Material
 
 private const val TICKS_PER_SECOND = 60.0
 

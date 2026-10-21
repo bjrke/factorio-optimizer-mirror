@@ -1,7 +1,15 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BeltTier
+import de.bjrke.factorio.optimizer.common.model.Category
+import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.InserterTier
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf

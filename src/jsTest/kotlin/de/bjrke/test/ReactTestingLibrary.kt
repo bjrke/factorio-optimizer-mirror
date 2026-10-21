@@ -3,7 +3,6 @@
 
 package de.bjrke.test
 
-import kotlin.js.JsNonModule
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import react.ReactNode

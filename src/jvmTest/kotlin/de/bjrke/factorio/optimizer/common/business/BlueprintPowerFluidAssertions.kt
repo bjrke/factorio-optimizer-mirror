@@ -1,9 +1,15 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.distanceSq
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import de.bjrke.test.assertAll
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** Invariants of the power and fluid networks: pole coverage and wiring, pipe connectivity. */
 private const val SUPPLY_RADIUS = 3

@@ -1,7 +1,13 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.model.*
-import de.bjrke.factorio.optimizer.common.model.Direction.*
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
+import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.manhattanDist
 
 /** How far east of a row a free output source is searched for. */
 private const val SOURCE_SEARCH_RANGE = 60

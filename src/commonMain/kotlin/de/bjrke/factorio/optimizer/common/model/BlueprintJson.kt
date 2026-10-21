@@ -1,6 +1,12 @@
 package de.bjrke.factorio.optimizer.common.model
 
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 /**
  * Serializes the blueprint to the compact JSON Factorio embeds in a blueprint string. Optional

@@ -1,7 +1,18 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.business.*
-import de.bjrke.factorio.optimizer.common.model.*
+import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.business.DEFAULT_NORMALIZE_TARGET
+import de.bjrke.factorio.optimizer.common.business.FactorioUrl
+import de.bjrke.factorio.optimizer.common.business.parseFactorioUrl
+import de.bjrke.factorio.optimizer.common.business.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.model.BeltTier
+import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.model.InserterTier
+import de.bjrke.factorio.optimizer.common.model.SelectionFlag
+import de.bjrke.factorio.optimizer.common.model.Surface
+import de.bjrke.factorio.optimizer.common.model.surfaceFromPlanet
+import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
 
 /**
  * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),
