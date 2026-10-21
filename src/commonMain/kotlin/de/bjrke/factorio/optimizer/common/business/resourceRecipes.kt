@@ -22,41 +22,44 @@ fun resourceRecipes(root: JsonObject) = buildList {
 /** `data.raw.resource`: the resource the drill/pumpjack extracts and how long a unit takes. */
 private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {
     for ((name, element) in root.table("resource").filterValueIsInstance<JsonObject>()) {
-        val minable = element.table("minable")
-        val category =
-            when (element.string("category")) {
-                null,
-                "basic-solid" -> Category.MINING_BASIC_SOLID
-                "hard-solid" -> Category.MINING_HARD_SOLID
-                "basic-fluid" -> Category.MINING_FLUID
-                else -> continue
-            }
-        val result = buildMap {
-            minable.string("result")?.also {
-                put(Material(it), minable.number("count") ?: 1.0)
-            }
-            for (entry in minable.objects("results")) {
-                val resultName = entry.string("name") ?: continue
-                put(Material(resultName), entry.number("amount") ?: 1.0)
-            }
-        }
-        if (result.isEmpty()) continue
+        add(minedResourceRecipe(name, element) ?: continue)
+    }
+}
 
-        val ingredients =
-            minable
-                .string("required_fluid")
-                ?.let { mapOf(Material(it) to (minable.number("fluid_amount") ?: 1.0)) }
-                .orEmpty()
+private fun minedResourceRecipe(name: String, element: JsonObject): Recipe? {
+    val category = resourceCategory(element.string("category")) ?: return null
+    val minable = element.table("minable")
+    val result = minableResults(minable)
+    if (result.isEmpty()) return null
 
-        add(
-            Recipe(
-                name = name,
-                ingredients = ingredients,
-                result = result,
-                time = minable.number("mining_time") ?: 1.0,
-                categories = setOf(category),
-            ),
-        )
+    val ingredients =
+        minable
+            .string("required_fluid")
+            ?.let { mapOf(Material(it) to (minable.number("fluid_amount") ?: 1.0)) }
+            .orEmpty()
+
+    return Recipe(
+        name = name,
+        ingredients = ingredients,
+        result = result,
+        time = minable.number("mining_time") ?: 1.0,
+        categories = setOf(category),
+    )
+}
+
+private fun resourceCategory(identifier: String?) =
+    when (identifier) {
+        null -> Category.MINING_BASIC_SOLID
+        else -> miningCategory(identifier)
+    }
+
+private fun minableResults(minable: JsonObject) = buildMap {
+    minable.string("result")?.also {
+        put(Material(it), minable.number("count") ?: 1.0)
+    }
+    for (entry in minable.objects("results")) {
+        val resultName = entry.string("name") ?: continue
+        put(Material(resultName), entry.number("amount") ?: 1.0)
     }
 }
 

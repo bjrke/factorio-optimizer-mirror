@@ -8,13 +8,8 @@
     <ID>CyclomaticComplexMethod:LayoutValidation.kt:private fun findUndergroundOutput: UndergroundEntity?</ID>
     <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$fun minimize: LinearProgramResult</ID>
     <ID>CyclomaticComplexMethod:LinearProgram.kt:LinearProgram$private fun simplex: Boolean</ID>
-    <ID>CyclomaticComplexMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
-    <ID>CyclomaticComplexMethod:resourceRecipes.kt:private fun MutableList&lt;Recipe&gt;.minedResourceRecipes</ID>
     <ID>LongMethod:LayoutAscii.kt:internal fun layoutAscii: String</ID>
     <ID>LongMethod:LayoutValidation.kt:internal fun validateLayout: List&lt;String&gt;</ID>
-    <ID>LongMethod:recipeParser.kt:fun parsePrototypes: ParsedRecipe</ID>
     <ID>LoopWithTooManyJumpStatements:LayoutValidation.kt:for</ID>
-    <ID>LoopWithTooManyJumpStatements:recipeParser.kt:for</ID>
-    <ID>TooManyFunctions:recipeParser.kt:de.bjrke.factorio.optimizer.common.business.recipeParser.kt</ID>
   </CurrentIssues>
 </SmellBaseline>

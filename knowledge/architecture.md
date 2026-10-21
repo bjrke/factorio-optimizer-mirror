@@ -12,9 +12,12 @@ CLI (JVM) from one shared core.
 
 ## Source layout
 
-- `src/commonMain` — shared logic: recipe parser (`recipeParser.kt`), optimizer
-  (`Optimizer.kt`, with `MachineCatalog` for the machine choice and rates), the
-  model, and the dumped `prototypes/` data.
+- `src/commonMain` — shared logic: recipe parsing (`recipeParser.kt` orchestrates
+  the dump, `RecipePrototype.kt` reads one recipe, `JsonFields.kt` holds the JSON
+  accessors, `prototypeStats.kt` the machine/logistics stats and
+  `resourceRecipes.kt` the map extraction recipes), optimizer (`Optimizer.kt`, with
+  `MachineCatalog` for the machine choice and rates), the model, and the dumped
+  `prototypes/` data.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, `styled-next`,
   `react-router-dom`); entry `js/index.kt`; `js/business/loadRecipe.kt` pulls the
   dumps via `@JsModule` and the webpack config in `webpack.config.d/`.

@@ -4,6 +4,28 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-21 — Clean the structural Detekt debt, phase B parser and resources
+
+**Context.** After the serializer/CLI slice, 14 typed findings remained. Five were
+the parser and resource pair: `parsePrototypes` (long, cyclomatic and a loop with
+four jumps), its file-level `TooManyFunctions`, and `minedResourceRecipes`
+(cyclomatic).
+
+**Decision.** Split the parser along its data boundaries instead of suppressing:
+
+- `JsonFields.kt` owns the nullable JSON accessors and the typed-object filter;
+- `RecipePrototype.kt` owns one `data.raw.recipe` entry: result probability,
+  ingredient/result maps, categories and surface conditions;
+- `recipeParser.kt` keeps the dump orchestration, scrap reach and material list;
+- `prototypeStats.kt` owns the machine and logistics stats;
+- `resourceRecipes.kt` keeps extraction recipes, with the mined-resource category,
+  results and fluid ingredient in their own helpers.
+
+**Consequences.** Both baselines drop from 14 to 9 entries, the test baseline stays
+empty, and `spotlessApply check` passes with the existing parser, resource and
+full-dump suites. The remaining nine findings are the plan, ascii, LP and validation
+group.
+
 ## 2026-10-20 — Clean the structural Detekt debt, phase B serializer and CLI
 
 **Context.** After the feed/optimizer slice, 19 typed findings remained. Five were
