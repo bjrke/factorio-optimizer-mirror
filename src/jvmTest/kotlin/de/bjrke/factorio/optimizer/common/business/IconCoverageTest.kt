@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.iconLayers
+import de.bjrke.factorio.optimizer.common.service.RecipeProvider
 import de.bjrke.test.assertTable
 import java.io.File
 import kotlin.test.Test

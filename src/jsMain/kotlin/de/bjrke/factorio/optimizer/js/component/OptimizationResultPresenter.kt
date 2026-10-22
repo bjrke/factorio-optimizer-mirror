@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.superRound
-import de.bjrke.factorio.optimizer.common.business.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.data.superRound
+import de.bjrke.factorio.optimizer.common.data.validNormalizeTarget
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder

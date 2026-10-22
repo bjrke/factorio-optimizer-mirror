@@ -4,6 +4,58 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-21 — Package boundaries: cut the core, then one explicit import per edge
+
+**Context.** `de.bjrke.factorio.optimizer.common.business` held 62 of the 98
+`commonMain` files (6,696 of ~10,000 lines) with no boundary between them. File sizes
+were already fine (largest 319 lines), so the problem is package coupling, not file
+length. `common.model` (15 files, 1,383 lines) is in the same state. The edges are
+invisible to import-based tooling because most files import `common.model.*`.
+
+**Decision.** Split the core by pipeline stage into
+`common/{model,util,data,blueprint,layout,service,cli}`, each at most 15 files and 800
+lines, and make every core symbol that no other package needs `internal`.
+Enforcement is two cheap layers, not an architecture tool:
+
+1. the compiler: an `internal` symbol used from another package does not compile, so
+   each stage commit is self-checking;
+2. detekt `ForbiddenImport`, one section of allowed targets per package. For that to
+   see the edges, **project packages lose their wildcard imports**: every
+   cross-package reference must be an explicit import. `WildcardImport` keeps its
+   exemptions for `kotlin`, `js`, `java` and other third-party packages.
+
+Package-level edges are the unit; a per-symbol allowlist was rejected as
+over-engineering.
+
+**Why not a tool.** A hand-written Kotlin scanner misparses multi-line constructor
+headers and same-name declarations across packages. Classycle is Java-only.
+Konture 1.0.2 was evaluated in a throwaway module and rejected: it sees the KMP
+sources exactly and catches the real edges, but mislabels local, private and library
+types, cannot name allowed symbols, and cannot allow standard-library packages.
+detekt's `DependencyRules` no longer exists in 2.0.0-alpha.6, and `ForbiddenImport`
+does not see wildcard imports (see `pitfalls.md` for the evidence).
+
+**Outcome.** `common.business` is gone; its 62 files and 6,696 lines are now
+`common.{data,blueprint,routing,layout,service,planning,compaction,special,plumbing}`.
+The wildcard ban landed first (in `4f6c3df`), so every later move only needed imports
+re-pointed at the symbol's new package. A shared `common.plan`
+package (the plan data, the `Planned*` types, the direct-feed band model and the
+machine footprint/ports) later removed the cycle between `blueprint`, `planning` and
+`special`. The file budget holds everywhere (largest 7); the 800-line budget still
+fails for `blueprint` (1,275) and `planning` (986), which are split separately.
+
+**How to move a file.** Move it with `git mv`, rewrite its `package` line, then run
+the compiler and fix what it names. A moved symbol must be imported by name at every
+use site — Kotlin only auto-resolves the file's own package — and an `expect`/`actual`
+pair moves together. Do not infer the target package from the symbol name with a text
+scan: names repeat (`recipe`, `plan`, `materials`), parameters and members look like
+declarations, and KDoc prose matches too. The compiler's error list is the only
+reliable source of edges.
+
+**Consequences.** No package may exceed 15 files. Size budgets (warn 10 files, fail 15)
+have no detekt rule and stay a small file-count test. `commonTest` helpers that live in
+a production package move to the `fixtures` package of their test.
+
 ## 2026-10-21 — Clean the structural Detekt debt, phase B plan, layout and LP
 
 **Context.** After the parser/resources slice, the last nine typed findings sat in

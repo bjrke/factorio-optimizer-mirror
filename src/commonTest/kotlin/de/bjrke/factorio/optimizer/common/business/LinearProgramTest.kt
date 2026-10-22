@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.service.LinearProgram
+import de.bjrke.factorio.optimizer.common.service.LinearProgramResult
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test

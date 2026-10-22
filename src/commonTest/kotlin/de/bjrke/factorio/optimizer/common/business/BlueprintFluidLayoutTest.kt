@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
 import de.bjrke.factorio.optimizer.common.business.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.business.fixtures.blueprintPipeFluids
 import de.bjrke.factorio.optimizer.common.business.fixtures.gear
@@ -9,6 +11,10 @@ import de.bjrke.factorio.optimizer.common.business.fixtures.planned
 import de.bjrke.factorio.optimizer.common.business.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.business.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.business.fixtures.water
+import de.bjrke.factorio.optimizer.common.layout.MachineEntity
+import de.bjrke.factorio.optimizer.common.layout.MarkerEntity
+import de.bjrke.factorio.optimizer.common.layout.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.layout.Plumbing
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Category
@@ -19,10 +25,15 @@ import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.model.west
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedSource
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import kotlin.test.Test

@@ -1,9 +1,5 @@
 package de.bjrke.factorio.optimizer.common.business.fixtures
 
-import de.bjrke.factorio.optimizer.common.business.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.PlannedRecipe
-import de.bjrke.factorio.optimizer.common.business.PlannedSource
 import de.bjrke.factorio.optimizer.common.business.testLogistics
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
@@ -15,6 +11,10 @@ import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedSource
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 
 val ore = Material("iron-ore")

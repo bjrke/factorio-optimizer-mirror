@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
 import de.bjrke.factorio.optimizer.common.business.fixtures.blueprintTransportMaterials
 import de.bjrke.factorio.optimizer.common.business.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.business.fixtures.gear
@@ -11,6 +12,11 @@ import de.bjrke.factorio.optimizer.common.business.fixtures.smeltRecipe
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.InserterTier
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedBand
+import de.bjrke.factorio.optimizer.common.plan.PlannedLink
+import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals

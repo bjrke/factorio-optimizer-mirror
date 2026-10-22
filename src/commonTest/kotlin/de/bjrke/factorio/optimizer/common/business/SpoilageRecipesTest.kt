@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.data.spoilageRecipes
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe

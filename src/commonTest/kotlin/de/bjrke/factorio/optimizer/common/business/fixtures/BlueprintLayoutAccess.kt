@@ -1,11 +1,11 @@
 package de.bjrke.factorio.optimizer.common.business.fixtures
 
-import de.bjrke.factorio.optimizer.common.business.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.Plumbing
-import de.bjrke.factorio.optimizer.common.business.TransportEntity
-import de.bjrke.factorio.optimizer.common.business.blueprintLayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
+import de.bjrke.factorio.optimizer.common.layout.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.TransportEntity
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 
 // The layout facts the suites assert on, read back from the production blueprintLayoutDump. They
 // live in the test source set: in commonMain only the CLI's text layout uses the dump.

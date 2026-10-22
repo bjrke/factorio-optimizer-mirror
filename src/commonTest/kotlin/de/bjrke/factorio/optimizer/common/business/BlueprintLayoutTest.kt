@@ -1,5 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
 import de.bjrke.factorio.optimizer.common.business.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.business.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.business.fixtures.gear
@@ -8,6 +11,12 @@ import de.bjrke.factorio.optimizer.common.business.fixtures.ore
 import de.bjrke.factorio.optimizer.common.business.fixtures.planned
 import de.bjrke.factorio.optimizer.common.business.fixtures.plate
 import de.bjrke.factorio.optimizer.common.business.fixtures.recipe
+import de.bjrke.factorio.optimizer.common.layout.BeltEntity
+import de.bjrke.factorio.optimizer.common.layout.InserterEntity
+import de.bjrke.factorio.optimizer.common.layout.MachineEntity
+import de.bjrke.factorio.optimizer.common.layout.MarkerEntity
+import de.bjrke.factorio.optimizer.common.layout.SplitterEntity
+import de.bjrke.factorio.optimizer.common.layout.TransportEntity
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Coordinate
@@ -19,8 +28,13 @@ import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertContains

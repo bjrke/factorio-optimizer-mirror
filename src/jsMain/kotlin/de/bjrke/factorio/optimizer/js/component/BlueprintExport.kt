@@ -3,17 +3,17 @@
 
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.business.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.blueprintPlan
-import de.bjrke.factorio.optimizer.common.business.blueprintString
-import de.bjrke.factorio.optimizer.common.business.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintPlan
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintString
+import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Blueprint
 import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.toJson
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder

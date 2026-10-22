@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterStats
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Logistics
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 
 /** The prototype stats the real dump provides, plus the calculator the logistics suites build. */
 internal val testLogistics =

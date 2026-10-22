@@ -1,10 +1,10 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.business.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.business.DEFAULT_NORMALIZE_TARGET
-import de.bjrke.factorio.optimizer.common.business.FactorioUrl
-import de.bjrke.factorio.optimizer.common.business.parseFactorioUrl
-import de.bjrke.factorio.optimizer.common.business.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.blueprint.FactorioUrl
+import de.bjrke.factorio.optimizer.common.blueprint.parseFactorioUrl
+import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.data.DEFAULT_NORMALIZE_TARGET
+import de.bjrke.factorio.optimizer.common.data.validNormalizeTarget
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Factory

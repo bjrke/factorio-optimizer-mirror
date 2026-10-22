@@ -1,10 +1,5 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.business.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.business.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.business.PlannedRecipe
-import de.bjrke.factorio.optimizer.common.business.PlannedSource
 import de.bjrke.factorio.optimizer.common.business.testLogistics
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Blueprint
@@ -20,6 +15,11 @@ import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
 import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedSource
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
 import de.bjrke.test.assertAll

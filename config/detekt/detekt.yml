@@ -29,19 +29,14 @@ style:
   DestructuringDeclarationWithTooManyEntries:
     maxDestructuringEntries: 4
 
-  # The project imports whole domain packages (`common.model`, `business`, the test
-  # fixtures) on purpose: a file usually needs most of the package, and listing the
-  # types would be noise. The serialization DSL is the same: JSON code is a separate
-  # layer that reads as one vocabulary. Other third-party wildcards are still reported.
+  # The project's own packages are imported name by name: an edge that is a wildcard is
+  # invisible to the boundary rules below, which only see explicit imports (see
+  # `knowledge/decisions.md`, 2026-10-21). The serialization DSL is different: JSON code
+  # is a separate layer that reads as one vocabulary. Standard-library and third-party
+  # wildcards are still allowed.
   WildcardImport:
     excludeImports:
       - 'java.util.*'
       - 'kotlinx.serialization.json.*'
-      - 'de.bjrke.factorio.optimizer.common.model.*'
-      - 'de.bjrke.factorio.optimizer.common.model.Direction.*'
-      - 'de.bjrke.factorio.optimizer.common.business.*'
-      - 'de.bjrke.factorio.optimizer.common.business.fixtures.*'
-      - 'de.bjrke.factorio.optimizer.js.component.*'
-      - 'de.bjrke.factorio.optimizer.js.component.fixtures.*'
-      - 'de.bjrke.test.*'
       - 'kotlin.test.*'
+      - 'de.bjrke.test.*'

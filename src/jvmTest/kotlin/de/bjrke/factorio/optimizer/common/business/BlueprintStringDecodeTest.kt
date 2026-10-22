@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintString
 import java.util.*
 import java.util.zip.Inflater
 import kotlin.test.Test

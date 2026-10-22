@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.data.allSciencePacks
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe

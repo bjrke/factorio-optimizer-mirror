@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.common.business.fixtures
 
-import de.bjrke.factorio.optimizer.common.business.ConveyorEntity
-import de.bjrke.factorio.optimizer.common.business.LayoutEntity
-import de.bjrke.factorio.optimizer.common.business.TransportEntity
-import de.bjrke.factorio.optimizer.common.business.UndergroundEntity
+import de.bjrke.factorio.optimizer.common.layout.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
+import de.bjrke.factorio.optimizer.common.layout.TransportEntity
+import de.bjrke.factorio.optimizer.common.layout.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate

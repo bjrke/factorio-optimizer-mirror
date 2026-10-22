@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.js.component.fixtures
 
-import de.bjrke.factorio.optimizer.common.business.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.business.testLogistics
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Category
@@ -10,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.factorio.optimizer.js.component.optimizationResult
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.render

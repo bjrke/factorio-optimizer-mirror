@@ -1,5 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
+import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
 import de.bjrke.factorio.optimizer.common.business.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.business.fixtures.gear
 import de.bjrke.factorio.optimizer.common.business.fixtures.logistics
@@ -7,6 +10,11 @@ import de.bjrke.factorio.optimizer.common.business.fixtures.ore
 import de.bjrke.factorio.optimizer.common.business.fixtures.planned
 import de.bjrke.factorio.optimizer.common.business.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.business.fixtures.water
+import de.bjrke.factorio.optimizer.common.layout.ChestEntity
+import de.bjrke.factorio.optimizer.common.layout.InserterEntity
+import de.bjrke.factorio.optimizer.common.layout.MarkerEntity
+import de.bjrke.factorio.optimizer.common.layout.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.model.Category
@@ -17,7 +25,11 @@ import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Factory
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.RequestFilter
+import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
+import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable

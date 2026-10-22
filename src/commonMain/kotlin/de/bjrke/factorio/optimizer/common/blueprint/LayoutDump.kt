@@ -1,0 +1,6 @@
+package de.bjrke.factorio.optimizer.common.blueprint
+
+import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
+
+/** A built layout plus the feed routes that could not be placed, for the CLI's text rendering. */
+internal data class LayoutDump(val entities: List<LayoutEntity>, val failures: List<String>)

@@ -74,6 +74,22 @@ here only with evidence, and should say how to recognise it.
   radio options and both entry points (`BeltEnd.fromSelection`, the CLI) clamp a
   chest code to `constant-combinator`; do not special-case the label again
   elsewhere.
+- **Package boundaries cannot be derived from Kotlin imports.** `common.business`
+  imports `common.model.*` in most files, and the JSON/packaging code imports only
+  Kotlin and kotlinx. An import- or grep-based checker therefore sees almost no
+  `business → model` edges and cannot tell a wildcard import from a real use. Text
+  scanning is also what a checker must survive: the project has multi-line
+  constructor headers (`data class Request(` with parameters on following lines,
+  at brace depth 0), one-line and multi-line KDoc, KDoc references (`[Factory]`),
+  and the same name declared in several packages (`material`, `recipe`, `name` in
+  `common.business.fixtures` and as parameter names). A hand-written scanner hit all
+  of these; see `decisions.md` (2026-10-21).
+- **Classycle is not usable for this project.** Classycle analyses Java class files
+  and its Gradle plugins are unmaintained (Portal versions 2015–2018); it expects
+  Java outer-class naming and `extends`, which Kotlin bytecode and metadata do not
+  match, so edges get silently dropped. A Kotlin-native tool or a real parser is
+  needed; detekt's `DependencyRules`/`ForbiddenImport` see imports only and cannot
+  resolve Kotlin top-level declarations.
 - **A `buildSrc` test suite never runs from the root build.** The root build drives
   buildSrc only through `:classes`/`:jar`, so `buildSrc/src/test` is dead unless
   invoked. `tasks.named("jar") { dependsOn(tasks.test) }` fails with a circular
@@ -167,3 +183,65 @@ here only with evidence, and should say how to recognise it.
   unsupported legacy setting"` and used the default retention instead. Configure
   `compaction.keep.tokens` (default 15000), not `tail_turns`; `opencode.json` is
   gitignored, so this is a local fix and needs `opencode service restart`.
+- **Konture on this repo: source capture is exact, dependency labels are not.**
+  Evaluated on 2026-10-21 with `io.github.baole.konture` 1.0.2 in a throwaway
+  `:konture-test` module. What works: `generateArchitectureLayout` reads KMP source
+  sets correctly (96 files = 95 `src/{common,js,jvm}Main` Kotlin files + the generated
+  `BuildInfo.kt`), `common.model` passes `onlyDependOnPackages` of its own package, and
+  `common.business` fails with 60-63 files that really do reach `common.model`. What
+  does not: the reported dependency labels are unreliable. A reference to a
+  `private class CorridorShift` and even `Collection<FactoryProduction>` in
+  `common.business` are labelled `common.model.CorridorShift` /
+  `common.model.Collection`; same-package references such as `common.business.LayoutBoard`
+  are still reported as unauthorized even when that package is in the allowance, so 6
+  of 60 blocks stay false; and the allowance matcher treats `kotlin..` as one literal
+  package, not a pattern. A rule that also needs the names it may use (a surface list)
+  cannot be expressed. Recognition: violations name a symbol under a package that
+  does not declare it.
+- **A moved symbol needs an explicit import at every use site.** Kotlin resolves names
+  from the file's own package only: after a file moves, each file that used one of its
+  symbols must `import` it by name, even though it compiled before. `expect`/`actual`
+  pairs must move together (same package, all source sets).
+- **Do not infer a symbol's package from its name with a text scan.** The cut was first
+  attempted that way and produced wrong edges: parameters and members look like
+  declarations, KDoc prose matched the declaration regexes, and names repeat across
+  packages (`recipe`, `plan`, `materials`, `EAST`). Resolve edges from the compiler's
+  unresolved-reference list instead; that list is exact and small.
+- **`spotlessApply` after staging leaves the reformat unstaged.** It reorders the
+  project imports, so run it before `git add`, or amend after it.
+- **Host-share phantoms recur and block every build.** On the virtiofs checkout an
+  interrupted Gradle run leaves entries that `stat` rejects while `ls` lists them;
+  renaming their *immediate* parent fails too, so detach at the shallowest ancestor
+  that accepts the rename. `tmp/fix-phantom.py` does this (defaults to
+  `buildSrc/build`, remove the tree afterwards). Recognise it by
+  `Failed to clean up output files` or
+  `Cannot access output property 'destinationDirectory'`.
+- **A settings-level `plugins { id("io.github.baole.konture") }` breaks the root
+  script.** Applying the Konture plugin in `settings.gradle.kts` stops the root
+  `build.gradle.kts` from seeing `buildSrc` (`Unresolved reference 'de'` for every
+  `de.bjrke.factorio.optimizer.buildlogic` import). Applying it in the root
+  `build.gradle.kts` `plugins {}` block works and is enough for `generateArchitectureLayout`.
+- **`buildSrc/build` can hold undeletable entries on the host share.** The project
+  lives on a virtiofs mount; after an interrupted build,
+  `buildSrc/build/classes/kotlin/main/de/bjrke` and
+  `.../META-INF/buildSrc.kotlin_module` became phantom entries: `stat` reports
+  "No such file", while `ls` still lists them as `d?????????`. They make every later
+  build fail with
+  `Failed to clean up output files for task ':buildSrc:compileKotlin'`, and
+  `rm -rf buildSrc/build` cannot remove them. Fix: `mv` the phantom *parents*
+  (`de` to `de_`, `META-INF` to `META-INF_`), then `rm -rf buildSrc/build`.
+- **A stale Gradle daemon can fake a build failure.** After the Konture experiment the
+  untouched tree still failed with `Script compilation errors ... Unresolved reference
+  'de'`, while `./gradlew :buildSrc:compileKotlin --rerun-tasks` compiled cleanly. A
+  `--rerun-tasks` on the buildSrc task cleared it. Before debugging a script error,
+  rerun the underlying task; do not edit the build script.
+- **detekt's `ForbiddenImport` cannot see wildcard imports; `DependencyRules` is gone.**
+  Verified on detekt 2.0.0-alpha.6: `style>ForbiddenImport>forbiddenImports` accepts
+  `pkg.**` patterns and is enforced (`e:` plus non-zero exit), but an
+  `import de.bjrke.factorio.optimizer.common.business.*` produced **no** finding while
+  explicit imports of the same package did. This codebase imports whole packages on
+  purpose (`WildcardImport.excludeImports`), so an import-based detekt rule would see
+  almost none of the `business -> model` edges. `DependencyRules` no longer ships in
+  any 2.0.0-alpha.6 rules jar (they are `dev.detekt.rules.*`); a custom rule that
+  needs real resolution must implement `dev.detekt.api.RequiresAnalysisApi`, which
+  `CastNullableToNonNullableType` does.

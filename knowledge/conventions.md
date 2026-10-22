@@ -18,9 +18,10 @@ up.
   test expectations read better in place; only opaque algorithm limits get a named
   constant. `ReturnCount` ignores guard clauses, a loop may use up to three
   `break`/`continue` statements, and destructuring may bind four names. Import the
-  project's own packages with a wildcard (`common.model.*`, `business.*`, the
-  fixtures, `de.bjrke.test.*`, `kotlin.test.*`), and the JSON code may use
-  `kotlinx.serialization.json.*`; spell other third-party imports out.
+  project's own packages by name, never with a wildcard: the boundary rules in
+  detekt can only see an edge that is an explicit import (see `decisions.md`,
+  2026-10-21). `kotlin.test.*`, `kotlinx.serialization.json.*` and third-party
+  wildcards stay allowed.
   There are **no committed Detekt baselines**: after the phase-B cleanup (see
   `decisions.md`) `detekt-baseline.xml`, `detekt-baseline-main.xml` and
   `detekt-baseline-test.xml` are all gone, so every finding fails `check`
@@ -31,6 +32,11 @@ up.
   method's helpers into one file can replace its finding with a file-level one:
   split by responsibility into separate files or classes instead of collecting
   a dozen writers in one file.
+- Package boundaries are the other half of that rule: a package is a unit with a
+  stated surface (see `decisions.md`, 2026-10-21). A cross-package reference is an
+  explicit import of the names actually used, and detekt's `ForbiddenImport` lists
+  the packages each package may reach. If a package grows past 15 files or 800
+  lines, that is the signal to cut it, not to add a file.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
@@ -50,9 +56,10 @@ up.
   after (`grep -oP 'fun \K[a-zA-Z]+(?=\()' | sort`); keep the suite's original name
   on one part.
   A fixtures file in the **same package** must live in a subpackage (e.g.
-  `common/business/fixtures/`): an `internal` top-level fixture with the same name
-  as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
-  Kotlin does not allow star-importing an `object`. Use `import …fixtures.*`.
+  `commonTest/…/business/fixtures/`): an `internal` top-level fixture with the same
+  name as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
+  Kotlin does not allow star-importing an `object`. Import each fixture by name; the
+  project's packages no longer use wildcards.
 - Prefer data that can be tested alone: `LayoutCompaction` already takes a
   `List<LayoutEntity>` and `LayoutRouter` only reads the board, so neither needs a
   full `BlueprintPlan` to test.
