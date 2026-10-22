@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
 import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
-import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
 import de.bjrke.factorio.optimizer.common.business.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.business.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.business.fixtures.gear
@@ -17,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.layout.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.SplitterEntity
 import de.bjrke.factorio.optimizer.common.layout.TransportEntity
+import de.bjrke.factorio.optimizer.common.layout.validateLayout
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.Category
 import de.bjrke.factorio.optimizer.common.model.Coordinate

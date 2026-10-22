@@ -1,9 +1,6 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.layout
 
 import de.bjrke.factorio.optimizer.common.compaction.LayoutIndex
-import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
-import de.bjrke.factorio.optimizer.common.layout.PipeToGroundEntity
-import de.bjrke.factorio.optimizer.common.layout.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.direction

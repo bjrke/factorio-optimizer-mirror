@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.blueprint.FactorioUrl
-import de.bjrke.factorio.optimizer.common.blueprint.parseFactorioUrl
+import de.bjrke.factorio.optimizer.common.blueprint.output.FactorioUrl
+import de.bjrke.factorio.optimizer.common.blueprint.output.parseFactorioUrl
 import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.data.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.data.validNormalizeTarget

@@ -4,8 +4,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.blueprintString
 import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Blueprint
 import de.bjrke.factorio.optimizer.common.model.BlueprintEntity

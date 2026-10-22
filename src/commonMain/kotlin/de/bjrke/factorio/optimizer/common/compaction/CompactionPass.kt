@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.common.compaction
 
-import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.layout.validateLayout
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.south
-import de.bjrke.factorio.optimizer.common.routing.ImportExtension
+import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 
 /** Upper bound on compaction corridors, so a pathological layout cannot loop forever. */
 private const val MAX_COMPACTION_PASSES = 256

@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.common.routing
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.LayoutRouter
 import de.bjrke.factorio.optimizer.common.layout.SplitterEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -15,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.model.adjacent
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.special.placePath
 
 /** How many split points are routed before the cheapest one is chosen. */

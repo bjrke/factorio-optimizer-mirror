@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.LayoutRouter
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 
 /**

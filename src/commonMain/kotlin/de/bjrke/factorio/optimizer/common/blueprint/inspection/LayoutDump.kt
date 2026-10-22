@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.blueprint.inspection
 
 import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
 

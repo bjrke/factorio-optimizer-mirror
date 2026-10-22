@@ -1,14 +1,16 @@
 package de.bjrke.factorio.optimizer.common.routing
 
-import de.bjrke.factorio.optimizer.common.blueprint.BeltEndConnector
-import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
+import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.layout.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.rebuildTunnels
+import de.bjrke.factorio.optimizer.common.layout.validateLayout
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.direction
+import de.bjrke.factorio.optimizer.common.plan.ImportExtension
+import de.bjrke.factorio.optimizer.common.plan.ImportFeed
 
 /**
  * Moves every import marker to one common column and removes the straight belt prefix in front of

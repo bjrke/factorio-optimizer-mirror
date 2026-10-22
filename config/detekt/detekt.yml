@@ -40,3 +40,18 @@ style:
       - 'kotlinx.serialization.json.*'
       - 'kotlin.test.*'
       - 'de.bjrke.test.*'
+
+  # Package edges (see `knowledge/decisions.md`, 2026-10-21). The rule is on and
+  # the list is empty on purpose: detekt 2.0.0-alpha.6 cannot express this
+  # pipeline's edges. `allowedImports` is a single global list, and every
+  # `forbiddenImports` entry applies to *every* file, so a package can only be
+  # listed when no other package may import it. Here the builder imports every
+  # stage, the stages import each other through the shared vocabulary
+  # (`layout`, `plan`, `route`), and the drivers and tests import the read-back
+  # packages, so no package qualifies: measured, every `pkg.**` entry either
+  # forbids an allowed edge or is unreachable. The edges stay enforced by the
+  # compiler (`internal` symbols) and by review. If detekt ever grows per-package
+  # permission, the intended edges are listed in `knowledge/decisions.md`.
+  ForbiddenImport:
+    active: true
+    forbiddenImports: []

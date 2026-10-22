@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.special
 
+import de.bjrke.factorio.optimizer.common.band.BandSearch
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.Recipe
@@ -13,7 +14,6 @@ import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.plannedMachines
-import de.bjrke.factorio.optimizer.common.planning.BandSearch
 import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import kotlin.math.ceil
 

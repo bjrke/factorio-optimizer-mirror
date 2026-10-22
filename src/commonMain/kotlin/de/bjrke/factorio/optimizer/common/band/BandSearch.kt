@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.planning
+package de.bjrke.factorio.optimizer.common.band
 
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Recipe

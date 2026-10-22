@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.blueprint.output
 
 /** CMF byte of the zlib header: DEFLATE with a 32K window. */
 private const val ZLIB_CMF = 0x78

@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.blueprintString
 import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
 import de.bjrke.factorio.optimizer.common.model.BeltTier
 import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.model.toJson

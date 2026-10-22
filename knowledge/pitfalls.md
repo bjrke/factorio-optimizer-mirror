@@ -183,6 +183,27 @@ here only with evidence, and should say how to recognise it.
   unsupported legacy setting"` and used the default retention instead. Configure
   `compaction.keep.tokens` (default 15000), not `tail_turns`; `opencode.json` is
   gitignored, so this is a local fix and needs `opencode service restart`.
+- **detekt's `ForbiddenImport` is a flat, global list — it cannot express per-package
+  edges.** Verified on 2.0.0-alpha.6: `allowedImports` is one global list, and
+  `forbiddenImports` is merged from every entry, so `pkg.**` forbids `pkg` for
+  *every* file, not only for the section it was written under. A package can
+  therefore be listed only when no other package imports it. `pkg.**` matches the
+  members of `pkg` and of every nested package (so `blueprint.**` covers
+  `blueprint.inspection.**`); a bare `pkg` matches nothing; `pkg.*` is a regex
+  whose dots are wildcards. Do not read a section comment as scoping — it is
+  documentation only. Recognise a wrong setup by an allowed edge being reported
+  (e.g. `band -> model` after `data` forbids `model`). The edges here stay
+  compiler- and review-enforced; see `decisions.md` (2026-10-22).
+- **A `sed`/`python` import rewrite is only a hint; the compiler is the arbiter.**
+  Moving a file and rewriting imports textually re-pointed `adjacent` (a
+  `model` extension) at a same-named private helper in `band`, and mapped
+  `ChestLikeEntity`/`Plumbing` to the wrong package. Run `./gradlew
+  compileKotlinJvm compileTestKotlinJvm` after every move and fix only what it
+  names; a bulk `git checkout -- src` also reverts the *staged* moves' content, so
+  the package line of every moved file must be checked again afterwards.
+- **`commonTest` cannot walk the source tree.** A test that reads files runs only
+  on JVM: put it in `jvmTest` and locate the root by walking up from
+  `System.getProperty("user.dir")` (same as `IconCoverageTest`).
 - **Konture on this repo: source capture is exact, dependency labels are not.**
   Evaluated on 2026-10-21 with `io.github.baole.konture` 1.0.2 in a throwaway
   `:konture-test` module. What works: `generateArchitectureLayout` reads KMP source

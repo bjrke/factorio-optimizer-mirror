@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.blueprint.output
 
 import de.bjrke.factorio.optimizer.common.data.normalizeTargetFromUrl
 

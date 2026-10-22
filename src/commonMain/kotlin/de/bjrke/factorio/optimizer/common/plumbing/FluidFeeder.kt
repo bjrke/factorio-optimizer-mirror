@@ -17,14 +17,14 @@ import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.planning.LayoutStage
 import de.bjrke.factorio.optimizer.common.planning.PlacedMachine
 import de.bjrke.factorio.optimizer.common.planning.Row
-import de.bjrke.factorio.optimizer.common.routing.ImportExtension
+import de.bjrke.factorio.optimizer.common.route.RouteRequest
 import de.bjrke.factorio.optimizer.common.special.DIRECTION_STEPS
-import de.bjrke.factorio.optimizer.common.special.RouteRequest
 import de.bjrke.factorio.optimizer.common.special.placePath
 
 /** The tiles of a label connector west of the source: input end, marker and output end. */

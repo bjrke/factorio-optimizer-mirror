@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.routing
+package de.bjrke.factorio.optimizer.common.plan
 
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Material

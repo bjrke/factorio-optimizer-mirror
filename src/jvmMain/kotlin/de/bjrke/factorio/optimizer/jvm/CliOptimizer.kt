@@ -2,9 +2,9 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.blueprintString
 import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
-import de.bjrke.factorio.optimizer.common.blueprint.layoutAscii
+import de.bjrke.factorio.optimizer.common.blueprint.inspection.layoutAscii
+import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
 import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.data.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.data.superRound

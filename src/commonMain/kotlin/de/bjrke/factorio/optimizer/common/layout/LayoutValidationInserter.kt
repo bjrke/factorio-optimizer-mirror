@@ -1,11 +1,6 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.layout
 
 import de.bjrke.factorio.optimizer.common.compaction.LayoutIndex
-import de.bjrke.factorio.optimizer.common.layout.ChestLikeEntity
-import de.bjrke.factorio.optimizer.common.layout.InserterEntity
-import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
-import de.bjrke.factorio.optimizer.common.layout.MachineEntity
-import de.bjrke.factorio.optimizer.common.layout.TransportEntity
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.direction
 

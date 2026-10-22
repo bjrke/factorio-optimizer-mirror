@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
 import de.bjrke.factorio.optimizer.common.compaction.SeamOrientation
 import de.bjrke.factorio.optimizer.common.compaction.nextCompaction
 import de.bjrke.factorio.optimizer.common.layout.BeltEntity
@@ -11,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.layout.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.Signal
 import de.bjrke.factorio.optimizer.common.layout.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.layout.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension

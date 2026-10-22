@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.blueprint.toBlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.layout.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.layout.InfinityPipeEntity

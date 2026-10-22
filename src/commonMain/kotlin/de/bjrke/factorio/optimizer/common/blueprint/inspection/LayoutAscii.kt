@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.blueprint.inspection
 
 /**
  * Renders a [dump] as one character per tile so a layout can be eyeballed in a terminal: machines

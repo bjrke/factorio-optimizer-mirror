@@ -13,8 +13,8 @@ CLI (JVM) from one shared core.
 ## Source layout
 
 - `src/commonMain` — shared logic, cut by pipeline stage into
-  `common/{model,util,data,plan,blueprint,layout,planning,routing,plumbing,compaction,
-  special,service}`:
+  `common/{model,util,data,plan,beltend,blueprint,layout,route,planning,routing,plumbing,
+  compaction,band,special,service}`:
   - `data` — the dump side: `recipeParser.kt` orchestrates it, `RecipePrototype.kt`
     reads one recipe, `JsonFields.kt` holds the JSON accessors, `prototypeStats.kt`
     the machine/logistics stats, `resourceRecipes.kt` the extraction recipes.
@@ -23,19 +23,28 @@ CLI (JVM) from one shared core.
     `RecipeProvider` for the parse), `LinearProgram.kt`, `Logistics.kt`.
   - `plan` — the vocabulary the stages share: `BlueprintPlan` and its result,
     the `Planned*` types, the direct-feed band model (`DirectFeedModel.kt`), the
-    machine footprint and fluid ports, and their budgets (`MAX_COPIES`,
-    `GROUP_MAX_MACHINES`).
-  - `blueprint` — `blueprintPlan` and `BlueprintSelection.kt` build a plan,
-    `BlueprintLayout.kt` assembles it, the ASCII rendering (`LayoutAscii*.kt`) and
-    the invariant checks (`LayoutValidation*.kt`) inspect it.
-  - `layout` — the entity hierarchy and the board kernel (`LayoutBoard`,
-    `LayoutPlacement`, `LayoutUnderground`, `Tunnels`, `LayoutRouter`).
-  - `planning` — the row and band planner (`RowPlanner`, `RowPlacer`, `BandSearch`,
-    the inserter and interface placers) and the shared `LayoutStage`.
+    machine footprint and fluid ports, their budgets (`MAX_COPIES`,
+    `GROUP_MAX_MACHINES`), and `ImportExtension` (the import state the marker, trim,
+    compaction and power stages share).
+  - `layout` — the board kernel and the entity hierarchy (`LayoutBoard`,
+    `LayoutEntity`, `LayoutTransportEntities`, `LayoutEntityStations`,
+    `LayoutPlacement`, `LayoutUnderground`, `Tunnels`), the layout index
+    (`LayoutIndex`) and the invariant checks (`LayoutValidation*.kt`).
+  - `route` — the weighted A* shared by belts and pipes (`LayoutRouter`,
+    `RouteSearch`, `RouteProfile`); it sits below `routing`, `plumbing` and
+    `planning`, which all drive it.
+  - `beltend` — `BeltEndConnector.kt` and `chestWires`: the solid belt's end marker
+    (label, infinity chest, chest) and its circuit wires.
+  - `blueprint` — `blueprintPlan` and `BlueprintSelection.kt` build a plan and
+    `BlueprintLayout.kt` assembles it; `blueprint/inspection` renders the ASCII
+    layout and the dump, `blueprint/output` encodes the string and the URL.
+  - `planning` — the row planner (`RowPlanner`, `RowPlacer`, `Row` and the
+    inserter/interface placers) and the shared `LayoutStage`.
+  - `band` — `BandSearch`, the direct-feed band search.
   - `routing` — implicit delivery (`Delivery*`, `Import*`, `SplitDeliveryRouter`) and
     `BeltRouteRules`.
   - `plumbing` — `FluidFeeder.kt`; `special` — the path and power placers, the
-    direct-feeder, the material search and the A* (`RouteSearch`, `RouteProfile`).
+    direct-feeder and the material search.
   - `compaction` — `LayoutCompaction`, `CompactionPass`, `SeamGrid`,
     `UndergroundStretcher`.
   - plus the dumped `prototypes/` resources.
@@ -53,30 +62,44 @@ CLI (JVM) from one shared core.
 target-specific `loadRecipe.kt`/`index.kt` files (the `data` ones are `expect`/`actual`
 pairs with the common declaration).
 
-Current sizes, files / lines — the budget is at most 15 files and 800 lines:
+Current sizes, files / lines — **files** are the budget (warn above 10, fail above
+15). There is no package line budget: file length is capped per file by
+`LargeClass`. `PackageSizeTest` in `jvmTest` walks
+`src/commonMain/kotlin/.../common` and prints the warnings:
 
 | package | files | lines |
 | --- | --- | --- |
-| blueprint | 15 | 1,275 |
+| band | 1 | 281 |
+| beltend | 1 | 215 |
+| blueprint | 3 | 367 |
+| blueprint/inspection | 3 | 229 |
+| blueprint/output | 3 | 225 |
 | compaction | 4 | 753 |
 | data | 9 | 628 |
-| layout | 7 | 644 |
+| layout | 11 | 794 |
 | model | 15 | 1,397 |
-| plan | 3 | 280 |
-| planning | 6 | 986 |
+| plan | 4 | 329 |
+| planning | 6 | 708 |
 | plumbing | 1 | 269 |
-| routing | 7 | 695 |
+| route | 3 | 343 |
+| routing | 6 | 651 |
 | service | 5 | 699 |
-| special | 6 | 868 |
+| special | 4 | 601 |
 | util | 2 | 85 |
+
+The lines column is informational: `model` is the only package without head-room in
+files (15), and a split there is a separate decision, not a reflex.
 
 Each package imports the others by name (no project wildcards, enforced by
 `WildcardImport` in `config/detekt/detekt.yml`), and a symbol no other package needs
-is `internal`: the compiler then rejects a cross-package use. See `decisions.md`
-(2026-10-21) for the rule and `pitfalls.md` for how to move a file.
+is `internal`: the compiler then rejects a cross-package use. `ForbiddenImport` is
+enabled but cannot express the edges (see `pitfalls.md`), so the package edges are
+compiler- and review-enforced. See `decisions.md` (2026-10-21) for the rule and
+`pitfalls.md` for how to move a file.
 
 ## Blueprint layout
 
+`blueprint/blueprintPlan` (`blueprint/BlueprintPlan.kt`) builds the plan;
 `blueprint/BlueprintLayout.kt` turns a `BlueprintPlan` plus a `LogisticsCalculator`
 into a `Blueprint` (`model/Blueprint.kt`). `buildBlueprint(plan, logistics,
 beltEnd)` runs `RowLayout` in ordered passes — recipe rows, target output, imports,
@@ -85,8 +108,9 @@ poles, pole wires — and returns a `Blueprint` whose `entities` become the
 `entities` array (numbered by list position) and whose `wires` become the
 top-level `wires` array. The order is load-bearing: pipes go before belts, the
 import trim before the underground stretch, compaction before the poles.
-`blueprintLayoutDump` is the one read-back of a finished layout (`LayoutDump`:
-placed `LayoutEntity`s plus failure strings); the CLI's `--layout` renders it and
+`blueprintLayoutDump` (`blueprint/inspection/`) is the one read-back of a finished
+layout (`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's
+`--layout` renders it and
 the test suites assert on it via `commonTest/…/business/fixtures/BlueprintLayoutAccess.kt`,
 so `RowLayout` and its accessors stay private.
 
@@ -98,12 +122,14 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   the reserve/place/remove primitives. Entity placement lives in
   `LayoutPlacement.kt`, the tunnel index in `Tunnels.kt` and the underground queries
   in `LayoutUnderground.kt`, all as board extensions.
-- `layout/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
-  `RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
-  the `RouteRequest`, and `RouteSearch.kt` owns the weighted A* frontier and node
+- `route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
+  `route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
+  the `RouteRequest`, and `route/RouteSearch.kt` owns the weighted A* frontier and node
   expansion.
 - `special/PathPlacer.kt` — `placePath`, the tile roles for plain and underground
-  runs, and `directionBetween`; shared by belt and pipe routes.
+  runs, and `directionBetween`; shared by belt and pipe routes. It is the one
+  stage package `routing` reaches, which is why the package edges stay
+  compiler-enforced (`pitfalls.md`).
 - `compaction/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
   end sharing.
@@ -111,10 +137,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   map, allocation depth, row units and the pure sizing helpers (`copiesOf`,
   `inserterPattern`).
 - `planning/RowPlacer.kt` — places the machine rows (`Row` = `RowBox` +
-  `RowLanes` + machines), the bands, lanes and product, and owns the
+  `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and product, and owns the
   allocation-to-row index and the lane direction. `MachineInserterPlacer` places
   the machine-edge inserters and `BandInterfacePlacer` the gap inserters.
-- `routing/ImportExtension.kt` — the shared import bookkeeping: the marker rows
+- `plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
 - `plumbing/FluidFeeder.kt` — routes every fluid: the reserved machine-edge pipes,
@@ -129,7 +155,7 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   `CorridorShift` cuts one corridor and moves the far side.
 - `special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry.
-- `blueprint/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
+- `beltend/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
 - `routing/DeliveryRouter.kt` — orders the solid deliveries and places the
   target's output connector; `DeliveryPreparation` reserves the sinks and sources,
@@ -148,7 +174,7 @@ a **direct-feed band**: a solid material whose producer and consumer stand in a
 small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
 `BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth
-for it. `BandSearch` finds the shortest window (`FeedWindow` checks that every
+for it. `band/BandSearch` finds the shortest window (`FeedWindow` checks that every
 consumer is covered and every producer feeds someone). `RowPlacer` places a band with `placeBand`; only belted allocations feed
 belts, lanes and sinks, so a band's internal material never gets a belt. See
 `decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking

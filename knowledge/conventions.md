@@ -33,10 +33,13 @@ up.
   split by responsibility into separate files or classes instead of collecting
   a dozen writers in one file.
 - Package boundaries are the other half of that rule: a package is a unit with a
-  stated surface (see `decisions.md`, 2026-10-21). A cross-package reference is an
-  explicit import of the names actually used, and detekt's `ForbiddenImport` lists
-  the packages each package may reach. If a package grows past 15 files or 800
-  lines, that is the signal to cut it, not to add a file.
+  stated surface (see `decisions.md`, 2026-10-21 and 2026-10-22). A cross-package
+  reference is an explicit import of the names actually used. `ForbiddenImport` is
+  enabled but cannot express the edges (one flat list, see `pitfalls.md`), so the
+  compiler (`internal`) and review carry them. `PackageSizeTest` (`jvmTest`) warns
+  above 10 files and fails above 15; a failing file budget is the signal to cut a
+  package, not to add a file. There is no line budget: file length is capped per
+  file by `LargeClass`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered

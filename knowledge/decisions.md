@@ -4,6 +4,55 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-22 — Package budgets: files only; detekt cannot own the edges
+
+**Context.** The 2026-10-21 cut left `blueprint` (15 files, 1,275 lines) and
+`planning` (6/986) over the old 800-line budget, and the brief for this pass asked
+for `ForbiddenImport` sections plus a package-size test. Splitting the two by
+measured edges worked (`blueprint` → builder 3/367 + `inspection` 3/229 +
+`output` 3/225; `planning` → row planner 6/708 + `band` 1/281). The edge rule did
+not.
+
+**Decision.** The package budget is the file count, and nothing else. The 800-line
+package budget is dropped: it is too low for a package of a dozen legitimate files
+(15 files at 93 lines each already exceeds it), and file length is already capped
+per file by `LargeClass` (500 lines) and kept small by responsibility.
+
+- `PackageSizeTest` (`jvmTest`) warns above 10 files and fails above 15. There is
+  no line assertion at all — not even a warning — so the test cannot drift back into
+  a second length budget. `model` (15 files, 1,397 lines, 93 average) is the only
+  package without file head-room; it needs no split for length.
+- `ForbiddenImport` stays enabled with an empty list, documented in
+  `config/detekt/detekt.yml`. On detekt 2.0.0-alpha.6 `allowedImports` is one
+  global list and every `forbiddenImports` entry applies to every file, so a
+  package can only be listed when no other package imports it. Measured on the
+  real graph, no package qualifies: `blueprint` imports every stage, the stages
+  reach each other through `layout`, `plan` and `route`, and the drivers and tests
+  import the read-back packages. The edges stay compiler- (`internal`) and
+  review-enforced.
+
+**Edges found while measuring, and the moves they forced.** A cycle
+(`blueprint ⇄ compaction`, `layout ⇄ special`, `routing ⇄ beltend`) had to go
+before the graph could even be read as a pipeline:
+
+- `ImportExtension` (shared stage state) → `plan`;
+- the weighted A* (`LayoutRouter`, `RouteSearch`, `RouteProfile`) → new `route`,
+  below `routing`, `plumbing` and `planning`;
+- `BeltEndConnector`/`chestWires` → new `beltend`, above `layout`;
+- `LayoutIndex` and the invariant checks (`validateLayout`) → `layout`, which
+  removes `compaction → blueprint.inspection` and makes inspection a leaf (it only
+  reads `layout` and `model` now).
+
+The result is acyclic: `model < plan, route, layout < beltend, band < planning <
+routing, plumbing, special, compaction < blueprint < blueprint.inspection/output`.
+
+**Open.** `special` still imports `layout` (the path and power placers need the
+board) while `layout` no longer imports `special`; the pipeline is a DAG but
+`routing → special` remains, which is why `special` cannot be a detekt target.
+
+**Supersedes.** The 2026-10-21 entry's "at most 15 files and 800 lines" budget: the
+file count survives, the line count is gone.
+
 ## 2026-10-21 — Package boundaries: cut the core, then one explicit import per edge
 
 **Context.** `de.bjrke.factorio.optimizer.common.business` held 62 of the 98
@@ -13,8 +62,9 @@ length. `common.model` (15 files, 1,383 lines) is in the same state. The edges a
 invisible to import-based tooling because most files import `common.model.*`.
 
 **Decision.** Split the core by pipeline stage into
-`common/{model,util,data,blueprint,layout,service,cli}`, each at most 15 files and 800
-lines, and make every core symbol that no other package needs `internal`.
+`common/{model,util,data,blueprint,layout,service,cli}`, each at most 15 files (a
+line budget was tried too and dropped on 2026-10-22), and make every core symbol
+that no other package needs `internal`.
 Enforcement is two cheap layers, not an architecture tool:
 
 1. the compiler: an `internal` symbol used from another package does not compile, so
@@ -41,8 +91,8 @@ The wildcard ban landed first (in `4f6c3df`), so every later move only needed im
 re-pointed at the symbol's new package. A shared `common.plan`
 package (the plan data, the `Planned*` types, the direct-feed band model and the
 machine footprint/ports) later removed the cycle between `blueprint`, `planning` and
-`special`. The file budget holds everywhere (largest 7); the 800-line budget still
-fails for `blueprint` (1,275) and `planning` (986), which are split separately.
+`special`. The file budget held everywhere (largest 7); `blueprint` (1,275 lines) and
+`planning` (986) were split later, for coupling rather than for length.
 
 **How to move a file.** Move it with `git mv`, rewrite its `package` line, then run
 the compiler and fix what it names. A moved symbol must be imported by name at every

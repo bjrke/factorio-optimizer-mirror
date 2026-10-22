@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.common.compaction
 
-import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
 import de.bjrke.factorio.optimizer.common.layout.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.PipeEntity
+import de.bjrke.factorio.optimizer.common.layout.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.east

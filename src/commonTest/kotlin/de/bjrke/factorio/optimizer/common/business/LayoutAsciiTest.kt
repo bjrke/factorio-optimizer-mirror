@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
-import de.bjrke.factorio.optimizer.common.blueprint.LayoutDump
-import de.bjrke.factorio.optimizer.common.blueprint.layoutAscii
+import de.bjrke.factorio.optimizer.common.blueprint.inspection.LayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.inspection.layoutAscii
 import de.bjrke.factorio.optimizer.common.layout.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.ChestEntity
 import de.bjrke.factorio.optimizer.common.layout.InserterEntity

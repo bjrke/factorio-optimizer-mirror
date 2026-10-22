@@ -1,12 +1,9 @@
-package de.bjrke.factorio.optimizer.common.layout
+package de.bjrke.factorio.optimizer.common.route
 
+import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.layout.PIPE_UNDERGROUND_RANGE
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.special.RouteCosts
-import de.bjrke.factorio.optimizer.common.special.RouteProfile
-import de.bjrke.factorio.optimizer.common.special.RouteRequest
-import de.bjrke.factorio.optimizer.common.special.RouteSearch
-import de.bjrke.factorio.optimizer.common.special.TunnelRules
 
 /**
  * The weighted A* router shared by belts and pipes. It only asks the [board] what a tile holds and

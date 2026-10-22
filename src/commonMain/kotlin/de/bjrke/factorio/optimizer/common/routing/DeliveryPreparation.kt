@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.routing
 
-import de.bjrke.factorio.optimizer.common.blueprint.BeltEndConnector
+import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -9,6 +9,8 @@ import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.plan.ImportExtension
+import de.bjrke.factorio.optimizer.common.plan.ImportFeed
 import de.bjrke.factorio.optimizer.common.planning.LayoutStage
 import de.bjrke.factorio.optimizer.common.planning.Row
 

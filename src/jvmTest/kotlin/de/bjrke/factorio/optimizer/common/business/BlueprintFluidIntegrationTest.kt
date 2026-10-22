@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.business
 
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
-import de.bjrke.factorio.optimizer.common.blueprint.validateLayout
+import de.bjrke.factorio.optimizer.common.layout.validateLayout
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
