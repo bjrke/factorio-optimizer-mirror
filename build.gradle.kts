@@ -124,10 +124,14 @@ tasks.named<Test>("jvmTest") {
 }
 
 // Detekt's KMP support registers the type-resolved `detektMainJvm`/`detektTestJvm`
-// tasks but does not wire them into `check`, so do that explicitly. The plain
-// `detekt` task (wired into `check` by the plugin) analyses every source set without
-// type resolution.
-tasks.named("check") { dependsOn("detektMainJvm", "detektTestJvm") }
+// tasks but does not wire them into `check`, so do that explicitly. Those two analyse
+// commonMain/commonTest with jvmMain/jvmTest; the plugin's plain `detekt` pass over all
+// of `src` is dropped from `check` because it repeats that work, and the JS sets get
+// their own light per-source-set tasks instead. `detekt` still exists for a one-off
+// whole-tree run, so `check` now analyses each source set exactly once.
+tasks.named("check") {
+    dependsOn("detektMainJvm", "detektTestJvm", "detektJsMainSourceSet", "detektJsTestSourceSet")
+}
 
 tasks.register<JavaExec>("run") {
     group = "run"

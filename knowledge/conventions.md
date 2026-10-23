@@ -7,10 +7,13 @@ up.
 
 ## Code size and file layout
 
-- Detekt enforces the quality gates and is part of `./gradlew check`. The plain
-  `detekt` task analyses all of `src` without type resolution; `check` additionally
-  runs the type-resolved `detektMainJvm`/`detektTestJvm` (detekt's KMP support
-  registers them but does not wire them into `check`, so `build.gradle.kts` does).
+- Detekt enforces the quality gates and is part of `./gradlew check`. `check` runs
+  the type-resolved `detektMainJvm`/`detektTestJvm` (detekt's KMP support registers
+  them but does not wire them into `check`, so `build.gradle.kts` does) plus the light
+  `detektJsMainSourceSet`/`detektJsTestSourceSet` for the JS-only sources. The plain
+  `detekt` task (all of `src`, no type resolution) is **not** in `check`: the typed
+  tasks already cover common + JVM, and running both analysed everything twice. Use
+  `./gradlew detekt` for a one-off whole-tree run; it still works and is not removed.
   `config/detekt/detekt.yml` raises `LargeClass.allowedLines` to **500** to keep a
   class within this project's budget. Detekt has no per-file line rule — `LargeClass`
   counts a class, so keep files small by responsibility rather than chasing a line
@@ -136,6 +139,22 @@ up.
   `build.gradle.kts`, `buildSrc/**`, `gradle/**` or `settings.gradle.kts`: iterate
   with `./gradlew jvmTest`, finish with `./gradlew spotlessApply check` — a single
   invocation, one Gradle process.
+- **A suite that is too heavy for the JS browser belongs in `jvmTest`.** `commonTest`
+  runs on both JVM and JS, so a suite there costs a Chrome execution in
+  `jsBrowserTest` on every pipeline. The layout and blueprint suites
+  (`BlueprintLayout*`, `BlueprintFluidLayoutTest`, `BlueprintImportTest`,
+  `BlueprintBeltEndTest`, `BlueprintLayoutSnapshotTest`, `band/`, the ascii, plan and
+  encoder suites) therefore live in `src/jvmTest`; `jsBrowserTest` keeps the model,
+  production, optimizer and `jsTest` component suites. Move a suite to `jvmTest`
+  rather than filtering it out in CI — the Kotlin/JS runner cannot express a
+  multi-suite exclude, and a filter hides the same cost from local runs too.
+  `blueprint/fixtures` stays in `commonTest`: `jvmTest` and the `jsTest`
+  `OptimizationResult*` suites both read it, and a shared test helper must not move
+  into a test source set it is not compiled with. Moved suites may still import
+  `service/fixtures` (`testLogistics`, `production`), which is also `internal` in
+  `commonTest`: the JVM test compilation sees those declarations as a friend module,
+  so the import keeps compiling — verified by moving the suites and rerunning
+  `compileTestKotlinJvm`.
 - A docs-only or tooling-only branch runs **no** Gradle task: `knowledge/**`,
   `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent
   tooling. `spotlessApply` would be a no-op there anyway. A branch that mixes code

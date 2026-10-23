@@ -1,24 +1,50 @@
+# Gradle keeps its dependency cache in the workspace so GitLab can cache it. The
+# key follows the two files that pin every dependency: the version catalog (Kotlin,
+# detekt, Spotless, kotlinx, the wrappers BOM) and the `Dockerfile` (its image tag
+# pins the Gradle and JDK versions, and so the cache layout). GitLab allows two
+# `key:files` entries, so `build.gradle.kts` and `buildSrc/build.gradle.kts` cannot
+# be listed too; they do not change the resolved artifacts unless the catalog does.
+variables:
+  GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
+  GRADLE_OPTS: "-Dorg.gradle.caching=true"
+
 cache:
+  key:
+    files:
+      - gradle/libs.versions.toml
+      - Dockerfile
   paths:
-    - .gradle
+    - .gradle/caches/modules-2
+    - .gradle/caches/jars-9
+    - .gradle/caches/9.8.1/transforms
+    - .kotlin
+    - build/js/node_modules
 
 test:
   stage: test
   image: $CI_REGISTRY_IMAGE:latest
-  variables:
-    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
   script:
-    - gradle --no-daemon clean check jsBrowserDistribution
+    - gradle --no-daemon check jsBrowserDistribution
+    - mv build/dist/js/productionExecutable public
   artifacts:
+    when: always
     expire_in: 1 week
     paths:
-      - build/dist/js/productionExecutable
+      - public
+      - build/reports/tests
+      - build/test-results
+      - build/reports/detekt
+      - build/reports/problems
+    reports:
+      junit:
+        - build/test-results/jvmTest/*.xml
+        - build/test-results/jsBrowserTest/*.xml
 
 pages:
   stage: deploy
   image: alpine:latest
   script:
-    - mv build/dist/js/productionExecutable public
+    - "true"
   artifacts:
     expire_in: 1 week
     paths:
