@@ -10,7 +10,9 @@
 // instead of asking the model to summarize stale history. Otherwise fall back to
 // the normal summarizer with a short steering instruction.
 //
-// A local plugin edit may need `opencode service restart` to take effect.
+// A local plugin edit may need `opencode service restart` to take effect. The
+// plugin API is V2: no `@opencode/plugin` import is needed for a plain
+// `{ id, setup }` default export (verified on v2.1.4, `opencode plugin list`).
 
 const HANDOFF_MARKER = "## Handoff state";
 

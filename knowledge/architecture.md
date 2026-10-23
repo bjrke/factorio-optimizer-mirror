@@ -318,5 +318,3 @@ serialization. `./gradlew check` runs Detekt (see `conventions.md`): the plain
 - `buildSrc/` — Gradle build logic (`dumpPrototypes`, `sanitizePrototypes`,
   `updateImages` are the `factorio` group tasks).
 - `.opencode/skills/` — the Factorio blueprint and optimizer skills.
-  `.opencode/plugins/compaction.js` steers the compaction summary; `/handoff` is
-  the manual counterpart.

@@ -3,33 +3,8 @@
 Verified traps, non-obvious behavior and diagnostic dead ends. An entry belongs
 here only with evidence, and should say how to recognise it.
 
-- **A missing `AGENTS.md` rule may just be un-loaded.** OpenCode loads nested
-  `AGENTS.md` files only when the agent reads or lists a directory below them.
-  A rule that must always apply belongs in the root `AGENTS.md`; anything else can
-  live in a nested file or in `knowledge/` and be loaded on demand.
-- **`opencode.json` is gitignored.** The repository's OpenCode config is local to
-  the checkout (verify with `git check-ignore -v opencode.json`). Do not rely on a
-  config change being tracked; put shared agent tooling in `.opencode/skills/`
-  and `knowledge/`, both of which are committed.
-- **Project OpenCode config uses deprecated V1 keys.** The local `opencode.json`
-  uses `permission` and `compaction.tail_turns`; V2 spells these `permissions` and
-  `compaction.keep.tokens`. It is local-only, so leave it to the user unless asked.
 - **`gradlew` tests run with the project root as the working directory.** Tests
   that shell out can resolve repository files relative to `System.getProperty("user.dir")`.
-- **Local plugins need a service restart, and are verifiable.** `.opencode/plugins/*.js`
-  is loaded by the OpenCode server; a direct-file edit does not always hot-reload, so
-  run `opencode service restart` (the current TUI connection drops). Confirm the plugin
-  is active with
-  `opencode api get '/api/plugin?location%5Bdirectory%5D=<abs-project-dir>'` (the
-  default location is `~`, so the project directory must be passed). Verified on
-  v2.0.32: a plain `{ id, setup }` default export from a `.js` file loads as an active
-  `local` plugin, so no `@opencode/plugin` dependency is required. `node --check`
-  catches syntax errors; behavior needs the runtime.
-- **OpenCode compacts automatically; the plugin only steers the summary.** A
-  `compaction` hook adds one preservation instruction (verified state, decisions,
-  next action, `knowledge/*` paths). `/handoff` produces the same information
-  deliberately. There is no agent-initiated compaction, no token budget and no
-  handoff file.
 - **A band's fluid port sits in a gap column the fluid feed cannot reach.** A
   direct-feed band interleaves its machines, so a member that takes a fluid has its
   port between two machines instead of on the row's outside edge; `feedFluids` then
@@ -189,22 +164,6 @@ here only with evidence, and should say how to recognise it.
   `MatchingDeclarationName` flagged `LayoutTunnels.kt` once `Tunnels` was its only
   type; renaming the file (not suppressing the rule) is the fix. Files with several
   top-level declarations are exempt.
-- **Compaction does not summarize the newest reply.** OpenCode's checkpoint
-  summary covers the transcript *before* the retained recent tail; the tail is
-  kept verbatim. At 2026-10-19 18:57 the manual compaction of session
-  `ses_eab214006ffexOwJWcjfeWwQX3` produced a summary that still said "No code
-  changes made" with the pre-implementation `Next Move`, while its `recent` field
-  began at the `ok` message (seq 194) and ended with the just-written handoff
-  reply. A `/handoff` reply is therefore *in the tail, not in the summary*, so
-  running `/handoff` and `/compact` alone cannot update it. The repo plugin
-  (`.opencode/plugins/compaction.js`) now lifts the newest assistant reply's
-  `## Handoff state` block into `event.result.summary`; run `/handoff` immediately
-  before `/compact` and put the durable state under that exact heading.
-- **V2 ignores `compaction.tail_turns`.** `opencode.json` still had the V1 key;
-  the server logged `path=$.compaction.tail_turns kind=unsupported action="omitted
-  unsupported legacy setting"` and used the default retention instead. Configure
-  `compaction.keep.tokens` (default 15000), not `tail_turns`; `opencode.json` is
-  gitignored, so this is a local fix and needs `opencode service restart`.
 - **detekt's `ForbiddenImport` is a flat, global list — it cannot express per-package
   edges.** Verified on 2.0.0-alpha.6: `allowedImports` is one global list, and
   `forbiddenImports` is merged from every entry, so `pkg.**` forbids `pkg` for

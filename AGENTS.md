@@ -94,14 +94,19 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   prose list the user would have to retype. This applies to every decision, not
   just ones that seem worth the tool.
 - A **question** (blocked/failing URL, missing resource, undecidable choice) is
-  asked directly and the task stopped — never turned into a script. For a
+  asked directly and the work stopped — never turned into a script. For a
   blocked/failing URL, name the host, paste the `curl` proof (status + raw
   body), and ask whether to approve or block it.
-- A **host command** (must run outside the sandbox): never paste it into chat.
-  Write a short, reviewable, Ubuntu-compatible script `tmp/<topic>.sh` that
-  writes results beside itself (`tmp/<topic>.out`/`.log`). Both directions are
-  painful in the sandbox, so keep everything needed in `tmp/`. `tmp/` is
-  intentionally not gitignored: keep scripts uncommitted, delete when done.
+- A **host command** (must run outside the sandbox): never paste it into chat;
+  write a short, reviewable, Ubuntu-compatible script `tmp/<topic>.sh` that saves
+  results beside itself. `tmp/` is intentionally not gitignored: keep scripts
+  uncommitted and delete them when done.
+
+## OpenCode 2.x tool notes
+
+- `execute` is Code Mode only; OS commands go through `shell`. There is no
+  `bash`, `task`, `write` or `patch` (V2 renames).
+- Never retry an unknown tool name; re-check the inventory and switch tool.
 
 ## Prerequisites
 
