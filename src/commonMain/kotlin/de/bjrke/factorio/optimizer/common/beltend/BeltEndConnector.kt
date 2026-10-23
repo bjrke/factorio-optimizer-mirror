@@ -1,28 +1,26 @@
 package de.bjrke.factorio.optimizer.common.beltend
 
-import de.bjrke.factorio.optimizer.common.layout.ChestEntity
-import de.bjrke.factorio.optimizer.common.layout.InserterEntity
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
-import de.bjrke.factorio.optimizer.common.layout.Signal
 import de.bjrke.factorio.optimizer.common.layout.endName
+import de.bjrke.factorio.optimizer.common.layout.entity.ChestEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition
+import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
+import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.RequestFilter
+import de.bjrke.factorio.optimizer.common.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.layout.placeInfinityChest
 import de.bjrke.factorio.optimizer.common.layout.placeLoader
 import de.bjrke.factorio.optimizer.common.layout.placeMarker
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.BlueprintWire
-import de.bjrke.factorio.optimizer.common.model.CircuitCondition
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
-import de.bjrke.factorio.optimizer.common.model.InfinitySettings
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.RequestFilter
 import de.bjrke.factorio.optimizer.common.model.area
 
 /**
@@ -179,37 +177,4 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
             ),
         )
     }
-}
-
-/**
- * The circuit wires a chest marker needs: the output marker's inserters read the chest through
- * their circuit condition, so each has to be wired to it. A blueprint does not rebuild a circuit
- * wire on its own (just like a pole wire), so the connection must be part of it.
- */
-internal fun chestWires(placed: List<LayoutEntity>): List<BlueprintWire> {
-    val wires = mutableListOf<BlueprintWire>()
-    placed.forEachIndexed { index, entity ->
-        // only the output marker reads the chest; the input marker has no circuit condition
-        if (entity !is ChestEntity || entity.circuitConditionEnabled != false) {
-            return@forEachIndexed
-        }
-        val chest = entity.area.topLeft
-        for (dx in listOf(-1, 1)) {
-            val inserter =
-                placed.withIndex().firstOrNull { (_, candidate) ->
-                    candidate is InserterEntity &&
-                        candidate.circuitCondition != null &&
-                        candidate.area.topLeft == Coordinate(chest.x + dx, chest.y)
-                } ?: continue
-            val chestNumber = index + 1
-            val inserterNumber = inserter.index + 1
-            wires +=
-                if (dx < 0) {
-                    BlueprintWire(inserterNumber, 1, chestNumber, 1)
-                } else {
-                    BlueprintWire(chestNumber, 1, inserterNumber, 1)
-                }
-        }
-    }
-    return wires
 }

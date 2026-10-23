@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.common.plan
 
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.ceil
 
 /** How many distinct recipes a single blueprint may build; the rest are imported. */

@@ -1,30 +1,27 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
 import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
-import de.bjrke.factorio.optimizer.common.beltend.chestWires
 import de.bjrke.factorio.optimizer.common.blueprint.inspection.LayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.output.chestWires
 import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.compaction.CompactionPass
 import de.bjrke.factorio.optimizer.common.compaction.UndergroundStretcher
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.LayoutNames
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.Blueprint
-import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
-import de.bjrke.factorio.optimizer.common.model.BlueprintWire
+import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.InserterTier
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.planning.LayoutStage
 import de.bjrke.factorio.optimizer.common.planning.RowPlacer
 import de.bjrke.factorio.optimizer.common.planning.RowPlanner
 import de.bjrke.factorio.optimizer.common.plumbing.FluidFeeder
+import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.routing.DeliveryRouter
 import de.bjrke.factorio.optimizer.common.routing.ImportTrimmer
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.special.PowerPlacer
 
 /**
@@ -39,7 +36,7 @@ import de.bjrke.factorio.optimizer.common.special.PowerPlacer
  * infinity chest, or a chest the belt's inserters feed from or to. A fluid belt always keeps the
  * constant-combinator/pipe label, since a chest cannot carry a fluid.
  */
-internal fun buildBlueprint(
+fun fromPlaced(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,

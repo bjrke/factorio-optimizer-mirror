@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.service
 
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.prototype.Recipe
 
 /**
  * The machine choice and rates for one parsed prototype set: which selected factory runs a recipe,

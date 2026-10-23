@@ -2,17 +2,19 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.output.FactorioUrl
 import de.bjrke.factorio.optimizer.common.blueprint.output.parseFactorioUrl
-import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.data.DEFAULT_NORMALIZE_TARGET
-import de.bjrke.factorio.optimizer.common.data.validNormalizeTarget
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.BeltTier
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.InserterTier
-import de.bjrke.factorio.optimizer.common.model.SelectionFlag
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.surfaceFromPlanet
-import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.production.DEFAULT_NORMALIZE_TARGET
+import de.bjrke.factorio.optimizer.common.production.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.prototype.Surface
+import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromIdentifier
+import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromSelection
+import de.bjrke.factorio.optimizer.common.prototype.selection.spaceAgeIn
+import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromPlanet
+import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
 
 /**
  * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),
@@ -63,7 +65,7 @@ private fun Array<String>.valueOptions(name: String): List<String> = filter {
 private fun resolveSpaceAge(args: Array<String>, url: FactorioUrl?) =
     when {
         args.any { it == "--base-game" } -> false
-        url != null -> SelectionFlag.SPACE_AGE.enabledIn(url.selection)
+        url != null -> spaceAgeIn(url.selection)
         else -> true
     }
 
@@ -91,9 +93,9 @@ private fun resolveOutputs(args: Array<String>) = buildSet {
 /** A chest marker needs ground, so a chest choice on a space platform falls back to the label. */
 private fun resolveBeltEnd(args: Array<String>, url: FactorioUrl?, surface: Surface): BeltEnd {
     val requested =
-        args.valueOption("belt-end")?.let(BeltEnd::fromIdentifier)
+        args.valueOption("belt-end")?.let(::beltEndFromIdentifier)
             ?: if (args.any { it == "--cheats" }) BeltEnd.INFINITY_CHEST
-            else BeltEnd.fromSelection(url?.selection, surface)
+            else beltEndFromSelection(url?.selection, surface)
     return requested.takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR
 }
 

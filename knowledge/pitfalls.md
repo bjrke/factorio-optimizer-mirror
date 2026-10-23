@@ -83,7 +83,9 @@ here only with evidence, and should say how to recognise it.
   at brace depth 0), one-line and multi-line KDoc, KDoc references (`[Factory]`),
   and the same name declared in several packages (`material`, `recipe`, `name` in
   `common.business.fixtures` and as parameter names). A hand-written scanner hit all
-  of these; see `decisions.md` (2026-10-21).
+  of these; see `decisions.md` (2026-10-21). If an edge checker is ever
+  automated, read the compiled constant pool rather than the sources: the compiler
+  has already resolved every name there.
 - **Classycle is not usable for this project.** Classycle analyses Java class files
   and its Gradle plugins are unmaintained (Portal versions 2015–2018); it expects
   Java outer-class naming and `extends`, which Kotlin bytecode and metadata do not
@@ -192,8 +194,9 @@ here only with evidence, and should say how to recognise it.
   `blueprint.inspection.**`); a bare `pkg` matches nothing; `pkg.*` is a regex
   whose dots are wildcards. Do not read a section comment as scoping — it is
   documentation only. Recognise a wrong setup by an allowed edge being reported
-  (e.g. `band -> model` after `data` forbids `model`). The edges here stay
-  compiler- and review-enforced; see `decisions.md` (2026-10-22).
+  (e.g. `band -> model` after `data` forbids `model`). `ForbiddenImport` stays
+  empty on purpose; the intended edges are the table in `architecture.md` and are
+  guarded by the compiler (`internal`) and review (`decisions.md`, 2026-10-23).
 - **A `sed`/`python` import rewrite is only a hint; the compiler is the arbiter.**
   Moving a file and rewriting imports textually re-pointed `adjacent` (a
   `model` extension) at a same-named private helper in `band`, and mapped
@@ -201,9 +204,37 @@ here only with evidence, and should say how to recognise it.
   compileKotlinJvm compileTestKotlinJvm` after every move and fix only what it
   names; a bulk `git checkout -- src` also reverts the *staged* moves' content, so
   the package line of every moved file must be checked again afterwards.
+- **Do not rebuild an import block from a name-based usage scan.** On 2026-10-22 a
+  helper that inserted `import <newPackage>.<Symbol>` for every symbol found in the
+  body silently corrupted ~80 files: it truncated `…common.prototype.Recipe` to
+  `…common.prototype` (a package, so `Packages cannot be imported`), inserted into
+  a block it then re-sorted without `import `, and added imports of *members* and
+  *parameter names* (`production`, `testRecipe`) that are only importable as
+  declarations. Recovering the blocks needed `git show HEAD:<path>` plus matching
+  each file's original import symbols against its body — never a name-to-package
+  guess. The reliable recipe is: `git mv`, `sed` the `package` line, then add the
+  import the *compiler* asks for, one symbol at a time.
+- **A moved `expect`/`actual` pair needs its source-set directories created too.**
+  Moving `common/production/loadRecipe.kt` also means `jsMain`/`jvmMain`
+  `common/production/loadRecipe.kt`; the JS one is also the `@JsModule` target the
+  webpack config resolves, so renaming the file without updating the `@JsModule`
+  path breaks only the browser bundle, not `compileKotlinJvm`.
+- **A package that is both a directory and a symbol prefix needs care in scanners.**
+  `common.prototype` and `common.prototype.selection` are separate packages, so a
+  resolver that stops at the longest known *prefix* attributes `…prototype.selection.X`
+  to `prototype`. Resolve from the full dotted path (or the declared package), never
+  from a prefix match — the package dependency table in `architecture.md` treats the
+  nested package as its own unit.
+- **An architecture guard must read the build output, not the source tree.** The
+  removed `PackageEdgesTest` first walked the source dirs and parsed `*.class` names
+  inside the `.kt` files, so it found zero class files and passed vacuously; the
+  injected `service -> blueprint` probe only failed after pointing it at
+  `build/classes/kotlin/jvm/main/...`. If a Gradle-level check is added, prove it by
+  injecting the violation it should reject.
 - **`commonTest` cannot walk the source tree.** A test that reads files runs only
   on JVM: put it in `jvmTest` and locate the root by walking up from
-  `System.getProperty("user.dir")` (same as `IconCoverageTest`).
+  `System.getProperty("user.dir")` (same as `IconCoverageTest`). Prefer a Gradle
+  task over such a test for anything that guards the build itself.
 - **Konture on this repo: source capture is exact, dependency labels are not.**
   Evaluated on 2026-10-21 with `io.github.baole.konture` 1.0.2 in a throwaway
   `:konture-test` module. What works: `generateArchitectureLayout` reads KMP source

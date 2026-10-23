@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.special
 
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.PoleEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.layout.placePole
 import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.Coordinate

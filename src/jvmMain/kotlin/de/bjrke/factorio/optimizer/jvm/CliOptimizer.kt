@@ -1,31 +1,32 @@
 package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
-import de.bjrke.factorio.optimizer.common.blueprint.blueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
 import de.bjrke.factorio.optimizer.common.blueprint.inspection.layoutAscii
+import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
-import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.data.DEFAULT_NORMALIZE_TARGET
-import de.bjrke.factorio.optimizer.common.data.superRound
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.BeltTier
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
-import de.bjrke.factorio.optimizer.common.model.InserterTier
-import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
-import de.bjrke.factorio.optimizer.common.model.forSurface
-import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
-import de.bjrke.factorio.optimizer.common.model.toJson
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.production.DEFAULT_NORMALIZE_TARGET
+import de.bjrke.factorio.optimizer.common.production.RecipeLoader
+import de.bjrke.factorio.optimizer.common.production.superRound
+import de.bjrke.factorio.optimizer.common.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.prototype.Surface
+import de.bjrke.factorio.optimizer.common.prototype.selection.forSurface
+import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
+import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
+import de.bjrke.factorio.optimizer.common.service.OptimizationResult
 import de.bjrke.factorio.optimizer.common.service.Optimizer
-import de.bjrke.factorio.optimizer.common.service.RecipeProvider
+import de.bjrke.factorio.optimizer.common.service.factoryProductionComparator
 
 /**
  * Which artifact(s) the CLI prints. Several may be requested at once; [order] is the order they are
@@ -71,7 +72,7 @@ data class CliArgs(
 
 fun main(args: Array<String>) {
     val cli = parseArgs(args)
-    val parsedRecipes = RecipeProvider.forActiveMods(cli.spaceAge).forSurface(cli.surface)
+    val parsedRecipes = RecipeLoader.forActiveMods(cli.spaceAge).forSurface(cli.surface)
     val factoryConfig = FactoryConfig(cli.spaceAge)
     val factories =
         cli.factories
@@ -88,7 +89,8 @@ fun main(args: Array<String>) {
         cli.belt?.takeIf { it in logisticsConfig.availableBelts }
             ?: logisticsConfig.belt(cli.selection)
     val lanes =
-        if (cli.fullBelt == true) BeltTier.MAX_LANES else logisticsConfig.beltLanes(cli.selection)
+        if (cli.fullBelt == true) BeltTier.MAX_LANES
+        else logisticsConfig.beltLanes(fullBeltIn(cli.selection))
     val beltStack = logisticsConfig.beltStack(cli.beltStack, inserter)
     val inserterStack = logisticsConfig.inserterStack(cli.inserterStack, inserter)
     val logistics =
@@ -156,9 +158,8 @@ private fun emitBlueprint(
 ) =
     when (output) {
         Output.LAYOUT -> println(layoutAscii(blueprintLayoutDump(plan, logistics, beltEnd)))
-        Output.JSON -> println(buildBlueprint(plan, logistics, beltEnd).toJson())
-        Output.BLUEPRINT ->
-            println(blueprintString(buildBlueprint(plan, logistics, beltEnd).toJson()))
+        Output.JSON -> println(fromPlaced(plan, logistics, beltEnd).toJson())
+        Output.BLUEPRINT -> println(blueprintString(fromPlaced(plan, logistics, beltEnd).toJson()))
         Output.SETTINGS,
         Output.LISTING -> Unit
     }

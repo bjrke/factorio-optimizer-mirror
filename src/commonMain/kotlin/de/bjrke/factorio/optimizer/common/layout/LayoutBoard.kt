@@ -1,7 +1,9 @@
 package de.bjrke.factorio.optimizer.common.layout
 
+import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.area
 
 internal const val MARKER = "constant-combinator"
 internal const val INFINITY_CHEST = "infinity-chest"

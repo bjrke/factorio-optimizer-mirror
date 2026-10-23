@@ -1,9 +1,12 @@
 package de.bjrke.factorio.optimizer.common.layout
 
+import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.adjacent
+import de.bjrke.factorio.optimizer.common.model.area
 
 /** The fluid the pipe or pipe-to-ground at [coordinate] carries, if any. */
 internal fun LayoutBoard.fluidAt(coordinate: Coordinate) =

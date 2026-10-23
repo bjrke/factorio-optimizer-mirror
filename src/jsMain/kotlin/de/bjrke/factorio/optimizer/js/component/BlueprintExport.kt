@@ -3,17 +3,18 @@
 
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.blueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.buildBlueprint
+import de.bjrke.factorio.optimizer.common.blueprint.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
+import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.Blueprint
-import de.bjrke.factorio.optimizer.common.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.toJson
+import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder
@@ -237,7 +238,7 @@ internal val blueprintButton =
                     +BUTTON_TEXT
                 }
                 if (open) {
-                    val blueprint = buildBlueprint(outcome.plan, props.logistics, props.beltEnd)
+                    val blueprint = fromPlaced(outcome.plan, props.logistics, props.beltEnd)
                     blueprintDialog {
                         label = outcome.plan.label
                         text = blueprintString(blueprint.toJson())

@@ -1,11 +1,11 @@
 package de.bjrke.factorio.optimizer.common.routing
 
 import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
-import de.bjrke.factorio.optimizer.common.layout.Signal
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.layout.placeMarker
 import de.bjrke.factorio.optimizer.common.layout.placeSurface
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST

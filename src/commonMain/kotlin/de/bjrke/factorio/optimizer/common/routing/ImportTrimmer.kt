@@ -1,11 +1,11 @@
 package de.bjrke.factorio.optimizer.common.routing
 
 import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
-import de.bjrke.factorio.optimizer.common.layout.BeltEntity
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.rebuildTunnels
-import de.bjrke.factorio.optimizer.common.layout.validateLayout
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.direction

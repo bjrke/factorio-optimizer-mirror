@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.routing
 
-import de.bjrke.factorio.optimizer.common.layout.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material

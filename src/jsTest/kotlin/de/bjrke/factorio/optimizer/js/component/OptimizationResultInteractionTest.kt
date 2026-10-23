@@ -1,15 +1,15 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.BeltTier
-import de.bjrke.factorio.optimizer.common.model.Factory
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
 import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
-import de.bjrke.factorio.optimizer.js.component.fixtures.gear
 import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
-import de.bjrke.factorio.optimizer.js.component.fixtures.ore
-import de.bjrke.factorio.optimizer.js.component.fixtures.plate
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo
 import de.bjrke.test.fireEvent

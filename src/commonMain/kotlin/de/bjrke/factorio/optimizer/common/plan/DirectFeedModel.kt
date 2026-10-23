@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.plan
 
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.Recipe
+import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.abs
 
 /**

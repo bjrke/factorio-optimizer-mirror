@@ -1,15 +1,15 @@
 package de.bjrke.factorio.optimizer.common.plumbing
 
-import de.bjrke.factorio.optimizer.common.layout.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.Signal
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.endName
+import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.layout.fluidAt
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipe
 import de.bjrke.factorio.optimizer.common.layout.placeMarker
 import de.bjrke.factorio.optimizer.common.layout.placePipe
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST

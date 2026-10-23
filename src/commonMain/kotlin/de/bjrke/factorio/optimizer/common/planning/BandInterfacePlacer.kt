@@ -6,9 +6,9 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
 import kotlin.math.ceil
 
 /**

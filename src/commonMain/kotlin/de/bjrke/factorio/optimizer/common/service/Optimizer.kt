@@ -1,14 +1,12 @@
 package de.bjrke.factorio.optimizer.common.service
 
-import de.bjrke.factorio.optimizer.common.model.Category
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
-import de.bjrke.factorio.optimizer.common.model.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.model.Recipe
-import de.bjrke.factorio.optimizer.common.model.Subgroup
+import de.bjrke.factorio.optimizer.common.prototype.Category
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.prototype.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.prototype.Subgroup
 
 private const val EPSILON = 1e-7
 private const val SLACK = 1e-6
@@ -26,7 +24,7 @@ private const val IMPORT_DISPLAY_EPSILON = 1e-4
  * intermediates.
  */
 class Optimizer(
-    private val parsedRecipe: ParsedRecipe = RecipeProvider.forActiveMods(),
+    private val parsedRecipe: ParsedRecipe,
     factories: Set<Factory> = FactoryConfig().defaults,
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()

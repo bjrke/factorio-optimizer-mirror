@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.Surface
+import de.bjrke.factorio.optimizer.common.prototype.Surface
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import react.ChildrenBuilder
 import react.FC

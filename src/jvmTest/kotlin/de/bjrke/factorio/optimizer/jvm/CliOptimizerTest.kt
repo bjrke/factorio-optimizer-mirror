@@ -1,13 +1,14 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.business.CalculatorSetup
-import de.bjrke.factorio.optimizer.common.business.calculator
-import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.BeltTier
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.InserterTier
-import de.bjrke.factorio.optimizer.common.model.Surface
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.prototype.Surface
+import de.bjrke.factorio.optimizer.common.service.fixtures.CalculatorSetup
+import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf

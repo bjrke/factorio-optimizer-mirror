@@ -32,14 +32,16 @@ up.
   method's helpers into one file can replace its finding with a file-level one:
   split by responsibility into separate files or classes instead of collecting
   a dozen writers in one file.
-- Package boundaries are the other half of that rule: a package is a unit with a
-  stated surface (see `decisions.md`, 2026-10-21 and 2026-10-22). A cross-package
-  reference is an explicit import of the names actually used. `ForbiddenImport` is
-  enabled but cannot express the edges (one flat list, see `pitfalls.md`), so the
-  compiler (`internal`) and review carry them. `PackageSizeTest` (`jvmTest`) warns
-  above 10 files and fails above 15; a failing file budget is the signal to cut a
-  package, not to add a file. There is no line budget: file length is capped per
-  file by `LargeClass`.
+- Package boundaries are the other half of that rule: a package is a domain with a
+  stated surface (see `decisions.md`, 2026-10-21 to 2026-10-23). A cross-package
+  reference is an explicit import of the names actually used. The allowed edges are
+  the table in `architecture.md` ("Package dependencies"); they are enforced by the
+  compiler (`internal` marks a symbol used outside its package) and by review, not
+  by a test — `ForbiddenImport` cannot express them (one flat list, see
+  `pitfalls.md`). A new package or a new edge means adding or changing a row on
+  purpose — never widening one to silence a failure.
+  A package that outgrows 10 files is cut along its responsibilities (15 is the
+  ceiling); there is no line budget, file length is capped per file by `LargeClass`.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
@@ -50,8 +52,10 @@ up.
   fixtures, leave each suite's `private` helpers and values in place rather than
   forcing a shared file (`OptimizerTest` → `OptimizerTest` + `OptimizerSurfaceTest`).
   When they share helpers, export them instead: top-level `internal` values and
-  functions in a `fixtures/` subpackage (`LogisticsFixtures.kt` holds
-  `testLogistics`, `TOLERANCE`, `BeltCase` and `calculator`), or an abstract base
+  functions in the fixtures package of the package they belong to
+  (`service/fixtures/LogisticsFixtures.kt` holds `testLogistics`, `BeltCase` and
+  `calculator`; `blueprint/fixtures/` holds the materials, recipes, plans and layout
+  assertions), or an abstract base
   class for helpers that capture per-test callbacks
   (`OptimizationResultTestBase`). A base class of a public test class must itself be
   public, or Kotlin reports "'public' subclass exposes its 'internal' supertype".
@@ -59,7 +63,7 @@ up.
   after (`grep -oP 'fun \K[a-zA-Z]+(?=\()' | sort`); keep the suite's original name
   on one part.
   A fixtures file in the **same package** must live in a subpackage (e.g.
-  `commonTest/…/business/fixtures/`): an `internal` top-level fixture with the same
+  `commonTest/…/common/blueprint/fixtures/`): an `internal` top-level fixture with the same
   name as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
   Kotlin does not allow star-importing an `object`. Import each fixture by name; the
   project's packages no longer use wildcards.

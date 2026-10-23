@@ -1,14 +1,14 @@
 package de.bjrke.factorio.optimizer.common.compaction
 
-import de.bjrke.factorio.optimizer.common.layout.BeltEntity
-import de.bjrke.factorio.optimizer.common.layout.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.MarkerEntity
-import de.bjrke.factorio.optimizer.common.layout.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.Plumbing
-import de.bjrke.factorio.optimizer.common.layout.UndergroundBeltEntity
-import de.bjrke.factorio.optimizer.common.layout.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.layout.endName
+import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd

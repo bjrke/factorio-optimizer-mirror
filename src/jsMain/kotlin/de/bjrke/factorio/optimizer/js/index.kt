@@ -3,25 +3,27 @@
 
 package de.bjrke.factorio.optimizer.js
 
-import de.bjrke.factorio.optimizer.common.data.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.data.normalizeTargetFromUrl
-import de.bjrke.factorio.optimizer.common.data.normalizeTargetToUrl
-import de.bjrke.factorio.optimizer.common.model.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.BeltTier
-import de.bjrke.factorio.optimizer.common.model.EMPTY_SELECTION
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
-import de.bjrke.factorio.optimizer.common.model.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
-import de.bjrke.factorio.optimizer.common.model.Selection
-import de.bjrke.factorio.optimizer.common.model.SelectionFlag
-import de.bjrke.factorio.optimizer.common.model.Surface
-import de.bjrke.factorio.optimizer.common.model.forSurface
-import de.bjrke.factorio.optimizer.common.model.selectionString
-import de.bjrke.factorio.optimizer.common.model.surfaceFromUrl
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.production.RecipeLoader
+import de.bjrke.factorio.optimizer.common.production.normalizeTargetFromUrl
+import de.bjrke.factorio.optimizer.common.production.normalizeTargetToUrl
+import de.bjrke.factorio.optimizer.common.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.prototype.Surface
+import de.bjrke.factorio.optimizer.common.prototype.selection.EMPTY_SELECTION
+import de.bjrke.factorio.optimizer.common.prototype.selection.Selection
+import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromSelection
+import de.bjrke.factorio.optimizer.common.prototype.selection.forSurface
+import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
+import de.bjrke.factorio.optimizer.common.prototype.selection.selectionString
+import de.bjrke.factorio.optimizer.common.prototype.selection.spaceAgeIn
+import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
+import de.bjrke.factorio.optimizer.common.service.OptimizationResult
 import de.bjrke.factorio.optimizer.common.service.Optimizer
-import de.bjrke.factorio.optimizer.common.service.RecipeProvider
 import de.bjrke.factorio.optimizer.js.component.appFooter
 import de.bjrke.factorio.optimizer.js.component.urlBlueprintButton
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
@@ -58,21 +60,21 @@ class FactorioOptimizerProps {
     var normalizeTarget = normalizeTargetFromUrl(params[ParamName("normalizeTarget")])
     var target = Material(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
     private val selection = params[ParamName("selection")]
-    var spaceAgeEnabled = selection?.let(SelectionFlag.SPACE_AGE::enabledIn) ?: true
+    var spaceAgeEnabled = selection?.let(::spaceAgeIn) ?: true
     val factoryConfig = FactoryConfig(spaceAgeEnabled)
     var factories = factoryConfig.fromUrl(selection)
     var surface =
         if (spaceAgeEnabled) surfaceFromUrl(selection) ?: Surface.NAUVIS else Surface.NAUVIS
 
-    val parsedRecipes = RecipeProvider.forActiveMods(spaceAgeEnabled).forSurface(surface)
+    val parsedRecipes = RecipeLoader.forActiveMods(spaceAgeEnabled).forSurface(surface)
 
     val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
 
     val logisticsConfig = LogisticsConfig(parsedRecipes.logistics, spaceAgeEnabled)
     var belt = logisticsConfig.belt(selection)
     var inserter = logisticsConfig.inserter(selection)
-    var beltLanes = logisticsConfig.beltLanes(selection)
-    var beltEnd = BeltEnd.fromSelection(selection, surface)
+    var beltLanes = logisticsConfig.beltLanes(fullBeltIn(selection))
+    var beltEnd = beltEndFromSelection(selection, surface)
     var beltStack = logisticsConfig.beltStack(params[ParamName("beltStack")], inserter)
     var inserterStack = logisticsConfig.inserterStack(params[ParamName("inserterStack")], inserter)
     val logistics =

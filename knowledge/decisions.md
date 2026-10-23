@@ -4,6 +4,77 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-23 — Package edges are documented, not tested
+
+**Context.** `PackageEdgesTest` (`jvmTest`, `common/arch/`) carried the whole
+allowed-edge table as a hard-coded map and read the constant pool of the compiled
+`commonMain` classes to compare against it. It was a hand-written guard inside the
+app's test suite: it ran only for whoever ran `jvmTest`, it held architecture data
+that belongs in the documentation, and keeping it in step with every package move
+made each split edit a test file. `PackageSizeTest` was removed for the same reason
+(`!172`).
+
+**Decision.** Delete the test and the `common/arch/` directory. The desired edges
+are the "Package dependencies" table in `architecture.md`; they are enforced by the
+compiler (`internal` symbols are invisible outside their package) and by review.
+
+**Consequences.** A new package or a wrong edge is caught by the compiler only where
+an `internal` symbol is crossed; a legal-looking import of a `public` symbol into a
+package that should not see it passes. The table is the reference for review, and
+`pitfalls.md` keeps the evaluated tooling (Classycle, Konture, detekt
+`ForbiddenImport`) so a future automated check starts from an existing tool rather
+than a bespoke test. When a guardrail is automated it goes to the Gradle/build
+level, not into the app suites.
+
+**Does not supersede** the package tree decision below; only its enforcement
+paragraph changed.
+
+## 2026-10-22 — Domains in the package tree, one-way by construction
+
+**Context.** The stage cut left packages that mixed domains. `service` held the
+LP optimizer *and* `RecipeProvider`, the thing that parses the prototype dump, so
+the "optimizer" produced the data a blueprint is built from — the dependency
+pointed the wrong way. `model` was the catch-all rulebook (recipes, machines,
+surfaces, belt ends, URL codecs, the blueprint DTOs and their JSON writer), and
+`layout` carried wire types it never reasoned about. The test tree was a single
+`common.business` package, and nothing rejected a new edge.
+
+**Decision.** The package tree is the domain model, and the arrows point one way:
+
+`model < prototype < production < service < layout < blueprint < blueprint.json`
+
+- `model` is the grid vocabulary only (`Tile`/`Area`/`Direction`/`Io`,
+  `Material`, icons) and imports nothing.
+- `prototype` is the Factorio rulebook; `prototype/selection` the URL codecs, so
+  only entry points and the rulebook can decode a selection string.
+- `production` reads the dump (`RecipeLoader` replaced `RecipeProvider`), `service`
+  is the optimizer and takes a `ParsedRecipe` in and returns an
+  `OptimizationResult`. `LogisticsCalculator` moved to `plan`, where the layout
+  stages use it.
+- `layout` (with `layout/entity` and `layout/validation`) never mentions the
+  blueprint: the wire settings the entities carry (`InfinitySettings`,
+  `RequestFilter`, `CircuitCondition`) live here, and `blueprint.output` owns the
+  layout -> DTO conversion (`toBlueprintEntity`) and the chest wires.
+- `blueprint` is the artifact and its assembly; `blueprint/planning` the
+  optimizer-result -> plan bridge, `blueprint/output` the encoders,
+  `blueprint/json` the wire JSON as a leaf nothing may import, `blueprint/inspection`
+  the read-back.
+
+**Enforcement.** The edges are written down as the "Package dependencies" table
+in `architecture.md` and enforced by the compiler (`internal`) and review; the
+`PackageEdgesTest` this entry introduced was removed on 2026-10-23 (see above).
+
+**Consequences.** `model` shrinks from 15 files to 4; the largest packages are
+`production` (9) and the stage packages (6-7). A package past 10 files is cut by
+responsibility (`layout` 14 -> 6 + entity 4 + validation 4, `blueprint` 10 ->
+2 + planning 2 + output 4 + json 2 + inspection 3). Tests mirror the packages,
+with shared helpers in `service/fixtures` and `blueprint/fixtures`.
+`fromPlaced` replaces `buildBlueprint`. Every move is one commit with its own
+`./gradlew spotlessApply check`.
+
+**Supersedes.** The 2026-10-22 entry below leaves "the edges stay compiler- and
+review-enforced" to this entry; its file-count budget still stands.
+
 ## 2026-10-22 — Package budgets: files only; detekt cannot own the edges
 
 **Context.** The 2026-10-21 cut left `blueprint` (15 files, 1,275 lines) and

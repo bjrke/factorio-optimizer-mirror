@@ -1,10 +1,11 @@
 package de.bjrke.factorio.optimizer.common.compaction
 
-import de.bjrke.factorio.optimizer.common.layout.BeltEntity
-import de.bjrke.factorio.optimizer.common.layout.ConveyorEntity
-import de.bjrke.factorio.optimizer.common.layout.MachineEntity
-import de.bjrke.factorio.optimizer.common.layout.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.direction

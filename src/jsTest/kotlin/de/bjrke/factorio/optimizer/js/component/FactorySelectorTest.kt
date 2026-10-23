@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryConfig
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot

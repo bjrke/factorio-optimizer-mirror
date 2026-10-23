@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.output
 
-import de.bjrke.factorio.optimizer.common.data.normalizeTargetFromUrl
+import de.bjrke.factorio.optimizer.common.production.normalizeTargetFromUrl
 
 /**
  * The five path segments of a Factorio-Optimizer web URL, decoded far enough that the CLI can run

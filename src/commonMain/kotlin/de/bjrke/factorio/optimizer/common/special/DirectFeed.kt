@@ -1,11 +1,10 @@
 package de.bjrke.factorio.optimizer.common.special
 
 import de.bjrke.factorio.optimizer.common.band.BandSearch
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.Recipe
 import de.bjrke.factorio.optimizer.common.plan.FEED_EPSILON
 import de.bjrke.factorio.optimizer.common.plan.FeedLink
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_COPIES
 import de.bjrke.factorio.optimizer.common.plan.PlannedBand
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
@@ -14,7 +13,8 @@ import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.plannedMachines
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.ceil
 
 /** The recipes one band may hold; a wider group is left to a later increment. */

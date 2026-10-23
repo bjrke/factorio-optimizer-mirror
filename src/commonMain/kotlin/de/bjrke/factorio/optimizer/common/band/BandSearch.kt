@@ -1,20 +1,20 @@
 package de.bjrke.factorio.optimizer.common.band
 
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.Recipe
 import de.bjrke.factorio.optimizer.common.plan.BandFeed
 import de.bjrke.factorio.optimizer.common.plan.BandPlan
 import de.bjrke.factorio.optimizer.common.plan.FEED_EPSILON
 import de.bjrke.factorio.optimizer.common.plan.FeedGroup
 import de.bjrke.factorio.optimizer.common.plan.FeedLink
 import de.bjrke.factorio.optimizer.common.plan.GROUP_MAX_MACHINES
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_RATIO_MACHINES
 import de.bjrke.factorio.optimizer.common.plan.OVER_SUPPLY
 import de.bjrke.factorio.optimizer.common.plan.UNDER_SUPPLY
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
-import de.bjrke.factorio.optimizer.common.service.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.ceil
 
 /** The longest cycle a band repeats; a longer pattern is never searched. */

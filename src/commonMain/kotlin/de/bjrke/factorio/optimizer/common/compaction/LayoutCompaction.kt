@@ -1,9 +1,10 @@
 package de.bjrke.factorio.optimizer.common.compaction
 
-import de.bjrke.factorio.optimizer.common.layout.BeltEntity
-import de.bjrke.factorio.optimizer.common.layout.LayoutEntity
-import de.bjrke.factorio.optimizer.common.layout.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.validateLayout
+import de.bjrke.factorio.optimizer.common.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.east
@@ -102,31 +103,6 @@ internal fun nextCompaction(
 }
 
 /** Every tile of every entity, so a tile query is O(1). */
-internal class LayoutIndex(val entities: List<LayoutEntity>) {
-    val tiles = HashMap<Coordinate, LayoutEntity>()
-    var minX = Int.MAX_VALUE
-    var maxX = Int.MIN_VALUE
-    var minY = Int.MAX_VALUE
-    var maxY = Int.MIN_VALUE
-
-    init {
-        for (entity in entities) {
-            for (tile in entity.area) {
-                tiles[tile] = entity
-                if (tile.x < minX) minX = tile.x
-                if (tile.x > maxX) maxX = tile.x
-                if (tile.y < minY) minY = tile.y
-                if (tile.y > maxY) maxY = tile.y
-            }
-        }
-    }
-
-    val isEmpty
-        get() = tiles.isEmpty()
-
-    fun at(tile: Coordinate) = tiles[tile]
-}
-
 private fun primaryRange(index: LayoutIndex, orientation: SeamOrientation) =
     if (orientation == SeamOrientation.VERTICAL) index.minY..index.maxY else index.minX..index.maxX
 

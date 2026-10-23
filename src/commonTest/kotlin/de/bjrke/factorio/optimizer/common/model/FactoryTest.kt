@@ -1,5 +1,8 @@
 package de.bjrke.factorio.optimizer.common.model
 
+import de.bjrke.factorio.optimizer.common.prototype.Category
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable

@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.Surface
+import de.bjrke.factorio.optimizer.common.prototype.Surface
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot

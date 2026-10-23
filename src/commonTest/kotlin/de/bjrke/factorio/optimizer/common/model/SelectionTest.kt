@@ -1,5 +1,17 @@
 package de.bjrke.factorio.optimizer.common.model
 
+import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.prototype.Surface
+import de.bjrke.factorio.optimizer.common.prototype.selection.EMPTY_SELECTION
+import de.bjrke.factorio.optimizer.common.prototype.selection.Selection
+import de.bjrke.factorio.optimizer.common.prototype.selection.SelectionFlag
+import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromSelection
+import de.bjrke.factorio.optimizer.common.prototype.selection.selectionString
+import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
@@ -135,7 +147,7 @@ class SelectionTest {
         assertTable(BeltEnd.entries) { beltEnd ->
             val selection = beltEndSelection(spaceAge = true, Surface.NAUVIS, beltEnd)
 
-            assertEquals(beltEnd, BeltEnd.fromSelection(selection, Surface.NAUVIS))
+            assertEquals(beltEnd, beltEndFromSelection(selection, Surface.NAUVIS))
         }
 
     @Test
@@ -145,10 +157,10 @@ class SelectionTest {
             val expected =
                 if (beltEnd.allowedOn(Surface.SPACE)) beltEnd else BeltEnd.CONSTANT_COMBINATOR
 
-            assertEquals(expected, BeltEnd.fromSelection(selection, Surface.SPACE))
+            assertEquals(expected, beltEndFromSelection(selection, Surface.SPACE))
         }
 
     @Test
     fun theOldCheatCodeStillSelectsTheInfinityChest() =
-        assertEquals(BeltEnd.INFINITY_CHEST, BeltEnd.fromSelection("X", Surface.NAUVIS))
+        assertEquals(BeltEnd.INFINITY_CHEST, beltEndFromSelection("X", Surface.NAUVIS))
 }
