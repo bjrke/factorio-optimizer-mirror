@@ -144,6 +144,69 @@ class BlueprintImportTest {
         )
     }
 
+    /**
+     * The rare-input row feeds its third solid input through the lane below the machine (`sinkOf`'s
+     * `NORTH` sink). The connector, its feed tile and the first lane tile must stay adjacent, so a
+     * vertical corridor cannot slip between them and leave the material on a different lane tile
+     * than the route filled.
+     */
+    @Test
+    fun theImportConnectorKeepsTheLaneTileItFeeds() {
+        val rare = Material("rare")
+        val makeGear =
+            recipe(
+                "gear",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ore to 1.0, coal to 1.0, rare to 1.0),
+            )
+        val plan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(makeGear, gear, Factory.ASSEMBLING_MACHINE_3)),
+                sources =
+                    listOf(
+                        PlannedSource(ore, 1.0, fluid = false),
+                        PlannedSource(coal, 1.0, fluid = false),
+                        PlannedSource(rare, 1.0, fluid = false),
+                    ),
+                scale = 1.0,
+                label = "gear",
+            )
+        val dump = blueprintLayoutDump(plan, logistics)
+        val machine = dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
+        val laneRow = machine.area.bottomRight.y + 3
+        val lane =
+            dump.entities.filterIsInstance<BeltEntity>().filter {
+                it.material == rare && it.area.topLeft.y == laneRow
+            }
+        val marker =
+            dump.entities.filterIsInstance<MarkerEntity>().single {
+                it.signal.material == rare
+            }
+        // the connector's own tiles sit between the label column and the feed, so the lane must run
+        // unbroken from the feed tile on: a hole would mean compaction cut a belt out of it
+        val byColumn = lane.map { it.area.topLeft.x }
+
+        assertAll(
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            {
+                assertEquals(
+                    byColumn.max() - byColumn.min() + 1,
+                    byColumn.size,
+                    "the lane runs unbroken from the connector to its end",
+                )
+            },
+            {
+                assertTrue(
+                    marker.area.topLeft.y == laneRow,
+                    "the marker row is the lane row: ${marker.area.topLeft}",
+                )
+            },
+        )
+    }
+
     @Test
     fun aProducedLaneIsFedFacingIntoTheLane() {
         val cable = Material("copper-cable")

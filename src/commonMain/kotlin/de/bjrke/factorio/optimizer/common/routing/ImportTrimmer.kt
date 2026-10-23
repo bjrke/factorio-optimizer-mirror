@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.direction
+import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.plan.ImportFeed
 
@@ -52,15 +53,29 @@ internal class ImportTrimmer(
         if (trimmed && !beltEnd.isChest) {
             imports.poleWestBound = maxOf(imports.poleWestBound, common + width)
         }
-        // keep the whole connector and the first belt together, so the markers keep one column
+        // keep the whole connector, its feed tile and the lane tile that receives it together, so
+        // the markers keep one column and a vertical corridor cannot slip between them and the lane
         for (feed in imports.importFeeds) {
             val connectorStart = if (trimmed) common else feed.start.x - width
             for (x in connectorStart..(connectorStart + width)) {
                 imports.pinnedImportTiles += Coordinate(x, feed.row)
             }
+            laneTile(feed)?.let { imports.pinnedImportTiles += it }
         }
         // the old connector marks are gone; re-index the tunnels before stretching
         board.rebuildTunnels()
+    }
+
+    /**
+     * The first lane tile behind [feed]'s connector: the tile the feed belt hands its material to.
+     * A corridor that cut between the connector and this tile would leave the marker feeding a
+     * different lane tile than the one the route filled, so compaction pins it as well.
+     */
+    private fun laneTile(feed: ImportFeed): Coordinate? {
+        val feedTile = Coordinate(feed.feed.x, feed.feed.y)
+        val belt = board.entityAt(feedTile) as? BeltEntity ?: return null
+        if (belt.material != feed.material || belt.direction != EAST) return null
+        return feedTile.east()
     }
 
     /**

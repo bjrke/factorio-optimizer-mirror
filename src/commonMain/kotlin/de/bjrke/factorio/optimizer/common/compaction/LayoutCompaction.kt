@@ -201,12 +201,17 @@ private class CorridorShift(
     }
 }
 
+/**
+ * Whether the shift actually shrank the layout: a corridor of only empty tiles leaves nothing on
+ * one side, and an empty layout must never count as the smaller one.
+ */
 private fun shrinks(
     before: LayoutIndex,
     after: List<LayoutEntity>,
     orientation: SeamOrientation,
 ): Boolean {
     val afterIndex = LayoutIndex(after)
+    if (afterIndex.isEmpty) return false
     return if (orientation == SeamOrientation.VERTICAL) {
         afterIndex.maxX - afterIndex.minX < before.maxX - before.minX
     } else {

@@ -46,6 +46,26 @@ here only with evidence, and should say how to recognise it.
   underground belts" to two copper-cable tunnels once its cable row joined a band
   (`advancedCircuitUrlOnlyTunnelsForItsCableFeed` locks the new state in). Line
   breaking a band too wide is a deferred follow-up, not a bug in the router.
+- **A row with more than two solid inputs breaks the import lanes, and that
+  reads as "compaction does not run".** `RowShape` gives a row a near, a far and a
+  below lane; `sinkOf` feeds every further input from below (`NORTH`) at
+  `row.left + (index - 3)`. The copies share one y, so those sinks line up with the
+  lane columns the row's own product runs through. When the row sits in a
+  direct-feed band, or a producer trunk already runs westward on those columns, the
+  import has to enter a tile that already holds a foreign belt. `BeltRouteRules`
+  allows it at the goal (`goal ||` skips `poursIntoSide`), so the layout is
+  invalid before compaction starts, and `CompactionPass` rejects every corridor
+  because `validateLayout` never comes back empty. Evidence (2026-10-23): the
+  reported `utility-science-pack` URL puts low-density-structure/processing-unit/
+  steel-plate on `(40..42, 127)` over the westbound electronic-circuit belt of the
+  flying-robot-frame row; the layout stays 93x131 in every configuration (1 or 2
+  lanes, normalize 1.0 or 4.5), and `validateLayout` is empty right after
+  `fluidFeeder.feed()` but not after `routeDeliveries()`. The flying-robot-frame
+  recipe has four solid inputs plus two more on the target row, which in a
+  single-material layout only a **mixed belt** can feed; that is out of scope and
+  not a router bug. Recognise it by `foreign side-load into …` at a few adjacent
+  lane tiles after routing with zero feed failures, not by a compaction log line.
+
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom

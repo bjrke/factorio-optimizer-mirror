@@ -248,6 +248,65 @@ class LayoutCompactionTest {
             assertNull(nextCompaction(listOf(machine(0, 0)), orientation))
         }
 
+    /**
+     * A corridor made only of empty tiles would leave one side of the layout empty. It must never
+     * count as a shrink, so the compaction returns no result instead of an empty layout.
+     */
+    @Test
+    fun aCorridorOfOnlyEmptyTilesIsNotAShrink() =
+        assertTableOf(SeamOrientation.VERTICAL, SeamOrientation.HORIZONTAL) { orientation ->
+            // one marker at the west/north edge: every corridor beyond it is empty
+            assertNull(nextCompaction(listOf(marker(0, 0)), orientation))
+        }
+
+    /**
+     * An import feed side-loads the westbound lane above it. Pinning only the connector lets a wide
+     * corridor cut from the feed tile to the lane's end, which slides the far side past the feed
+     * and leaves the material on the wrong lane tile. Pinning the lane tile the feed must reach
+     * keeps the corridor narrower, so the feed still lands where the route put it.
+     */
+    @Test
+    fun aPinnedLaneTileKeepsTheCorridorOffTheFeed() {
+        val entities = sideLoadedImport()
+        val connectorOnly = setOf(Coordinate(1, 1), Coordinate(2, 1))
+        val withLaneTile = connectorOnly + Coordinate(4, 0)
+
+        val loose =
+            assertNotNull(
+                nextCompaction(entities, SeamOrientation.VERTICAL, pinned = connectorOnly),
+            )
+        val tight =
+            assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL, pinned = withLaneTile))
+
+        assertAll(
+            {
+                assertEquals(emptyList(), validateLayout(entities), "the fixture is a valid layout")
+            },
+            { assertTrue(tight.width < loose.width, "the lane pin narrows the corridor") },
+            { assertEquals(emptyList(), validateLayout(tight.entities)) },
+        )
+    }
+
+    /**
+     * A westbound lane in row 0, wall to wall, side-loaded from row 1. The connector marker sits at
+     * (1, 1), its feed at (2, 1) and the feed side-loads (3, 0); (4, 0) is the lane tile that must
+     * keep receiving the material. Row 2 is wall to wall, so the only corridor is the gap at (4,
+     * 1).
+     */
+    private fun sideLoadedImport(): List<LayoutEntity> = buildList {
+        add(marker(0, 0))
+        for (x in 1..9) add(belt(x, 0, direction = Direction.WEST))
+        add(marker(10, 0))
+        add(marker(1, 1))
+        add(belt(2, 1))
+        add(belt(3, 1))
+        add(belt(5, 1))
+        add(marker(6, 1))
+        add(marker(1, 2))
+        for (x in 2..9) add(belt(x, 2))
+        add(marker(10, 2))
+    }
+
     @Test
     fun aPinnedImportGroupIsNeverSplit() {
         // two import stubs west of an empty gap; the group (markers and feeds) must keep its column
