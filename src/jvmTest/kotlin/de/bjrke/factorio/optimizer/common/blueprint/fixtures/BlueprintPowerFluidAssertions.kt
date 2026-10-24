@@ -7,11 +7,10 @@ import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.distanceSq
+import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import de.bjrke.test.assertAll
 import kotlin.test.assertEquals
@@ -79,10 +78,8 @@ private fun pipeLinks(tile: Coordinate, plumbing: Map<Coordinate, Plumbing>): Se
     }
 }
 
-private fun plainPipeLinks(tile: Coordinate, plumbing: Map<Coordinate, Plumbing>): Set<Coordinate> =
-    Direction.entries.mapNotNullTo(mutableSetOf()) { direction ->
-        (tile + direction.step).takeIf { it in plumbing }
-    }
+private fun plainPipeLinks(tile: Coordinate, plumbing: Map<Coordinate, Plumbing>) =
+    tile.neighbors.filterTo(mutableSetOf()) { it in plumbing }
 
 private fun groundPipeLinks(
     pipe: PipeToGroundEntity,
@@ -97,7 +94,8 @@ private fun groundPipeLinks(
             neighbour is InfinityPipeEntity ||
             (neighbour is PipeToGroundEntity && mouthOf(neighbour) == mouth.opposite())
     if (connects) result += front
-    for (distance in 2..PIPE_REACH) {
+    // a pipe-to-ground may surface in the next tile; the buried tile is the walkway
+    for (distance in 1..PIPE_REACH) {
         val toward = if (pipe.io == Io.INPUT) pipe.direction.step else pipe.direction.step * -1
         val other = plumbing[pipe.area.topLeft + toward * distance]
         if (other !is PipeToGroundEntity) continue

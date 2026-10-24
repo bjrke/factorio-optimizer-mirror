@@ -15,6 +15,24 @@ internal data class RowBox(
     val width: Int,
     val height: Int,
     val stride: Int,
+    /** What the row's machines run, by allocation: a fluid lane has to read their port table. */
+    val machines: Map<Int, PlannedMachine>,
+)
+
+/** A machine of a row as the plan knows it: its prototype name and its recipe's ingredients. */
+internal class PlannedMachine(val identifier: String, val ingredients: Set<Material>)
+
+/**
+ * The row geometry before a row exists: where the machines start and which belt rows they need.
+ * [laneNearRow] and [laneFarRow] are the input belts above the machines, [laneBelowRow] a third
+ * input belt below them, [outputLaneRow] the product belt.
+ */
+internal class RowShape(
+    val factoryTop: Int,
+    val laneNearRow: Int?,
+    val laneFarRow: Int?,
+    val laneBelowRow: Int?,
+    val outputLaneRow: Int,
 )
 
 /** The input and output belt rows of a row and the solid materials those lanes carry. */
@@ -39,6 +57,16 @@ internal class Row(
     /** The direct insertions between the machines, by the gap they sit in. */
     val interfaces: List<PlannedLink> = emptyList(),
 ) {
+    /**
+     * The machine of this row that [machine] builds, so its port table can be read without the
+     * plan.
+     */
+    fun planned(machine: PlacedMachine): PlannedMachine = box.machines.getValue(machine.allocation)
+
+    /** The belt rows around the machines: the input lanes above and a third input belt below. */
+    val beltRows: List<Int>
+        get() = listOfNotNull(lanes.nearRow, lanes.farRow, lanes.belowRow)
+
     val copies
         get() = machines.size
 

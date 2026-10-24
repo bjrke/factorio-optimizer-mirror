@@ -30,7 +30,10 @@ private fun findUndergroundOutput(
     input: UndergroundEntity,
 ): UndergroundEntity? {
     val step = input.direction.step
-    for (distance in 2..undergroundReach(input)) {
+    // a pipe-to-ground may surface in the very next tile: that one buried tile is the walkway the
+    // player crosses the line on. Underground belts keep one tile between their ends.
+    val nearest = if (input is PipeToGroundEntity) 1 else 2
+    for (distance in nearest..undergroundReach(input)) {
         val candidate = index.at(input.area.topLeft + step * distance) as? UndergroundEntity
         if (candidate != null && pairsWith(input, candidate)) return candidate
     }

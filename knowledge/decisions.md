@@ -4,6 +4,94 @@ Significant technical/process decisions and their rationale. Newest first.
 Superseded decisions are removed once their replacement records the rationale; Git
 history keeps the old text.
 
+## 2026-10-23 — Fluids are built as one lane above (or below) the belts
+
+**Context.** `FluidFeeder.feed()` runs after the rows and their edges, so
+`fluidEdge()` finds every machine edge already carrying the inserters
+`MachineInserterPlacer` put there. It falls back to both side edges and returns
+null once they are gone, so a multi-row fluid plan ended in "no fluid port" and
+split networks. The first attempt put the pipe line on the inserter row itself and
+moved inserters off the port tiles; the user rejected it: an AM3's north edge
+always carries exactly underground-belt exit + short + long inserter, and the
+machine port tile is that same inserter row.
+
+**Decision.** Each row that takes (or gives) a fluid through a port the table puts
+on its north (or south) edge gets **one lane**:
+
+- the lane row lies **two rows beyond the outermost belt** of the row: `topmost belt
+  − 2` on the north side, `last belt below + 2` on the south side. **There is no
+  free row between the belts and the machines** — `factoryTop − 1` is the inserter
+  row and `factoryTop − 2`/`−3` are the input belts, so a lane placed there would
+  displace a belt;
+- the lane row has a **plain junction pipe above every port**, joined by a
+  **horizontal pipe-to-ground run across every gap**. The run fills the gap: the
+  two tiles between two touching machines' ports carry the two ends directly next
+  to each other (`pUUp`), a wider gap buries the tiles between them. A surface pipe
+  would wall the row off; the run's ends and buried tiles are what the player can
+  walk across. (A pipe-to-ground may surface in the very next tile, unlike an
+  underground belt; `validateUndergrounds` allows distance 1 for pipes only.)
+- the lane marker sits in the **same west column as the solid import markers**.
+  It is placed inline (`oCo`) first and `ImportTrimmer` later moves it into the
+  common import column and joins its output to the lane head with pipe-to-ground
+  runs along the lane row (a one-tile gap stays the only surface pipe, a two-tile
+  gap is a pair of adjacent ends). A belt, underground belt or inserter crossing
+  the lane row in the west corridor is simply buried under by the link; only a
+  non-buryable entity at the source or a run end keeps the inline marker. The
+  marker, link and head are pinned, so compaction shifts them as one column and the
+  player connects one west column for every imported fluid instead of hunting each
+  lane;
+- every port is reached by one **vertical shaft**: its top end stands **one row
+  inside** the lane (lane row + 1 in the north, lane row − 1 in the south), its
+  bottom end on the port tile. The junction pipe above the end stays a surface
+  pipe, so the link, the junction and the shaft mouth join;
+- the shaft buries itself under both belt rows and the inserter row; a belt or an
+  inserter over a run is passed under, never moved;
+- a shaft that finds no room in its column is **skipped** — its port alone falls
+  back to the routed feed, the rest of the lane is still built. The lane is
+  primary, the A* route is only the fallback for a side port, a machine without a
+  port table, or a skipped column;
+- a reserved fluid port **must not cost an input inserter**: `MachineInserterPlacer`
+  spreads the short/long pattern over the free columns and falls back to the
+  machine's last column (normally kept for a pole) when the port took one, so a
+  two-solid-input recipe that also takes a fluid keeps its long inserter;
+- fluid **outputs** mirror the same code on the south side; `placeTargetOutput`
+  stays for a solid target only.
+- machines **touch** in a fluid row (`stride = size.width`): the lane needs no
+  horizontal gap.
+
+**Consequences.** `planning/FluidLane.kt` holds the board-free shape (lane row,
+junction pipes, horizontal runs and shaft pairs), `planning/RowFluidLane.kt` which
+fluid a row gets and the port per machine, `planning/FluidLanePlacer.kt` the board
+side (marker, ends, tunnel index, skip-on-collision) and
+`plumbing/FluidLaneFeed.kt` ties lanes to the feeder. `RowShape` moved from `RowPlacer` into `Row.kt` and `Row.box.machines`
+carries each allocation's prototype and ingredients, so the lane code reads the
+port table without needing a `BlueprintPlan`. `RowPlacer.placeAll()` keeps its
+order (machines, edges, then the feed), which is what the insertion row needs.
+The port rows stay whatever `blueprintMachineFluidPorts` says; it agrees with
+`inserterPortColumns` again (`blueprintMachineEdge`/`EdgeFlow`). A row whose
+machine has a port only on a side edge keeps the routed feed — with the
+electromagnetic plant now fed through its top `BOTH` port instead of its west
+third-row port.
+
+## 2026-10-23 — A machine port's side is a `Direction`, not its own enum
+
+**Context.** `blueprintMachineEdge` originally returned a new `MachineEdge` enum
+(`TOP`/`BOTTOM`/`WEST`/`EAST`) so the inserter placer and the fluid feed read a
+port's machine side once. It was an exact 1:1 rename of the four `Direction`
+values — no member, payload or invariant of its own — so callers carried a
+`TOP ↔ NORTH` translation and two names for `EAST`/`WEST`.
+
+**Decision.** `blueprintMachineEdge` returns `Direction` and
+`blueprintMachineEdgeFlow` takes one; callers use `NORTH`/`SOUTH`. A separate
+compass enum is only worth it when it narrows the domain (`LineSide` keeps a lane
+to two of four sides and makes its `when` exhaustive) or carries semantics
+`Direction` cannot express (`PortFlow`, `BeltEnd`).
+
+**Consequences.** One compass vocabulary; `RowFluidLane` translates `LineSide` to
+`Direction` at the one point where the row side becomes a machine side. No
+behaviour change: the electric-engine layout and the chest processing-unit URL are
+identical, and `check` stays green.
+
 ## 2026-10-23 — Package edges are documented, not tested
 
 **Context.** `PackageEdgesTest` (`jvmTest`, `common/arch/`) carried the whole

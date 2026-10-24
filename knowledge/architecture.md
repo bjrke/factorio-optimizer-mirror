@@ -62,9 +62,9 @@ CLI (JVM) from one shared core.
   - `planning` — the row planner (`RowPlanner`, `RowPlacer`, `Row` and the
     inserter/interface placers) and the shared `LayoutStage`.
   - `routing` — implicit delivery (`Delivery*`, `Import*`, `SplitDeliveryRouter`)
-    and `BeltRouteRules`; `plumbing` — `FluidFeeder.kt`; `special` — the path,
-    power and material-search pass; `compaction` — `LayoutCompaction`,
-    `CompactionPass`, `SeamGrid`, `UndergroundStretcher`.
+    and `BeltRouteRules`; `plumbing` — the fluid feed (`FluidFeeder`, `FluidLaneFeed`);
+    `special` — the path, power and material-search pass; `compaction` —
+    `LayoutCompaction`, `CompactionPass`, `SeamGrid`, `UndergroundStretcher`.
   - `blueprint` — the artifact and its assembly: `Blueprint.kt` (`Blueprint`, its
     entities and wires), `BlueprintLayout.kt` (`fromPlaced`, the ordered stage
     pipeline). `blueprint/planning` turns an `OptimizationResult` into a plan
@@ -114,15 +114,15 @@ package line budget: file length is capped per file by `LargeClass`.
 | layout/entity | 4 | 255 |
 | layout/validation | 4 | 235 |
 | model | 4 | 216 |
-| plan | 5 | 446 |
-| planning | 6 | 708 |
-| plumbing | 1 | 269 |
+| plan | 5 | 547 |
+| planning | 9 | 1195 |
+| plumbing | 2 | 408 |
 | production | 9 | 511 |
 | production/stats | 1 | 142 |
 | prototype | 5 | 673 |
 | prototype/selection | 3 | 134 |
 | route | 3 | 343 |
-| routing | 6 | 651 |
+| routing | 7 | 864 |
 | service | 4 | 607 |
 | special | 4 | 601 |
 | util | 2 | 85 |
@@ -211,7 +211,12 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 - `layout/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
   the reserve/place/remove primitives. Entity placement lives in
   `LayoutPlacement.kt`, the tunnel index in `Tunnels.kt` and the underground queries
-  in `LayoutUnderground.kt`, all as board extensions.
+  in `LayoutUnderground.kt`, all as board extensions. `LayoutPipes.kt` holds the
+  one pipe-tile rule, `canPlacePipes` (the tile is free and no placed pipe beside
+  it carries another fluid — touching pipes merge in Factorio), which the lane
+  placer and the routed fluid feed share; `touchesForeign` is its neighbor test,
+  while a tile merely *reserved* for another fluid stays the caller's check
+  (`FluidFeeder.pipeAllowed` via `edgeFluidAt`).
 - `route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
   `route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
   the `RouteRequest`, and `route/RouteSearch.kt` owns the weighted A* frontier and node
@@ -226,19 +231,44 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   map, allocation depth, row units and the pure sizing helpers (`copiesOf`,
   `inserterPattern`).
 - `planning/RowPlacer.kt` — places the machine rows (`Row` = `RowBox` +
-  `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and product, and owns the
-  allocation-to-row index and the lane direction. `MachineInserterPlacer` places
-  the machine-edge inserters and `BandInterfacePlacer` the gap inserters.
+  `RowLanes` + `RowShape` + machines, declared in `Row.kt`), the bands, lanes and
+  product, and owns the allocation-to-row index and the lane direction.
+  `Row.box.machines` carries each allocation's prototype and ingredients.
+  `MachineInserterPlacer` places the machine-edge inserters and
+  `BandInterfacePlacer` the gap inserters.
+- `planning/FluidLane.kt` — the board-free lane shape: a plain junction pipe above
+  every port, a horizontal pipe-to-ground run across every gap (a pair of adjacent
+  ends in the two-tile gap between touching machines) and one vertical shaft per
+  port, whose ends sit one row inside the lane and on the port tile.
+  `planning/RowFluidLane.kt` decides which fluid a row gets on which side, the port
+  per machine and the lane row (two rows beyond the outermost belt).
+  `planning/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
+  horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds
+  no room so only that port falls back to the route.
 - `plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
-- `plumbing/FluidFeeder.kt` — routes every fluid: the reserved machine-edge pipes,
-  one marker per fluid and the pipe network grown from it (`pipeAllowed`,
-  `fluidEdge`).
-- `routing/ImportTrimmer.kt` — moves every import marker to one common column
-  and removes the straight belt prefix in front of it (`lastStraightEast`).
+- `plumbing/FluidFeeder.kt` — supplies every fluid. It first lets
+  `plumbing/FluidLaneFeed.kt` place the lane of every row that gets one (north and
+  south side), records the port tiles those lanes reach and leaves them alone, then
+  reserves the remaining machine edges (`fluidEdge`) and grows one routed network
+  per fluid from its marker (`pipeAllowed`, `pipeRoute`). The lane is primary; the
+  A* path is only the fallback for a side port, a machine without a port table or a
+  shaft that found no room. It runs after `RowPlacer.placeAll()`, so the belts and
+  inserters a shaft buries itself under already stand (see `decisions.md`,
+  2026-10-23).
+- `routing/ImportTrimmer.kt` — moves every import marker to one common column and
+  removes the straight belt prefix in front of it (`lastStraightEast`). A **fluid**
+  lane marker moves into that same column and joins its lane head with
+  pipe-to-ground runs along the lane row (`FluidFeed` in
+  `plan/ImportExtension.kt`); the marker, link and head are pinned so compaction
+  shifts them as one group.
 - `compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
   underground runs after each corridor and shifts the import pins and bounds.
+  The solid and fluid import markers, their links and the lane head are pinned
+  (`ImportExtension.pinnedImportTiles`, passed to `nextCompaction` as `pinned`),
+  so compaction moves them as one column; `fluidPorts` stays read-only (the
+  stretcher uses it to avoid swallowing a port).
 - `compaction/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
   `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program, and
   `CorridorShift` cuts one corridor and moves the far side.

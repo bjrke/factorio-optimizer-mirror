@@ -28,6 +28,13 @@ class CoordinateTest {
         }
 
     @Test
+    fun neighborsAreTheFourSidesNorthFirstClockwise() =
+        assertEquals(
+            listOf(Coordinate(5, 4), Coordinate(6, 5), Coordinate(5, 6), Coordinate(4, 5)),
+            Coordinate(5, 5).neighbors,
+        )
+
+    @Test
     fun directionsHonourTheAmount() =
         assertTableOf(
             Coordinate(5, 3) to Coordinate(5, 5).north(2),

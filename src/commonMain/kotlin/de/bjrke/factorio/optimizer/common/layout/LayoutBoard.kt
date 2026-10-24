@@ -38,7 +38,7 @@ internal data class LayoutNames(
  * underground runs pass under it) and the primitives that place or remove an entity. A stage asks
  * the board instead of keeping a second copy of the grid, so a new stage cannot forget a tunnel
  * index or a route bound. The entity-kind helpers live in `LayoutPlacement.kt`, the underground
- * queries in `LayoutUnderground.kt`.
+ * queries in `LayoutUnderground.kt` and the pipe-tile rule in `LayoutPipes.kt`.
  */
 internal class LayoutBoard(
     val names: LayoutNames,

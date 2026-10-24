@@ -14,6 +14,31 @@ here only with evidence, and should say how to recognise it.
   regression. `DirectFeed.kt` therefore skips any recipe that takes a fluid, as
   producer *and* as consumer, until the fluid feed is reworked (see
   `decisions.md`, 2026-10-18).
+- **A pipe-to-ground's blueprint `direction` is the side its surface pipe attaches
+  on, not the run's travel direction.** `toBlueprintEntity` (`blueprint/output/
+  LayoutSerialization.kt`) flips **only the input end** (`Io.INPUT`) and leaves the
+  output end as stored, so the internal convention is "store both ends with the
+  run's travel direction". A shaft that dives from a lane above a machine therefore
+  stores its **lane-side end as `INPUT`** and its port-side end as `OUTPUT`, both
+  with `Direction.SOUTH`; the writer then emits N at the lane end and S at the port.
+  Assigning the io the other way round (output at the lane, input at the port,
+  `8090d46`) serializes **both ends 180° off**, which the user saw in game as
+  "tunnel ends are N/S but both turned around". Check the direction in the encoded
+  JSON (`--json`: `0` N, `4` E, `8` S, `12` W), not only the internal `Io`.
+- **There is no free row between the input belts and the machines.** An AM3 row has
+  the inserter row on `factoryTop - 1` and its input belts on `factoryTop - 2` and
+  `factoryTop - 3` (a third solid input below the row), so a fluid lane placed
+  there would displace a belt — the user rejected exactly that twice. The lane
+  belongs **two rows beyond the outermost belt** (`min belt - 2`, `max belt + 2`),
+  with the tunnel's lane-side end in the single row between (`- 1`/`+ 1`). The lane
+  row has a **junction pipe above every port**, joined across each gap by a
+  horizontal pipe-to-ground run (a pair of adjacent ends in the two-tile gap
+  between touching machines). Do not replace those runs with surface pipes: the
+  surface line walls the row off, while the run is what the player walks across. A
+  lane derived from `laneNearRow - 1` instead of the outermost belt lands **on the
+  far belt row**, `board.isFree` fails on the belt tiles and the lane silently fell
+  back to the route (evidence: `lubricant` lane planned at `y=95` over belts on
+  `y=95/97`, then `no pipe route`).
 - **A band stands in one row of up to 18 machines, so a wide band forces belt
   crossings.** `GROUP_MAX_MACHINES = 18` (`DirectFeed.kt`) is what a band may hold;
   rows above a band then have to reach past it, and a belt that crosses another belt
@@ -41,6 +66,22 @@ here only with evidence, and should say how to recognise it.
   not a router bug. Recognise it by `foreign side-load into …` at a few adjacent
   lane tiles after routing with zero feed failures, not by a compaction log line.
 
+- **A fluid marker joins the solid import column unless the source block or a run
+  end is taken.** The link buries under a belt, underground belt or inserter that
+  crosses the lane row in the west corridor, so a solid route crossing the lane no
+  longer keeps the marker out of the column (the `--cheats` electric-engine case:
+  the circuit belt at the lane row is passed under). A machine or another
+  non-buryable entity at the source tile or a run end, or a reserved tile, keeps
+  the inline marker: the fluid is still correct, only the shared column is missed.
+- **A reserved fluid port silently drops an inserter from the pattern.**
+  `MachineInserterPlacer` laid the short/long pattern over `0 until width - 1` minus
+  the top port columns, then zipped it. An AM3 has exactly three edge columns; the
+  fluid port takes the middle one, so only the pole column was left and the
+  pattern's second entry (the long inserter to the far belt) fell off the end. The
+  symptom is a fluid row whose far input belt is never unloaded although its near
+  belt is; the ASCII shows one `^` per machine instead of two, and the blueprint
+  JSON has a `fast-inserter` but no `long-handed-inserter` on that row. Use the
+  machine's last column as the spare slot when a port claims one of the others.
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom
@@ -276,3 +317,19 @@ here only with evidence, and should say how to recognise it.
   any 2.0.0-alpha.6 rules jar (they are `dev.detekt.rules.*`); a custom rule that
   needs real resolution must implement `dev.detekt.api.RequiresAnalysisApi`, which
   `CastNullableToNonNullableType` does.
+- **`detektMainJvm`/`detektTestJvm` report "compiler errors found during analysis"
+  although the code compiles.** Verified on 2026-10-24 at `395323f`, both with and
+  without the working-tree changes: the type-resolved Detekt tasks print
+  `There were 3 compiler errors found during analysis. This affects accuracy of
+  reporting.` while `check` (and `compileKotlinJvm`) succeed, and no error names a
+  file. Treat it as analysis-only noise unless the count changes or a finding looks
+  wrong; prove a real compile failure with `./gradlew jvmTest`, not with this line.
+- **A root session can start without shell or edit tools.** On 2026-10-23 the root
+  agent had only the `opencode` and window tools: `mcp-find` answered "No servers
+  found matching query" for `shell`, for `filesystem` and for an empty query,
+  `mcp-add` answered "not registered", and the `browser` namespace held no tools.
+  `subagent` sessions did have `shell`/`read`/`write`/`edit`, so work was driven
+  through chained subagents instead — which burned the turn budget and produced
+  repeated aborted calls. Verify the root toolset **first**; if the `shell` or `edit`
+  tool is missing, start a fresh session rather than proxying every edit through a
+  subagent.

@@ -5,8 +5,7 @@ import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.direction
-import de.bjrke.factorio.optimizer.common.special.DIRECTION_STEPS
+import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.special.directionBetween
 
 /**
@@ -32,8 +31,7 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
 
     /** True when a belt next to [coordinate] pours a different material into that tile. */
     private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean =
-        DIRECTION_STEPS.any { d ->
-            val neighbor = coordinate + d
+        coordinate.neighbors.any { neighbor ->
             val belt = board.entityAt(neighbor) as? ConveyorEntity
             belt != null &&
                 belt.direction == directionBetween(neighbor, coordinate) &&

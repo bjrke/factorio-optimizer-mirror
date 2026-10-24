@@ -3,12 +3,16 @@ package de.bjrke.factorio.optimizer.common.planning
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.placeInserter
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PortFlow
+import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
+import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdgeFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import kotlin.math.abs
 
@@ -24,18 +28,13 @@ internal class MachineInserterPlacer(
     private val planner: RowPlanner,
 ) {
 
-    /**
-     * The fluid-port columns of one machine: the top edge takes the lanes, the bottom the product.
-     */
-    private data class PortColumns(val top: Set<Int>, val bottom: Set<Int>)
-
     fun place(row: Row, internal: Set<Material>) {
         for (machine in row.machines) placeMachine(row, machine, internal)
     }
 
     private fun placeMachine(row: Row, machine: PlacedMachine, internal: Set<Material>) {
         val allocation = plan.recipes[machine.allocation]
-        val ports = portColumns(row, machine)
+        val ports = portColumns(machine)
         placeInputInserters(row, machine, allocation, ports.top)
         placeOutputInserters(row, machine, allocation, internal, ports.bottom)
     }
@@ -43,16 +42,13 @@ internal class MachineInserterPlacer(
     /**
      * A fluid pipe sits on the machine edge just outside its port tile; keep those tiles free of
      * inserters so the fluid can actually connect. A recipe that uses no fluid keeps the original
-     * inserter spread, ports and all.
+     * inserter spread, ports and all. The columns are relative to the machine, so the row is not
+     * needed: every copy of a row keeps the same ones.
      */
-    private fun portColumns(row: Row, machine: PlacedMachine): PortColumns {
+    private fun portColumns(machine: PlacedMachine): PortColumns {
         val allocation = plan.recipes[machine.allocation]
         if (!usesFluid(allocation)) return PortColumns(emptySet(), emptySet())
-        val ports = blueprintMachineFluidPorts(allocation.factory.identifier)
-        return PortColumns(
-            ports.filter { it.tile.y == -1 }.mapTo(mutableSetOf()) { it.tile.x },
-            ports.filter { it.tile.y == row.height }.mapTo(mutableSetOf()) { it.tile.x },
-        )
+        return inserterPortColumns(allocation.factory.identifier)
     }
 
     /**
@@ -74,8 +70,12 @@ internal class MachineInserterPlacer(
                 far?.let { planner.insertersFor(allocation, listOf(it)) } ?: 0,
                 row.width,
             )
-        // the machine's last column is left free for a pole; a port there stays free for the pipe
-        val insertColumns = (0 until maxOf(1, row.width - 1)).filterNot(topPorts::contains)
+        // the machine's last column is left free for a pole; a fluid port may take one of the
+        // remaining columns, and the long inserter must not fall off the edge with it: use the
+        // pole column as the spare slot before dropping an inserter
+        val preferred = (0 until maxOf(1, row.width - 1)).filterNot(topPorts::contains)
+        val spare = (0 until row.width).filterNot(topPorts::contains).filterNot(preferred::contains)
+        val insertColumns = (preferred + spare).take(pattern.size)
         insertColumns.zip(pattern).forEach { (column, long) ->
             board.placeInserter(
                 Coordinate(machine.left + column, row.factoryTop - 1),
@@ -127,6 +127,34 @@ internal class MachineInserterPlacer(
         allocation.recipe.ingredients.keys.any { logistics.isFluid(it) } ||
             allocation.recipe.result.keys.any { logistics.isFluid(it) }
 }
+
+/**
+ * The fluid-port columns of one machine: [PortColumns.top] feeds from the lanes above,
+ * [PortColumns.bottom] drains onto the product belt below. Both are read from
+ * [blueprintMachineFluidPorts] through [blueprintMachineEdge] and [blueprintMachineEdgeFlow], the
+ * same table and reading the fluid feed uses, so the two stages cannot drift apart: a machine whose
+ * pipes sit on both the top and the bottom edge only keeps the input side free on top (where the
+ * feed takes its port) and the output side free below.
+ */
+internal fun inserterPortColumns(identifier: String): PortColumns {
+    val ports = blueprintMachineFluidPorts(identifier)
+    fun columns(edge: Direction, feeding: PortFlow) =
+        ports
+            .filter { port ->
+                // a both-way port sits on both sides and feeds or drains either way
+                val flow = blueprintMachineEdgeFlow(identifier, port, edge)
+                blueprintMachineEdge(identifier, port) == edge &&
+                    (flow == feeding || flow == PortFlow.BOTH)
+            }
+            .mapTo(mutableSetOf()) { it.tile.x }
+    return PortColumns(
+        columns(NORTH, PortFlow.INPUT),
+        columns(SOUTH, PortFlow.OUTPUT),
+    )
+}
+
+/** The inserter columns to keep free of a machine: the top feed and the bottom drain ports. */
+internal data class PortColumns(val top: Set<Int>, val bottom: Set<Int>)
 
 /**
  * The material a machine's product leaves the row with: its solid result, unless it is internal.

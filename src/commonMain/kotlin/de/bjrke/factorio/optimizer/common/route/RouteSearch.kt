@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.util.MinHeap
 
 /** West edge no feed route may cross, so a route cannot run around the import lanes. */
@@ -94,10 +95,7 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
 
         val turn = if (current.heading != direction) profile.costs.turnCost else 0
         val detour = if (inCorridor(surface)) 0 else profile.costs.detourCost
-        val clear =
-            if (Direction.entries.any { board.isReserved(surface + it.step) })
-                profile.costs.keepClearCost
-            else 0
+        val clear = if (surface.neighbors.any(board::isReserved)) profile.costs.keepClearCost else 0
         relax(
             current,
             RouteNode(surface, direction, straight = maxOf(0, current.straight - 1)),

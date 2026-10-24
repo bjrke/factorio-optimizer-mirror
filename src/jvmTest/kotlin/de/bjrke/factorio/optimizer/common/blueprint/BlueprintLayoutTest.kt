@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
@@ -193,6 +194,50 @@ class BlueprintLayoutTest {
         // the second input sits on the far lane, which only a long inserter reaches
         val names = fromPlaced(twoPlan, logistics).entities.map { it.name }
         assertContains(names, "long-handed-inserter")
+    }
+
+    @Test
+    fun aFluidPortDoesNotCostTheLongInserter() {
+        // an assembler with two solid inputs and a fluid port on its top edge: the port takes the
+        // middle column, so the pattern's long inserter has to move to the machine's last column
+        val two =
+            recipe(
+                "two",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(plate to 1.0, ore to 1.0, water to 1.0),
+            )
+        val twoPlan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(two, gear, Factory.ASSEMBLING_MACHINE_3)),
+                sources =
+                    listOf(
+                        PlannedSource(plate, 1.0, fluid = false),
+                        PlannedSource(ore, 1.0, fluid = false),
+                        PlannedSource(water, 1.0, fluid = true),
+                    ),
+                scale = 1.0,
+                label = "two",
+            )
+        val dump = blueprintLayoutDump(twoPlan, logistics)
+        val machine = dump.entities.filterIsInstance<MachineEntity>().single()
+        val inputRow = machine.area.topLeft.y - 1
+        val inputs =
+            dump.entities.filterIsInstance<InserterEntity>().filter {
+                it.area.topLeft.y == inputRow
+            }
+
+        assertAll(
+            { assertEquals(2, inputs.size, inputs.toString()) },
+            { assertTrue(inputs.any { it.long }, inputs.toString()) },
+            {
+                assertEquals(
+                    setOf(0, 2),
+                    inputs.map { it.area.topLeft.x - machine.area.topLeft.x }.toSet(),
+                )
+            },
+        )
     }
 
     @Test

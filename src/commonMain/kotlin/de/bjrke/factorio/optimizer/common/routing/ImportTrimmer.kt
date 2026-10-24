@@ -18,6 +18,11 @@ import de.bjrke.factorio.optimizer.common.plan.ImportFeed
  * it. The routing already happened, so the router saw the old, wide west corridor and did not have
  * to route around the markers; only the unused prefix disappears. The common column is the furthest
  * east every feed has a straight eastward run, so the import bus stays straight.
+ *
+ * The fluid lane markers join that same column: [FluidFeedLinker] moves their inline `oCo` block
+ * west of the factory and joins it to the lane head with pipe-to-ground runs along the lane row, so
+ * the west corridor stays walkable and the player only has to connect one column when placing the
+ * blueprint.
  */
 internal class ImportTrimmer(
     private val board: LayoutBoard,
@@ -25,6 +30,7 @@ internal class ImportTrimmer(
     private val beltEnd: BeltEnd,
     private val imports: ImportExtension,
 ) {
+    private val fluidLinker = FluidFeedLinker(board, beltEnd, imports)
 
     fun trim() {
         if (imports.importFeeds.isEmpty()) return
@@ -49,10 +55,14 @@ internal class ImportTrimmer(
                 trimmed = false
             }
         }
+        // the solids end up in the trimmed column, or in the connector's own west column when the
+        // trim could not run; either way the fluid markers join that column
+        val solidColumn = if (trimmed) common else connector.left
         // a chest marker is powered, so its poles may sit in the import extension
-        if (trimmed && !beltEnd.isChest) {
-            imports.poleWestBound = maxOf(imports.poleWestBound, common + width)
+        if (!beltEnd.isChest) {
+            imports.poleWestBound = maxOf(imports.poleWestBound, solidColumn + width)
         }
+        fluidLinker.link(solidColumn)
         // keep the whole connector, its feed tile and the lane tile that receives it together, so
         // the markers keep one column and a vertical corridor cannot slip between them and the lane
         for (feed in imports.importFeeds) {

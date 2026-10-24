@@ -79,6 +79,16 @@ up.
   `--layout` also uses it), so no production type had to widen its visibility
   (`RowLayout` stays `private`) or keep a wrapper only tests call.
 
+## Spelling and naming
+
+- Code, KDoc and commit messages use **American English**: `neighbor`, `color`,
+  `center`, `behavior`, `serialize`. Keep an identifier as the game spells it even
+  when it differs: the blueprint key is `neighbours`, so `Blueprint.neighbours`,
+  `PoleEntity.neighbours` and `neighboursJson()` stay British. British spellings in
+  untouched code (`labelled` in `Optimizer`/`Surface`) are not churned just to
+  conform; new identifiers and new prose are American (user instruction,
+  2026-10-24).
+
 ## Behavior-preserving refactors
 
 - Before splitting a layout stage, pin its output with a characterization test.

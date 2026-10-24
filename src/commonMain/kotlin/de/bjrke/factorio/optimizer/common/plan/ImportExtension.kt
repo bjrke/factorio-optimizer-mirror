@@ -17,6 +17,21 @@ internal class ImportFeed(
 )
 
 /**
+ * One imported fluid: the lane row and head its marker feeds, the direction its lane flows and the
+ * inline source tiles it placed. The trimmer moves the source to the common import column and joins
+ * it to the head with underground runs, so one column serves both the solid and the fluid markers.
+ */
+internal class FluidFeed(
+    val material: Material,
+    val row: Int,
+    val head: Coordinate,
+    /** Whether the lane flows east (a north feed); a south drain flows west. */
+    val flowEast: Boolean,
+    /** The source block as placed inline, west to east. */
+    val source: List<Coordinate>,
+)
+
+/**
  * The import extension west of the factory: the marker rows already claimed, the imports to trim,
  * the tiles compaction must not move and the west bounds that keep poles and compaction out of the
  * extension. It is shared state, so the marker, trim, compaction and power stages agree on one
@@ -29,6 +44,9 @@ internal class ImportExtension {
 
     /** The imported inputs to trim, in placement order. */
     val importFeeds = mutableListOf<ImportFeed>()
+
+    /** The fluid lanes whose marker joins the solid import column, in placement order. */
+    val fluidFeeds = mutableListOf<FluidFeed>()
 
     /**
      * The import marker tiles. A vertical corridor may not move them, so the markers stay in one

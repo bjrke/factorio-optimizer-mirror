@@ -4,7 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
@@ -14,9 +14,7 @@ import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.prototype.category
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 
@@ -85,18 +83,15 @@ fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordinate>> {
             .associateBy { it.area.topLeft }
     val grounds =
         tiles.filterValues { it.name == "pipe-to-ground" }.mapValues { it.value.direction }
-    return connectedComponents(tiles.keys) { tile -> plumbingNeighbours(tile, tiles, grounds) }
+    return connectedComponents(tiles.keys) { tile -> plumbingNeighbors(tile, tiles, grounds) }
 }
 
-private fun plumbingNeighbours(
+private fun plumbingNeighbors(
     tile: Coordinate,
     tiles: Map<Coordinate, BlueprintEntity>,
     grounds: Map<Coordinate, Direction?>,
 ): List<Coordinate> = buildList {
-    for (direction in Direction.entries) {
-        val next = tile + direction.step
-        if (next in tiles) add(next)
-    }
+    addAll(tile.neighbors.filter(tiles::contains))
     val mouth = grounds[tile] ?: return@buildList
     val away = mouth.opposite().step
     for (distance in 1..10) {

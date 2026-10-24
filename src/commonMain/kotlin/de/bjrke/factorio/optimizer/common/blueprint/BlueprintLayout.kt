@@ -29,8 +29,9 @@ import de.bjrke.factorio.optimizer.common.special.PowerPlacer
  * by belt lanes just above (a short inserter for the near lane, a long inserter for the far one)
  * and drained by an output belt just below. Rows flow top to bottom; imports enter from the left,
  * and a material built inside the plan runs on one trunk from its producer's output belt, with a
- * splitter on that belt for every further recipe that takes it. Fluids use pipe clusters next to
- * the machines instead of belts.
+ * splitter on that belt for every further recipe that takes it. A fluid row gets one pipe lane on a
+ * row beyond its belts, with an underground shaft down to every machine port; a machine whose port
+ * the lane cannot reach keeps the routed pipe instead.
  *
  * The [beltEnd] chooses how a solid belt ends: the constant-combinator label (the default), an
  * infinity chest, or a chest the belt's inserters feed from or to. A fluid belt always keeps the
@@ -127,7 +128,9 @@ private class RowLayout(
             // prepare every source before routing anything, so a long early route cannot occupy a
             // marker or producer outlet that a later delivery needs
             val deliveries = deliveryRouter.prepareDeliveries()
-            // pipes go first: their underground runs are cheap and belts can tunnel under them
+            // pipes go first: their underground runs are cheap and belts can tunnel under them.
+            // The rows and their edges are already in place, so a lane can read the belts it passes
+            // under and a port it cannot carry falls back to the routed feed.
             fluidFeeder.feed()
             deliveryRouter.routeDeliveries(deliveries)
             fluidFeeder.placeTargetOutput()

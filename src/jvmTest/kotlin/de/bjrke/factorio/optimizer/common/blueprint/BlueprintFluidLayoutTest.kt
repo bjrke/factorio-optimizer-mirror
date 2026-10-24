@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
@@ -15,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
@@ -103,7 +105,7 @@ class BlueprintFluidLayoutTest {
     }
 
     @Test
-    fun anElectromagneticPlantIsFedOnItsThirdRowPort() {
+    fun anElectromagneticPlantIsFedOnItsTopPort() {
         val wire =
             recipe("electro", Category.ELECTROMAGNETICS, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
@@ -118,17 +120,65 @@ class BlueprintFluidLayoutTest {
         val machine = dump.entities.filterIsInstance<MachineEntity>().single()
         val left = machine.area.topLeft.x
         val top = machine.area.topLeft.y
-        // the prototype's west connection is on the third row, not the first
-        val port = Coordinate(left - 1, top + 2)
+        // the prototype's top pipe is a BOTH port at (1, -1), which the lane above feeds
+        val port = Coordinate(left + 1, top - 1)
 
         assertAll(
             { assertEquals(emptyList(), dump.failures) },
             {
                 assertTrue(
                     dump.entities.any { it is Plumbing && it.area.topLeft == port },
-                    "no pipe at the machine's third-row port $port",
+                    "no pipe at the machine's top port $port",
                 )
             },
+        )
+    }
+
+    @Test
+    fun theFluidMarkerJoinsTheColumnOfTheSolidImportMarker() {
+        val wet =
+            recipe(
+                "wet-gear",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(plate to 1.0, water to 1.0),
+            )
+        val plan =
+            BlueprintPlan(
+                target = gear,
+                recipes = listOf(planned(wet, gear, Factory.ASSEMBLING_MACHINE_3)),
+                sources =
+                    listOf(
+                        PlannedSource(plate, 1.0, fluid = false),
+                        PlannedSource(water, 1.0, fluid = true),
+                    ),
+                scale = 1.0,
+                label = "wet-gear",
+            )
+        val dump = blueprintLayoutDump(plan, logistics)
+        val markers = dump.entities.filterIsInstance<MarkerEntity>()
+        val solidImport = markers.single { it.signal.material == plate }
+        val fluidMarker = markers.single { it.signal.fluid }
+        val machine = dump.entities.filterIsInstance<MachineEntity>().single()
+        val laneRow = fluidMarker.area.topLeft.y
+
+        assertAll(
+            // the constant combinator sits in the same west column as the solid marker's
+            { assertEquals(solidImport.area.topLeft.x, fluidMarker.area.topLeft.x) },
+            // the marker's output is joined to the lane head along its own row, underground
+            {
+                assertTrue(
+                    dump.entities.any {
+                        it is PipeToGroundEntity &&
+                            it.area.topLeft.y == laneRow &&
+                            it.area.topLeft.x > fluidMarker.area.topLeft.x &&
+                            it.area.topLeft.x < machine.area.topLeft.x
+                    },
+                    "no underground link between the fluid marker and the lane head",
+                )
+            },
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
         )
     }
 

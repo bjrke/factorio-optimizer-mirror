@@ -15,9 +15,6 @@ import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.adjacent
 
-/** All the directions, Clock-wise EAST first, like most of the stuff has to be delivered. */
-internal val DIRECTION_STEPS = Direction.entries.map { it.step }
-
 /** A tile's role in a route: a plain belt, a tunnel input or a tunnel output, all facing. */
 internal sealed interface PathRole {
     val direction: Direction

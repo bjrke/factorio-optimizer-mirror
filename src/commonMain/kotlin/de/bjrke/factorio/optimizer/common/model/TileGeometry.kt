@@ -44,3 +44,10 @@ val Coordinate.direction: Coordinate
         val newY = y.sign
         return if (x == newX && y == newY) this else Coordinate(newX, newY)
     }
+
+/**
+ * The four tiles orthogonally next to this one, north first and then clockwise (north, east, south,
+ * west), so every walk over the neighborhood visits them in the same order.
+ */
+val Coordinate.neighbors: List<Coordinate>
+    get() = listOf(north(), east(), south(), west())

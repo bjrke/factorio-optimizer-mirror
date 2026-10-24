@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
@@ -52,15 +53,6 @@ internal class RowPlacer(
         }
     }
 
-    /** The input lanes of a row and the machine rows they need. */
-    private class RowShape(
-        val factoryTop: Int,
-        val laneNearRow: Int?,
-        val laneFarRow: Int?,
-        val laneBelowRow: Int?,
-        val outputLaneRow: Int,
-    )
-
     private fun rowShape(solids: List<Material>, height: Int, bandTop: Int): RowShape {
         val lanes =
             when {
@@ -88,14 +80,14 @@ internal class RowPlacer(
         val solids =
             recipe.recipe.ingredients.keys.filter { !logistics.isFluid(it) }.sortedBy { it.name }
         val shape = rowShape(solids, size.height, bandTop)
-        // a machine that takes a fluid needs a free side for its pipe, so those copies get a gap
-        val hasFluid = recipe.recipe.ingredients.keys.any { logistics.isFluid(it) }
-        val stride = size.width + if (hasFluid) 1 else 0
+        // a fluid row needs no side gap: its lane runs on a row of its own beyond the belts and
+        // reaches every port through the squash of an underground shaft, so the copies touch
+        val stride = size.width
         val machines = List(copies) { PlacedMachine(allocation, LANE_MARGIN + it * stride) }
         val row =
             Row(
                 machines = machines,
-                box = RowBox(LANE_MARGIN, shape.factoryTop, size.width, size.height, stride),
+                box = box(shape, size, stride, machines, plan),
                 lanes =
                     RowLanes(
                         solids,
@@ -119,6 +111,29 @@ internal class RowPlacer(
         placeProduct(row, emptySet())
         return row
     }
+
+    /** The rectangle of a row and what each of its allocations runs, for a fluid lane to read. */
+    private fun box(
+        shape: RowShape,
+        size: Dimension,
+        stride: Int,
+        machines: List<PlacedMachine>,
+        plan: BlueprintPlan,
+    ) =
+        RowBox(
+            LANE_MARGIN,
+            shape.factoryTop,
+            size.width,
+            size.height,
+            stride,
+            machines
+                .map { it.allocation }
+                .distinct()
+                .associateWith { allocation ->
+                    val recipe = plan.recipes[allocation]
+                    PlannedMachine(recipe.factory.identifier, recipe.recipe.ingredients.keys)
+                },
+        )
 
     /**
      * Builds a direct-feed band as one row of interleaved machines: every machine sits a tile apart
@@ -144,7 +159,7 @@ internal class RowPlacer(
         val row =
             Row(
                 machines = machines,
-                box = RowBox(LANE_MARGIN, shape.factoryTop, size.width, size.height, stride),
+                box = box(shape, size, stride, machines, plan),
                 lanes =
                     RowLanes(
                         solids,

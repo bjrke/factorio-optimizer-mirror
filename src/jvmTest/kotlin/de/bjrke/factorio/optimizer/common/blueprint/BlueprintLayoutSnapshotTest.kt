@@ -47,7 +47,7 @@ class BlueprintLayoutSnapshotTest {
                 scale = 1.0,
                 label = "water-boil",
             )
-        assertSignature("1847ab995042330b", fromPlaced(plan, logistics))
+        assertSignature("7fe9b1786363a623", fromPlaced(plan, logistics))
     }
 
     @Test
