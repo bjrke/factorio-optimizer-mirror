@@ -5,7 +5,6 @@ import de.bjrke.factorio.optimizer.common.layout.placeInserter
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
@@ -18,7 +17,6 @@ import kotlin.math.ceil
  */
 internal class BandInterfacePlacer(
     private val board: LayoutBoard,
-    private val plan: BlueprintPlan,
     private val logistics: LogisticsCalculator,
 ) {
 
@@ -45,14 +43,14 @@ internal class BandInterfacePlacer(
 
     /** The machine rows [machine] keeps free for a fluid port on the side facing the gap. */
     private fun portRows(row: Row, machine: PlacedMachine, east: Boolean): Set<Int> {
-        val allocation = plan.recipes[machine.allocation]
-        val recipe = allocation.recipe
+        val plannedRecipe = machine.plannedRecipe
+        val recipe = plannedRecipe.recipe
         val usesFluid =
             recipe.ingredients.keys.any { logistics.isFluid(it) } ||
                 recipe.result.keys.any { logistics.isFluid(it) }
         if (!usesFluid) return emptySet()
         val edge = if (east) row.width else -1
-        return blueprintMachineFluidPorts(allocation.factory.identifier)
+        return blueprintMachineFluidPorts(plannedRecipe.factory.identifier)
             .filter { it.tile.x == edge }
             .mapTo(mutableSetOf()) { row.factoryTop + it.tile.y }
     }

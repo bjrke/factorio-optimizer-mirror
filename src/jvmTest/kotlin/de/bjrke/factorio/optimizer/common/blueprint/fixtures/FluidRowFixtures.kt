@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.FluidPort
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.plan.isInputPort
@@ -33,15 +34,10 @@ fun fluidRowPlan(
     fluidInputs: Map<Material, Double> = emptyMap(),
 ): BlueprintPlan {
     val boil = waterRecipe(fluidInputs)
+    val planned = PlannedRecipe(FactoryProduction(gear, boil, factory, amount = 1.0, level = 0))
     return BlueprintPlan(
         target = gear,
-        recipes =
-            listOf(
-                PlannedRecipe(
-                    FactoryProduction(gear, boil, factory, amount = 1.0, level = 0),
-                    machines,
-                ),
-            ),
+        rows = listOf(PlannedRow(List(machines.toInt().coerceAtLeast(1)) { planned })),
         sources = (listOf(water) + fluidInputs.keys).map { PlannedSource(it, 1.0, fluid = true) },
         scale = 1.0,
         label = "water-boil",

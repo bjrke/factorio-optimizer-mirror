@@ -42,30 +42,25 @@ fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
 }
 
 /**
- * A material must reach a belt from one allocation only. `producerOf` in the layout has one belt
- * source per material, so a second belt-fed producer would be built with a product belt no delivery
- * ever uses — the "factory with an unconnected output belt" a band already covers.
+ * A material must reach a belt from one planned recipe only. The layout has one belt source per
+ * material, so a second belt-fed producer would be built with a product belt no delivery ever uses
+ * — the "factory with an unconnected output belt" a band already covers.
  */
 fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
     // a band inserts its link machine to machine, so that producer never puts material on a belt
-    val inserted =
-        plan.bands.flatMapTo(mutableSetOf()) { band ->
-            band.links.map { link ->
-                val machine = if (link.producerIsLeft) link.gap else link.gap + 1
-                band.machines[machine] to link.material
-            }
-        }
     val sources =
-        plan.recipes
-            .withIndex()
-            .flatMap { (index, allocation) ->
-                allocation.recipe.result.keys.map { index to it }
+        plan.rows
+            .flatMap { row ->
+                row.plannedRecipes.flatMap { planned ->
+                    planned.recipe.result.keys
+                        .filter { material -> row.exports(planned, material) }
+                        .map { material -> planned to material }
+                }
             }
-            .filterNot { it in inserted }
             .groupBy({ it.second }, { it.first })
     val doubled = sources.filterValues { it.size > 1 }
 
-    assertEquals(emptyMap(), doubled, "material put on a belt by more than one allocation")
+    assertEquals(emptyMap(), doubled, "material put on a belt by more than one planned recipe")
 }
 
 /** An import connector: a label, chest or inserter sits right next to the buried run. */

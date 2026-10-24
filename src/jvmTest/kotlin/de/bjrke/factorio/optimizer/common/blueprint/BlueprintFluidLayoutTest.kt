@@ -29,6 +29,7 @@ import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.model.west
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -51,7 +52,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -82,7 +83,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -111,7 +112,10 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(wire, gear, Factory.ELECTROMAGNETIC_PLANT)),
+                rows =
+                    listOf(
+                        PlannedRow.copies(planned(wire, gear, Factory.ELECTROMAGNETIC_PLANT), 1),
+                    ),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "electro",
@@ -146,7 +150,8 @@ class BlueprintFluidLayoutTest {
         val plan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(wet, gear, Factory.ASSEMBLING_MACHINE_3)),
+                rows =
+                    listOf(PlannedRow.copies(planned(wet, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
                 sources =
                     listOf(
                         PlannedSource(plate, 1.0, fluid = false),
@@ -188,7 +193,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -226,7 +231,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -248,7 +253,8 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = lubricant,
-                recipes = listOf(planned(crack, lubricant, Factory.CHEMICAL_PLANT)),
+                rows =
+                    listOf(PlannedRow.copies(planned(crack, lubricant, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "lubricant",
@@ -273,7 +279,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
@@ -307,7 +313,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -342,7 +348,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
@@ -374,7 +380,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(coolant, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),

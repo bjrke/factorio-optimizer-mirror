@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -36,11 +37,7 @@ fun planned(
     recipe: Recipe,
     material: Material,
     factory: Factory,
-) =
-    PlannedRecipe(
-        production = FactoryProduction(material, recipe, factory, 1.0, 0),
-        machines = 1.0,
-    )
+) = PlannedRecipe(FactoryProduction(material, recipe, factory, 1.0, 0))
 
 val logistics =
     LogisticsCalculator(
@@ -60,10 +57,14 @@ val craftRecipe =
 val basePlan =
     BlueprintPlan(
         target = gear,
-        recipes =
+        rows =
             listOf(
-                planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
-                planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_1),
+                PlannedRow(
+                    listOf(planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)),
+                ),
+                PlannedRow(
+                    listOf(planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_1)),
+                ),
             ),
         sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
         scale = 1.0,

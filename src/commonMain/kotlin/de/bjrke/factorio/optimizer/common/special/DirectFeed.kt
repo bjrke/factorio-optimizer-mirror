@@ -6,9 +6,9 @@ import de.bjrke.factorio.optimizer.common.plan.FEED_EPSILON
 import de.bjrke.factorio.optimizer.common.plan.FeedLink
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_COPIES
-import de.bjrke.factorio.optimizer.common.plan.PlannedBand
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
@@ -23,8 +23,17 @@ private const val MAX_BAND_RECIPES = 3
 /** The links one band may realize. */
 private const val MAX_BAND_LINKS = 3
 
-/** The allocations a plan builds and the direct-feed bands they form. */
-internal class DirectFeed(val recipes: List<PlannedRecipe>, val bands: List<PlannedBand>)
+/** The rows a plan builds; a plain row repeats one recipe, a band interleaves several. */
+internal class DirectFeed(val rows: List<PlannedRow>) {
+
+    /** Every planned recipe in row order; a recipe may appear once per row. */
+    val recipes: List<PlannedRecipe>
+        get() = rows.flatMap { it.plannedRecipes }
+
+    /** The direct-feed bands among the rows. */
+    val bands: List<PlannedRow>
+        get() = rows.filter { it.links.isNotEmpty() }
+}
 
 private class DirectFeedBuilder(
     val target: Recipe,
@@ -103,10 +112,9 @@ private class DirectFeedBuilder(
     }
 
     fun build(): DirectFeed {
-        val recipes = mutableListOf<PlannedRecipe>()
-        val bands = buildBands(recipes)
+        val bands = buildBands()
         val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
-        val built = builtOf(recipes)
+        val built = builtOf(bands)
         val onBelt = onBeltOf()
         val belted =
             included
@@ -114,38 +122,24 @@ private class DirectFeedBuilder(
                 .mapNotNull {
                     belted(it, grouped, onBelt, built)
                 }
-        return DirectFeed(recipes + targetRow(built) + belted, bands)
+        return DirectFeed(bands + targetRow(built) + belted)
     }
 
-    /**
-     * Adds one allocation per recipe a band builds and returns the bands with those allocation
-     * indices.
-     */
-    private fun buildBands(recipes: MutableList<PlannedRecipe>): List<PlannedBand> =
-        bandPlans.map { plan ->
-            val allocationOf = buildMap {
-                for (recipe in plan.machines.toSet()) {
-                    this[recipe] = recipes.size
-                    recipes +=
-                        PlannedRecipe(
-                            production = production.getValue(recipe),
-                            machines = plan.machines.count { it == recipe }.toDouble(),
-                        )
-                }
-            }
-
-            PlannedBand(
-                plan.machines.map { allocationOf.getValue(it) },
+    /** Builds one row per arranged band, with its machine sequence and the links between them. */
+    private fun buildBands(): List<PlannedRow> = bandPlans.map { plan ->
+        val plannedByRecipe =
+            plan.machines.toSet().associateWith { PlannedRecipe(production.getValue(it)) }
+        PlannedRow(
+            machines = plan.machines.map { plannedByRecipe.getValue(it) },
+            links =
                 plan.feeds.map {
                     PlannedLink(it.gap, it.link.material, it.flow, it.producerIsLeft)
                 },
-            )
-        }
+        )
+    }
 
-    private fun builtOf(recipes: List<PlannedRecipe>) =
-        recipes
-            .groupBy { it.recipe }
-            .mapValues { (_, plannedRecipes) -> plannedRecipes.sumOf { it.machines.toInt() } }
+    private fun builtOf(rows: List<PlannedRow>) =
+        rows.flatMap { it.machines }.groupingBy { it.recipe }.eachCount()
 
     // machines a band builds whose product still leaves it over a belt, i.e. the band's output as
     // opposed to a link that is inserted machine to machine; those already supply the belted
@@ -161,8 +155,8 @@ private class DirectFeedBuilder(
     }
 
     /**
-     * The rate a belted allocation still has to cover: every consumer outside the direct links, at
-     * the rate the plan was sized for.
+     * The rate a belted planned recipe still has to cover: every consumer outside the direct links,
+     * at the rate the plan was sized for.
      */
     private fun beltedRate(recipe: Recipe, grouped: Set<FeedLink>) = included.sumOf { consumer ->
         consumer.recipe.ingredients.keys.sumOf { material ->
@@ -187,18 +181,18 @@ private class DirectFeedBuilder(
             FeedLink(material, recipe, consumer.recipe) !in grouped
 
     /**
-     * One belted allocation per recipe: what the consumers that are not direct-fed still need, at
-     * the rate the plan was sized for, less what a band's own output already puts on a belt. Sizing
-     * by whole consumer machines would over-build: a complete foundry would demand four iron-gear
-     * machines although the plan only ever needs a fraction of its rate, and that row would then
-     * have no consumer at all.
+     * One belted planned recipe per recipe: what the consumers that are not direct-fed still need,
+     * at the rate the plan was sized for, less what a band's own output already puts on a belt.
+     * Sizing by whole consumer machines would over-build: a complete foundry would demand four
+     * iron-gear machines although the plan only ever needs a fraction of its rate, and that row
+     * would then have no consumer at all.
      */
     private fun belted(
         factory: FactoryProduction,
         grouped: Set<FeedLink>,
         onBelt: Map<Recipe, Int>,
         built: Map<Recipe, Int>,
-    ): PlannedRecipe? {
+    ): PlannedRow? {
         val recipe = factory.recipe
         val material = recipe.result.keys.singleOrNull() ?: return null
         val rate = beltedRate(recipe, grouped)
@@ -212,14 +206,20 @@ private class DirectFeedBuilder(
         return if (rate <= 0.0 || machines <= 0) null
         else {
             require(factory == production.getValue(recipe))
-            PlannedRecipe(factory, machines.toDouble())
+            PlannedRow.copies(PlannedRecipe(factory), machines)
         }
     }
 
     /** The target always needs a row of its own when no band built it. */
     private fun targetRow(built: Map<Recipe, Int>) =
         if ((built[target] ?: 0) > 0) emptyList()
-        else listOf(PlannedRecipe(production.getValue(target), need.getValue(target).toDouble()))
+        else
+            listOf(
+                PlannedRow.copies(
+                    PlannedRecipe(production.getValue(target)),
+                    need.getValue(target),
+                ),
+            )
 }
 
 private fun List<FeedLink>.recipes() = flatMap { listOf(it.producer, it.consumer) }.distinct()
@@ -231,13 +231,14 @@ private fun sharesRecipe(first: FeedLink, second: FeedLink) =
         first.consumer == second.consumer
 
 /**
- * Splits a plan's recipes into allocations and direct-feed bands.
+ * Splits a plan's recipes into planned recipes and direct-feed bands.
  *
  * A solid input whose producer stands in a small whole-machine cycle with its consumer
  * ([cycleRatio]) is inserted machine-to-machine instead of coming over a belt, so the band holds
  * both recipes interleaved. A material the consumers outside the bands still need — after what a
- * band's own output already puts on a belt — gets one belted allocation, sized at the rate the plan
- * was drawn for. Anything that does not fit a band keeps its plan machine count and stays belted.
+ * band's own output already puts on a belt — gets one belted planned recipe, sized at the rate the
+ * plan was drawn for. Anything that does not fit a band keeps its plan machine count and stays
+ * belted.
  */
 internal fun directFeed(
     target: Recipe,
@@ -245,6 +246,6 @@ internal fun directFeed(
     scale: Double,
     logistics: LogisticsCalculator,
 ): DirectFeed {
-    return if (included.isEmpty()) DirectFeed(emptyList(), emptyList())
+    return if (included.isEmpty()) DirectFeed(emptyList())
     else DirectFeedBuilder(target, included, scale, logistics).build()
 }

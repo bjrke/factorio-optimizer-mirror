@@ -64,7 +64,6 @@ internal class DeliveryPreparation(
     private val beltEnd: BeltEnd,
 ) {
     private val board = stage.board
-    private val planner = stage.planner
     private val rowPlacer = stage.rowPlacer
 
     /**
@@ -117,9 +116,8 @@ internal class DeliveryPreparation(
         val grouped = sinks.groupBy { it.first }
         val deliveries = mutableListOf<Delivery>()
         for ((material, list) in grouped.entries.sortedBy { it.key.name }) {
-            val producer = planner.producerOf[material]
-            if (producer != null) {
-                val producerRow = rowPlacer.rows[producer] ?: continue
+            val producerRow = rowPlacer.producerRow(material)
+            if (producerRow != null) {
                 val start = outputStart(producerRow, material)
                 val distinctSinks = list.map { it.third }.distinctBy { it.feed }
                 // the trunk reaches the farthest consumer, so it passes the nearer ones on the way

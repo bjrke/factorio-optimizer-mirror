@@ -25,6 +25,7 @@ import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -50,7 +51,10 @@ class BlueprintFluidCharacterizationTest {
     private val fluidPlan =
         BlueprintPlan(
             target = gear,
-            recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT).copy(machines = 3.0)),
+            rows =
+                listOf(
+                    PlannedRow(List(3) { planned(boil, gear, Factory.CHEMICAL_PLANT) }),
+                ),
             sources = listOf(PlannedSource(water, 1.0, fluid = true)),
             scale = 1.0,
             label = "water-boil",

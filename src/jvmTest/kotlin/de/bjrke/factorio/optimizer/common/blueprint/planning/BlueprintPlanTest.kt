@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.FluidPort
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_BLUEPRINT_RECIPES
+import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
@@ -21,7 +22,6 @@ import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.OptimizationResult
 import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
-import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -213,7 +213,7 @@ class BlueprintPlanTest {
             )
 
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
-        // the cap counts every built recipe, not the allocations a recipe may be split into
+        // the cap counts every built recipe, not the planned recipes a recipe may be split into
         assertEquals(MAX_BLUEPRINT_RECIPES, planned.recipes.map { it.recipe }.distinct().size)
     }
 
@@ -240,11 +240,23 @@ class BlueprintPlanTest {
             {
                 assertEquals(
                     setOf(smelt, craft),
-                    band.machines.mapTo(mutableSetOf()) { planned.recipes[it].recipe },
+                    band.machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
             { assertEquals(setOf(plate), band.links.mapTo(mutableSetOf()) { it.material }) },
+            // the plate only moves machine to machine, so it never becomes a belt source
+            { assertEquals(listOf(gear), planned.beltMaterials) },
         )
+    }
+
+    @Test
+    fun plannedRecipesOfTheSameRecipeCompareByValue() {
+        val craft =
+            recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
+        val first = PlannedRecipe(production(craft, gear, Factory.ASSEMBLING_MACHINE_3))
+        val second = PlannedRecipe(production(craft, gear, Factory.ASSEMBLING_MACHINE_3))
+
+        assertEquals(first, second)
     }
 
     @Test
@@ -269,7 +281,7 @@ class BlueprintPlanTest {
         val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         assertAll(
             // even though the import would need more than two belts, the plan builds all three
-            { assertEquals(3.0, planned.recipes.single().machines, TOLERANCE) },
+            { assertEquals(3, planned.rows.single().machines.size) },
             { assertEquals("iron-gear-wheel", planned.label) },
         )
     }

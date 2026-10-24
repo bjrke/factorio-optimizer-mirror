@@ -47,18 +47,17 @@ fun blueprintPlan(
     // import lane would then need upgrading
     val scale = normalizeTarget
 
-    // split the recipes into allocations and direct-feed bands: a recipe feeding another one in a
-    // small whole-machine cycle is built interleaved with it, and gets one allocation per consumer
+    // split the recipes into planned recipes and direct-feed bands: a recipe feeding another one in
+    // a small whole-machine cycle is built interleaved with it, one planned recipe per consumer
     val feed = directFeed(targetFactory.recipe, included, scale, logistics)
 
     return BlueprintPlanResult.Planned(
         BlueprintPlan(
             target = result.target,
-            recipes = feed.recipes,
+            rows = feed.rows,
             sources = plannedSources(included, scale, logistics),
             scale = scale,
             label = planLabel(result.target, scale / normalizeTarget),
-            bands = feed.bands,
         ),
     )
 }

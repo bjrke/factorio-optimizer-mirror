@@ -2,9 +2,11 @@ package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
+import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 
-/** One machine of a row: the allocation it builds and the column it starts on. */
-internal class PlacedMachine(val allocation: Int, val left: Int)
+/** One machine of a row: the planned recipe it builds and the column it starts on. */
+internal class PlacedMachine(val plannedRecipe: PlannedRecipe, val left: Int)
 
 /**
  * The rectangle a row occupies: its corner, one machine footprint and the stride between copies.
@@ -15,12 +17,7 @@ internal data class RowBox(
     val width: Int,
     val height: Int,
     val stride: Int,
-    /** What the row's machines run, by allocation: a fluid lane has to read their port table. */
-    val machines: Map<Int, PlannedMachine>,
 )
-
-/** A machine of a row as the plan knows it: its prototype name and its recipe's ingredients. */
-internal class PlannedMachine(val identifier: String, val ingredients: Set<Material>)
 
 /**
  * The row geometry before a row exists: where the machines start and which belt rows they need.
@@ -50,18 +47,20 @@ internal data class RowLanes(
  * intermediate straight from one machine into the next.
  */
 internal class Row(
-    /** The machine each allocation builds, left to right; one entry per machine. */
+    /** The plan row this geometry places. */
+    val plannedRow: PlannedRow,
+    /** The planned recipe each machine builds, left to right; one entry per machine. */
     val machines: List<PlacedMachine>,
     val box: RowBox,
     val lanes: RowLanes,
-    /** The direct insertions between the machines, by the gap they sit in. */
-    val interfaces: List<PlannedLink> = emptyList(),
 ) {
-    /**
-     * The machine of this row that [machine] builds, so its port table can be read without the
-     * plan.
-     */
-    fun planned(machine: PlacedMachine): PlannedMachine = box.machines.getValue(machine.allocation)
+    /** The planned recipes this row builds, once each, in machine order. */
+    val plannedRecipes: List<PlannedRecipe>
+        get() = plannedRow.plannedRecipes
+
+    /** The direct insertions between the machines, by the gap they sit in. */
+    val interfaces: List<PlannedLink>
+        get() = plannedRow.links
 
     /** The belt rows around the machines: the input lanes above and a third input belt below. */
     val beltRows: List<Int>

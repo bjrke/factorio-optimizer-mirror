@@ -28,13 +28,13 @@ import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -105,10 +105,10 @@ class BlueprintLayoutTest {
         val scaled =
             BlueprintPlan(
                 target = gear,
-                recipes =
+                rows =
                     listOf(
-                        PlannedRecipe(
-                            production =
+                        PlannedRow.copies(
+                            PlannedRecipe(
                                 FactoryProduction(
                                     gear,
                                     craftRecipe,
@@ -116,7 +116,8 @@ class BlueprintLayoutTest {
                                     1.0,
                                     0,
                                 ),
-                            machines = 2.5,
+                            ),
+                            3,
                         ),
                     ),
                 sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
@@ -136,10 +137,10 @@ class BlueprintLayoutTest {
         val row =
             BlueprintPlan(
                 target = gear,
-                recipes =
+                rows =
                     listOf(
-                        PlannedRecipe(
-                            production =
+                        PlannedRow.copies(
+                            PlannedRecipe(
                                 FactoryProduction(
                                     gear,
                                     craftRecipe,
@@ -147,7 +148,8 @@ class BlueprintLayoutTest {
                                     1.0,
                                     0,
                                 ),
-                            machines = 3.0,
+                            ),
+                            3,
                         ),
                     ),
                 sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
@@ -181,7 +183,8 @@ class BlueprintLayoutTest {
         val twoPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(two, gear, Factory.ASSEMBLING_MACHINE_3)),
+                rows =
+                    listOf(PlannedRow.copies(planned(two, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
                 sources =
                     listOf(
                         PlannedSource(plate, 1.0, fluid = false),
@@ -210,7 +213,8 @@ class BlueprintLayoutTest {
         val twoPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(two, gear, Factory.ASSEMBLING_MACHINE_3)),
+                rows =
+                    listOf(PlannedRow.copies(planned(two, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
                 sources =
                     listOf(
                         PlannedSource(plate, 1.0, fluid = false),
@@ -252,11 +256,20 @@ class BlueprintLayoutTest {
         val shared =
             BlueprintPlan(
                 target = alpha,
-                recipes =
+                rows =
                     listOf(
-                        planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
-                        planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
-                        planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                        PlannedRow.copies(
+                            planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                        PlannedRow.copies(
+                            planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                        PlannedRow.copies(
+                            planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
                     ),
                 sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
                 scale = 1.0,
@@ -280,11 +293,20 @@ class BlueprintLayoutTest {
         val shared =
             BlueprintPlan(
                 target = alpha,
-                recipes =
+                rows =
                     listOf(
-                        planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
-                        planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
-                        planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                        PlannedRow.copies(
+                            planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                        PlannedRow.copies(
+                            planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                        PlannedRow.copies(
+                            planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
                     ),
                 sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
                 scale = 1.0,
@@ -398,7 +420,10 @@ class BlueprintLayoutTest {
         val threePlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(three, gear, Factory.ASSEMBLING_MACHINE_3)),
+                rows =
+                    listOf(
+                        PlannedRow.copies(planned(three, gear, Factory.ASSEMBLING_MACHINE_3), 1),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(ore, 1.0, fluid = false),

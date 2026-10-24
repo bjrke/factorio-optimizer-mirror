@@ -13,8 +13,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.plan.PlannedBand
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -43,7 +43,7 @@ class BlueprintLayoutSnapshotTest {
         val plan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -53,27 +53,24 @@ class BlueprintLayoutSnapshotTest {
 
     @Test
     fun bandLayoutIsStable() {
+        val gearRow = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,
-                recipes =
+                rows =
                     listOf(
-                        planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
-                        planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_3),
-                    ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
-                scale = 1.0,
-                label = "iron-gear-wheel",
-                bands =
-                    listOf(
-                        PlannedBand(
-                            machines = listOf(0, 1),
+                        PlannedRow(
+                            machines = listOf(gearRow, plateRow),
                             links =
                                 listOf(
                                     PlannedLink(0, plate, flow = 0.1, producerIsLeft = false),
                                 ),
                         ),
                     ),
+                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                scale = 1.0,
+                label = "iron-gear-wheel",
             )
         assertSignature("fedff84bd03373db", fromPlaced(plan, logistics))
     }

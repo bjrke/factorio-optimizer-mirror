@@ -56,7 +56,7 @@ internal class FluidLaneFeed(
      * port of the same edge, which the one lane of the row does not serve.
      */
     fun portFor(row: Row, machine: PlacedMachine, material: Material): Coordinate? {
-        val fluids = liquidsOf(row, machine)
+        val fluids = liquidsOf(machine)
         val index = fluids.indexOf(material)
         if (index < 0) return null
         val port = inletPorts(row, machine).getOrNull(index) ?: return null
@@ -64,12 +64,14 @@ internal class FluidLaneFeed(
     }
 
     /** The fluids [machine] takes, by name: the order the lane hands its ports out in. */
-    fun liquidsOf(row: Row, machine: PlacedMachine): List<Material> =
-        row.planned(machine).ingredients.filter { logistics.isFluid(it) }.sortedBy { it.name }
+    fun liquidsOf(machine: PlacedMachine): List<Material> =
+        machine.plannedRecipe.recipe.ingredients.keys
+            .filter { logistics.isFluid(it) }
+            .sortedBy { it.name }
 
     /** The machine's inlet ports on the edge the row's lanes feed, in the port table's order. */
     private fun inletPorts(row: Row, machine: PlacedMachine): List<Coordinate> {
-        val identifier = row.planned(machine).identifier
+        val identifier = machine.plannedRecipe.factory.identifier
         return blueprintMachineFluidPorts(identifier)
             .filter { port -> port.tile.y < 0 }
             .filter {

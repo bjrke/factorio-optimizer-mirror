@@ -22,6 +22,7 @@ import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.west
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -113,7 +114,13 @@ class BlueprintImportTest {
         val mixedPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(twoImports, gear, Factory.ASSEMBLING_MACHINE_3)),
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(twoImports, gear, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(ore, 1.0, fluid = false),
@@ -163,7 +170,10 @@ class BlueprintImportTest {
         val plan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(makeGear, gear, Factory.ASSEMBLING_MACHINE_3)),
+                rows =
+                    listOf(
+                        PlannedRow.copies(planned(makeGear, gear, Factory.ASSEMBLING_MACHINE_3), 1),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(ore, 1.0, fluid = false),
@@ -217,10 +227,16 @@ class BlueprintImportTest {
         val produced =
             BlueprintPlan(
                 target = top,
-                recipes =
+                rows =
                     listOf(
-                        planned(makeTop, top, Factory.ASSEMBLING_MACHINE_3),
-                        planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                        PlannedRow.copies(
+                            planned(makeTop, top, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                        PlannedRow.copies(
+                            planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
                     ),
                 sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
                 scale = 1.0,

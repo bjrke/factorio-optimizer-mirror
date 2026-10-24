@@ -3,150 +3,60 @@ package de.bjrke.factorio.optimizer.common.planning
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.MACHINE_COUNT_EPSILON
-import de.bjrke.factorio.optimizer.common.plan.MAX_COPIES
-import de.bjrke.factorio.optimizer.common.plan.PlannedBand
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-/** One row to place: a direct-feed band, or a single allocation built on its own. */
-internal class RowUnit(
+/** One row to place, ordered by how deep it sits from the sources. */
+internal data class RowUnit(val row: PlannedRow, val depth: Int) {
     /** What the row is built from, so two rows with the same depth keep a stable order. */
-    val label: String,
-    val depth: Int,
-    val band: PlannedBand?,
-    val allocation: Int,
-)
+    val label: String
+        get() = row.plannedRecipes.map { it.recipe.name }.sorted().joinToString("+")
+}
 
 /**
- * The plan-level decisions a layout needs before it places anything: which allocation produces each
- * material, how deep every allocation sits from the sources, and the row order. Also the pure
- * sizing helpers (`copiesOf`, `inserterPattern`) the row placer uses, so no geometry leaks in.
+ * The plan-level decisions a layout needs before it places anything: how deep every row sits from
+ * the sources and the row order. Also the pure sizing helpers (`inserterPattern`) the row placer
+ * uses, so no geometry leaks in.
  */
 internal class RowPlanner(
     private val plan: BlueprintPlan,
     private val logistics: LogisticsCalculator,
 ) {
 
-    /** The first belted allocation that makes a material; a band's internal material has none. */
-    val producerOf: Map<Material, Int>
-
-    private val depth = mutableMapOf<Int, Int>()
-
     /** The rows to place, top to bottom: the deepest consumers first, then by name. */
-    val units: List<RowUnit>
-
-    init {
-        producerOf = producerMap()
-        computeDepth()
-        units = rowUnits()
-    }
+    val units: List<RowUnit> =
+        plan.rows
+            .map { row -> RowUnit(row, row.plannedRecipes.maxOf { depthOf(it, emptyList()) }) }
+            .sortedWith(compareBy({ it.depth }, { it.label }))
 
     /**
-     * The producer of every material, ignoring the ones a band moves machine to machine: a band
-     * inserts its intermediate material straight into the next machine, so its producer allocation
-     * must not act as a belt source.
+     * The depth of [planned]: how many production steps away from the sources it is, used to order
+     * the rows. A recipe already on [path] contributes zero instead of recursing forever, and a
+     * path visits every recipe once, so the walk stays within the plan's recipe cap.
      */
-    private fun producerMap(): Map<Material, Int> {
-        val internal = mutableSetOf<Pair<Int, Material>>()
-        for (band in plan.bands) {
-            for (link in band.links) {
-                val machine = if (link.producerIsLeft) link.gap else link.gap + 1
-                internal += band.machines[machine] to link.material
+    private fun depthOf(planned: PlannedRecipe, path: List<Recipe>): Int {
+        if (planned.recipe in path) return 0
+        val next = path + planned.recipe
+        val producers =
+            planned.recipe.ingredients.keys.mapNotNull { material ->
+                plan.producerRecipeOf(material)?.takeIf { it != planned }?.let { material to it }
             }
-        }
-        val producers = mutableMapOf<Material, Int>()
-        for ((index, recipe) in plan.recipes.withIndex()) {
-            for (material in recipe.recipe.result.keys) {
-                if ((index to material) in internal) continue
-                producers.getOrPut(material) { index }
-            }
-        }
-        return producers
+        return if (producers.isEmpty()) 0
+        else 1 + producers.maxOf { (_, producer) -> depthOf(producer, next) }
     }
 
-    /**
-     * The depth of every allocation: how many production steps away from the sources it is, used to
-     * order the rows. Band links count like any other input, so a band still sits below what feeds
-     * it, and a cycle cannot recurse forever.
-     */
-    private fun computeDepth() {
-        val producer = mutableMapOf<Material, Int>()
-        for ((index, recipe) in plan.recipes.withIndex()) {
-            for (material in recipe.recipe.result.keys) producer.getOrPut(material) { index }
-        }
-        val visiting = mutableSetOf<Recipe>()
-        for (index in plan.recipes.indices) depthOf(index, producer, visiting)
-    }
-
-    /**
-     * The depth of allocation [index], memoized and cycle-safe: a recipe already on the current
-     * path contributes zero instead of recursing forever.
-     */
-    private fun depthOf(
-        index: Int,
-        producer: Map<Material, Int>,
-        visiting: MutableSet<Recipe>,
-    ): Int =
-        depth[index]
-            ?: run {
-                val allocation = plan.recipes[index]
-                if (!visiting.add(allocation.recipe)) 0
-                else {
-                    val inputs =
-                        allocation.recipe.ingredients.keys.filter {
-                            it in producer && producer.getValue(it) != index
-                        }
-                    val value =
-                        if (inputs.isEmpty()) 0
-                        else 1 + inputs.maxOf { depthOf(producer.getValue(it), producer, visiting) }
-                    visiting.remove(allocation.recipe)
-                    depth[index] = value
-                    value
-                }
-            }
-
-    private fun rowUnits(): List<RowUnit> {
-        val inBand = mutableSetOf<Int>()
-        for (band in plan.bands) inBand += band.machines
-        val rows = mutableListOf<RowUnit>()
-        for (band in plan.bands) {
-            val members = band.machines.distinct()
-            rows +=
-                RowUnit(
-                    label = members.map { plan.recipes[it].recipe.name }.sorted().joinToString("+"),
-                    depth = members.maxOf { depth[it] ?: 0 },
-                    band = band,
-                    allocation = members.first(),
-                )
-        }
-        for (index in plan.recipes.indices) {
-            if (index in inBand) continue
-            rows +=
-                RowUnit(
-                    label = plan.recipes[index].recipe.name,
-                    depth = depth[index] ?: 0,
-                    band = null,
-                    allocation = index,
-                )
-        }
-        return rows.sortedWith(compareBy({ it.depth }, { it.label }))
-    }
-
-    fun copiesOf(recipe: PlannedRecipe): Int =
-        // a machine count that should be whole but carries floating point noise must not round up
-        ceil(recipe.machines - MACHINE_COUNT_EPSILON).toInt().coerceIn(1, MAX_COPIES)
-
-    fun footprint(recipe: PlannedRecipe) = blueprintMachineFootprint(recipe.factory.identifier)
+    fun footprint(plannedRecipe: PlannedRecipe) =
+        blueprintMachineFootprint(plannedRecipe.factory.identifier)
 
     /** How many inserters one machine needs to pull [materials] out of its lane. */
-    fun insertersFor(recipe: PlannedRecipe, materials: List<Material>): Int {
+    fun insertersFor(plannedRecipe: PlannedRecipe, materials: List<Material>): Int {
         if (materials.isEmpty()) return 0
-        val rate = materials.sumOf { inputPerMachine(recipe.production, it) }
+        val rate = materials.sumOf { inputPerMachine(plannedRecipe.production, it) }
         return maxOf(1, ceil(logistics.beltInserterCount(rate)).toInt())
     }
 

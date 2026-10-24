@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.planning
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
@@ -21,10 +20,7 @@ import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
  * feed. A machine that takes two fluids on the same edge gets one lane for the first and keeps its
  * second port for the route.
  */
-internal class RowFluidLane(
-    private val plan: BlueprintPlan,
-    private val logistics: LogisticsCalculator,
-) {
+internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The fluids [row] takes (north) or gives (south) through a port on that edge, by name. */
     fun fluids(row: Row, side: LineSide): List<Material> {
@@ -77,7 +73,7 @@ internal class RowFluidLane(
 
     /** The machine port tiles of [machine] on [side], in the order the port table lists them. */
     private fun portsOf(row: Row, machine: PlacedMachine, side: LineSide): List<Coordinate> {
-        val identifier = plan.recipes[machine.allocation].factory.identifier
+        val identifier = machine.plannedRecipe.factory.identifier
         val edge = if (side == LineSide.NORTH) Direction.NORTH else Direction.SOUTH
         val sideFlow = if (side == LineSide.NORTH) PortFlow.INPUT else PortFlow.OUTPUT
         return blueprintMachineFluidPorts(identifier)
@@ -91,10 +87,10 @@ internal class RowFluidLane(
 
     /** The fluids [machine] takes (north) or gives (south), by name: the lane's port order. */
     private fun materialsOf(machine: PlacedMachine, side: LineSide): List<Material> {
-        val allocation = plan.recipes[machine.allocation]
+        val plannedRecipe = machine.plannedRecipe
         val materials =
-            if (side == LineSide.NORTH) allocation.recipe.ingredients.keys
-            else allocation.recipe.result.keys
+            if (side == LineSide.NORTH) plannedRecipe.recipe.ingredients.keys
+            else plannedRecipe.recipe.result.keys
         return materials.filter { logistics.isFluid(it) }.sortedBy { it.name }
     }
 }

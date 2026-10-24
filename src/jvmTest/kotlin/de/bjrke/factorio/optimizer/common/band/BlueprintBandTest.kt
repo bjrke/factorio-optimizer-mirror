@@ -12,8 +12,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.plan.PlannedBand
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
@@ -27,28 +27,25 @@ class BlueprintBandTest {
 
     @Test
     fun aBandFeedsItsConsumerMachineToMachine() {
+        val gearRow = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_3)
         val bandPlan =
             BlueprintPlan(
                 target = gear,
-                recipes =
-                    listOf(
-                        planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
-                        planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_3),
-                    ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
-                scale = 1.0,
-                label = "iron-gear-wheel",
                 // the gear machine takes its plate from the smelter on its right
-                bands =
+                rows =
                     listOf(
-                        PlannedBand(
-                            machines = listOf(0, 1),
+                        PlannedRow(
+                            machines = listOf(gearRow, plateRow),
                             links =
                                 listOf(
                                     PlannedLink(0, plate, flow = 0.1, producerIsLeft = false),
                                 ),
                         ),
                     ),
+                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                scale = 1.0,
+                label = "iron-gear-wheel",
             )
         val blueprint = fromPlaced(bandPlan, logistics)
         val materials = blueprintTransportMaterials(bandPlan, logistics)

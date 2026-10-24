@@ -40,12 +40,11 @@ internal class DeliveryRouter(
     private val board = stage.board
     private val plan = stage.plan
     private val logistics = stage.logistics
-    private val planner = stage.planner
     private val rowPlacer = stage.rowPlacer
     private val router = stage.router
     private val connector = connector
 
-    private val networks = DeliveryNetworks(planner.producerOf)
+    private val networks = DeliveryNetworks(plan.beltMaterials)
     private val rules = BeltRouteRules(board)
     private val splits = SplitDeliveryRouter(board, router, networks, rules, failures)
 
@@ -116,10 +115,9 @@ internal class DeliveryRouter(
     /** Extends the target's output belt and ends it in the selected solid connector. */
     fun placeTargetOutput() {
         val targetMaterial = plan.target
-        val producer = planner.producerOf[targetMaterial] ?: return
-        val recipe = plan.recipes[producer]
-        val row = rowPlacer.rows[producer] ?: return
-        if (!recipe.recipe.result.keys.any { !logistics.isFluid(it) }) return
+        val row = rowPlacer.producerRow(targetMaterial) ?: return
+        val producer = row.plannedRow.producerOf(targetMaterial) ?: return
+        if (!producer.recipe.result.keys.any { !logistics.isFluid(it) }) return
         var coordinate = Coordinate(row.right + 1, row.outputLaneRow)
 
         while (coordinate.x <= row.right + OUTPUT_BELT_LEAD && board.isFree(coordinate)) {

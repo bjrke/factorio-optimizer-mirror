@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -23,7 +24,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
@@ -56,12 +56,20 @@ private val craft =
 private val plan =
     BlueprintPlan(
         target = gear,
-        recipes =
+        rows =
             listOf(
-                PlannedRecipe(
-                    production =
-                        FactoryProduction(gear, craft, Factory.ASSEMBLING_MACHINE_3, 1.0, 0),
-                    machines = 1.0,
+                PlannedRow(
+                    listOf(
+                        PlannedRecipe(
+                            FactoryProduction(
+                                gear,
+                                craft,
+                                Factory.ASSEMBLING_MACHINE_3,
+                                1.0,
+                                0,
+                            ),
+                        ),
+                    ),
                 ),
             ),
         sources = listOf(PlannedSource(plate, 1.0, fluid = false)),

@@ -59,7 +59,6 @@ internal class FluidFeeder(
     private val board = stage.board
     private val plan = stage.plan
     private val logistics = stage.logistics
-    private val planner = stage.planner
     private val rowPlacer = stage.rowPlacer
     private val router = stage.router
     private val lanes = FluidLaneFeed(board, imports, beltEnd, logistics)
@@ -68,15 +67,15 @@ internal class FluidFeeder(
     fun feed() {
         // the row lanes go in first: they are placed before any routed pipe, so a route cannot take
         // a tile of one, and every port a lane reaches is left to the lane
-        val laneModel = RowFluidLane(plan, logistics)
+        val laneModel = RowFluidLane(logistics)
         // a lane that could not reach a port leaves it free, so the loop below routes it
         LineSide.entries.forEach { side -> lanes.place(laneModel, side, rowPlacer.placedRows) }
         // reserve every fluid's machine edge first, so two fluids never pick touching edges
         val targets = mutableMapOf<Material, MutableList<Coordinate>>()
         for (row in rowPlacer.placedRows) {
             for (machine in row.machines) {
-                val allocation = plan.recipes[machine.allocation]
-                val fluids = lanes.liquidsOf(row, machine)
+                val plannedRecipe = machine.plannedRecipe
+                val fluids = lanes.liquidsOf(machine)
                 // one port per fluid: a machine that already reserved a port for a fluid is fed
                 val fed = mutableMapOf<Material, Coordinate>()
                 for (material in fluids) {
@@ -88,7 +87,8 @@ internal class FluidFeeder(
                     val port = fluidEdge(row, machine, material, fed.keys)
                     if (port == null) {
                         failures +=
-                            "${material.name} to ${allocation.factory.identifier} (no fluid port)"
+                            "${material.name} to ${plannedRecipe.factory.identifier} " +
+                                "(no fluid port)"
                         continue
                     }
                     fed[material] = port
@@ -116,11 +116,10 @@ internal class FluidFeeder(
     /** Connects a fluid output pipe to each target machine, so its product has somewhere to go. */
     fun placeTargetOutput() {
         if (!logistics.isFluid(plan.target)) return
-        val producer = planner.producerOf[plan.target] ?: return
-        val recipe = plan.recipes[producer]
-        val row = rowPlacer.rows[producer] ?: return
+        val row = rowPlacer.producerRow(plan.target) ?: return
+        val producer = row.plannedRow.producerOf(plan.target) ?: return
         for (machine in row.machines) {
-            if (plan.recipes[machine.allocation].recipe !== recipe.recipe) continue
+            if (machine.plannedRecipe.recipe !== producer.recipe) continue
             val coordinate = productEdge(row, machine) ?: continue
             if (!board.isFree(coordinate) || board.isReserved(coordinate)) continue
             board.placePipe(coordinate, plan.target)
@@ -178,7 +177,7 @@ internal class FluidFeeder(
      * back to its left then right edge, which flows both ways.
      */
     private fun inletTiles(row: Row, machine: PlacedMachine): List<Coordinate> {
-        val identifier = plan.recipes[machine.allocation].factory.identifier
+        val identifier = machine.plannedRecipe.factory.identifier
         val ports =
             blueprintMachineFluidPorts(identifier)
                 .filter {
@@ -211,7 +210,7 @@ internal class FluidFeeder(
         fed: Set<Material>,
     ): Coordinate? {
         if (material in fed) return null
-        val identifier = plan.recipes[machine.allocation].factory.identifier
+        val identifier = machine.plannedRecipe.factory.identifier
         val inlets =
             inletTiles(row, machine).filter { board.edgeFluidAt(it) in listOf(null, material) }
         val preferred =
@@ -236,8 +235,7 @@ internal class FluidFeeder(
      */
     private fun productEdge(row: Row, machine: PlacedMachine): Coordinate? {
         val port =
-            blueprintMachineOutputPort(plan.recipes[machine.allocation].factory.identifier)
-                ?: return null
+            blueprintMachineOutputPort(machine.plannedRecipe.factory.identifier) ?: return null
         val tile = Coordinate(machine.left + port.tile.x, row.factoryTop + port.tile.y)
         return tile.takeIf { available(it) }
     }

@@ -12,7 +12,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedBand
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
@@ -21,9 +21,9 @@ private const val LANE_MARGIN = 40
 private const val BAND_GAP = 14
 
 /**
- * Places the machine rows once: a plain allocation as a row of copies, a direct-feed band as one
- * row of interleaved machines. Owns the row index and the placement order the later delivery and
- * fluid stages read.
+ * Places the machine rows once: a plain planned recipe as a row of copies, a direct-feed band as
+ * one row of interleaved machines. Owns the placement order the later delivery and fluid stages
+ * read.
  */
 internal class RowPlacer(
     private val board: LayoutBoard,
@@ -32,22 +32,17 @@ internal class RowPlacer(
     private val planner: RowPlanner,
 ) {
 
-    /** The row that builds each allocation; a band row serves all of its allocations. */
-    val rows = mutableMapOf<Int, Row>()
-
-    /** Every row once, in placement order; a band row serves all of its allocations. */
+    /** Every row once, in placement order; a band row serves all of its planned recipes. */
     val placedRows = mutableListOf<Row>()
 
-    private val machineInserters = MachineInserterPlacer(board, plan, logistics, planner)
-    private val bandInterfaces = BandInterfacePlacer(board, plan, logistics)
+    private val machineInserters = MachineInserterPlacer(board, logistics, planner)
+    private val bandInterfaces = BandInterfacePlacer(board, logistics)
 
     fun placeAll() {
         var y = 0
         for (unit in planner.units) {
             val row =
-                if (unit.band != null) placeBand(unit.band, y) else placeRow(unit.allocation, y)
-            for (machine in row.machines.distinctBy { it.allocation }) rows[machine.allocation] =
-                row
+                if (unit.row.links.isEmpty()) placeRow(unit.row, y) else placeBand(unit.row, y)
             placedRows += row
             y = row.outputLaneRow + 3 + BAND_GAP
         }
@@ -72,22 +67,27 @@ internal class RowPlacer(
         )
     }
 
-    /** Builds one allocation as a row of [copies] touching machines of the same recipe. */
-    private fun placeRow(allocation: Int, bandTop: Int): Row {
-        val recipe = plan.recipes[allocation]
-        val size = planner.footprint(recipe)
-        val copies = planner.copiesOf(recipe)
+    /** Builds a plain row: repeated machines of its one planned recipe, touching each other. */
+    private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
+        val plannedRecipe = plannedRow.plannedRecipes.single()
+        val size = planner.footprint(plannedRecipe)
         val solids =
-            recipe.recipe.ingredients.keys.filter { !logistics.isFluid(it) }.sortedBy { it.name }
+            plannedRecipe.recipe.ingredients.keys
+                .filter { !logistics.isFluid(it) }
+                .sortedBy { it.name }
         val shape = rowShape(solids, size.height, bandTop)
         // a fluid row needs no side gap: its lane runs on a row of its own beyond the belts and
         // reaches every port through the squash of an underground shaft, so the copies touch
         val stride = size.width
-        val machines = List(copies) { PlacedMachine(allocation, LANE_MARGIN + it * stride) }
+        val machines =
+            plannedRow.machines.mapIndexed { index, planned ->
+                PlacedMachine(planned, LANE_MARGIN + index * stride)
+            }
         val row =
             Row(
+                plannedRow = plannedRow,
                 machines = machines,
-                box = box(shape, size, stride, machines, plan),
+                box = box(shape, size, stride),
                 lanes =
                     RowLanes(
                         solids,
@@ -101,51 +101,32 @@ internal class RowPlacer(
             board.place(
                 MachineEntity(
                     Coordinate(machine.left, row.factoryTop).area(size),
-                    recipe.factory.identifier,
-                    recipe.recipe.name,
+                    plannedRecipe.factory.identifier,
+                    plannedRecipe.recipe.name,
                 ),
             )
         }
-        machineInserters.place(row, emptySet())
+        machineInserters.place(row, emptyList())
         placeLanes(row)
-        placeProduct(row, emptySet())
+        placeProduct(row, emptyList())
         return row
     }
 
-    /** The rectangle of a row and what each of its allocations runs, for a fluid lane to read. */
-    private fun box(
-        shape: RowShape,
-        size: Dimension,
-        stride: Int,
-        machines: List<PlacedMachine>,
-        plan: BlueprintPlan,
-    ) =
-        RowBox(
-            LANE_MARGIN,
-            shape.factoryTop,
-            size.width,
-            size.height,
-            stride,
-            machines
-                .map { it.allocation }
-                .distinct()
-                .associateWith { allocation ->
-                    val recipe = plan.recipes[allocation]
-                    PlannedMachine(recipe.factory.identifier, recipe.recipe.ingredients.keys)
-                },
-        )
+    /** The rectangle of a row: its corner, one machine footprint and the stride between copies. */
+    private fun box(shape: RowShape, size: Dimension, stride: Int) =
+        RowBox(LANE_MARGIN, shape.factoryTop, size.width, size.height, stride)
 
     /**
      * Builds a direct-feed band as one row of interleaved machines: every machine sits a tile apart
      * so the gap column between two of them can carry the inserters that move their intermediate,
      * and the whole band shares the lane rows and the output belt.
      */
-    private fun placeBand(band: PlannedBand, bandTop: Int): Row {
-        val internal = band.links.mapTo(mutableSetOf()) { it.material }
-        val allocations = band.machines.distinct().map { plan.recipes[it] }
-        val size = planner.footprint(allocations.first())
+    private fun placeBand(plannedRow: PlannedRow, bandTop: Int): Row {
+        val internal = plannedRow.links.map { it.material }
+        val plannedRecipes = plannedRow.plannedRecipes
+        val size = planner.footprint(plannedRecipes.first())
         val solids =
-            allocations
+            plannedRecipes
                 .flatMap { it.recipe.ingredients.keys }
                 .filter { !logistics.isFluid(it) && it !in internal }
                 .distinct()
@@ -153,13 +134,14 @@ internal class RowPlacer(
         val shape = rowShape(solids, size.height, bandTop)
         val stride = size.width + 1
         val machines =
-            band.machines.mapIndexed { index, allocation ->
-                PlacedMachine(allocation, LANE_MARGIN + index * stride)
+            plannedRow.machines.mapIndexed { index, plannedRecipe ->
+                PlacedMachine(plannedRecipe, LANE_MARGIN + index * stride)
             }
         val row =
             Row(
+                plannedRow = plannedRow,
                 machines = machines,
-                box = box(shape, size, stride, machines, plan),
+                box = box(shape, size, stride),
                 lanes =
                     RowLanes(
                         solids,
@@ -168,15 +150,13 @@ internal class RowPlacer(
                         shape.laneBelowRow,
                         shape.outputLaneRow,
                     ),
-                interfaces = band.links,
             )
         for (machine in machines) {
-            val allocation = plan.recipes[machine.allocation]
             board.place(
                 MachineEntity(
                     Coordinate(machine.left, row.factoryTop).area(size),
-                    allocation.factory.identifier,
-                    allocation.recipe.name,
+                    machine.plannedRecipe.factory.identifier,
+                    machine.plannedRecipe.recipe.name,
                 ),
             )
         }
@@ -201,10 +181,10 @@ internal class RowPlacer(
     }
 
     /** Ends the row with an output belt when one of its machines makes something for outside. */
-    private fun placeProduct(row: Row, internal: Set<Material>) {
+    private fun placeProduct(row: Row, internal: List<Material>) {
         val product =
             row.machines.firstNotNullOfOrNull {
-                externalProduct(plan.recipes[it.allocation], internal, logistics)
+                externalProduct(it.plannedRecipe, internal, logistics)
             }
         product?.let {
             for (x in row.left..row.right) {
@@ -219,8 +199,8 @@ internal class RowPlacer(
      * into one row do not have to cross. A lone produced input picks the nearer end.
      */
     fun laneDirection(row: Row, material: Material): Direction {
-        if (material !in planner.producerOf) return EAST
-        val produced = row.solids.filter { it in planner.producerOf }.sortedBy { outletX(it) }
+        if (material !in plan.beltMaterials) return EAST
+        val produced = row.solids.filter { it in plan.beltMaterials }.sortedBy { outletX(it) }
         val index = produced.indexOf(material)
         val middle = produced.size / 2
         if (index in 0 until middle) return EAST
@@ -228,10 +208,17 @@ internal class RowPlacer(
         return if (outletX(material) <= (row.left + row.right) / 2) EAST else WEST
     }
 
-    /** The tile east of a material's producer output lane, or Far East when it is not placed. */
-    fun outletX(material: Material): Int {
-        val producer = planner.producerOf[material] ?: return Int.MAX_VALUE
-        val producerRow = rows[producer] ?: return Int.MAX_VALUE
-        return producerRow.right + 1
+    /**
+     * The row that puts [material] on a belt, or null while it is not placed or when the plan
+     * imports it.
+     */
+    fun producerRow(material: Material): Row? {
+        val producer = plan.producerOf(material) ?: return null
+        return placedRows.firstOrNull { row -> row.plannedRow == producer }
     }
+
+    /**
+     * The tile east of the row that puts [material] on a belt, or Far East when it is not placed.
+     */
+    fun outletX(material: Material): Int = producerRow(material)?.right?.plus(1) ?: Int.MAX_VALUE
 }

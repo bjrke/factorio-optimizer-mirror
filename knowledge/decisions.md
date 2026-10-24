@@ -5,6 +5,56 @@ This file records the **current** reasoning only: a superseded decision, and the
 per-change narrative behind each decision, lives in the commit messages and
 `git log`. Anything here should still constrain the code today.
 
+## 2026-10-24 — The row is the occurrence, not the planned recipe
+
+**Context.** Direct-feed bands and belt rows can both build the same recipe, so
+`BlueprintPlan` entries could not be told apart by recipe value. The first fix
+used the list position as an `Int` "allocation"; the second used the object's
+reference identity. Both are hidden keys: an identity object works like an index
+in a map. The recipe's output, machine count and rate cannot distinguish the
+occurrences either — a band and a belt row can have the same machine count and
+the same product.
+
+**Decision.** The occurrence is the **row**, and a row is plain data:
+
+```kotlin
+data class PlannedRecipe(val production: FactoryProduction)
+
+data class PlannedRow(
+    /** One entry per machine, left to right; a plain row repeats the same recipe. */
+    val machines: List<PlannedRecipe>,
+    /** The direct insertions of a band; empty for a plain row. */
+    val links: List<PlannedLink> = emptyList(),
+)
+```
+
+`BlueprintPlan` holds `rows: List<PlannedRow>`, not a global recipe registry.
+`PlannedRecipe` is a data class again; its machine count is the number of times
+it appears in its row (`PlannedRow.machinesOf`), so it cannot disagree with the
+row. A plain row is a one-recipe list repeated once per machine; a band is its
+machine sequence plus links. `BlueprintPlan.recipes` is a derived view for
+callers that only need the recipes.
+
+No `Map` or `Set` is keyed by a planned recipe or a row:
+
+- `producerOf(material)` scans `plan.rows` for the first row exporting it; the
+  placed row is found by `row.plannedRow == producer`, a value comparison;
+- band membership and order are the `rows`/`machines` lists themselves, so
+  `RowPlanner` no longer reconstructs them;
+- depth is a DFS with a `List<Recipe>` path as the cycle guard, no memo map.
+
+The plan is capped at `MAX_BLUEPRINT_RECIPES = 8` recipes and a band at
+`GROUP_MAX_MACHINES = 18`, so the scans are smaller than the hash tables they
+replace. `BlueprintPlan.beltMaterials` (a list) answers "is this material
+produced at all?"; `BlueprintPlan.producerOf` keeps the old first-producer
+semantics, and `producerRecipeOf` the depth-order producer.
+
+**Consequences.** Two structurally identical rows compare equal and are
+interchangeable (same recipes, machine counts, links and geometry); they are not
+collapsed by any map or set. A duplicate recipe in two different rows is simply
+two lists of values. Prose and fields say "planned recipe" /
+`machine.plannedRecipe` / `row.plannedRecipes`, not "allocation".
+
 ## 2026-10-23 — Fluids are built as one lane above (or below) the belts
 
 **Context.** `FluidFeeder.feed()` runs after the rows and their edges, so
@@ -56,9 +106,9 @@ junction pipes, horizontal runs and shaft pairs), `planning/RowFluidLane.kt` whi
 fluid a row gets and the port per machine, `planning/FluidLanePlacer.kt` the board
 side (marker, ends, tunnel index, skip-on-collision) and
 `plumbing/FluidLaneFeed.kt` ties lanes to the feeder; `routing/FluidFeedLinker.kt`
-draws the marker-to-head link. `RowShape` lives in `Row.kt` and
-`Row.box.machines` carries each allocation's prototype and ingredients, so the lane
-code reads the port table without a `BlueprintPlan`. The port rows stay whatever
+draws the marker-to-head link. `RowShape` lives in `Row.kt` and each
+`PlacedMachine` carries its `plannedRecipe`, so the lane code reads the prototype
+and ingredients without a `BlueprintPlan`. The port rows stay whatever
 `blueprintMachineFluidPorts` says; it agrees with `inserterPortColumns` again
 (`blueprintMachineEdge`/`PortFlow`). A row whose machine has a port only on a side
 edge keeps the routed feed — the electromagnetic plant is fed through its top
@@ -196,17 +246,17 @@ as the durable record and the compaction hook that only steers the summarizer.
 verified state, decisions and next action. No handoff file, and the agent never
 compacts on its own; OpenCode's `compaction.auto` decides when.
 
-## 2026-10-18 — Belt-fed allocations are sized by the plan's rate, not by whole consumer machines
+## 2026-10-18 — Belt-fed planned recipes are sized by the plan's rate, not by whole consumer machines
 
 **Context.** A reported plan held an extra electronic-circuit and inserter factory
 with unconnected output belts, and a five-machine iron-gear row where one more
-assembler would have been enough. The belted split sized every allocation as
+assembler would have been enough. The belted split sized every planned recipe as
 `ceil(builtConsumerMachines × inputPerMachine ÷ outputPerMachine)` — enough to run
-each built consumer at full rate — while the plan drew far less. `producerOf`
-supports one belt source per material, so a redundant allocation keeps its product
-belt and no delivery starts on it.
+each built consumer at full rate — while the plan drew far less. The plan has one
+belt source per material, so a redundant planned recipe keeps its product belt and
+no delivery starts on it.
 
-**Decision.** Size a belt-fed allocation by the plan's own rate demand — the same
+**Decision.** Size a belt-fed planned recipe by the plan's own rate demand — the same
 `consumption × scale` an import draws — and subtract what a band's *output* already
 puts on a belt:
 
@@ -220,8 +270,8 @@ belts, with no belt chain that no inserter takes from. The layout still assumes 
 belt source per material; a material that both a band's output and a belt row
 produce would need two deliveries (a merge), which no fixture needs yet — the
 invariant is asserted per plan
-(`realBlueprintsPutEveryMaterialOnAtMostOneBelt`). Supersedes the belted-allocation
-bullet of the direct-feed entry below.
+(`realBlueprintsPutEveryMaterialOnAtMostOneBelt`). Supersedes the belted
+planned-recipe bullet of the direct-feed entry below.
 
 ## 2026-10-18 — Direct-feed bands group recipes by rate, not by machine count
 
@@ -251,17 +301,20 @@ belt-free bands:
   stays belted.
 - Every machine is built **complete** (the band's share is rounded up); interface
   inserters are placed in the gap column on the producer's side, as many as the flow
-  needs. A band's internal material gets **no lane, sink, belt or belted
-  allocation**: only belted allocations fill `producerOf`.
-- `BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth;
-  a band is laid out by its own code path (`placeBand`), and a plan without bands
-  lays out exactly as before. `PlannedRecipe.directInsert` is gone.
+  needs. A band's internal material gets **no lane, sink, belt or belted planned
+  recipe**: only belted planned recipes are belt sources
+  (`BlueprintPlan.producerOf`).
+- `BlueprintPlan.rows` (`PlannedRow`/`PlannedLink`) is the single source of truth;
+  a band is a row with links and is laid out by its own code path (`placeBand`), and
+  a plan without bands lays out exactly as before. `PlannedRecipe.directInsert` is
+  gone.
 - A recipe that takes **or produces** a fluid is skipped for now: a band puts a
   fluid port between two machines where the lane/feed cannot reach it (see
   `pitfalls.md`).
 
-**Consequences.** `Row` became a band of heterogeneous machines and `rows` is keyed
-by allocation index; belts, lanes and sinks are unchanged for the belted part.
+**Consequences.** `Row` became a band of heterogeneous machines; belts, lanes and
+sinks are unchanged for the belted part. (The original `rows`-by-allocation-index
+keying is gone; see 2026-10-24.)
 Deferred: line-breaking a band that is too wide (up to 18 machines in one row can
 force belt crossings), and **mixed-footprint bands** — `arrange`/`placeBand` assume
 one machine size per row, which keeps e.g. `iron-gear-wheel` (3×3) from inserting

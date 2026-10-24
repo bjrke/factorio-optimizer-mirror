@@ -243,13 +243,15 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 - `compaction/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
   end sharing.
-- `planning/RowPlanner.kt` — the plan-level row order: the band-aware producer
-  map, allocation depth, row units and the pure sizing helpers (`copiesOf`,
-  `inserterPattern`).
-- `planning/RowPlacer.kt` — places the machine rows (`Row` = `RowBox` +
-  `RowLanes` + `RowShape` + machines, declared in `Row.kt`), the bands, lanes and
-  product, and owns the allocation-to-row index and the lane direction.
-  `Row.box.machines` carries each allocation's prototype and ingredients.
+- `planning/RowPlanner.kt` — the plan-level row order: the depth of every row
+  (a DFS over `BlueprintPlan.rows` with a recipe path as the cycle guard), the
+  `RowUnit(row, depth)` order and the pure sizing helpers (`inserterPattern`).
+- `planning/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
+  `RowBox` + `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and
+  product, and owns the ordered `placedRows` list and the lane direction. A
+  `PlacedMachine` carries its own `plannedRecipe`; `producerRow(material)` scans
+  `placedRows` for the row whose `plannedRow` equals
+  `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
   `BandInterfacePlacer` the gap inserters.
 - `planning/FluidLane.kt` — the board-free lane shape: a plain junction pipe above
@@ -310,12 +312,15 @@ layout test fixtures instead of a per-suite breadth-first walk.
 a **direct-feed band**: a solid material whose producer and consumer stand in a
 small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
-`BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth
-for it. `band/BandSearch` finds the shortest window (`FeedWindow` checks that every
-consumer is covered and every producer feeds someone). `RowPlacer` places a band with `placeBand`; only belted allocations feed
-belts, lanes and sinks, so a band's internal material never gets a belt. See
+`BlueprintPlan.rows` (`PlannedRow`/`PlannedLink`) is the single source of truth
+for it. A band is a `PlannedRow` whose `links` are non-empty and whose `machines`
+hold one `PlannedRecipe` per machine; a plain row repeats its one recipe once per
+machine and has no links. `band/BandSearch` finds the shortest window
+(`FeedWindow` checks that every consumer is covered and every producer feeds
+someone). `RowPlacer` places a band with `placeBand`; only belted planned recipes
+feed belts, lanes and sinks, so a band's internal material never gets a belt. See
 `decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
-follow-ups.
+follow-ups, and (2026-10-24) for why the row is the occurrence.
 
 A solid belt's end is a `BeltEnd` (`layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed

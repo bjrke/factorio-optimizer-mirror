@@ -4,7 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.GROUP_MAX_MACHINES
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedBand
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
@@ -57,8 +57,8 @@ private fun production(
         productivity,
     )
 
-/** The recipes of a band in machine order; its machines index into [DirectFeed.recipes]. */
-private fun DirectFeed.sequence(band: PlannedBand) = band.machines.map { recipes[it].recipe.name }
+/** The recipes of a band in machine order. */
+private fun DirectFeed.sequence(band: PlannedRow) = band.machines.map { it.recipe.name }
 
 class DirectFeedTest {
 
@@ -200,7 +200,7 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aMaterialWithASecondConsumerGetsOneMoreAllocation() {
+    fun aMaterialWithASecondConsumerGetsOneMorePlannedRecipe() {
         val cable = recipe("copper-cable", mapOf(alpha to 1.0))
         val circuit = recipe("electronic-circuit", mapOf(gamma to 1.0), mapOf(alpha to 1.0))
         val module = recipe("module", mapOf(product to 1.0), mapOf(alpha to 0.05))
@@ -233,12 +233,17 @@ class DirectFeedTest {
                     feed.recipes.map { it.recipe.name },
                 )
             },
-            { assertEquals(listOf(2.0, 2.0, 1.0, 1.0), feed.recipes.map { it.machines }) },
+            {
+                assertEquals(
+                    listOf(2, 2, 1, 1),
+                    feed.rows.flatMap { row -> row.plannedRecipes.map { row.machinesOf(it) } },
+                )
+            },
         )
     }
 
     @Test
-    fun aBeltedAllocationCoversThePlansRateNotAWholeConsumerMachine() {
+    fun aBeltedPlannedRecipeCoversThePlansRateNotAWholeConsumerMachine() {
         // the foundry-like consumer takes 20 alpha/s when it runs full, but the plan only ever
         // draws a twentieth of that rate; sizing the belt row by the whole machine would build nine
         // gear machines where a single one is enough
@@ -259,10 +264,7 @@ class DirectFeedTest {
                 logistics = logistics,
             )
 
-        val machines =
-            feed.recipes
-                .groupingBy { it.recipe.name }
-                .fold(0) { sum, allocation -> sum + allocation.machines.toInt() }
+        val machines = feed.rows.flatMap { it.machines }.groupingBy { it.recipe.name }.eachCount()
         assertAll(
             // the gear and the inserter form a 1:1 band, so the gear machine the band builds
             // supplies only that band; the foundry takes one more gear machine over a belt
@@ -306,7 +308,7 @@ class DirectFeedTest {
             },
             // the plate does not fit into that band any more, so it is built as a belt row of its
             // own
-            { assertEquals(5.0, feed.recipes.last().machines) },
+            { assertEquals(5, feed.rows.last().machines.size) },
         )
     }
 

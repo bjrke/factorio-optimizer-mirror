@@ -83,10 +83,7 @@ class BlueprintPlanIntegrationTest {
     fun theReportedLogisticSciencePackUrlBuildsNoRedundantFactory() {
         val (plan, _, _) =
             planFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1")
-        val machines =
-            plan.recipes
-                .groupingBy { it.recipe.name }
-                .fold(0) { sum, allocation -> sum + allocation.machines.toInt() }
+        val machines = plan.rows.flatMap { it.machines }.groupingBy { it.recipe.name }.eachCount()
 
         assertAll(
             { assertOneBeltSourcePerMaterial(plan) },

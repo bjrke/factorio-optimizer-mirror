@@ -25,6 +25,7 @@ import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -166,7 +167,7 @@ class BlueprintBeltEndTest {
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                recipes = listOf(planned(boil, gear, Factory.CHEMICAL_PLANT)),
+                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
