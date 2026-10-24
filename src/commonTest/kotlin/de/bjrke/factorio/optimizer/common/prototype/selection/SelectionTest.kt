@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.model
+package de.bjrke.factorio.optimizer.common.prototype.selection
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -6,12 +6,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Surface
-import de.bjrke.factorio.optimizer.common.prototype.selection.EMPTY_SELECTION
-import de.bjrke.factorio.optimizer.common.prototype.selection.Selection
-import de.bjrke.factorio.optimizer.common.prototype.selection.SelectionFlag
-import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromSelection
-import de.bjrke.factorio.optimizer.common.prototype.selection.selectionString
-import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf

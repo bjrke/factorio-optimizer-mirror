@@ -2,6 +2,9 @@ package de.bjrke.factorio.optimizer.common.blueprint
 
 import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.blueprint.inspection.LayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.blueprint.output.chestWires
 import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.compaction.CompactionPass

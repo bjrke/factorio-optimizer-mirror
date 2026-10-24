@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
+import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.PlannedBand

@@ -1,13 +1,19 @@
-package de.bjrke.factorio.optimizer.common.model
+package de.bjrke.factorio.optimizer.common.blueprint.json
 
-import de.bjrke.factorio.optimizer.common.blueprint.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintWire
-import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
+import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.layout.entity.RequestFilter
+import de.bjrke.factorio.optimizer.common.model.Area
+import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Dimension
+import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.areaTile
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test

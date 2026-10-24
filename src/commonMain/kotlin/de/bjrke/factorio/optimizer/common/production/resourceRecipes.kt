@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.production
 
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.production.stats.miningCategory
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.prototype.category

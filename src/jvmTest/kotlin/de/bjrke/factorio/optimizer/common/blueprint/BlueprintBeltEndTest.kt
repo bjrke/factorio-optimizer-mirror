@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition

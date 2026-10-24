@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.output
 
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.ChestLikeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity

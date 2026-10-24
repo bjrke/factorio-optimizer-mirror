@@ -3,10 +3,10 @@
 
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
 import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
+import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd

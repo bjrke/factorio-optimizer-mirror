@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material

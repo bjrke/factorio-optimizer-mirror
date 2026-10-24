@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.json
 
-import de.bjrke.factorio.optimizer.common.blueprint.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.model.Material
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray

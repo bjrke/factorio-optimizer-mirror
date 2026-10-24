@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.output
 
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintWire
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity

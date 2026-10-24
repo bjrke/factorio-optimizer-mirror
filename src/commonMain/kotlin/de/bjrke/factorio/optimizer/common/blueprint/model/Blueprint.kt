@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.blueprint
+package de.bjrke.factorio.optimizer.common.blueprint.model
 
 import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings

@@ -1,61 +1,53 @@
 # Decisions
 
-Significant technical/process decisions and their rationale. Newest first.
-Superseded decisions are removed once their replacement records the rationale; Git
-history keeps the old text.
+Significant technical and process decisions and their rationale, newest first.
+This file records the **current** reasoning only: a superseded decision, and the
+per-change narrative behind each decision, lives in the commit messages and
+`git log`. Anything here should still constrain the code today.
 
 ## 2026-10-23 — Fluids are built as one lane above (or below) the belts
 
 **Context.** `FluidFeeder.feed()` runs after the rows and their edges, so
 `fluidEdge()` finds every machine edge already carrying the inserters
-`MachineInserterPlacer` put there. It falls back to both side edges and returns
-null once they are gone, so a multi-row fluid plan ended in "no fluid port" and
-split networks. The first attempt put the pipe line on the inserter row itself and
-moved inserters off the port tiles; the user rejected it: an AM3's north edge
-always carries exactly underground-belt exit + short + long inserter, and the
-machine port tile is that same inserter row.
+`MachineInserterPlacer` put there. The first attempt put a pipe line on the
+inserter row itself and moved inserters off the port tiles; the user rejected it:
+an AM3's north edge always carries exactly underground-belt exit + short + long
+inserter, and the machine port tile is that same inserter row.
 
 **Decision.** Each row that takes (or gives) a fluid through a port the table puts
 on its north (or south) edge gets **one lane**:
 
-- the lane row lies **two rows beyond the outermost belt** of the row: `topmost belt
-  − 2` on the north side, `last belt below + 2` on the south side. **There is no
-  free row between the belts and the machines** — `factoryTop − 1` is the inserter
-  row and `factoryTop − 2`/`−3` are the input belts, so a lane placed there would
+- the lane row lies **two rows beyond the outermost belt** of the row: `topmost
+  belt − 2` on the north side, `last belt below + 2` on the south side. There is no
+  free row between the belts and the machines, so a lane placed there would
   displace a belt;
 - the lane row has a **plain junction pipe above every port**, joined by a
-  **horizontal pipe-to-ground run across every gap**. The run fills the gap: the
-  two tiles between two touching machines' ports carry the two ends directly next
-  to each other (`pUUp`), a wider gap buries the tiles between them. A surface pipe
-  would wall the row off; the run's ends and buried tiles are what the player can
-  walk across. (A pipe-to-ground may surface in the very next tile, unlike an
-  underground belt; `validateUndergrounds` allows distance 1 for pipes only.)
-- the lane marker sits in the **same west column as the solid import markers**.
-  It is placed inline (`oCo`) first and `ImportTrimmer` later moves it into the
-  common import column and joins its output to the lane head with pipe-to-ground
-  runs along the lane row (a one-tile gap stays the only surface pipe, a two-tile
-  gap is a pair of adjacent ends). A belt, underground belt or inserter crossing
-  the lane row in the west corridor is simply buried under by the link; only a
+  **horizontal pipe-to-ground run across every gap** (the two tiles between
+  touching machines' ports carry the two ends directly next to each other,
+  `pUUp`; a wider gap buries the tiles between them). A surface pipe would wall
+  the row off; the run is what the player can walk across. A pipe-to-ground may
+  surface in the very next tile, unlike an underground belt
+  (`validateUndergrounds` allows distance 1 for pipes only);
+- the lane marker sits in the **same west column as the solid import markers**. It
+  is placed inline (`oCo`) first; `ImportTrimmer` later moves it into the common
+  import column and `FluidFeedLinker` joins its output to the lane head with
+  pipe-to-ground runs along the lane row. A belt, underground belt or inserter
+  crossing the lane row in the west corridor is buried under by the link; only a
   non-buryable entity at the source or a run end keeps the inline marker. The
-  marker, link and head are pinned, so compaction shifts them as one column and the
-  player connects one west column for every imported fluid instead of hunting each
-  lane;
+  marker, link and head are pinned, so compaction shifts them as one column;
 - every port is reached by one **vertical shaft**: its top end stands **one row
-  inside** the lane (lane row + 1 in the north, lane row − 1 in the south), its
-  bottom end on the port tile. The junction pipe above the end stays a surface
-  pipe, so the link, the junction and the shaft mouth join;
+  inside** the lane (lane row + 1 north, lane row − 1 south), its bottom end on
+  the port tile. The junction pipe above the end stays a surface pipe;
 - the shaft buries itself under both belt rows and the inserter row; a belt or an
   inserter over a run is passed under, never moved;
 - a shaft that finds no room in its column is **skipped** — its port alone falls
-  back to the routed feed, the rest of the lane is still built. The lane is
-  primary, the A* route is only the fallback for a side port, a machine without a
-  port table, or a skipped column;
+  back to the routed feed. The lane is primary; the A* route is only the fallback
+  for a side port, a machine without a port table, or a skipped column;
 - a reserved fluid port **must not cost an input inserter**: `MachineInserterPlacer`
   spreads the short/long pattern over the free columns and falls back to the
-  machine's last column (normally kept for a pole) when the port took one, so a
-  two-solid-input recipe that also takes a fluid keeps its long inserter;
+  machine's last column (normally kept for a pole) when the port took one;
 - fluid **outputs** mirror the same code on the south side; `placeTargetOutput`
-  stays for a solid target only.
+  stays for a solid target only (the fluid feeder has its own);
 - machines **touch** in a fluid row (`stride = size.width`): the lane needs no
   horizontal gap.
 
@@ -63,23 +55,21 @@ on its north (or south) edge gets **one lane**:
 junction pipes, horizontal runs and shaft pairs), `planning/RowFluidLane.kt` which
 fluid a row gets and the port per machine, `planning/FluidLanePlacer.kt` the board
 side (marker, ends, tunnel index, skip-on-collision) and
-`plumbing/FluidLaneFeed.kt` ties lanes to the feeder. `RowShape` moved from `RowPlacer` into `Row.kt` and `Row.box.machines`
-carries each allocation's prototype and ingredients, so the lane code reads the
-port table without needing a `BlueprintPlan`. `RowPlacer.placeAll()` keeps its
-order (machines, edges, then the feed), which is what the insertion row needs.
-The port rows stay whatever `blueprintMachineFluidPorts` says; it agrees with
-`inserterPortColumns` again (`blueprintMachineEdge`/`EdgeFlow`). A row whose
-machine has a port only on a side edge keeps the routed feed — with the
-electromagnetic plant now fed through its top `BOTH` port instead of its west
-third-row port.
+`plumbing/FluidLaneFeed.kt` ties lanes to the feeder; `routing/FluidFeedLinker.kt`
+draws the marker-to-head link. `RowShape` lives in `Row.kt` and
+`Row.box.machines` carries each allocation's prototype and ingredients, so the lane
+code reads the port table without a `BlueprintPlan`. The port rows stay whatever
+`blueprintMachineFluidPorts` says; it agrees with `inserterPortColumns` again
+(`blueprintMachineEdge`/`PortFlow`). A row whose machine has a port only on a side
+edge keeps the routed feed — the electromagnetic plant is fed through its top
+`BOTH` port instead of its west third-row port.
 
 ## 2026-10-23 — A machine port's side is a `Direction`, not its own enum
 
 **Context.** `blueprintMachineEdge` originally returned a new `MachineEdge` enum
-(`TOP`/`BOTTOM`/`WEST`/`EAST`) so the inserter placer and the fluid feed read a
-port's machine side once. It was an exact 1:1 rename of the four `Direction`
-values — no member, payload or invariant of its own — so callers carried a
-`TOP ↔ NORTH` translation and two names for `EAST`/`WEST`.
+(`TOP`/`BOTTOM`/`WEST`/`EAST`) that was an exact 1:1 rename of four `Direction`
+values, so callers carried a `TOP ↔ NORTH` translation and two names for
+`EAST`/`WEST`.
 
 **Decision.** `blueprintMachineEdge` returns `Direction` and
 `blueprintMachineEdgeFlow` takes one; callers use `NORTH`/`SOUTH`. A separate
@@ -88,544 +78,133 @@ to two of four sides and makes its `when` exhaustive) or carries semantics
 `Direction` cannot express (`PortFlow`, `BeltEnd`).
 
 **Consequences.** One compass vocabulary; `RowFluidLane` translates `LineSide` to
-`Direction` at the one point where the row side becomes a machine side. No
-behaviour change: the electric-engine layout and the chest processing-unit URL are
-identical, and `check` stays green.
-
-## 2026-10-23 — Package edges are documented, not tested
-
-**Context.** `PackageEdgesTest` (`jvmTest`, `common/arch/`) carried the whole
-allowed-edge table as a hard-coded map and read the constant pool of the compiled
-`commonMain` classes to compare against it. It was a hand-written guard inside the
-app's test suite: it ran only for whoever ran `jvmTest`, it held architecture data
-that belongs in the documentation, and keeping it in step with every package move
-made each split edit a test file. `PackageSizeTest` was removed for the same reason
-(`!172`).
-
-**Decision.** Delete the test and the `common/arch/` directory. The desired edges
-are the "Package dependencies" table in `architecture.md`; they are enforced by the
-compiler (`internal` symbols are invisible outside their package) and by review.
-
-**Consequences.** A new package or a wrong edge is caught by the compiler only where
-an `internal` symbol is crossed; a legal-looking import of a `public` symbol into a
-package that should not see it passes. The table is the reference for review, and
-`pitfalls.md` keeps the evaluated tooling (Classycle, Konture, detekt
-`ForbiddenImport`) so a future automated check starts from an existing tool rather
-than a bespoke test. When a guardrail is automated it goes to the Gradle/build
-level, not into the app suites.
-
-**Does not supersede** the package tree decision below; only its enforcement
-paragraph changed.
-
-## 2026-10-22 — Domains in the package tree, one-way by construction
-
-**Context.** The stage cut left packages that mixed domains. `service` held the
-LP optimizer *and* `RecipeProvider`, the thing that parses the prototype dump, so
-the "optimizer" produced the data a blueprint is built from — the dependency
-pointed the wrong way. `model` was the catch-all rulebook (recipes, machines,
-surfaces, belt ends, URL codecs, the blueprint DTOs and their JSON writer), and
-`layout` carried wire types it never reasoned about. The test tree was a single
-`common.business` package, and nothing rejected a new edge.
-
-**Decision.** The package tree is the domain model, and the arrows point one way:
-
-`model < prototype < production < service < layout < blueprint < blueprint.json`
-
-- `model` is the grid vocabulary only (`Tile`/`Area`/`Direction`/`Io`,
-  `Material`, icons) and imports nothing.
-- `prototype` is the Factorio rulebook; `prototype/selection` the URL codecs, so
-  only entry points and the rulebook can decode a selection string.
-- `production` reads the dump (`RecipeLoader` replaced `RecipeProvider`), `service`
-  is the optimizer and takes a `ParsedRecipe` in and returns an
-  `OptimizationResult`. `LogisticsCalculator` moved to `plan`, where the layout
-  stages use it.
-- `layout` (with `layout/entity` and `layout/validation`) never mentions the
-  blueprint: the wire settings the entities carry (`InfinitySettings`,
-  `RequestFilter`, `CircuitCondition`) live here, and `blueprint.output` owns the
-  layout -> DTO conversion (`toBlueprintEntity`) and the chest wires.
-- `blueprint` is the artifact and its assembly; `blueprint/planning` the
-  optimizer-result -> plan bridge, `blueprint/output` the encoders,
-  `blueprint/json` the wire JSON as a leaf nothing may import, `blueprint/inspection`
-  the read-back.
-
-**Enforcement.** The edges are written down as the "Package dependencies" table
-in `architecture.md` and enforced by the compiler (`internal`) and review; the
-`PackageEdgesTest` this entry introduced was removed on 2026-10-23 (see above).
-
-**Consequences.** `model` shrinks from 15 files to 4; the largest packages are
-`production` (9) and the stage packages (6-7). A package past 10 files is cut by
-responsibility (`layout` 14 -> 6 + entity 4 + validation 4, `blueprint` 10 ->
-2 + planning 2 + output 4 + json 2 + inspection 3). Tests mirror the packages,
-with shared helpers in `service/fixtures` and `blueprint/fixtures`.
-`fromPlaced` replaces `buildBlueprint`. Every move is one commit with its own
-`./gradlew spotlessApply check`.
-
-**Supersedes.** The 2026-10-22 entry below leaves "the edges stay compiler- and
-review-enforced" to this entry; its file-count budget still stands.
-
-## 2026-10-22 — Package budgets: files only; detekt cannot own the edges
-
-**Context.** The 2026-10-21 cut left `blueprint` (15 files, 1,275 lines) and
-`planning` (6/986) over the old 800-line budget, and the brief for this pass asked
-for `ForbiddenImport` sections plus a package-size test. Splitting the two by
-measured edges worked (`blueprint` → builder 3/367 + `inspection` 3/229 +
-`output` 3/225; `planning` → row planner 6/708 + `band` 1/281). The edge rule did
-not.
-
-**Decision.** The package budget is the file count, and nothing else. The 800-line
-package budget is dropped: it is too low for a package of a dozen legitimate files
-(15 files at 93 lines each already exceeds it), and file length is already capped
-per file by `LargeClass` (500 lines) and kept small by responsibility.
-
-- `PackageSizeTest` (`jvmTest`) warns above 10 files and fails above 15. There is
-  no line assertion at all — not even a warning — so the test cannot drift back into
-  a second length budget. `model` (15 files, 1,397 lines, 93 average) is the only
-  package without file head-room; it needs no split for length.
-- `ForbiddenImport` stays enabled with an empty list, documented in
-  `config/detekt/detekt.yml`. On detekt 2.0.0-alpha.6 `allowedImports` is one
-  global list and every `forbiddenImports` entry applies to every file, so a
-  package can only be listed when no other package imports it. Measured on the
-  real graph, no package qualifies: `blueprint` imports every stage, the stages
-  reach each other through `layout`, `plan` and `route`, and the drivers and tests
-  import the read-back packages. The edges stay compiler- (`internal`) and
-  review-enforced.
-
-**Edges found while measuring, and the moves they forced.** A cycle
-(`blueprint ⇄ compaction`, `layout ⇄ special`, `routing ⇄ beltend`) had to go
-before the graph could even be read as a pipeline:
-
-- `ImportExtension` (shared stage state) → `plan`;
-- the weighted A* (`LayoutRouter`, `RouteSearch`, `RouteProfile`) → new `route`,
-  below `routing`, `plumbing` and `planning`;
-- `BeltEndConnector`/`chestWires` → new `beltend`, above `layout`;
-- `LayoutIndex` and the invariant checks (`validateLayout`) → `layout`, which
-  removes `compaction → blueprint.inspection` and makes inspection a leaf (it only
-  reads `layout` and `model` now).
-
-The result is acyclic: `model < plan, route, layout < beltend, band < planning <
-routing, plumbing, special, compaction < blueprint < blueprint.inspection/output`.
-
-**Open.** `special` still imports `layout` (the path and power placers need the
-board) while `layout` no longer imports `special`; the pipeline is a DAG but
-`routing → special` remains, which is why `special` cannot be a detekt target.
-
-**Supersedes.** The 2026-10-21 entry's "at most 15 files and 800 lines" budget: the
-file count survives, the line count is gone.
-
-## 2026-10-21 — Package boundaries: cut the core, then one explicit import per edge
-
-**Context.** `de.bjrke.factorio.optimizer.common.business` held 62 of the 98
-`commonMain` files (6,696 of ~10,000 lines) with no boundary between them. File sizes
-were already fine (largest 319 lines), so the problem is package coupling, not file
-length. `common.model` (15 files, 1,383 lines) is in the same state. The edges are
-invisible to import-based tooling because most files import `common.model.*`.
-
-**Decision.** Split the core by pipeline stage into
-`common/{model,util,data,blueprint,layout,service,cli}`, each at most 15 files (a
-line budget was tried too and dropped on 2026-10-22), and make every core symbol
-that no other package needs `internal`.
-Enforcement is two cheap layers, not an architecture tool:
-
-1. the compiler: an `internal` symbol used from another package does not compile, so
-   each stage commit is self-checking;
-2. detekt `ForbiddenImport`, one section of allowed targets per package. For that to
-   see the edges, **project packages lose their wildcard imports**: every
-   cross-package reference must be an explicit import. `WildcardImport` keeps its
-   exemptions for `kotlin`, `js`, `java` and other third-party packages.
-
-Package-level edges are the unit; a per-symbol allowlist was rejected as
-over-engineering.
-
-**Why not a tool.** A hand-written Kotlin scanner misparses multi-line constructor
-headers and same-name declarations across packages. Classycle is Java-only.
-Konture 1.0.2 was evaluated in a throwaway module and rejected: it sees the KMP
-sources exactly and catches the real edges, but mislabels local, private and library
-types, cannot name allowed symbols, and cannot allow standard-library packages.
-detekt's `DependencyRules` no longer exists in 2.0.0-alpha.6, and `ForbiddenImport`
-does not see wildcard imports (see `pitfalls.md` for the evidence).
-
-**Outcome.** `common.business` is gone; its 62 files and 6,696 lines are now
-`common.{data,blueprint,routing,layout,service,planning,compaction,special,plumbing}`.
-The wildcard ban landed first (in `4f6c3df`), so every later move only needed imports
-re-pointed at the symbol's new package. A shared `common.plan`
-package (the plan data, the `Planned*` types, the direct-feed band model and the
-machine footprint/ports) later removed the cycle between `blueprint`, `planning` and
-`special`. The file budget held everywhere (largest 7); `blueprint` (1,275 lines) and
-`planning` (986) were split later, for coupling rather than for length.
-
-**How to move a file.** Move it with `git mv`, rewrite its `package` line, then run
-the compiler and fix what it names. A moved symbol must be imported by name at every
-use site — Kotlin only auto-resolves the file's own package — and an `expect`/`actual`
-pair moves together. Do not infer the target package from the symbol name with a text
-scan: names repeat (`recipe`, `plan`, `materials`), parameters and members look like
-declarations, and KDoc prose matches too. The compiler's error list is the only
-reliable source of edges.
-
-**Consequences.** No package may exceed 15 files. Size budgets (warn 10 files, fail 15)
-have no detekt rule and stay a small file-count test. `commonTest` helpers that live in
-a production package move to the `fixtures` package of their test.
-
-## 2026-10-21 — Clean the structural Detekt debt, phase B plan, layout and LP
-
-**Context.** After the parser/resources slice, the last nine typed findings sat in
-four files: `blueprintPlan` (cyclomatic), `layoutAscii` (cyclomatic and long),
-`validateLayout`/`findUndergroundOutput` (cyclomatic, plus a loop with four jumps in
-`validateLayout`) and `LinearProgram.minimize`/`simplex` (cyclomatic).
-
-**Decision.** With the plan done, every baseline is empty and both
-`detekt-baseline.xml` and `detekt-baseline-main.xml` are deleted; the rules and their
-budgets stay untouched. The four files each split by responsibility:
-
-- `BlueprintPlan.kt` keeps the plan data and `blueprintPlan` as the ordered steps
-  (target check, target factory, recipe walk, direct feed, sources, label);
-  `BlueprintSelection.kt` owns which recipes are built (the buildable/excluded rule,
-  the single-producer walk that caps at `maxRecipes`, the import list) and
-  `BlueprintMachine.kt` the machine geometry (footprints, fluid ports);
-- `LayoutValidation.kt` runs the invariant groups in a fixed order — overlap,
-  materials, undergrounds, inserters — and each group lives in
-  `LayoutValidationTransport.kt`, `LayoutValidationUnderground.kt` or
-  `LayoutValidationInserter.kt`; they append to one shared error list, so the message
-  order is unchanged;
-- `LayoutAscii.kt` only arranges board, legend and failures; the glyph/code tables are
-  `LayoutAsciiBoard.kt` (`AsciiCodes`, shared so legend and grid use one numbering) and
-  `LayoutAsciiLegend.kt`;
-- `LinearProgram` kept its tableau and `pivot`; the entering column, leaving row, phase
-  one (`makeFeasible`) and the artificial-variable cleanup (`dropArtificial`) became
-  named steps.
-
-**Consequences.** Both baselines go from 9 to 0 and are removed (like
-`detekt-baseline-test.xml` in phase A), so `check` now fails on any new finding
-without an allow-list in between: keep extraction the default answer to a finding. `spotlessApply check` passes (`jvmTest`,
-`jsBrowserTest`, all Detekt tasks) with no test changed. Two traps were hit and are in
-`pitfalls.md`: the glyph `when` needed one more split (15 branches) and phase one of
-the simplex is numerically sensitive — an apparently equivalent `>= 0.0` feasibility
-test instead of `< -EPS` made the optimizer report empty plans.
-
-## 2026-10-21 — Clean the structural Detekt debt, phase B parser and resources
-
-**Context.** After the serializer/CLI slice, 14 typed findings remained. Five were
-the parser and resource pair: `parsePrototypes` (long, cyclomatic and a loop with
-four jumps), its file-level `TooManyFunctions`, and `minedResourceRecipes`
-(cyclomatic).
-
-**Decision.** Split the parser along its data boundaries instead of suppressing:
-
-- `JsonFields.kt` owns the nullable JSON accessors and the typed-object filter;
-- `RecipePrototype.kt` owns one `data.raw.recipe` entry: result probability,
-  ingredient/result maps, categories and surface conditions;
-- `recipeParser.kt` keeps the dump orchestration, scrap reach and material list;
-- `prototypeStats.kt` owns the machine and logistics stats;
-- `resourceRecipes.kt` keeps extraction recipes, with the mined-resource category,
-  results and fluid ingredient in their own helpers.
-
-**Consequences.** Both baselines drop from 14 to 9 entries, the test baseline stays
-empty, and `spotlessApply check` passes with the existing parser, resource and
-full-dump suites. The remaining nine findings were the plan, ascii, LP and validation
-group, cleared in the next slice.
-
-## 2026-10-20 — Clean the structural Detekt debt, phase B serializer and CLI
-
-**Context.** After the feed/optimizer slice, 19 typed findings remained. Five were
-the serializer and CLI pair: `BlueprintEntity.toJson` (long and cyclomatic),
-`parseArgs` (long and cyclomatic) and `settingsText` (long parameter list).
-
-**Decision.** Split both by field and argument group instead of suppressing. The
-blueprint envelope (`label`, `icons`, entity list, wires) stays in
-`BlueprintJson.kt`; `BlueprintEntityJson.kt` owns one entity's position, settings,
-neighbours and control behavior, with the optional fields in named writers. The
-CLI parser moves to `CliArgsParser.kt`, where `valueOption`/`valueOptions` handle
-singular and repeated `--name=` options and one resolver owns each decision
-(space age, surface, normalize target, outputs, belt end). `settingsText` reads the
-resolved belt, inserter, lanes and stacks from the active `LogisticsCalculator`
-instead of taking seven parameters.
-
-**Consequences.** The typed main baseline drops from 19 to 14 entries and the plain
-baseline from 18 to 14; the test baseline stays empty. `spotlessApply check` passes,
-and `BlueprintJsonTest` now covers every extracted entity section (position,
-recipe, infinity chest/pipe, neighbours, marker and the existing filters/wires).
-The remaining 14 findings are the plan, ascii, LP, validation, parser and
-resource-recipe group.
-
-## 2026-10-20 — Clean the structural Detekt debt, phase B feed and optimizer
-
-**Context.** After the router/seam slice, 29 typed findings remained; ten were the
-band/feed/optimizer cluster: `BandSearch.feedsOf`, `DirectFeedBuilder.build` and
-`mapBelted`, `Optimizer.factoryProductions`/`solve`/`depth` and the `Optimizer` class
-itself, plus `DeliveryPreparation.sinkOf`.
-
-**Decision.** Give each mixed responsibility a named owner. `FeedWindow` performs
-one band window's greedy supply flow instead of `BandSearch.feedsOf`; `DirectFeed`
-keeps only link discovery, grouping and the belted allocation, with the link,
-band, on-belt and belted-rate steps as methods. `MachineCatalog` owns factory
-choice and machine rates, leaving `Optimizer` to the material balance; its
-production labelling is split into consumption/producer/representative/depth
-helpers, and `DepthIndex` memoizes the cycle-safe display depth. `sinkOf` is a
-pure `when` with nullable lane sinks.
-
-**Consequences.** The typed main baseline drops from 29 to 19 entries and the plain
-baseline from 28 to 18; the test baseline stays empty. `spotlessApply check`
-passes and all optimizer/direct-feed suites pass, so machine counts and band
-shapes are unchanged. The remaining 19 findings are the plan, serializer, CLI,
-ascii, LP, validation, parser and resource-recipe group.
-
-## 2026-10-20 — Clean the structural Detekt debt, phase B router and seam
-
-**Context.** Phase A left 40 typed findings. Eleven of them were the long/cyclic
-`LayoutRouter.route`, its many-parameter `RouteProfile`, the seam dynamic program
-(`findSeam`, `beltCuttable`, `pipeCuttable`) and `LayoutCompaction.applyCorridor`.
-
-**Decision.** Make the search state explicit instead of keeping it in one method:
-`RouteProfile` groups `RouteCosts` and `TunnelRules`, a `RouteRequest` carries the
-start/goal/predicate/profile, and `RouteSearch` owns the A* frontier, relaxation,
-node expansion and the in-region/corridor rules. `LayoutRouter` keeps only the
-belt/pipe profiles and the public entry points. `SeamSearch` owns the seam DP and
-its tie-breaks behind `findSeam`, and `CorridorShift` classifies each entity and
-performs the shift. The belt/pipe cuttable checks are `all`/`none` expressions, so
-they no longer need early returns.
-
-**Consequences.** The typed main baseline drops from 40 to 29 entries and the plain
-baseline from 37 to 28; the test baseline stays empty. `spotlessApply check` passes
-and the four layout snapshot hashes are unchanged, so routing and compaction
-geometry are neutral. The deferred work is the direct-feed/band/optimizer group and
-the serializer/parser/CLI/ascii/LP/validation group.
-
-## 2026-10-20 — Clean the structural Detekt debt, phase A
-
-**Context.** The structural baselines held 67 typed findings. The layout stages and
-model types mixed several responsibilities in one constructor or file, which is why
-the findings clustered in `LayoutRouter`, `SeamGrid`, `RowPlacer`, `Optimizer`,
-`recipeParser`, `LayoutBoard`, `DeliveryRouter` and the test helpers. The goal is a
-reviewable baseline of zero, not a relaxed rule set.
-
-**Decision.** Fix the low-risk half first, in behaviour-preserving slices, and keep
-the remaining debt explicit:
-
-- one `LayoutStage` context for `board`, `plan`, `logistics`, `planner`, `rowPlacer`
-  and `router`, so stages stop repeating the same constructor;
-- `LayoutBoard` keeps only grid/reservation/primitives; entity placement is
-  `LayoutPlacement.kt`, the tunnel index is `Tunnels`, underground queries are
-  `LayoutUnderground.kt`;
-- `common.util.connectedComponents` replaces three hand-written breadth-first walks
-  (pole wiring and the test fixtures);
-- value objects for the crowds of parameters: `FactorySpec`, `Selection`, `RowBox` +
-  `RowLanes`, and `RunGrowth` for an underground run;
-- the row stages split by machine edge: `MachineInserterPlacer` and
-  `BandInterfacePlacer`, while `RowPlacer` keeps the row order, lanes and product;
-- delivery splits are their own `SplitDeliveryRouter` with `DeliveryNetworks` and
-  `BeltRouteRules`, so `DeliveryRouter` only orders deliveries and places the
-  target output;
-- `LayoutEntity.withArea` moves the entity-kind switch into the entities, and
-  `CoordinateGeometry.kt` holds the distance/compass helpers as extensions;
-- `BlueprintLayoutAssertions` stays in `jvmTest`; the shared underground-run
-  assertion lives in `commonTest` fixtures and adapts either the DTO or a layout
-  dump.
-
-**Consequences.** The typed main baseline drops from 59 to 40 entries, the plain
-baseline from 56 to 37, and the typed test baseline is empty, so
-`detekt-baseline-test.xml` is deleted. The remaining 40 findings are the deferred
-router/seam, optimizer/band and parser/CLI work; the same clean-up path applies
-(extract a named responsibility, then regenerate the baseline). `LongParameterList`
-still exempts data classes by Detekt default, so each grouping object is a genuine
-value (a machine spec, a URL choice, a row rectangle), not a bag of unrelated
-arguments. See `conventions.md` and `pitfalls.md`.
-
-## 2026-10-20 — Shrink the Detekt baselines to structural debt
-
-**Context.** The three baselines were fully current — 192 plain, 131 typed-main and
-59 typed-test entries — but most were style or false-positive noise (85 wildcard
-imports, 31 return counts, 13 loop jumps, renameable files), not the structural
-complexity the baselines were meant to track. Every entry needs a reviewer to
-distinguish accepted debt from new noise.
-
-**Decision.** Tune the rules that fight legitimate code and fix the rest:
-`ReturnCount.excludeGuardClauses` (31 → 10), `LoopWithTooManyJumpStatements`
-`maxJumpCount: 3` (13 → 4), `DestructuringDeclarationWithTooManyEntries`
-`maxDestructuringEntries: 4` (all 3), and `WildcardImport.excludeImports` for the
-project's own packages (`common.model`, `Direction`, `common.business`, the fixtures,
-`js.component`, `de.bjrke.test`), `kotlin.test.*` and `kotlinx.serialization.json.*`.
-The JSON DSL is a self-contained layer that reads as one vocabulary. The remaining
-third-party wildcards (`react`, `web.cssom`, `tanstack.react.router`) were spelled
-out.
-
-Fix the mechanical findings: `.orEmpty()` instead of `?: emptySet()`/`?: ""`,
-`Map.getValue` instead of `!!`, `RowLayout`'s initializer-only `val`s, the shadowed
-lambda `it`, `AreaTile` → `areaTile`, five extracted `ComplexCondition`s,
-`IconLayers.kt`/`Selection.kt`/`factorioUrl.kt` renamed after their type, `LayoutDump`
-moved to its own file, and `@file:Suppress` for the React `XProps` names and JS
-interop parameters (a file annotation, because the light-mode task reports those on
-the file/interface).
-
-**Consequences.** The baselines now hold only structural debt: 56 plain, 59 main
-and 8 test entries — cyclomatic complexity, long methods, long parameter lists,
-too-many-functions classes, ten return counts, four loop jumps and two nested blocks.
-The remaining split candidates are the eight methods flagged for both `LongMethod`
-and `CyclomaticComplexMethod`. Wildcard imports of the project's own packages and
-the JSON DSL are the house style; other third-party wildcards are still findings.
-See `conventions.md`.
-
-## 2026-10-20 — Allow magic numbers, name only opaque tunables
-
-**Context.** Detekt's introduction absorbed 65 `MagicNumber` findings into the
-baselines. The optimizer is geometry-, vector- and math-heavy, so most literals are
-tile offsets, degrees, prototype/game data or expected values in tests. Replacing
-them with constants would force a lookup away from the assertion or coordinate that
-needs the number, without making the domain clearer.
-
-**Decision.** Disable the `MagicNumber` rule in `config/detekt/detekt.yml` and drop
-its entries from all three baselines. Keep domain values in place: blueprint JSON
-direction values (`0/4/8/12`), display rotations (`90/180/270/360`), fluid-port
-coordinates, factory/surface data, recipe amounts, icon scales, CSS sizes and
-protocol bit operations. Name only the opaque algorithm limits where the value alone
-does not explain the intent: A* expansion cap, pole-connect rounds, source/marker
-search bounds, fluid route-start count, pipe connector width and ASCII ruler step.
-Share one `MACHINE_COUNT_EPSILON` between `BlueprintPlan` and `RowPlanner` instead
-of repeating `1e-6`.
-
-**Consequences.** New numeric literals no longer fail `check`; reviewers judge
-whether a value needs a name from its context. Named constants are for limits and
-thresholds, not for cardinals or test expectations. See `conventions.md`.
-
-## 2026-10-20 — Detekt replaces the custom `checkFileSizes` task
-
-**Context.** The 2026-10-19 line budget was a small hand-rolled Gradle task
-(`checkFileSizes`) with three tiers and, later, no baseline. It measured only file
-length, and needed its own `buildSrc` function and tests; a standard Kotlin linter
-was wanted instead.
-
-**Decision.** Apply Detekt (plugin id `dev.detekt`, version `2.0.0-alpha.6` — the
-current 2.0 alpha, accepted as such) and delete `checkFileSizes`, its `buildSrc`
-function and its 7 tests (`ci/file-size-baseline.txt` was already gone). Detekt runs
-with `buildUponDefaultConfig = true`, and `config/detekt/detekt.yml` raises only
-`LargeClass.allowedLines` to 500 to match the project's file budget. The plain
-`detekt` task analyses all of `src` without type resolution; the KMP type-resolved
-`detektMainJvm`/`detektTestJvm` tasks are wired into `check` by hand, because the
-plugin registers but does not wire them. `check` is gated by three committed
-baselines: `detekt-baseline.xml` (plain task) and
-`detekt-baseline-main.xml`/`detekt-baseline-test.xml` (typed tasks).
-
-**Consequences.** There is no per-file line rule: `LargeClass` counts a class, so the
-500-line budget is now per class, not per file — keep a file small by responsibility.
-The current light-mode findings (~325) plus the typed tasks' own are absorbed by the
-baselines, so `check` fails only on a new finding; the reports remain the split
-roadmap. Detekt's typed KMP tasks analyse `commonMain` and `jvmMain` as one fragment
-and log three `expect`/`actual` compiler errors (detekt issue #9602), degrading type
-resolution for `loadPrototypeDump` only. Removing the buildSrc test leaves buildSrc
-without tests, so the obsolete CI `gradle -p buildSrc test` line was dropped. See
-`conventions.md` and `pitfalls.md`.
-
-## 2026-10-20 — Split the layout into explicit stages, verified by layout snapshots
-
-**Context.** The 2026-10-19 decision extracted the kernel (`LayoutBoard`,
-`LayoutRouter`, `UndergroundStretcher`, `LayoutCompaction`) but left
-`BlueprintLayout.kt` at 1,925 lines with one `RowLayout` class owning the whole
-pipeline and all plan-level state. Every stage change still meant reading the same
-file.
-
-**Decision.** Extract the remaining pipeline stages as classes in the same package
-(`common.business`), one slice per commit:
-
-- `PathPlacer` — `placePath`, the surface/tunnel roles, `directionBetween`;
-- `PowerPlacer` — pole coverage, pole wires, the west bound;
-- `BeltEndConnector` — connector width/offset, every belt-end marker, chest wires;
-- `RowPlanner` — band-aware producer map, allocation depth, row units,
-  `copiesOf`/`footprint`/`insertersFor`/`inserterPattern`;
-- `RowPlacer` — `Row`/`PlacedMachine`, row/band placement, lanes, products,
-  band interfaces, the allocation-to-row index and the lane direction;
-- `ImportExtension` — the shared import bookkeeping (marker rows, feeds to trim,
-  pinned tiles, pole/compaction west bounds);
-- `FluidFeeder` — fluid edges, markers and pipe networks;
-- `ImportTrimmer` — the common import column and the straight-prefix trim;
-- `CompactionPass` — the compaction loop, the re-stretch and the pin/bound shift.
-
-Each stage takes the board and the state it owns in its constructor and exposes
-what later stages need; `RowLayout` keeps the ordered `build()` and the delivery
-router (sinks, deliveries, splits, target output, networks, failures). No stage
-interface and no DI container. Add `BlueprintLayoutSnapshotTest` first: it hashes
-the canonical entity/wire output (FNV-1a) for base, chest, fluid and band plans,
-and the same test run in a clean worktree at the pre-split commit proves each
-slice is behavior-neutral.
-
-**Consequences.** The finished split took `BlueprintLayout.kt` from 1,925 to 196
-lines (1,925 → 1,508 → 1,370 → 1,011 → 629 → 196), extracting the belt delivery
-router (sinks, deliveries, splits, import sources, `networks`, `failures`) into
-`DeliveryRouter.kt` (480). Delivery went last because it owns the most shared state.
-Package moves (e.g. `business/blueprint/layout`) are deferred until a further split,
-to keep each commit mechanical.
-
-## 2026-10-19 — Keep the layout modular with a per-file line budget
+`Direction` where the row side becomes a machine side. No behavior change.
+
+## 2026-10-22 — Domains in the package tree, one-way and compiler-enforced
+
+**Context.** `common.business` held 62 of 98 `commonMain` files and `common.model`
+was a catch-all (recipes, machines, surfaces, belt ends, URL codecs, blueprint
+DTOs, JSON writer). Edges were invisible to import-based tooling.
+
+**Decision.** The package tree is the domain model and the arrows point one way
+(the full table is in `architecture.md`, "Package dependencies"):
+
+- `model` is the grid vocabulary only; `prototype` the Factorio rulebook,
+  `prototype/selection` the URL codecs; `production` reads the dump; `service` is
+  the optimizer and never loads the dump; `plan`/`route`/`layout` are the shared
+  vocabulary and grid kernel; the stage packages (`planning`, `routing`,
+  `plumbing`, `special`, `compaction`) drive them; `beltend` and `band` sit
+  between; `blueprint` assembles the artifact.
+- A symbol no other package needs is `internal`; the compiler rejects a
+  cross-package use. Every cross-package reference is an explicit import of the
+  names used — no project wildcards — so an edge is visible in the file header.
+- **Enforcement is the compiler plus review, not a test.** `PackageEdgesTest` and
+  `PackageSizeTest` were removed: they were app tests holding architecture data and
+  needed an edit on every package move. `ForbiddenImport` cannot replace them (one
+  flat, global list; `DependencyRules` no longer exists). A future automated guard
+  belongs at the Gradle/build level, reads compiled output, and must be proven by
+  injecting the violation it should reject. `pitfalls.md` records the evaluated
+  tools.
+
+**Consequences.** `model` shrank from 15 files to 4; `layout` split into
+`layout/entity` + `layout/validation`; `blueprint` into planning/output/json/
+inspection plus the `blueprint/model` DTO leaf. The cycles
+`blueprint ⇄ compaction`, `layout ⇄ special`, `routing ⇄ beltend` and
+`production ⇄ production.stats` are gone, the last one by folding the single stats
+file back into `production`; the package graph is one-way. `fromPlaced` replaced
+`buildBlueprint`.
+
+**Budgets.** The package budget is the **file count**: past 10 files is a signal to
+split, 15 the ceiling; review keeps it, no task does. There is no line budget: file
+length is capped per class by `LargeClass` (500). `model` was the only package
+without file head-room for a while; `planning` and `production` sit at 9 now.
+
+**How to move a file.** `git mv`, rewrite the `package` line, then run
+`./gradlew compileKotlinJvm compileTestKotlinJvm` and add the import the
+**compiler** asks for, one symbol at a time. Do not infer packages from a text
+scan; `pitfalls.md` has the traps.
+
+## 2026-10-20 — The layout is explicit stages, pinned by snapshots
 
 **Context.** `BlueprintLayout.kt` had grown to 2,446 lines with one `RowLayout`
-class holding ~90 methods and ~30 mutable fields; `BlueprintLayoutTest` was 1,194
-lines and `BlueprintIntegrationTest` 944. Every layout change forced an agent to
-read and edit the same huge file, which is the dominant token cost.
+class holding ~90 methods and ~30 mutable fields; every layout change meant
+editing that file.
 
-**Decision.** Split the layout by ownership of state rather than by line count:
+**Decision.** Split by ownership of state, not by line count, into classes that
+take the board (or plain data) and the shared state they own in their constructor:
 
-- `LayoutBoard` owns the tile grid, placed entities, route bounds, tunnel index and
-  the tile/placement primitives;
-- `LayoutRouter` owns `RouteProfile`/`RouteNode` and the weighted A*;
-- `UndergroundStretcher` owns growing a run along its surface run;
-- `RowLayout` keeps plan-level state (rows, sinks, deliveries, imports, networks)
-  and the ordered `build()` pipeline.
+- `LayoutBoard` owns the mutable grid, placements, reservations and primitives;
+  `LayoutRouter` the weighted A*; `UndergroundStretcher` the run growth;
+  `LayoutCompaction` the seam search; `RowLayout` keeps the ordered `build()`.
+- The remaining stages are `PathPlacer`, `PowerPlacer`, `BeltEndConnector`,
+  `RowPlanner`, `RowPlacer`, `ImportExtension`, `FluidFeeder`, `ImportTrimmer`,
+  `CompactionPass`, `DeliveryRouter` (see `architecture.md` for the current
+  owners).
+- Every stage takes one `planning/LayoutStage.kt` context (`board`, `plan`,
+  `logistics`, `planner`, `rowPlacer`, `router`). There is **no stage interface and
+  no DI container**: the `build()` order is load-bearing. State several stages
+  mutate lives in one small holder (`ImportExtension`), not in a lambda or a copied
+  value.
 
-The blueprint model is split the same way (`Material`, `Recipe`, `Category`,
-`Surface`; the wire DTO stays in `Blueprint.kt` while Factorio JSON lives in
-`BlueprintJson.kt`). Tests are grouped by scenario, and an over-long suite is
-split the same way (`OptimizerTest` for synthetic machine/recipe cases,
-`OptimizerSurfaceTest` for real per-surface resolution).
+**Consequences.** The file went from 1,925 to 196 lines. `BlueprintLayoutSnapshotTest`
+hashes the canonical entity/wire list (FNV-1a) for the base, chest, fluid and band
+plans; prove any further split neutral in a clean worktree at the pre-change
+commit. There is **no Gradle module split**: a KMP multi-module split would
+duplicate `expect`/`actual`, resource wiring and test targets for ~7k lines of
+`commonMain`, so package and file boundaries are enough.
 
-A `checkFileSizes` task (wired into `check`) enforced a per-file line budget with a
-soft 300-line warning and a hard 500-line failure, and listed grandfathered hard
-offenders in `ci/file-size-baseline.txt` as a strict ratchet. The 2026-10-20 entry
-above later replaced the task with Detekt.
+## 2026-10-20 — Detekt is the quality gate; no baselines
 
-**Consequences.** The first slice reduced `BlueprintLayout.kt` to 1,925 lines,
-recorded then as a baseline entry; all 64 layout tests still pass. The
-remaining plan-level stages are extracted one at a time, each lowering the
-baseline (actual names are in the 2026-10-20 entry below). No Gradle module
-split: a KMP multi-module split would duplicate `expect/actual`
-(`loadPrototypeDump`), resource wiring and test targets for ~7k lines of
-`commonMain`, so package/file boundaries are enough at this size.
+**Context.** A hand-rolled `checkFileSizes` task enforced a per-file line budget and
+needed its own `buildSrc` function and tests; a standard Kotlin linter was wanted
+instead.
 
-## 2026-10-19 — Drop the per-task checkpoint system
+**Decision.** Apply Detekt (`dev.detekt` 2.0.0-alpha.6) with
+`buildUponDefaultConfig = true` and `config/detekt/detekt.yml` as the only
+override, and delete `checkFileSizes`:
 
-**Context.** The task workflow cost more than it returned. Every task file in Git
-has exactly one commit, so the "live checkpoint" was never maintained during work
-— it was written once at the end anyway, and the roundtrips spent editing it bought
-nothing. The plugin injected a protocol reminder into every model call and forced
-compaction at fixed 200k/250k token counts regardless of the model's window, which
-compacted work in situations where the user did not expect it. User: it "creates
-additional roundtrips to maintain the task document and ... compacts in situations
-where I would expect them".
+- `LargeClass.allowedLines = 500` is the project's per-class budget.
+- `MagicNumber` is off: tile offsets, degrees, game data and test expectations read
+  better in place; name only opaque algorithm limits.
+- `ReturnCount.excludeGuardClauses`, `LoopWithTooManyJumpStatements.maxJumpCount = 3`
+  and `DestructuringDeclarationWithTooManyEntries.maxDestructuringEntries = 4`
+  match the readable forms. `TooManyFunctions` keeps Detekt's default of 11 per
+  file/class.
+- `check` runs the type-resolved `detektMainJvm`/`detektTestJvm` plus the light
+  `detektJsMainSourceSet`/`detektJsTestSourceSet`; the plain `detekt` task over all
+  of `src` is **not** in `check` (it would analyze the same files twice) but stays
+  available for a one-off run.
+- **No committed baselines.** Every finding fails `check`; fix it by extracting a
+  named responsibility, and suppress only a proven false positive with a written
+  reason.
 
-**Decision.** Remove the per-task layer entirely: `knowledge/tasks/`, the `agents`
-CLI and its skill, the `/task` command, task IDs, checkpoints, `.active` symlinks,
-commit↔task lookups and the context-budget/auto-compaction logic. Keep `knowledge/`
-(`index`, `architecture`, `conventions`, `pitfalls`, `decisions`) as the durable,
-reusable record and a `compaction` hook that only steers the summarizer.
-`/handoff` is the explicit gesture: promote reusable findings into `knowledge/` and
-state the verified state, decisions and next action for the summary. No handoff
-file, and the agent never compacts on its own.
+**Consequences.** The typed KMP tasks report three `expect`/`actual` compiler
+errors although the build passes (detekt issue #9602, see `pitfalls.md`). The
+wildcard ban is not enforced by a Detekt boundary rule — `ForbiddenImport` stays
+empty on purpose — it is house style so review can see each edge.
 
-**Consequences.** Compaction timing is left to OpenCode's own `compaction.auto`.
-There is no per-task history index; commit messages carry per-change detail and
-`knowledge/*` carries the rationale. The always-on protocol shrinks to a short
-knowledge section, and no tokens are injected per call.
+## 2026-10-19 — No per-task checkpoint layer
+
+**Context.** Every task file in Git had exactly one commit, so the "live
+checkpoint" was written once at the end anyway; the plugin also forced compaction
+at fixed token counts regardless of the model's window.
+
+**Decision.** Remove `knowledge/tasks/`, the `agents` CLI and its skill, the
+`/task` command, task IDs, checkpoints and `.active` symlinks. Keep `knowledge/`
+as the durable record and the compaction hook that only steers the summarizer.
+`/handoff` is the explicit gesture: promote reusable findings and state the
+verified state, decisions and next action. No handoff file, and the agent never
+compacts on its own; OpenCode's `compaction.auto` decides when.
 
 ## 2026-10-18 — Belt-fed allocations are sized by the plan's rate, not by whole consumer machines
 
-**Context.** The user replayed `#/2.5/logistic-science-pack/CFSXbmr/1/1`. The 1:1
-bands were right, but the blueprint held an *additional* electronic-circuit and
-inserter factory, "which have unconnected output belts", and a five-machine
-iron-gear row where only one more assembler "would be necessary". The belted split
-had sized every allocation as `ceil(builtConsumerMachines × inputPerMachine ÷
-outputPerMachine)` — enough to run each built consumer machine at *full* rate. For
-a complete one-machine foundry (8 gear/s when it runs) that is `ceil(3.2) = 4` gear
-machines although the plan only draws 0.83 gear/s, and for the nine science machines
-it added a second inserter row even though the band's own inserter machine (2.5/s)
-already covered their 1.875/s. `producerOf` supports one belt source per material,
-so a redundant belt-fed allocation keeps its product belt while no delivery starts
-on it: the unconnected belt.
+**Context.** A reported plan held an extra electronic-circuit and inserter factory
+with unconnected output belts, and a five-machine iron-gear row where one more
+assembler would have been enough. The belted split sized every allocation as
+`ceil(builtConsumerMachines × inputPerMachine ÷ outputPerMachine)` — enough to run
+each built consumer at full rate — while the plan drew far less. `producerOf`
+supports one belt source per material, so a redundant allocation keeps its product
+belt and no delivery starts on it.
 
 **Decision.** Size a belt-fed allocation by the plan's own rate demand — the same
 `consumption × scale` an import draws — and subtract what a band's *output* already
@@ -636,71 +215,65 @@ need − builtMachines)`, capped at `MAX_COPIES`, and built only when at least o
 consumer is not direct-fed. A band's inserted (internal) link never counts as belt
 output; a recipe whose consumers are all inserted gets no belt row at all.
 
-**Consequences.** The reported plan shrinks from 20 to 14 machines (gear 2 in total,
-EC 1, inserter 1, cable 1, foundry 1, science 9), 322 belts → 220, and no belt chain
-is left that no inserter takes from. The layout still assumes one belt source per
-material; a material that both a band's output and a belt row produce would need two
-deliveries (a merge), which no fixture needs yet — the invariant is asserted per
-plan (`realBlueprintsPutEveryMaterialOnAtMostOneBelt`). Supersedes the
-belted-allocation bullet of the 2026-10-18 direct-feed entry below.
+**Consequences.** The reported plan shrank from 20 to 14 machines and 322 to 220
+belts, with no belt chain that no inserter takes from. The layout still assumes one
+belt source per material; a material that both a band's output and a belt row
+produce would need two deliveries (a merge), which no fixture needs yet — the
+invariant is asserted per plan
+(`realBlueprintsPutEveryMaterialOnAtMostOneBelt`). Supersedes the belted-allocation
+bullet of the direct-feed entry below.
 
 ## 2026-10-18 — Direct-feed bands group recipes by rate, not by machine count
 
 **Context.** A recipe pair like `copper-cable` → `electronic-circuit` was always fed
 over a belt, even when the machines stand in a ratio that lets an inserter move the
 material straight from one machine into the next. The user asked for that direct
-insertion whenever it is feasible, routing the recipes as one unit ("always on when
-feasible", never as a chooser, never an error).
+insertion whenever it is feasible, as one unit ("always on when feasible", never a
+chooser, never an error).
 
-**Decision.** A new pure module `DirectFeed.kt` searches for links (a solid material
+**Decision.** `special/DirectFeed.kt` (pure) searches for links (a solid material
 whose single in-plan producer can be inserted into a consumer) and groups them into
-*belt-free bands*:
+belt-free bands:
 
-- Eligibility comes from **per-machine rates**, never from machine counts:
+- Eligibility comes from **per-machine rates**, never machine counts:
   `outputPerMachine = speed × (1 + productivity) × items / time` (the bonus counts —
   it is what a directly-fed consumer really receives) and
   `inputPerMachine = speed × items / time`.
 - A rate `r` is accepted when a whole-machine cycle `p : q` fits
   `r / 1.05 ≤ p / q ≤ r × 1.25` with `p + q ≤ 6`; ties go to the smallest sum, then
-  to the closest rate. Otherwise the link stays belted. This is the user-verified
-  rule (`0.8:1` and `1.05:1` → `1:1`, `1.1:1` rejected, `1:20` rejected).
+  the closest rate. Otherwise the link stays belted (user-verified: `0.8:1` and
+  `1.05:1` → `1:1`, `1.1:1` and `1:20` rejected).
 - The band is a **window of a periodic arrangement**: a cycle is found, repeated
   often enough to cover every member's whole machine need, then cut to the shortest
   length at which no consumer starves and no producer is left without a consumer
-  next to it (`A B C B A` for a 1:2:1 need). `GROUP_MAX_MACHINES = 18` bounds it;
-  a group that cannot fit stays belted.
+  (`A B C B A` for a 1:2:1 need). `GROUP_MAX_MACHINES = 18`,
+  `MAX_BAND_RECIPES = 3` and `MAX_BAND_LINKS = 3` bound it; a group that cannot fit
+  stays belted.
 - Every machine is built **complete** (the band's share is rounded up); interface
-  inserters are placed in the gap column on the producer's side, as many as the
-  flow needs (never a rejection), and the row keeps its own outputs.
-- A band's internal material gets **no lane, sink, belt or belted allocation**: the
-  band's producer allocation must not act as a belt source. A material with another
-  consumer still gets one belted allocation per belted consumer plus what is left of
-  the plan's count.
-- `PlannedRecipe.directInsert` was removed; `BlueprintPlan.bands` is the single
-  source of truth, and a band is laid out by its own code path (`placeBand`), so a
-  plan without bands lays out exactly as before.
+  inserters are placed in the gap column on the producer's side, as many as the flow
+  needs. A band's internal material gets **no lane, sink, belt or belted
+  allocation**: only belted allocations fill `producerOf`.
+- `BlueprintPlan.bands` (`PlannedBand`/`PlannedLink`) is the single source of truth;
+  a band is laid out by its own code path (`placeBand`), and a plan without bands
+  lays out exactly as before. `PlannedRecipe.directInsert` is gone.
+- A recipe that takes **or produces** a fluid is skipped for now: a band puts a
+  fluid port between two machines where the lane/feed cannot reach it (see
+  `pitfalls.md`).
 
 **Consequences.** `Row` became a band of heterogeneous machines and `rows` is keyed
-by allocation index; only belted allocations fill `producerOf`, so belts, lanes and
-sinks are unchanged for the belted part of a plan. Grouping fluid-touching recipes
-is deferred: a band puts a machine's fluid port between two machines where the
-current fluid feed cannot reach it, so those recipes keep their belt until the fluid
-feed is reworked (a separate session). Also deferred: line-breaking a band that is
-too wide (up to 18 machines stand in one row, which can force belt crossings), and
-**mixed-footprint bands** — `arrange`/`placeBand` assume every machine in a row has
-the same size, which keeps e.g. `iron-gear-wheel` (3×3) from inserting straight into
-a `foundry` (5×5) so that the gear row has to be belted. The user's note on how it
-can work: since the *smaller* machine feeds the bigger one, the smaller one needs no
-output belt at all, and if it needs belt access, it can stand in the middle with
-long inserters reaching the lanes above and below. Merged on branch
-`bjrke/direct-insertion-groups` (commit `38f3cf9`).
+by allocation index; belts, lanes and sinks are unchanged for the belted part.
+Deferred: line-breaking a band that is too wide (up to 18 machines in one row can
+force belt crossings), and **mixed-footprint bands** — `arrange`/`placeBand` assume
+one machine size per row, which keeps e.g. `iron-gear-wheel` (3×3) from inserting
+straight into a `foundry` (5×5). The user's note: since the *smaller* machine feeds
+the bigger one, the smaller one needs no output belt, and if it needs belt access it
+can stand in the middle with long inserters reaching the lanes above and below.
 
 ## 2026-10-18 — Belt end is a `BeltEnd` selection, not a cheats flag
 
 **Context.** The web UI had one "test chests" checkbox (`SelectionFlag.CHEATS`)
 that only switched the infinity chest on. The request was to pick the solid belt's
-end marker from icons and to add real chest connectors reproducing blueprints the
-user had pasted.
+end marker from icons and to reproduce pasted blueprints with real chests.
 
 **Decision.** Replace the boolean with a `BeltEnd` enum whose values each carry a
 URL `code` and a prototype `identifier`: `constant-combinator` (no code, the
@@ -708,19 +281,19 @@ default), `infinity-chest` (`X`, the old cheats mode), `buffer-chest` (`H`),
 `storage-chest` (`G`), `wooden-chest` (`W`) and `steel-chest` (`D`). A chest marker
 is a five-tile connector — `UG-in · inserter · chest · inserter · UG-out`, the belt
 tunnelling under the chest; an input marker feeds the belt out of the chest, an
-output marker fills it, and the plain chests buffer both ways. `infinity-chest`
-keeps the `X` code and the `--cheats` CLI alias, so existing links and scripts keep
+output marker fills it, and plain chests buffer both ways. `infinity-chest` keeps
+the `X` code and the `--cheats` CLI alias, so existing links and scripts keep
 working.
 
-**Consequences.** `selectionString` gains a `beltEnd` parameter and
-`SelectionFlag` drops `CHEATS`. The blueprint model grows `mirror`, `bar`,
-`requestFilter`, `circuitCondition` and `circuitConditionEnabled` to reproduce the
-pasted blueprints faithfully (`import_from` is deliberately omitted — it is a
-space-platform field). Connector inserters are powered, so the pole bound that
-normally keeps poles out of the import extension is skipped for a chest marker
-(see `pitfalls.md`). Chests need ground, so a space platform offers only the label
-and any chest code in a URL or `--belt-end` clamps to it. Merged as `9560a5d`
-(`!145`); the connector geometry and wire traps are in `pitfalls.md`.
+**Consequences.** `BeltEnd` is a field of `Selection` (`selection.beltEnd`), whose
+`code` `selectionString` emits; `SelectionFlag` drops `CHEATS`. The blueprint model
+grows `mirror`, `bar`, `requestFilter`, `circuitCondition` and
+`circuitConditionEnabled` to reproduce pasted blueprints faithfully (`import_from`
+is deliberately omitted — it is a space-platform field).
+Connector inserters are powered, so the pole bound that normally keeps poles out of
+the import extension is skipped for a chest marker (see `pitfalls.md`). Chests need
+ground, so a space platform offers only the label and any chest code in a URL or
+`--belt-end` clamps to it.
 
 ## 2026-10-18 — Durable agent knowledge lives in a visible `knowledge/` directory
 
@@ -728,11 +301,11 @@ and any chest code in a URL or `--belt-end` clamps to it. Merged as `9560a5d`
 drop verified findings. Everything important had to survive outside the active
 conversation in a place an agent would reliably find.
 
-**Decision.** Durable knowledge lives in a visible top-level `knowledge/` directory:
-`index.md` (navigation), `architecture.md`, `conventions.md`, `pitfalls.md` and
-`decisions.md`. `AGENTS.md` keeps only always-on rules and points here. Per-change
-detail stays in the commit message; only reusable, stable and verified findings are
-promoted into `knowledge/`.
+**Decision.** Durable knowledge lives in a visible top-level `knowledge/`
+directory: `index.md` (navigation), `architecture.md`, `conventions.md`,
+`pitfalls.md` and `decisions.md`. `AGENTS.md` keeps only always-on rules and points
+here. Per-change detail stays in the commit message; only reusable, stable and
+verified findings are promoted.
 
 **Consequences.** One root directory, no hidden prefix. Agents load `index.md` first
 and then only the files their work needs, so the always-on context stays small.

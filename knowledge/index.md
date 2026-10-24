@@ -27,4 +27,6 @@ compaction and no handoff file.
 ## History
 
 Per-change history lives in commit messages; rationale that outlives a change is
-promoted into the files above. Use `git log` and `git blame` to trace it.
+promoted into the files above, and a decision that no longer applies is deleted
+from `decisions.md` rather than kept as history. Use `git log` and `git blame` to
+trace it.

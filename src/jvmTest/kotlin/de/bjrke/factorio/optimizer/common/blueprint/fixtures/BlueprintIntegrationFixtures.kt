@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate

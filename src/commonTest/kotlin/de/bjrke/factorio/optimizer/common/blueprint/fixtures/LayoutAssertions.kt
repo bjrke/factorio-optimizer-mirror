@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.TransportEntity

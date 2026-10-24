@@ -102,12 +102,6 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   results beside itself. `tmp/` is intentionally not gitignored: keep scripts
   uncommitted and delete them when done.
 
-## OpenCode 2.x tool notes
-
-- `execute` is Code Mode only; OS commands go through `shell`. There is no
-  `bash`, `task`, `write` or `patch` (V2 renames).
-- Never retry an unknown tool name; re-check the inventory and switch tool.
-
 ## Prerequisites
 
 - JDK 25 is required; a local install must exist or the build fails with a

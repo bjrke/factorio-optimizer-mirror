@@ -1,13 +1,6 @@
-package de.bjrke.factorio.optimizer.common.production.stats
+package de.bjrke.factorio.optimizer.common.production
 
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.production.boolean
-import de.bjrke.factorio.optimizer.common.production.filterValueIsInstance
-import de.bjrke.factorio.optimizer.common.production.number
-import de.bjrke.factorio.optimizer.common.production.objects
-import de.bjrke.factorio.optimizer.common.production.string
-import de.bjrke.factorio.optimizer.common.production.strings
-import de.bjrke.factorio.optimizer.common.production.table
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.prototype.Logistics

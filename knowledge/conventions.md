@@ -12,7 +12,7 @@ up.
   them but does not wire them into `check`, so `build.gradle.kts` does) plus the light
   `detektJsMainSourceSet`/`detektJsTestSourceSet` for the JS-only sources. The plain
   `detekt` task (all of `src`, no type resolution) is **not** in `check`: the typed
-  tasks already cover common + JVM, and running both analysed everything twice. Use
+  tasks already cover common + JVM, and running both analyzed everything twice. Use
   `./gradlew detekt` for a one-off whole-tree run; it still works and is not removed.
   `config/detekt/detekt.yml` raises `LargeClass.allowedLines` to **500** to keep a
   class within this project's budget. Detekt has no per-file line rule — `LargeClass`
@@ -21,13 +21,12 @@ up.
   test expectations read better in place; only opaque algorithm limits get a named
   constant. `ReturnCount` ignores guard clauses, a loop may use up to three
   `break`/`continue` statements, and destructuring may bind four names. Import the
-  project's own packages by name, never with a wildcard: the boundary rules in
-  detekt can only see an edge that is an explicit import (see `decisions.md`,
-  2026-10-21). `kotlin.test.*`, `kotlinx.serialization.json.*` and third-party
-  wildcards stay allowed.
-  There are **no committed Detekt baselines**: after the phase-B cleanup (see
-  `decisions.md`) `detekt-baseline.xml`, `detekt-baseline-main.xml` and
-  `detekt-baseline-test.xml` are all gone, so every finding fails `check`
+  project's own packages by name, never with a wildcard, so every cross-package
+  edge is visible in the file's header and review can compare it with the table
+  in `architecture.md` (see `decisions.md`, 2026-10-22). `de.bjrke.test.*`,
+  `kotlin.test.*`, `kotlinx.serialization.json.*` and third-party wildcards stay
+  allowed.
+  There are **no committed Detekt baselines**, so every finding fails `check`
   directly. Fix a finding by extracting a named responsibility; only suppress a
   proven false positive, with a written reason.
 - `TooManyFunctions` allows 11 functions per file/class (Detekt default
@@ -36,15 +35,16 @@ up.
   split by responsibility into separate files or classes instead of collecting
   a dozen writers in one file.
 - Package boundaries are the other half of that rule: a package is a domain with a
-  stated surface (see `decisions.md`, 2026-10-21 to 2026-10-23). A cross-package
-  reference is an explicit import of the names actually used. The allowed edges are
-  the table in `architecture.md` ("Package dependencies"); they are enforced by the
-  compiler (`internal` marks a symbol used outside its package) and by review, not
-  by a test — `ForbiddenImport` cannot express them (one flat list, see
-  `pitfalls.md`). A new package or a new edge means adding or changing a row on
-  purpose — never widening one to silence a failure.
+  stated surface (see `decisions.md`, 2026-10-22). A cross-package reference is an
+  explicit import of the names actually used. The allowed edges are the table in
+  `architecture.md` ("Package dependencies"); they are enforced by the compiler
+  (`internal` marks a symbol used outside its package) and by review, not by a test
+  — `ForbiddenImport` cannot express them (one flat list, see `pitfalls.md`). A new
+  package or a new edge means adding or changing a row on purpose — never widening
+  one to silence a failure.
   A package that outgrows 10 files is cut along its responsibilities (15 is the
-  ceiling); there is no line budget, file length is capped per file by `LargeClass`.
+  ceiling); review keeps that budget, no task does. There is no line budget; class
+  length is capped by `LargeClass` (500).
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered
@@ -151,13 +151,16 @@ up.
   invocation, one Gradle process.
 - **A suite that is too heavy for the JS browser belongs in `jvmTest`.** `commonTest`
   runs on both JVM and JS, so a suite there costs a Chrome execution in
-  `jsBrowserTest` on every pipeline. The layout and blueprint suites
-  (`BlueprintLayout*`, `BlueprintFluidLayoutTest`, `BlueprintImportTest`,
+  `jsBrowserTest` on every pipeline. The heavy layout and blueprint suites
+  (`BlueprintLayout*`, `BlueprintFluid*`, `BlueprintImportTest`,
   `BlueprintBeltEndTest`, `BlueprintLayoutSnapshotTest`, `band/`, the ascii, plan and
-  encoder suites) therefore live in `src/jvmTest`; `jsBrowserTest` keeps the model,
-  production, optimizer and `jsTest` component suites. Move a suite to `jvmTest`
-  rather than filtering it out in CI — the Kotlin/JS runner cannot express a
-  multi-suite exclude, and a filter hides the same cost from local runs too.
+  encoder suites) therefore live in `src/jvmTest`. The light kernel and unit suites
+  still run in `commonTest` (`LayoutCompactionTest`, `LayoutPipesTest`,
+  `LayoutEntityTest`, `FluidLaneTest`, `MaterialSearchTest`, plus the model,
+  prototype, production, optimizer and service suites) and appear in
+  `jsBrowserTest` too. Move a suite to
+  `jvmTest` rather than filtering it out in CI — the Kotlin/JS runner cannot express
+  a multi-suite exclude, and a filter hides the same cost from local runs too.
   `blueprint/fixtures` stays in `commonTest`: `jvmTest` and the `jsTest`
   `OptimizationResult*` suites both read it, and a shared test helper must not move
   into a test source set it is not compiled with. Moved suites may still import

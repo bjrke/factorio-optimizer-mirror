@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.json
 
-import de.bjrke.factorio.optimizer.common.blueprint.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings

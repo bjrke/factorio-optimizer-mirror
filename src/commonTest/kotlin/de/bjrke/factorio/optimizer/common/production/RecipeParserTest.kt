@@ -27,6 +27,30 @@ class RecipeParserTest {
     @Test fun emptyDumpShouldReturnEmptyRecipeList() = assertEquals(emptyList(), parse("{}"))
 
     @Test
+    fun parseDumpRecipes() =
+        assertEquals(
+            setOf("copper-plate", "tungsten-plate"),
+            parse(
+                    """
+                    {"recipe":{
+                      "copper-plate":{
+                        "type":"recipe","name":"copper-plate","categories":["smelting"],
+                        "energy_required":3.2,
+                        "ingredients":[{"type":"item","name":"copper-ore","amount":1}],
+                        "results":[{"type":"item","name":"copper-plate","amount":1}]},
+                      "tungsten-plate":{
+                        "type":"recipe","name":"tungsten-plate","categories":["smelting"],
+                        "energy_required":2,
+                        "ingredients":[{"type":"item","name":"tungsten-ore","amount":1}],
+                        "results":[{"type":"item","name":"tungsten-plate","amount":1}]}
+                    }}
+                    """,
+                )
+                .map { it.name }
+                .toSet(),
+        )
+
+    @Test
     fun parseCopperPlate() =
         assertEquals(
             listOf(
