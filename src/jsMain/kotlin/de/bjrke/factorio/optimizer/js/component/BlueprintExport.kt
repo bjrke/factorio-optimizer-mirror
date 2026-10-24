@@ -12,7 +12,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
@@ -89,8 +88,8 @@ internal val blueprintView =
         val minY = entities.minOfOrNull { it.area.topLeft.y } ?: 0
         val maxX = entities.maxOfOrNull { it.area.bottomRight.x } ?: 0
         val maxY = entities.maxOfOrNull { it.area.bottomRight.y } ?: 0
-        val gridWidth = ((maxX - minX) * TILE).coerceAtLeast(TILE)
-        val gridHeight = ((maxY - minY) * TILE).coerceAtLeast(TILE)
+        val gridWidth = (1 + maxX - minX) * TILE
+        val gridHeight = (1 + maxY - minY) * TILE
 
         svg {
             viewBox = "0 0 $gridWidth $gridHeight"
