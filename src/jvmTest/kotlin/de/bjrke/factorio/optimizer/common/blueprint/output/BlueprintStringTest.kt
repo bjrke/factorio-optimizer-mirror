@@ -10,7 +10,7 @@ class BlueprintStringTest {
 
     @Test
     fun base64MatchesTheRfc4648Vectors() =
-        assertTableOf<Pair<String, String>>(
+        assertTableOf(
             "" to "",
             "M" to "TQ==",
             "Ma" to "TWE=",

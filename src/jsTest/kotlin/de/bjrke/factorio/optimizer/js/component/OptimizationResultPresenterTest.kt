@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -11,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
 import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe

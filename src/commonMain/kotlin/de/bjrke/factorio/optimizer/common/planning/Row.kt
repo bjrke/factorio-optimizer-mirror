@@ -54,9 +54,6 @@ internal class Row(
     val box: RowBox,
     val lanes: RowLanes,
 ) {
-    /** The planned recipes this row builds, once each, in machine order. */
-    val plannedRecipes: List<PlannedRecipe>
-        get() = plannedRow.plannedRecipes
 
     /** The direct insertions between the machines, by the gap they sit in. */
     val interfaces: List<PlannedLink>

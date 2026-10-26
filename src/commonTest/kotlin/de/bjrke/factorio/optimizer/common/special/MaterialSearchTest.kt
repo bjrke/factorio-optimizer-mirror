@@ -48,7 +48,7 @@ class MaterialSearchTest {
     fun requiresEveryQueryTokenToMatch() =
         assertTableOf(
             "iron plate" to listOf(Material("iron-plate")),
-            "iron zzz" to emptyList<Material>(),
+            "iron zzz" to emptyList(),
         ) { (query, expected) ->
             assertEquals(expected, searchMaterials(materials, query))
         }

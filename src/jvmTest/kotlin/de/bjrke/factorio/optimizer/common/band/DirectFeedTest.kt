@@ -1,10 +1,8 @@
 package de.bjrke.factorio.optimizer.common.band
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.GROUP_MAX_MACHINES
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
@@ -14,9 +12,7 @@ import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.special.DirectFeed
 import de.bjrke.factorio.optimizer.common.special.directFeed
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
@@ -56,9 +52,6 @@ private fun production(
         speed,
         productivity,
     )
-
-/** The recipes of a band in machine order. */
-private fun DirectFeed.sequence(band: PlannedRow) = band.machines.map { it.recipe.name }
 
 class DirectFeedTest {
 
@@ -130,7 +123,7 @@ class DirectFeedTest {
                         "electronic-circuit",
                         "copper-cable",
                     ),
-                    feed.sequence(band),
+                    band.machines.map { it.recipe.name },
                 )
             },
             { assertEquals(listOf(alpha, alpha, alpha, alpha), band.links.map { it.material }) },
@@ -169,7 +162,7 @@ class DirectFeedTest {
             {
                 assertEquals(
                     listOf("alpha-rod", "beta-unit", "gamma-plate", "beta-unit", "alpha-rod"),
-                    feed.sequence(band),
+                    band.machines.map { it.recipe.name },
                 )
             },
             { assertEquals(listOf(alpha, gamma, gamma, alpha), band.links.map { it.material }) },
@@ -222,7 +215,7 @@ class DirectFeedTest {
             {
                 assertEquals(
                     listOf("copper-cable", "electronic-circuit"),
-                    feed.sequence(band).distinct(),
+                    band.machines.map { it.recipe.name }.distinct(),
                 )
             },
             { assertEquals(4, band.machines.size) },

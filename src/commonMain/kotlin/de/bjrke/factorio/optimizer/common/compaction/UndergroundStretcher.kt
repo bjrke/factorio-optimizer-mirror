@@ -19,8 +19,6 @@ import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 

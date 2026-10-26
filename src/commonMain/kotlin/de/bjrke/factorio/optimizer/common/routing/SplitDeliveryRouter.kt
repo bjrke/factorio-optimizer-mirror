@@ -12,7 +12,6 @@ import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.adjacent
 import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.special.placePath

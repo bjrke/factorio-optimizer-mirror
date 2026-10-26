@@ -22,8 +22,6 @@ import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan

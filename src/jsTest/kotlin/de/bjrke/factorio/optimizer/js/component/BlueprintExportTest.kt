@@ -1,9 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
@@ -40,9 +38,6 @@ import react.create
 import web.dom.Element
 import web.html.HTMLButtonElement
 import web.html.HTMLTextAreaElement
-
-private val plate = Material("iron-plate")
-private val gear = Material("iron-gear-wheel")
 
 private val craft =
     Recipe(

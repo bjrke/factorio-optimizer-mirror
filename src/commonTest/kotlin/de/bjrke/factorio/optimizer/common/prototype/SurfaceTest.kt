@@ -151,8 +151,8 @@ class SurfaceTest {
         assertTableOf(
             Surface.AQUILO to listOf("quantum-processor"),
             Surface.SPACE to listOf("quantum-processor"),
-            Surface.NAUVIS to emptyList<String>(),
-            Surface.VULCANUS to emptyList<String>(),
+            Surface.NAUVIS to emptyList(),
+            Surface.VULCANUS to emptyList(),
         ) { (surface, expected) ->
             assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name))
         }
@@ -185,7 +185,7 @@ class SurfaceTest {
             Surface.NAUVIS to setOf("iron-ore", "coal", "stone"),
             Surface.VULCANUS to setOf("tungsten-ore", "coal"),
             Surface.GLEBA to setOf("stone"),
-            Surface.FULGORA to emptySet<String>(),
+            Surface.FULGORA to emptySet(),
         ) { (surface, expected) ->
             assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
         }
@@ -230,7 +230,7 @@ class SurfaceTest {
 
         assertTableOf(
             Surface.GLEBA to setOf("yumako", "jellynut"),
-            Surface.NAUVIS to emptySet<String>(),
+            Surface.NAUVIS to emptySet(),
         ) { (surface, expected) ->
             assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
         }
@@ -246,7 +246,7 @@ class SurfaceTest {
 
         assertTableOf(
             Surface.NAUVIS to setOf("wood"),
-            Surface.GLEBA to emptySet<String>(),
+            Surface.GLEBA to emptySet(),
         ) { (surface, expected) ->
             assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
         }
@@ -297,8 +297,8 @@ class SurfaceTest {
 
         assertTableOf(
             Surface.GLEBA to setOf("iron-bacteria", "iron-bacteria-spoiling"),
-            Surface.FULGORA to emptySet<String>(),
-            Surface.NAUVIS to emptySet<String>(),
+            Surface.FULGORA to emptySet(),
+            Surface.NAUVIS to emptySet(),
         ) { (surface, expected) ->
             assertEquals(expected, parsed.forSurface(surface).recipes.map(Recipe::name).toSet())
         }

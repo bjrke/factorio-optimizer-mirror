@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier

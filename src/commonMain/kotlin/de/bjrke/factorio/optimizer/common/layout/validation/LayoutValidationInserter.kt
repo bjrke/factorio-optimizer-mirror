@@ -6,8 +6,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.TransportEntity
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 
 /**
  * Every inserter needs a source behind it and a drop in front of it, both a machine, a transport or

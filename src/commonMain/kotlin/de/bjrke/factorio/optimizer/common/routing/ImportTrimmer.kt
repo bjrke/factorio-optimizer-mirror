@@ -8,7 +8,6 @@ import de.bjrke.factorio.optimizer.common.layout.rebuildTunnels
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.plan.ImportFeed

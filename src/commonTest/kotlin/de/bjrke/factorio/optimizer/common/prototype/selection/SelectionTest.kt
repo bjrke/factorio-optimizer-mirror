@@ -114,7 +114,7 @@ class SelectionTest {
 
     @Test
     fun flagsAreOffWhenTheirCodeIsAbsent() =
-        assertTableOf<Pair<String?, Boolean>>(
+        assertTableOf(
             "S" to true,
             "abcSL" to true,
             "L" to false,

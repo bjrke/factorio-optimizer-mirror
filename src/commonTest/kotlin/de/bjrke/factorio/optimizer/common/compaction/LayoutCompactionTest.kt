@@ -18,7 +18,6 @@ import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.areaTile
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.test.assertAll

@@ -24,7 +24,6 @@ private val externallyProcessedCategories =
         Category.CRYOGENICS,
         Category.RECYCLING,
         Category.CRUSHING,
-        Category.ASTEROID_COLLECTION,
     )
 
 /** Classic smelters are left out (their plates are imported); the foundry is kept. */
@@ -49,22 +48,26 @@ internal fun includedRecipes(
     factories: Collection<FactoryProduction>,
     target: FactoryProduction,
     maxRecipes: Int,
-): List<FactoryProduction> {
-    val singleProducer = singleProducers(factories, target.recipe)
+) =
+    buildList<FactoryProduction> {
+        val singleProducer = singleProducers(factories, target.recipe)
+        val queue = ArrayDeque<FactoryProduction>()
+        var factory: FactoryProduction? = target
 
-    val included = mutableListOf<FactoryProduction>()
-    fun include(factory: FactoryProduction) {
-        if (included.any { it.recipe === factory.recipe } || included.size >= maxRecipes) return
-        included += factory
-        // build every input that has a single producer, until the recipe cap is reached
-        factory.recipe.ingredients.keys
-            .filter { it in singleProducer }
-            .sortedBy { it.name }
-            .forEach { include(singleProducer.getValue(it)) }
+        while (factory != null) {
+            if (size >= maxRecipes) break
+            if (none { it.recipe === factory.recipe }) {
+                add(factory)
+                // build every input that has a single producer, until the recipe cap is reached
+                queue.addAll(
+                    factory.recipe.ingredients.keys
+                        .sortedBy { it.name }
+                        .mapNotNull { singleProducer[it] },
+                )
+            }
+            factory = queue.removeFirstOrNull()
+        }
     }
-    include(target)
-    return included
-}
 
 /**
  * Whether a factory can stand in the blueprint. The target's producer is always kept, even when it
@@ -90,7 +93,7 @@ private fun buildable(factory: FactoryProduction, target: Recipe): Boolean {
 private fun singleProducers(
     factories: Collection<FactoryProduction>,
     target: Recipe,
-): Map<Material, FactoryProduction> =
+) =
     factories
         .filter { buildable(it, target) }
         .flatMap { factory -> factory.recipe.result.keys.map { it to factory } }

@@ -3,8 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFor
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.test.assertAll

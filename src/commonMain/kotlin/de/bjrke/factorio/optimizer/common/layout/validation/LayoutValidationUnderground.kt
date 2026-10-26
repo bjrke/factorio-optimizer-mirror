@@ -5,8 +5,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 
 /**
  * Every underground input needs an output of the same material, direction and kind, within the

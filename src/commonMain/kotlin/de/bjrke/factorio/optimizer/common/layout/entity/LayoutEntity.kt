@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
 
 /**
  * What a marker displays: a [material] and whether it is a [fluid]. Grouping the two keeps a

@@ -118,10 +118,10 @@ internal class FluidFeedLinker(
     }
 
     /** A run's two ends stay on free ground; the tiles between may be buried under a belt. */
-    private fun runFits(row: Int, west: Int, east: Int): Boolean {
-        if (!placeable(Coordinate(west, row)) || !placeable(Coordinate(east, row))) return false
-        return (west + 1 until east).all { x -> canBury(Coordinate(x, row)) }
-    }
+    private fun runFits(row: Int, west: Int, east: Int) =
+        placeable(Coordinate(west, row)) &&
+            placeable(Coordinate(east, row)) &&
+            (west + 1 until east).all { x -> canBury(Coordinate(x, row)) }
 
     /** Whether a fluid run may pass under the entity at [tile]. */
     private fun canBury(tile: Coordinate): Boolean {

@@ -25,7 +25,7 @@ import kotlin.math.roundToInt
 fun blueprintPlan(
     result: OptimizationResult,
     logistics: LogisticsCalculator,
-    normalizeTarget: Double = 1.0,
+    scale: Double = 1.0,
     maxRecipes: Int = MAX_BLUEPRINT_RECIPES,
 ): BlueprintPlanResult {
     if (result.target.name == ALL_SCIENCE_PACKS) {
@@ -43,10 +43,6 @@ fun blueprintPlan(
 
     val included = includedRecipes(result.factories.values, targetFactory, maxRecipes)
 
-    // build exactly the requested rate: a factory per machine the optimizer sized, even when an
-    // import lane would then need upgrading
-    val scale = normalizeTarget
-
     // split the recipes into planned recipes and direct-feed bands: a recipe feeding another one in
     // a small whole-machine cycle is built interleaved with it, one planned recipe per consumer
     val feed = directFeed(targetFactory.recipe, included, scale, logistics)
@@ -57,7 +53,7 @@ fun blueprintPlan(
             rows = feed.rows,
             sources = plannedSources(included, scale, logistics),
             scale = scale,
-            label = planLabel(result.target, scale / normalizeTarget),
+            label = planLabel(result.target, scale / scale),
         ),
     )
 }

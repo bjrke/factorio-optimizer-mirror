@@ -18,8 +18,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 
 /**
  * The one place a placed entity becomes the serializable [BlueprintEntity] DTO. The common part is

@@ -22,7 +22,7 @@ internal val spaceAgeToggle =
             name = "space-age",
             alt = "Space Age",
             selected = props.enabled,
-            inputType = InputType.Companion.checkbox,
+            inputType = InputType.checkbox,
             onChange = { props.toggle(!props.enabled) },
         )
     }

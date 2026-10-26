@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.common.layout
 
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.area
 
 /**
  * The tile-to-entity lookup and the extent of a fixed entity list: the read-only counterpart of

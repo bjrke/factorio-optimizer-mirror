@@ -59,8 +59,8 @@ private fun ChildrenBuilder.amountInput(
             marginRight = 1.ch
         }
         value = superRound(amount * props.normalizeTarget).toString()
-        onChange = {
-            it.target.value.toDoubleOrNull()?.let { value ->
+        onChange = { event ->
+            event.target.value.toDoubleOrNull()?.let { value ->
                 validNormalizeTarget(amount / value)?.let { props.changeNormalizeTo(it) }
             }
         }

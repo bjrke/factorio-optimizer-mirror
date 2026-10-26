@@ -9,11 +9,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertSplittersOnly
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.entitiesFor
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.feedFailuresFor
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planAndLogistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFor
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.transportMaterialsFor
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
@@ -22,7 +20,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf

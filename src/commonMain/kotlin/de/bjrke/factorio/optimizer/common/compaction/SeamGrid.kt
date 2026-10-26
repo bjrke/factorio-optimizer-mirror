@@ -8,7 +8,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south

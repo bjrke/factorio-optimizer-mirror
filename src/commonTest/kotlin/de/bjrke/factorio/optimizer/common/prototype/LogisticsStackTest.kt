@@ -65,7 +65,7 @@ class LogisticsStackTest {
     fun inserterStackConfigKeepsWithinTheInsertersRange() {
         val config = LogisticsConfig(testLogistics, spaceAge = true)
 
-        assertTableOf<Triple<String?, InserterTier, Int>>(
+        assertTableOf(
             Triple("1", InserterTier.BULK_INSERTER, 2),
             Triple(null, InserterTier.STACK_INSERTER, 6),
             Triple("99", InserterTier.BULK_INSERTER, 12),
@@ -107,7 +107,7 @@ class LogisticsStackTest {
             },
             {
                 // an unstacked belt is the default; selecting the stack inserter lifts the level
-                assertTableOf<Triple<String?, InserterTier, Int>>(
+                assertTableOf(
                     Triple(null, InserterTier.FAST_INSERTER, 1),
                     Triple("1", InserterTier.FAST_INSERTER, 1),
                     Triple("1", InserterTier.STACK_INSERTER, BeltTier.MIN_STACK_INSERTER_STACK),

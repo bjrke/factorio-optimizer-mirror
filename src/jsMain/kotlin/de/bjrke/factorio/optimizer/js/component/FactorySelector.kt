@@ -30,7 +30,7 @@ internal val factorySelector =
                 selectableIcon(
                     name = factory.identifier,
                     selected = props.selectedFactories.contains(factory),
-                    inputType = InputType.Companion.radio,
+                    inputType = InputType.radio,
                     groupName = groupName,
                     onChange = {
                         props.selectFactory(props.config.add(props.selectedFactories, factory))
@@ -44,7 +44,7 @@ internal val factorySelector =
             selectableIcon(
                 name = factory.identifier,
                 selected = enabled,
-                inputType = InputType.Companion.checkbox,
+                inputType = InputType.checkbox,
                 onChange = {
                     props.selectFactory(
                         if (enabled) {

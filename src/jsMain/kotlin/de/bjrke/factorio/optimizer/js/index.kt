@@ -155,7 +155,7 @@ fun main() {
                     getParentRoute = { rootRoute },
                     path =
                         RoutePath(
-                            "/\$normalizeTarget/\$target/\$selection/\$beltStack/\$inserterStack",
+                            $$"/$normalizeTarget/$target/$selection/$beltStack/$inserterStack",
                         ),
                     component = RouterBasedParams,
                 ),
@@ -165,7 +165,7 @@ fun main() {
             createRoute(
                 RouteOptions(
                     getParentRoute = { rootRoute },
-                    path = RoutePath("\$"),
+                    path = RoutePath("$"),
                     component = RouterBasedParams,
                 ),
             )

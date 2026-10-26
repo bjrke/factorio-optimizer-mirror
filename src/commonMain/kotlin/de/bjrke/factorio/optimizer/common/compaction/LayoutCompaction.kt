@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.south
 
@@ -128,7 +127,7 @@ private fun corridorOf(
         val maxStart = minOf(secondary, run.last - width + 1)
         if (minStart > maxStart) return null
         val start = minStart + (maxStart - minStart) / 2
-        corridor[primary] = start..(start + width - 1)
+        corridor[primary] = start until start + width
     }
     return corridor
 }
@@ -211,12 +210,12 @@ private fun shrinks(
     orientation: SeamOrientation,
 ): Boolean {
     val afterIndex = LayoutIndex(after)
-    if (afterIndex.isEmpty) return false
-    return if (orientation == SeamOrientation.VERTICAL) {
-        afterIndex.maxX - afterIndex.minX < before.maxX - before.minX
-    } else {
-        afterIndex.maxY - afterIndex.minY < before.maxY - before.minY
-    }
+    return !afterIndex.isEmpty &&
+        if (orientation == SeamOrientation.VERTICAL) {
+            afterIndex.maxX - afterIndex.minX < before.maxX - before.minX
+        } else {
+            afterIndex.maxY - afterIndex.minY < before.maxY - before.minY
+        }
 }
 
 private fun LayoutEntity.shifted(orientation: SeamOrientation, amount: Int): LayoutEntity {

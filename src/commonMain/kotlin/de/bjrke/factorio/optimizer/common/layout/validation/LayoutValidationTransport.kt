@@ -5,8 +5,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south

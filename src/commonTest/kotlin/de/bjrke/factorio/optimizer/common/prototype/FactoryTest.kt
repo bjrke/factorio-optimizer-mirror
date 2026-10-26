@@ -134,7 +134,7 @@ class FactoryTest {
 
     @Test
     fun absentSelectionTurnsOnTheDefaultMachines() =
-        assertTableOf<Pair<FactoryConfig, String?>>(
+        assertTableOf(
             base to null,
             base to "",
             spaceAge to null,

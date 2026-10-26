@@ -1,10 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -14,8 +12,6 @@ import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.OptimizationResult
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.js.component.optimizationResult
 import de.bjrke.test.ComponentTest

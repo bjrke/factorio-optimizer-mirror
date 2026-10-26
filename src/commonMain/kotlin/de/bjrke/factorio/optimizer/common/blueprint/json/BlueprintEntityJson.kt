@@ -8,7 +8,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.RequestFilter
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
@@ -117,7 +116,7 @@ private fun BlueprintEntity.controlBehaviorJson(): JsonObject? =
     circuitConditionEnabled?.let { enabled ->
         buildJsonObject { put("circuit_condition_enabled", enabled) }
     }
-        ?: circuitCondition?.let { it.controlBehaviorJson() }
+        ?: circuitCondition?.controlBehaviorJson()
         ?: marker?.let { markerControlBehavior(it, markerFluid) }
 
 private fun CircuitCondition.controlBehaviorJson() = buildJsonObject {

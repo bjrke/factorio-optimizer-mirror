@@ -10,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import kotlin.test.assertEquals
 

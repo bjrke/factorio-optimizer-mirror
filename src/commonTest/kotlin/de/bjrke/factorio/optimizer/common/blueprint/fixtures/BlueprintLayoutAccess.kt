@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.layout.entity.TransportEntity
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 

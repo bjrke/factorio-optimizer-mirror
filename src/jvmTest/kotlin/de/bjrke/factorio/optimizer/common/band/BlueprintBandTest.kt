@@ -10,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow

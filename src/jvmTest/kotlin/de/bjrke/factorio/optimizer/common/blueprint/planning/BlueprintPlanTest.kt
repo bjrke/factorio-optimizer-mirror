@@ -17,10 +17,8 @@ import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.prototype.category
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.OptimizationResult
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf

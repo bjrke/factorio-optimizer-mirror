@@ -5,7 +5,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.prototype.category
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.OptimizationResult
 import de.bjrke.factorio.optimizer.common.service.Optimizer

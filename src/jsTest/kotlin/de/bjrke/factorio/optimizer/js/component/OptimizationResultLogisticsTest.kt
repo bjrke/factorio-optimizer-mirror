@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
 import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe

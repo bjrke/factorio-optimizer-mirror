@@ -5,7 +5,6 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import kotlin.test.ExperimentalKotlinTestApi

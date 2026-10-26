@@ -1,7 +1,5 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
@@ -42,7 +40,7 @@ class LogisticsSelectionTest {
     fun beltLanesDefaultToHalfAndTheFullBeltFlagSelectsBoth() {
         val config = LogisticsConfig(testLogistics, spaceAge = true)
 
-        assertTableOf<Pair<String?, Int>>(
+        assertTableOf(
             null to 1,
             "tx" to 1,
             "L" to 2,

@@ -42,8 +42,7 @@ internal class FluidLaneFeed(
             val material = lanes.fluids(row, side).firstOrNull() ?: continue
             val lane = lanes.lane(row, side, material) ?: continue
             // the marker may not run into the import extension west of the row
-            val placed = placer.place(lane, material, row.left, side)
-            if (placed == null) continue
+            val placed = placer.place(lane, material, row.left, side) ?: continue
             for (port in placed.ports) laneFeeds[port] = material
             for (skipped in placed.skipped) unreached[skipped] = material
         }

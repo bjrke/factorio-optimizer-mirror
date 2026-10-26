@@ -17,8 +17,6 @@ import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.west
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
@@ -209,8 +207,9 @@ class BlueprintImportTest {
                 )
             },
             {
-                assertTrue(
-                    marker.area.topLeft.y == laneRow,
+                assertEquals(
+                    laneRow,
+                    marker.area.topLeft.y,
                     "the marker row is the lane row: ${marker.area.topLeft}",
                 )
             },

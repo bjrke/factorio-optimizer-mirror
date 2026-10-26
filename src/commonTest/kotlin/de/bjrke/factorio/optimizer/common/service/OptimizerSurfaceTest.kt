@@ -1,8 +1,5 @@
 package de.bjrke.factorio.optimizer.common.service
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.lubricant
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.production.RecipeLoader

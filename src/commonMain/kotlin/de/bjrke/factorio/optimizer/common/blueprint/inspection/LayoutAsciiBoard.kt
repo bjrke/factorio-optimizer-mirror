@@ -20,8 +20,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 
 /** Codes for the materials on belts and in pipes; cycled if a blueprint ever uses more. */
 private const val MATERIAL_CODES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -44,7 +42,7 @@ internal fun asciiBoard(entities: List<LayoutEntity>): AsciiBoard {
     val codes = AsciiCodes(entities)
     val grid = Array(height) { CharArray(width) { ' ' } }
     for (entity in entities) {
-        for (tile in entity.area) grid[tile.y - minY][tile.x - minX] = codes.of(entity)
+        for ((x, y) in entity.area) grid[y - minY][x - minX] = codes.of(entity)
     }
 
     val labelWidth = maxY.toString().length
@@ -69,7 +67,7 @@ internal fun asciiBoard(entities: List<LayoutEntity>): AsciiBoard {
  * The character for every entity: machines count up in digits, belts show their material's code,
  * and inserters and loaders point the way their material goes.
  */
-private class AsciiCodes internal constructor(entities: List<LayoutEntity>) {
+private class AsciiCodes(entities: List<LayoutEntity>) {
     private val listedMaterials = materials(entities)
     private val materialCodes =
         listedMaterials.withIndex().associate { (index, material) ->
@@ -177,6 +175,7 @@ internal fun asciiLegend(entities: List<LayoutEntity>): String {
 /** One line per signal a constant combinator carries. */
 private fun markerLegend(entities: List<LayoutEntity>): String =
     entities
+        .asSequence()
         .filterIsInstance<MarkerEntity>()
         .map { it.signal.material }
         .distinct()
@@ -192,6 +191,7 @@ private fun infinityLegend(entities: List<LayoutEntity>): String = buildString {
 /** One line per chest type, under the letter [chestGlyph] gives it. */
 private fun chestLegend(entities: List<LayoutEntity>): String =
     entities
+        .asSequence()
         .filterIsInstance<ChestEntity>()
         .map { it.name }
         .distinct()

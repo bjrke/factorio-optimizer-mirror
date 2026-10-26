@@ -32,7 +32,7 @@ private const val MARKER_SEARCH_COLUMNS = 12
  */
 internal class DeliveryRouter(
     stage: LayoutStage,
-    connector: BeltEndConnector,
+    private val connector: BeltEndConnector,
     imports: ImportExtension,
     beltEnd: BeltEnd,
     private val failures: MutableList<String>,
@@ -42,7 +42,6 @@ internal class DeliveryRouter(
     private val logistics = stage.logistics
     private val rowPlacer = stage.rowPlacer
     private val router = stage.router
-    private val connector = connector
 
     private val networks = DeliveryNetworks(plan.beltMaterials)
     private val rules = BeltRouteRules(board)

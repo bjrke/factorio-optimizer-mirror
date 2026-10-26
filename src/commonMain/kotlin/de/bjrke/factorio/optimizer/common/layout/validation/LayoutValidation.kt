@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.layout.validation
 import de.bjrke.factorio.optimizer.common.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.area
 
 /**
  * The invariant checks a compacted layout has to keep. It is deliberately absolute rather than a

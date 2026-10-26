@@ -22,7 +22,7 @@ class UtilsKtTest {
 
     @Test
     fun validNormalizeTargetRejectsNonPositiveOrNonFinite() =
-        assertTableOf<Pair<Double?, Double?>>(
+        assertTableOf(
             null to null,
             0.0 to null,
             -0.0 to null,
@@ -39,7 +39,7 @@ class UtilsKtTest {
 
     @Test
     fun normalizeTargetFromUrlFallsBackToDefaultForInvalidValues() =
-        assertTableOf<Pair<String?, Double>>(
+        assertTableOf(
             null to DEFAULT_NORMALIZE_TARGET,
             "" to DEFAULT_NORMALIZE_TARGET,
             "abc" to DEFAULT_NORMALIZE_TARGET,
@@ -78,7 +78,7 @@ class UtilsKtTest {
      */
     @Test
     fun normalizeTargetUrlKeepsSingleInputStepsAdjustable() =
-        assertTableOf<Pair<Double, Double>>(
+        assertTableOf(
             // scrap output of the big mining drill, clicked first -> its own display is 1
             3275.6419753086425 to 1.0,
             // next step of that same row

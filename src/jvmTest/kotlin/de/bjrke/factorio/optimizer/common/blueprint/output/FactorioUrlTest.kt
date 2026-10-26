@@ -15,7 +15,7 @@ class FactorioUrlTest {
             "http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1",
             "localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1",
             "#/4.5/advanced-circuit/CFSXbmr/1/1",
-            "http://example.com/some/page#/4.5/advanced-circuit/CFSXbmr/1/1",
+            "https://example.com/some/page#/4.5/advanced-circuit/CFSXbmr/1/1",
         ) { text ->
             assertEquals(
                 FactorioUrl(4.5, "advanced-circuit", "CFSXbmr", "1", "1"),
@@ -47,7 +47,7 @@ class FactorioUrlTest {
 
     @Test
     fun nonUrlsAreRejected() =
-        assertTableOf<String?>(
+        assertTableOf(
             null,
             "",
             "advanced-circuit",

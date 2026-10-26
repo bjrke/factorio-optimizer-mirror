@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
@@ -58,7 +57,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
             middleButton(),
         )
 
-        assertEquals(emptyList<Material>(), changedMaterials)
+        assertEquals(emptyList(), changedMaterials)
     }
 
     @Test
@@ -68,7 +67,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
         fireEvent.click(screen.getByTitle(plate.name))
 
         assertAll(
-            { assertEquals(emptyList<Material>(), changedMaterials) },
+            { assertEquals(emptyList(), changedMaterials) },
             // the ingredient's consumption, exactly like clicking the amount icon
             { assertEquals(listOf(2.0), normalizedTo) },
         )

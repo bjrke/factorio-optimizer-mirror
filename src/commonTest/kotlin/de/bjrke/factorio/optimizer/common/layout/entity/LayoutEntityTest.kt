@@ -1,7 +1,5 @@
 package de.bjrke.factorio.optimizer.common.layout.entity
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate

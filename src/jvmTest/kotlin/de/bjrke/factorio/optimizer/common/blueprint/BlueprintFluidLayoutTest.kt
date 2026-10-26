@@ -21,8 +21,6 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.area
-import de.bjrke.factorio.optimizer.common.model.direction
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south

@@ -1,8 +1,5 @@
 package de.bjrke.factorio.optimizer.common.service
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
