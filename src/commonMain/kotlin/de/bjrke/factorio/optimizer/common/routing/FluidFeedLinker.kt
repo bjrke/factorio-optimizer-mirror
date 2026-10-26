@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.routing
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.FLUID_SOURCE_WIDTH
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.PIPE_UNDERGROUND_RANGE
 import de.bjrke.factorio.optimizer.common.layout.endName
@@ -8,12 +9,11 @@ import de.bjrke.factorio.optimizer.common.layout.entity.BeltLikeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
-import de.bjrke.factorio.optimizer.common.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
-import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipe
-import de.bjrke.factorio.optimizer.common.layout.placeMarker
+import de.bjrke.factorio.optimizer.common.layout.placeFluidSource
 import de.bjrke.factorio.optimizer.common.layout.placePipe
+import de.bjrke.factorio.optimizer.common.layout.removeFluidSource
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
@@ -43,14 +43,15 @@ internal class FluidFeedLinker(
 
     /** Moves one feed; a feed that no longer fits west of its head keeps the inline marker. */
     private fun link(feed: FluidFeed, column: Int) {
-        val sourceEnd = if (beltEnd == BeltEnd.INFINITY_CHEST) column else column + 2
+        val sourceEnd =
+            if (beltEnd == BeltEnd.INFINITY_CHEST) column else column + FLUID_SOURCE_WIDTH - 1
         if (sourceEnd >= feed.head.x) return
-        if (feed.source.first().x == column) {
+        if (feed.source.x == sourceEnd) {
             pin(feed, column)
             return
         }
         val saved = board.placed.toList()
-        feed.source.forEach { board.removeAt(it) }
+        board.removeFluidSource(beltEnd, feed.source)
         if (!placeSource(feed, column)) {
             board.replaceAll(saved)
             return
@@ -66,21 +67,13 @@ internal class FluidFeedLinker(
     /** Places the fluid source block at [column] and the walkable link to the lane head. */
     private fun placeSource(feed: FluidFeed, column: Int): Boolean {
         val row = feed.row
-        val sourceTiles =
-            (column..(column + if (beltEnd == BeltEnd.INFINITY_CHEST) 0 else 2)).map {
-                Coordinate(it, row)
-            }
-        if (sourceTiles.any { !placeable(it) }) return false
-        if (!linkFits(feed, sourceTiles.last().x)) return false
-        if (beltEnd == BeltEnd.INFINITY_CHEST) {
-            board.placeInfinityPipe(sourceTiles.single(), feed.material)
-        } else {
-            board.placeEnd(feed.material, sourceTiles[0], EAST, INPUT)
-            board.placeMarker(sourceTiles[1], Signal(feed.material, fluid = true))
-            board.placeEnd(feed.material, sourceTiles[2], EAST, OUTPUT)
-            board.markTunnel(sourceTiles[0], sourceTiles[2], board.endName(feed.material))
-        }
-        connect(feed, sourceTiles.last().x)
+        val width = if (beltEnd == BeltEnd.INFINITY_CHEST) 1 else FLUID_SOURCE_WIDTH
+        val end = Coordinate(column + width - 1, row)
+        val tiles = (end.x - width + 1..end.x).map { Coordinate(it, row) }
+        if (tiles.any { !placeable(it) }) return false
+        if (!linkFits(feed, end.x)) return false
+        board.placeFluidSource(beltEnd, end, feed.material, feed.sink)
+        connect(feed, end.x)
         return true
     }
 

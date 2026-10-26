@@ -387,3 +387,23 @@ verified findings are promoted.
 
 **Consequences.** One root directory, no hidden prefix. Agents load `index.md` first
 and then only the files their work needs, so the always-on context stays small.
+
+## 2026-10-26 — One fluid source-block placement, with the role on `FluidFeed`
+
+**Context.** `placeInfinityPipe` had three callers (`FluidLanePlacer`, `FluidFeeder`,
+`FluidFeedLinker`) and `placeInfinityPipeSink` two, because three pipeline stages each
+copied the cheat/marker branch. The trimmer had no role, so a sink lane whose marker
+it relocated became a filtered supply pipe.
+
+**Decision.** `LayoutBoard.placeFluidSource(beltEnd, end, fluid, sink)` is the only
+caller of the two infinity-pipe primitives and the only place that branches on
+`BeltEnd.INFINITY_CHEST`. It builds the block west from its eastmost tile `end`: one
+tile for a cheat connector, three for a real marker. `FluidFeed` carries that eastmost
+tile and the `sink` role, so the trimmer re-places a drain as a drain.
+`removeFluidSource` is the symmetric removal.
+
+**Consequences.** The three stages still place a source, but only through the shared
+helper; a new stage cannot forget the cheat/marker split or the role. The lane
+placer's old west-bound search was dead: a longer block further west could never fit
+when the three-tile block at `end - 2` did not, so `sourceTiles` became a fixed-width
+`sourceEnd` and `place` lost its `westOf` parameter.

@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
@@ -40,6 +41,7 @@ import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Fluid imports, pipe routing and underground pipe runs. */
@@ -294,6 +296,46 @@ class BlueprintFluidLayoutTest {
             { assertEquals(2, pipes.size) },
             { assertEquals(setOf(water), pipes.mapNotNull { it.settings?.fluid }.toSet()) },
             { assertEquals(lubricant, pipes.single { it.settings == null }.material) },
+        )
+    }
+
+    @Test
+    fun aSinkMarkerStaysUnfilteredWhenTheTrimmerMovesIt() {
+        val drain =
+            recipe(
+                "drain",
+                Category.CHEMISTRY,
+                mapOf(lubricant to 1.0),
+                mapOf(plate to 1.0, water to 1.0),
+            )
+        val plan =
+            BlueprintPlan(
+                target = lubricant,
+                rows =
+                    listOf(PlannedRow.copies(planned(drain, lubricant, Factory.CHEMICAL_PLANT), 1)),
+                sources =
+                    listOf(
+                        PlannedSource(plate, 1.0, fluid = false),
+                        PlannedSource(water, 1.0, fluid = true),
+                    ),
+                scale = 1.0,
+                label = "drain",
+            )
+        val dump = blueprintLayoutDump(plan, logistics, BeltEnd.INFINITY_CHEST)
+        val sink =
+            dump.entities.filterIsInstance<InfinityPipeEntity>().single { it.material == lubricant }
+        val solidImport =
+            dump.entities.filterIsInstance<InfinityChestEntity>().single {
+                it.settings.item == plate
+            }
+
+        assertAll(
+            // the trimmer relocates the sink marker but must keep it unfiltered
+            { assertNull(sink.settings) },
+            // it joins the same west column as the solid import
+            { assertEquals(solidImport.area.topLeft.x, sink.area.topLeft.x) },
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
         )
     }
 

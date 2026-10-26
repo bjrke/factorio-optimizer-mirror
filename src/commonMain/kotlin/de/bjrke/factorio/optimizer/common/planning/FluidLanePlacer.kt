@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.FLUID_SOURCE_WIDTH
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.canPlacePipes
 import de.bjrke.factorio.optimizer.common.layout.endName
@@ -8,13 +9,10 @@ import de.bjrke.factorio.optimizer.common.layout.entity.BeltLikeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
-import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipe
-import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipeSink
-import de.bjrke.factorio.optimizer.common.layout.placeMarker
+import de.bjrke.factorio.optimizer.common.layout.placeFluidSource
 import de.bjrke.factorio.optimizer.common.layout.placePipe
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -27,9 +25,6 @@ import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.plan.FluidFeed
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 import kotlin.math.abs
-
-/** The tiles of the inline marker west of a lane head: input end, marker and output end. */
-private const val MARKER_WIDTH = 3
 
 /** What placing a lane achieved: the ports it reaches, and the ports it had no room for. */
 internal class PlacedLane(val ports: List<Coordinate>, val skipped: List<Coordinate>)
@@ -54,19 +49,18 @@ internal class FluidLanePlacer(
 ) {
 
     /**
-     * Places [lane] for [material] and the marker that sources it, never west of [westOf]. Returns
-     * null when the lane row itself or the marker stretch is taken.
+     * Places [lane] for [material] and the marker that sources it. Returns null when the lane row
+     * itself or the marker block is taken.
      */
     fun place(
         lane: FluidLane,
         material: Material,
-        westOf: Int,
         side: LineSide,
         sink: Boolean = false,
     ): PlacedLane? {
         val laneTiles = lane.surface + lane.runs.flatMap { (from, to) -> listOf(from, to) }
         if (!laneTiles.all { board.canPlacePipes(it, material) }) return null
-        val source = sourceTiles(lane.head, material, westOf) ?: return null
+        val source = sourceEnd(lane.head, material) ?: return null
         val buried =
             lane.shafts.filter { (top, bottom) -> shaftFits(top, bottom, material) }.toSet()
 
@@ -87,7 +81,7 @@ internal class FluidLanePlacer(
         // the marker is placed inline for now; the import trimmer moves it to the solid marker
         // column and joins it to the head, so one west column serves every import
         imports.fluidFeeds +=
-            FluidFeed(material, lane.laneRow, lane.head, side == LineSide.NORTH, source)
+            FluidFeed(material, lane.laneRow, lane.head, side == LineSide.NORTH, source, sink)
         imports.markerRows += lane.laneRow
         // the machine port is the end that touches the machine: the bottom of a north lane, the top
         // of a south lane
@@ -101,43 +95,26 @@ internal class FluidLanePlacer(
     }
 
     /**
-     * The marker tiles west of the lane [head], or null when the stretch is taken. The block sits
-     * inline on the lane's own row, so the lane is fed straight east with no turn: an input end, a
-     * marker and an output end for a constant combinator, a single infinity pipe otherwise. It
-     * never moves west of [westOf], where the import lanes run.
+     * The eastmost tile of the marker block west of the lane [head], or null when the block does
+     * not fit. The block is one tile for an infinity chest and three tiles otherwise, ending one
+     * tile west of the head so the lane is fed straight east.
      */
-    private fun sourceTiles(head: Coordinate, material: Material, westOf: Int): List<Coordinate>? {
-        val end = head.x - 1
-        val start = if (beltEnd == BeltEnd.INFINITY_CHEST) end else end - MARKER_WIDTH + 1
-        val column =
-            (start downTo minOf(westOf, head.x - MARKER_WIDTH)).firstOrNull { candidate ->
-                (candidate until head.x).all {
-                    board.canPlacePipes(Coordinate(it, head.y), material)
-                }
-            } ?: return null
-        return (column until head.x).map { Coordinate(it, head.y) }
+    private fun sourceEnd(head: Coordinate, material: Material): Coordinate? {
+        val width = if (beltEnd == BeltEnd.INFINITY_CHEST) 1 else FLUID_SOURCE_WIDTH
+        val end = Coordinate(head.x - 1, head.y)
+        val tiles = (end.x - width + 1..end.x).map { Coordinate(it, head.y) }
+        return end.takeIf { tiles.all { tile -> board.canPlacePipes(tile, material) } }
     }
 
     /**
-     * Places the marker block west of its lane: either the `oCo` pair or one infinity pipe. A
-     * [sink] lane drains its fluid, so its cheat pipe is unfiltered and deletes what reaches it.
+     * Places the marker block west of its lane, ending at [end]. A [sink] lane drains its fluid, so
+     * its cheat pipe is unfiltered and deletes what reaches it.
      */
-    private fun placeSource(tiles: List<Coordinate>, material: Material, sink: Boolean) {
-        if (beltEnd == BeltEnd.INFINITY_CHEST) {
-            val source = tiles.single()
-            if (sink) board.placeInfinityPipeSink(source, material)
-            else board.placeInfinityPipe(source, material)
-            imports.compactionWestBound = maxOf(imports.compactionWestBound, source.x)
-            return
-        }
-        val input = tiles.first()
-        val output = tiles.last()
-        board.placeEnd(material, input, EAST, INPUT)
-        board.placeMarker(tiles[1], Signal(material, fluid = true))
-        board.placeEnd(material, output, EAST, OUTPUT)
-        board.markTunnel(input, output, board.endName(material))
+    private fun placeSource(end: Coordinate, material: Material, sink: Boolean) {
+        board.placeFluidSource(beltEnd, end, material, sink)
+        val westBound = if (beltEnd == BeltEnd.INFINITY_CHEST) end.x else end.x + 1
         // the lane head is where the import extension may not be compacted over
-        imports.compactionWestBound = maxOf(imports.compactionWestBound, output.x + 1)
+        imports.compactionWestBound = maxOf(imports.compactionWestBound, westBound)
     }
 
     /**

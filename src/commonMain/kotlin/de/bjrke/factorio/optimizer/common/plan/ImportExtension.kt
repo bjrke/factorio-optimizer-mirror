@@ -18,7 +18,7 @@ internal class ImportFeed(
 
 /**
  * One imported fluid: the lane row and head its marker feeds, the direction its lane flows and the
- * inline source tiles it placed. The trimmer moves the source to the common import column and joins
+ * inline source block it placed. The trimmer moves the source to the common import column and joins
  * it to the head with underground runs, so one column serves both the solid and the fluid markers.
  */
 internal class FluidFeed(
@@ -27,8 +27,10 @@ internal class FluidFeed(
     val head: Coordinate,
     /** Whether the lane flows east (a north feed); a south drain flows west. */
     val flowEast: Boolean,
-    /** The source block as placed inline, west to east. */
-    val source: List<Coordinate>,
+    /** The eastmost tile of the source block as placed inline. */
+    val source: Coordinate,
+    /** Whether the lane drains its fluid, so its source block is an unfiltered sink. */
+    val sink: Boolean,
 )
 
 /**

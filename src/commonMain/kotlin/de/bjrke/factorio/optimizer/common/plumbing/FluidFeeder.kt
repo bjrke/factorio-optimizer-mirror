@@ -1,20 +1,13 @@
 package de.bjrke.factorio.optimizer.common.plumbing
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.FLUID_SOURCE_WIDTH
 import de.bjrke.factorio.optimizer.common.layout.canPlacePipes
-import de.bjrke.factorio.optimizer.common.layout.endName
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.entity.Signal
-import de.bjrke.factorio.optimizer.common.layout.markTunnel
-import de.bjrke.factorio.optimizer.common.layout.placeEnd
-import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipe
-import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipeSink
-import de.bjrke.factorio.optimizer.common.layout.placeMarker
+import de.bjrke.factorio.optimizer.common.layout.placeFluidSource
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.model.Io.INPUT
-import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.model.neighbors
@@ -31,9 +24,6 @@ import de.bjrke.factorio.optimizer.common.planning.PlacedMachine
 import de.bjrke.factorio.optimizer.common.planning.Row
 import de.bjrke.factorio.optimizer.common.route.RouteRequest
 import de.bjrke.factorio.optimizer.common.special.placePath
-
-/** The tiles of a label connector west of the source: input end, marker and output end. */
-private const val PIPE_CONNECTOR_WIDTH = 3
 
 /** How many existing network points are tried before a fluid sink is reported unreachable. */
 private const val MAX_ROUTE_STARTS = 8
@@ -271,7 +261,7 @@ internal class FluidFeeder(
         // the connector tiles west of the source: a single infinity pipe or the input/label/output
         // triple that hides the fluid under the combinator (a chest cannot carry a fluid)
         val firstColumn =
-            if (beltEnd == BeltEnd.INFINITY_CHEST) source.x - 1 else source.x - PIPE_CONNECTOR_WIDTH
+            if (beltEnd == BeltEnd.INFINITY_CHEST) source.x - 1 else source.x - FLUID_SOURCE_WIDTH
         // keep the connector's buried run clear of any other fluid near the machine, and off a
         // marker row a previous import already claimed
         var row = target.y
@@ -282,22 +272,7 @@ internal class FluidFeeder(
         imports.markerRows += row
         // the cheat variant replaces the label with a single infinity pipe: a filter supplies the
         // fluid, while an unfiltered pipe deletes it, which is what a sink needs
-        if (beltEnd == BeltEnd.INFINITY_CHEST) {
-            val pipe = Coordinate(source.x - 1, row)
-            if (sink) board.placeInfinityPipeSink(pipe, material)
-            else board.placeInfinityPipe(pipe, material)
-            imports.compactionWestBound = maxOf(imports.compactionWestBound, target.x)
-            return Coordinate(source.x, row)
-        }
-        // a pipe-to-ground run under the label, so the label does not block the fluid
-        board.placeEnd(material, Coordinate(source.x - PIPE_CONNECTOR_WIDTH, row), EAST, INPUT)
-        board.placeMarker(Coordinate(source.x - 2, row), Signal(material, fluid = true))
-        board.placeEnd(material, Coordinate(source.x - 1, row), EAST, OUTPUT)
-        board.markTunnel(
-            Coordinate(source.x - PIPE_CONNECTOR_WIDTH, row),
-            Coordinate(source.x - 1, row),
-            board.endName(material),
-        )
+        board.placeFluidSource(beltEnd, Coordinate(source.x - 1, row), material, sink)
         imports.compactionWestBound = maxOf(imports.compactionWestBound, target.x)
         return Coordinate(source.x, row)
     }

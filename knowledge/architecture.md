@@ -100,7 +100,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 `expect`/`actual` pairs with the common declaration, both in
 `common.production`).
 
-Package sizes (files, verified 2026-10-24). **Files** are the budget: past 10 is a
+Package sizes (files, verified 2026-10-26). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
 removed, so review keeps it (see `decisions.md`, 2026-10-22). There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
@@ -117,7 +117,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint/output | 4 |
 | blueprint/planning | 2 |
 | compaction | 4 |
-| layout | 7 |
+| layout | 8 |
 | layout/entity | 4 |
 | layout/validation | 4 |
 | model | 4 |
