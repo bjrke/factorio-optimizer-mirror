@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.plan.FluidPort
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
+import de.bjrke.factorio.optimizer.common.plan.blueprintMachineDirection
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdgeFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
@@ -24,16 +25,13 @@ import kotlin.test.assertNotNull
 /**
  * The machine fluid-port table and its edges.
  *
- * The prototype dump in `resources/prototypes` cannot verify the edges: `sanitizePrototypeDump`
+ * The prototype dump in `resources/prototypes` cannot verify the ports: `sanitizePrototypeDump`
  * keeps only curated fields and none of them is a `pipe_connections` or `fluid_boxes`, so the dump
- * carries no pipe-connection data at all. The table therefore rests on two things: the port tiles
- * match the machines' known pipe layout, and the flows follow the row geometry — the inserter
- * placer feeds from the lanes above (the top edge) and drains onto the product belt below (the
- * bottom edge), so a one-way port on the top or west edge is an input and one on the bottom or east
- * edge an output. Every machine with a port table is covered here.
- *
- * [PortFlow.BOTH] is its own input *and* output side: the electromagnetic plant's pipes stand on
- * every side, so a row can feed or drain it from whichever side reaches it.
+ * carries no pipe-connection data at all. The table therefore rests on the machines' real prototype
+ * definitions: the tiles and flows are the prototype's, then [blueprintMachineDirection] turns the
+ * machine so its inputs face a horizontal lane side. Every machine with a port table is covered
+ * here, including the 180° turn of the cryogenic plant, foundry and oil refinery and the 90° turn
+ * of the electromagnetic plant.
  */
 class BlueprintMachinePortTest {
 
@@ -50,7 +48,7 @@ class BlueprintMachinePortTest {
         }
 
     @Test
-    fun everyInputPortFacesTheLanesAboveAndEveryOutputItsBeltBelow() =
+    fun everyInputPortFacesAHorizontalLaneSide() =
         assertTable(machines) { factory ->
             val ports = edgePorts(factory.identifier)
             assertAll(
@@ -58,28 +56,45 @@ class BlueprintMachinePortTest {
                 {
                     assertEquals(
                         emptyList(),
-                        ports.filter { it.flow == PortFlow.INPUT && it.edge != Direction.NORTH },
-                        "${factory.identifier} has an input port the row's lanes cannot reach",
-                    )
-                },
-                {
-                    assertEquals(
-                        emptyList(),
                         ports.filter {
-                            it.flow == PortFlow.OUTPUT && it.edge != Direction.SOUTH
+                            it.flow == PortFlow.INPUT &&
+                                it.edge != Direction.NORTH &&
+                                it.edge != Direction.SOUTH
                         },
-                        "${factory.identifier} has an output port the product belt cannot reach",
+                        "${factory.identifier} has an input port no lane can reach",
                     )
                 },
                 {
-                    // a both-way machine has no one-way port, so check it offers at least one
+                    // a machine that gives fluid must offer a drain port
                     assertEquals(
                         true,
-                        ports.any { it.flow != PortFlow.OUTPUT },
-                        "${factory.identifier} has no port to feed it",
+                        ports.any { it.flow != PortFlow.INPUT },
+                        "${factory.identifier} has no port to drain it",
                     )
                 },
             )
+        }
+
+    @Test
+    fun eachMachineIsTurnedUntilItsInputsFaceALaneSide() =
+        assertTableOf(
+            "cryogenic-plant" to Direction.SOUTH,
+            "foundry" to Direction.SOUTH,
+            "oil-refinery" to Direction.SOUTH,
+            "electromagnetic-plant" to Direction.EAST,
+        ) { (identifier, direction) ->
+            assertEquals(direction, blueprintMachineDirection(identifier))
+        }
+
+    @Test
+    fun theOtherMachinesKeepThePrototypeFacing() =
+        assertTableOf(
+            "assembling-machine-2",
+            "assembling-machine-3",
+            "chemical-plant",
+            "biochamber",
+        ) { identifier ->
+            assertEquals(Direction.NORTH, blueprintMachineDirection(identifier))
         }
 
     @Test
@@ -102,42 +117,67 @@ class BlueprintMachinePortTest {
         }
 
     @Test
-    fun aOneWayFlowFollowsTheRowReading() =
-        assertTable(machines) { factory ->
-            assertTable(edgePorts(factory.identifier)) { port ->
-                if (port.flow == PortFlow.BOTH) return@assertTable
-                val expected =
-                    if (port.edge == Direction.NORTH || port.edge == Direction.WEST) PortFlow.INPUT
-                    else PortFlow.OUTPUT
-                assertEquals(
-                    expected,
-                    port.flow,
-                    "${factory.identifier} ${port.tile} on ${port.edge}",
-                )
-            }
+    fun theTurnedMachinesTakeOnTheLaneSideAndGiveOnTheOther() =
+        assertTableOf(
+            "cryogenic-plant" to
+                listOf(
+                    Coordinate(0, -1) to PortFlow.INPUT,
+                    Coordinate(2, -1) to PortFlow.INPUT,
+                    Coordinate(4, -1) to PortFlow.INPUT,
+                    Coordinate(0, 5) to PortFlow.OUTPUT,
+                    Coordinate(2, 5) to PortFlow.OUTPUT,
+                    Coordinate(4, 5) to PortFlow.OUTPUT,
+                ),
+            "foundry" to
+                listOf(
+                    Coordinate(1, -1) to PortFlow.INPUT,
+                    Coordinate(3, -1) to PortFlow.INPUT,
+                    Coordinate(1, 5) to PortFlow.OUTPUT,
+                    Coordinate(3, 5) to PortFlow.OUTPUT,
+                ),
+            "oil-refinery" to
+                listOf(
+                    Coordinate(1, -1) to PortFlow.INPUT,
+                    Coordinate(3, -1) to PortFlow.INPUT,
+                    Coordinate(0, 5) to PortFlow.OUTPUT,
+                    Coordinate(2, 5) to PortFlow.OUTPUT,
+                    Coordinate(4, 5) to PortFlow.OUTPUT,
+                ),
+            "electromagnetic-plant" to
+                listOf(
+                    Coordinate(1, -1) to PortFlow.INPUT,
+                    Coordinate(2, 4) to PortFlow.INPUT,
+                    Coordinate(-1, 2) to PortFlow.OUTPUT,
+                    Coordinate(4, 1) to PortFlow.OUTPUT,
+                ),
+        ) { (identifier, expected) ->
+            assertEquals(
+                expected.toSet(),
+                blueprintMachineFluidPorts(identifier).map { it.tile to it.flow }.toSet(),
+            )
         }
 
     @Test
     fun twoPortsPerFlowKeepBothPipesInTheTable() =
         assertTableOf(
             "chemical-plant" to
-                listOf(Coordinate(0, -1), Coordinate(2, -1), Coordinate(0, 3), Coordinate(2, 3)),
+                listOf(Coordinate(0, -1), Coordinate(0, 3), Coordinate(2, -1), Coordinate(2, 3)),
             "cryogenic-plant" to
                 listOf(
-                    Coordinate(0, 5),
-                    Coordinate(2, 5),
-                    Coordinate(4, 5),
                     Coordinate(0, -1),
+                    Coordinate(0, 5),
                     Coordinate(2, -1),
+                    Coordinate(2, 5),
                     Coordinate(4, -1),
+                    Coordinate(4, 5),
                 ),
             "oil-refinery" to
                 listOf(
-                    Coordinate(1, 5),
-                    Coordinate(3, 5),
-                    Coordinate(0, -1),
-                    Coordinate(2, -1),
-                    Coordinate(4, -1),
+                    Coordinate(0, 5),
+                    Coordinate(1, -1),
+                    Coordinate(2, 5),
+                    Coordinate(3, -1),
+                    Coordinate(4, 5),
                 ),
         ) { (identifier, tiles) ->
             assertEquals(tiles, blueprintMachineFluidPorts(identifier).map(FluidPort::tile))

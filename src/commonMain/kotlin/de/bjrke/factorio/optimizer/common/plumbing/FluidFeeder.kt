@@ -9,7 +9,6 @@ import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipe
 import de.bjrke.factorio.optimizer.common.layout.placeMarker
-import de.bjrke.factorio.optimizer.common.layout.placePipe
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
@@ -29,7 +28,6 @@ import de.bjrke.factorio.optimizer.common.planning.LayoutStage
 import de.bjrke.factorio.optimizer.common.planning.LineSide
 import de.bjrke.factorio.optimizer.common.planning.PlacedMachine
 import de.bjrke.factorio.optimizer.common.planning.Row
-import de.bjrke.factorio.optimizer.common.planning.RowFluidLane
 import de.bjrke.factorio.optimizer.common.route.RouteRequest
 import de.bjrke.factorio.optimizer.common.special.placePath
 
@@ -67,9 +65,8 @@ internal class FluidFeeder(
     fun feed() {
         // the row lanes go in first: they are placed before any routed pipe, so a route cannot take
         // a tile of one, and every port a lane reaches is left to the lane
-        val laneModel = RowFluidLane(logistics)
         // a lane that could not reach a port leaves it free, so the loop below routes it
-        LineSide.entries.forEach { side -> lanes.place(laneModel, side, rowPlacer.placedRows) }
+        LineSide.entries.forEach { side -> lanes.place(side, rowPlacer.placedRows) }
         // reserve every fluid's machine edge first, so two fluids never pick touching edges
         val targets = mutableMapOf<Material, MutableList<Coordinate>>()
         for (row in rowPlacer.placedRows) {
@@ -119,12 +116,30 @@ internal class FluidFeeder(
         val row = rowPlacer.producerRow(plan.target) ?: return
         val producer = row.plannedRow.producerOf(plan.target) ?: return
         for (machine in row.machines) {
-            if (machine.plannedRecipe.recipe !== producer.recipe) continue
-            val coordinate = productEdge(row, machine) ?: continue
-            if (!board.isFree(coordinate) || board.isReserved(coordinate)) continue
-            board.placePipe(coordinate, plan.target)
-            fluidPorts += coordinate
+            if (machine.plannedRecipe.recipe === producer.recipe) {
+                connectTargetOutput(row, machine)
+            }
         }
+    }
+
+    /** Routes the target fluid from one producer's output port to a marker beside it. */
+    private fun connectTargetOutput(row: Row, machine: PlacedMachine) {
+        // a lane on the machine's output edge already drains the product
+        if (lanes.portFor(row, machine, plan.target) != null) return
+        val coordinate = productEdge(row, machine) ?: return
+        board.reserve(coordinate, plan.target)
+        board.setEdgeFluid(coordinate, plan.target)
+        fluidPorts += coordinate
+        val source = fluidMarker(plan.target, coordinate)
+        board.reserve(source, plan.target)
+        val segment = fluidRoute(source, EAST, coordinate, plan.target)
+        if (segment == null) {
+            failures +=
+                "${plan.target.name} from ${machine.plannedRecipe.factory.identifier} " +
+                    "(no pipe route)"
+            return
+        }
+        placePath(board, plan.target, listOf(source) + segment)
     }
 
     /** One fluid to lay: its marker tile, the pipe network grown from it and the taps to reach. */
@@ -192,9 +207,6 @@ internal class FluidFeeder(
         return ports.ifEmpty { sideEdges(row, machine) }
     }
 
-    /** Whether [tile] can still take a pipe. */
-    private fun available(tile: Coordinate) = board.isFree(tile) && !board.isReserved(tile)
-
     /**
      * The tile a fluid pipe must occupy to feed the [material] a machine of [row] takes, or null
      * when this machine needs no further port. One port per fluid is the rule: [fed] are the fluids
@@ -217,8 +229,9 @@ internal class FluidFeeder(
             blueprintMachineInputPort(identifier)?.let {
                 Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y)
             }
-        return inlets.firstOrNull { it == preferred && available(it) }
-            ?: inlets.firstOrNull { available(it) }
+        return inlets.firstOrNull {
+            it == preferred && board.isFree(it) && !board.isReserved(it)
+        } ?: inlets.firstOrNull { board.isFree(it) && !board.isReserved(it) }
     }
 
     /**
@@ -237,7 +250,7 @@ internal class FluidFeeder(
         val port =
             blueprintMachineOutputPort(machine.plannedRecipe.factory.identifier) ?: return null
         val tile = Coordinate(machine.left + port.tile.x, row.factoryTop + port.tile.y)
-        return tile.takeIf { available(it) }
+        return tile.takeIf { board.isFree(it) && !board.isReserved(it) }
     }
 
     /** Places a fluid marker and returns the free tile its pipe lane starts on. */

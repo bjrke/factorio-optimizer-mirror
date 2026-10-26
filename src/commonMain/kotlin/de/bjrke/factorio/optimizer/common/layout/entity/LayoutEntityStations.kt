@@ -9,6 +9,8 @@ data class MachineEntity(
     override val area: Area,
     override val name: String,
     val recipe: String,
+    /** The blueprint direction the machine is placed in; north is the prototype's own facing. */
+    val direction: Direction = Direction.NORTH,
 ) : LayoutEntity {
     override val isPowered = true
 

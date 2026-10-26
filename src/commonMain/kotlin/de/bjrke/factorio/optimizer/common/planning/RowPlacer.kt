@@ -13,6 +13,7 @@ import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
+import de.bjrke.factorio.optimizer.common.plan.blueprintMachineDirection
 
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
@@ -103,6 +104,7 @@ internal class RowPlacer(
                     Coordinate(machine.left, row.factoryTop).area(size),
                     plannedRecipe.factory.identifier,
                     plannedRecipe.recipe.name,
+                    blueprintMachineDirection(plannedRecipe.factory.identifier),
                 ),
             )
         }
@@ -157,6 +159,7 @@ internal class RowPlacer(
                     Coordinate(machine.left, row.factoryTop).area(size),
                     machine.plannedRecipe.factory.identifier,
                     machine.plannedRecipe.recipe.name,
+                    blueprintMachineDirection(machine.plannedRecipe.factory.identifier),
                 ),
             )
         }

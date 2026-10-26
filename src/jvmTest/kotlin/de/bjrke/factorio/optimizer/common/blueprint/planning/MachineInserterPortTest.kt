@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdgeFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.planning.PortColumns
 import de.bjrke.factorio.optimizer.common.planning.inserterPortColumns
@@ -28,42 +27,46 @@ class MachineInserterPortTest {
         Factory.entries.filter { blueprintMachineFluidPorts(it.identifier).isNotEmpty() }
 
     @Test
-    fun thePlacerReadsEachPortOnTheEdgeTheTablePutsIt() =
+    fun thePlacerKeepsOnlyThePortsTheRecipeReallyUses() =
         assertTable(machines) { factory ->
             val identifier = factory.identifier
-            val columns = inserterPortColumns(identifier)
-            // the columns the port table itself implies, derived here independently of the helper
-            fun expected(edge: Direction, feeding: PortFlow) =
+            val columns = inserterPortColumns(identifier, inputFluids = 1, outputFluids = 0)
+            // the single water input takes the first horizontal input port, in x order
+            val used =
                 blueprintMachineFluidPorts(identifier)
-                    .filter { port ->
-                        val flow = blueprintMachineEdgeFlow(identifier, port, edge)
-                        blueprintMachineEdge(identifier, port) == edge &&
-                            (flow == feeding || flow == PortFlow.BOTH)
+                    .filter {
+                        blueprintMachineEdge(identifier, it) in
+                            listOf(Direction.NORTH, Direction.SOUTH)
                     }
-                    .mapTo(mutableSetOf()) { port -> port.tile.x }
+                    .filter { it.flow != PortFlow.OUTPUT }
+                    .take(1)
+            fun expected(edge: Direction) =
+                used
+                    .filter { blueprintMachineEdge(identifier, it) == edge }
+                    .mapTo(mutableSetOf()) {
+                        it.tile.x
+                    }
             assertEquals(
-                PortColumns(
-                    expected(Direction.NORTH, PortFlow.INPUT),
-                    expected(Direction.SOUTH, PortFlow.OUTPUT),
-                ),
+                PortColumns(expected(Direction.NORTH), expected(Direction.SOUTH)),
                 columns,
                 "$identifier keeps the wrong inserter columns",
             )
         }
 
     @Test
-    fun theLayoutKeepsEveryTopFeedPortFreeOfInserters() =
+    fun theLayoutKeepsEveryUsedFeedPortFreeOfInserters() =
         assertTable(machines) { factory ->
             val plan = fluidRowPlan(factory)
             val row = FluidRowLayout(plan)
             val machine = row.machines.single()
-            val ports = inserterPortColumns(factory.identifier).top
-            // the input inserters sit on the row one above the machine, on the lane columns
-            val blocked = ports.map { Coordinate(machine.x + it, machine.y - 1) }
+            val columns = inserterPortColumns(factory.identifier, inputFluids = 1, outputFluids = 0)
+            val blocked =
+                (columns.top.map { Coordinate(machine.x + it, machine.y - 1) } +
+                    columns.bottom.map { Coordinate(machine.x + it, machine.y + machine.height) })
             assertEquals(
                 emptyList(),
                 blocked.filter { it in row.inserters },
-                "${factory.identifier} puts an input inserter on its fluid port",
+                "${factory.identifier} puts an inserter on a used fluid port",
             )
         }
 }

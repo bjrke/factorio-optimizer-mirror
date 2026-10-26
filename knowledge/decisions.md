@@ -114,6 +114,31 @@ and ingredients without a `BlueprintPlan`. The port rows stay whatever
 edge keeps the routed feed — the electromagnetic plant is fed through its top
 `BOTH` port instead of its west third-row port.
 
+## 2026-10-26 — Machine ports follow the prototype, and the blueprint turns the machine
+
+**Context.** Four reported layouts put a fluid into a machine's output box or onto the wrong
+port: the cryogenic plant fed petroleum gas from the north although its inputs are on the
+south edge, the electromagnetic plant fed heavy oil into a north output box, and a
+heavy-oil-cracking chemical plant swapped water and heavy oil because the lane sorted fluids
+by name. The chemical plant also lost its long inserter because every port in the table was
+kept free, including the corner the recipe did not use.
+
+**Decision.** `blueprintMachineFluidPorts` is the prototype table (`fluid_boxes`
+`production_type`) **after** the blueprint's rotation, not a row-side interpretation of the
+edge. `blueprintMachineDirection` turns the machines whose prototypes do not fit the row:
+the cryogenic plant, foundry and oil refinery by 180°, the electromagnetic plant by 90°
+clockwise; the others stay at the prototype facing. A lane's side comes from the port the
+recipe assigns to the fluid, in recipe order (never alphabetical), so north can feed and
+south can feed. `inserterPortColumns` reserves only the ports the recipe's fluids use. A
+fluid target whose output port is on a side edge is routed to a marker like an input, instead
+of leaving a bare pipe stub.
+
+**Consequences.** `MachineEntity` carries the blueprint `direction` (north stays the omitted
+default); `RowFluidLane` owns the recipe-order port assignment, and `FluidLaneFeed` and
+`MachineInserterPlacer` read the same assignment. Layouts with a cryogenic plant, foundry,
+oil refinery or electromagnetic plant change geometry; the four reported URLs are pinned in
+`BlueprintFluidPortLayoutTest`.
+
 ## 2026-10-23 — A machine port's side is a `Direction`, not its own enum
 
 **Context.** `blueprintMachineEdge` originally returned a new `MachineEdge` enum

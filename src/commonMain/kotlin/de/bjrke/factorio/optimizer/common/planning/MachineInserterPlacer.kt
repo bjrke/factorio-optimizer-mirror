@@ -11,7 +11,6 @@ import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdgeFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import kotlin.math.abs
 
@@ -46,7 +45,12 @@ internal class MachineInserterPlacer(
     private fun portColumns(machine: PlacedMachine): PortColumns {
         val plannedRecipe = machine.plannedRecipe
         if (!usesFluid(plannedRecipe)) return PortColumns(emptySet(), emptySet())
-        return inserterPortColumns(plannedRecipe.factory.identifier)
+        val recipe = plannedRecipe.recipe
+        return inserterPortColumns(
+            plannedRecipe.factory.identifier,
+            recipe.ingredients.keys.count { logistics.isFluid(it) },
+            recipe.result.keys.count { logistics.isFluid(it) },
+        )
     }
 
     /**
@@ -127,28 +131,32 @@ internal class MachineInserterPlacer(
 }
 
 /**
- * The fluid-port columns of one machine: [PortColumns.top] feeds from the lanes above,
- * [PortColumns.bottom] drains onto the product belt below. Both are read from
- * [blueprintMachineFluidPorts] through [blueprintMachineEdge] and [blueprintMachineEdgeFlow], the
- * same table and reading the fluid feed uses, so the two stages cannot drift apart: a machine whose
- * pipes sit on both the top and the bottom edge only keeps the input side free on top (where the
- * feed takes its port) and the output side free below.
+ * The fluid-port columns of one machine: [PortColumns.top] keeps the ports on the north edge free,
+ * [PortColumns.bottom] those on the south edge. Only the ports the recipe's fluid counts use are
+ * reserved: the chemical plant's unused top corner stays available for a long inserter. The ports
+ * come from the same turned table the fluid feed reads, so the two stages cannot drift apart; a
+ * side port is routed and does not take an inserter column here.
  */
-internal fun inserterPortColumns(identifier: String): PortColumns {
-    val ports = blueprintMachineFluidPorts(identifier)
-    fun columns(edge: Direction, feeding: PortFlow) =
-        ports
-            .filter { port ->
-                // a both-way port sits on both sides and feeds or drains either way
-                val flow = blueprintMachineEdgeFlow(identifier, port, edge)
-                blueprintMachineEdge(identifier, port) == edge &&
-                    (flow == feeding || flow == PortFlow.BOTH)
+internal fun inserterPortColumns(
+    identifier: String,
+    inputFluids: Int,
+    outputFluids: Int,
+): PortColumns {
+    val horizontal =
+        blueprintMachineFluidPorts(identifier).filter {
+            blueprintMachineEdge(identifier, it) in listOf(NORTH, SOUTH)
+        }
+    // the recipe assigns its fluids to the horizontal ports in x order, one port per fluid
+    val used =
+        horizontal.filter { it.flow != PortFlow.OUTPUT }.take(inputFluids) +
+            horizontal.filter { it.flow != PortFlow.INPUT }.take(outputFluids)
+    fun columns(edge: Direction) =
+        used
+            .filter { blueprintMachineEdge(identifier, it) == edge }
+            .mapTo(mutableSetOf()) {
+                it.tile.x
             }
-            .mapTo(mutableSetOf()) { it.tile.x }
-    return PortColumns(
-        columns(NORTH, PortFlow.INPUT),
-        columns(SOUTH, PortFlow.OUTPUT),
-    )
+    return PortColumns(columns(NORTH), columns(SOUTH))
 }
 
 /** The inserter columns to keep free of a machine: the top feed and the bottom drain ports. */
