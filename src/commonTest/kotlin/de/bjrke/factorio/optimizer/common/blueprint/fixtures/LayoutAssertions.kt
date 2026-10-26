@@ -10,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import kotlin.test.assertEquals
 
 /**
@@ -125,11 +124,31 @@ private fun forwardProblem(
 private fun RunTile.plainBelt(direction: Direction, material: Material?) =
     name.endsWith("transport-belt") && this.direction == direction && this.material == material
 
-private fun List<RunTile>.isImportConnector(entity: RunTile) = any {
-    (it.name == "constant-combinator" ||
-        it.name.endsWith("chest") ||
-        it.name.endsWith("inserter")) && it.area.topLeft.manhattanDist(entity.area.topLeft) == 1
+private fun List<RunTile>.isImportConnector(entity: RunTile): Boolean {
+    val direction = entity.direction ?: return false
+    val type = entity.type ?: return false
+    val step = direction.step
+    val sign = if (type == Io.INPUT) 1 else -1
+    return listOf(2, 4).any { distance ->
+        val partner =
+            firstOrNull { it.area.topLeft == entity.area.topLeft + step * distance * sign }
+                ?: return@any false
+        if (
+            !partner.name.endsWith("underground-belt") ||
+                partner.type == type ||
+                partner.direction != direction
+        ) {
+            return@any false
+        }
+        val middle = firstOrNull {
+            it.area.topLeft == entity.area.topLeft + step * (distance / 2) * sign
+        }
+        middle != null && middle.name.isConnectorFurniture()
+    }
 }
+
+private fun String.isConnectorFurniture() =
+    this == "constant-combinator" || endsWith("chest") || endsWith("inserter") || endsWith("loader")
 
 private fun undergroundRange(name: String) =
     when {

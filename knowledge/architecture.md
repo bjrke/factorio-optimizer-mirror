@@ -207,13 +207,17 @@ optimizer's `OptimizationResult`; `blueprint/BlueprintLayout.kt` turns a
 `BlueprintPlan` plus a `LogisticsCalculator` into a `Blueprint`
 (`blueprint/model/Blueprint.kt`). `fromPlaced(plan, logistics, beltEnd)` runs
 `RowLayout` in ordered passes — recipe rows, target output, import preparation,
-fluid feeds (the lane first, then the routed fallback), solid deliveries, the
-fluid target output, trim import prefixes, stretch underground runs, compaction,
-poles (which place their wires) — and returns a `Blueprint` whose `entities` are
-numbered by list position and whose `wires` are the chest-connector wires from
-`blueprint/output/ChestWires.kt`. The order is load-bearing: pipes go before
-belts, the import trim before the underground stretch, compaction before the
-poles.
+fluid lanes and source markers, solid import deliveries, the routed fluid
+fallback, produced solid deliveries, the fluid target output, trim import
+prefixes, stretch underground runs, compaction, poles (which place their wires) —
+and returns a `Blueprint` whose `entities` are numbered by list position and whose
+`wires` are the chest-connector wires from `blueprint/output/ChestWires.kt`. The
+order is load-bearing: fluid lanes go before solid belts, solid imports go before
+produced deliveries, the import trim before the underground stretch, compaction
+before the poles. `layout/validation` also requires every routed underground belt
+end to connect through a same-material belt; compaction rejects a corridor that
+would leave an entrance or exit orphaned (connector ends are recognized by their
+2/4-tile partner pattern).
 `blueprintLayoutDump` (`blueprint/inspection/`) is the one read-back of a finished
 layout (`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's
 `--layout` renders it and
@@ -267,16 +271,18 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 - `plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
-- `plumbing/FluidFeeder.kt` — supplies every fluid. It first lets
+- `plumbing/FluidFeeder.kt` — supplies every fluid. `placeImports()` lets
   `plumbing/FluidLaneFeed.kt` place the lane of every row that gets one (north and
   south side), records the port tiles those lanes reach and leaves them alone, then
-  reserves the remaining machine edges (`fluidEdge`) and grows one routed network
-  per fluid from its marker (`pipeAllowed`, `pipeRoute`). The lane is primary; the
-  A* path is only the fallback for a side port, a machine without a port table or a
-  shaft that found no room. A fluid target whose output port is on a side edge is
-  routed to a marker by the same path (`connectTargetOutput`), not left as a
-  stub. It runs after `RowPlacer.placeAll()`, so the belts and inserters a shaft
-  buries itself under already stand (see `decisions.md`, 2026-10-26).
+  reserves the remaining machine edges (`fluidEdge`) and places every routed
+  source marker, keeping the prepared pipe groups. `routeFluids()` grows those
+  networks afterwards (`pipeAllowed`, `pipeRoute`), after the solid imports. The
+  lane is primary; the A* path is only the fallback for a side port, a machine
+  without a port table or a shaft that found no room. A fluid target whose output
+  port is on a side edge is routed to a marker by the same path
+  (`connectTargetOutput`), not left as a stub. The lane/marker pass runs after
+  `RowPlacer.placeAll()`, so the belts and inserters a shaft buries itself under
+  already stand (see `decisions.md`, 2026-10-26).
 - `routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). A **fluid**
   lane marker moves into that same column; `routing/FluidFeedLinker.kt` joins its
@@ -284,8 +290,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   `plan/ImportExtension.kt`). The marker, link and head are pinned so compaction
   shifts them as one group.
 - `compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
-  underground runs after each corridor and shifts the import pins and bounds.
-  The solid and fluid import markers, their links and the lane head are pinned
+  underground runs after each corridor and shifts the import pins and bounds. A
+  candidate that fails only after the stretch is ruled out by its seam path and the
+  loop tries the next corridor instead of aborting. The solid and fluid import
+  markers, their links and the lane head are pinned
   (`ImportExtension.pinnedImportTiles`, passed to `nextCompaction` as `pinned`),
   so compaction moves them as one column; `fluidPorts` stays read-only (the
   stretcher uses it to avoid swallowing a port).
@@ -297,8 +305,9 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   final geometry.
 - `beltend/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
-- `routing/DeliveryRouter.kt` — orders the solid deliveries and places the
-  target's output connector; `DeliveryPreparation` reserves the sinks and sources,
+- `routing/DeliveryRouter.kt` — routes the solid imports first and the produced
+  deliveries afterwards, and places the target's output connector;
+  `DeliveryPreparation` reserves the sinks and sources (imports first),
   `SplitDeliveryRouter` inserts the branch splitters, `DeliveryNetworks` remembers
   the produced trunks and `BeltRouteRules` is the belt-tile predicate shared by
   both routes. `routing/FluidFeedLinker.kt` links a trimmed fluid marker to its

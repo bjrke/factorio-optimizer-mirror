@@ -7,6 +7,42 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-10-26 — Import belts are routed before produced deliveries
+
+**Decision.** The solid import routes are laid after the fluid lanes and their source markers, and
+before the routed fluid fallback and the produced solid deliveries. All solid sources are still
+reserved and placed up front, imports first, so an early route cannot take a later source or
+marker. An import therefore keeps the direct path along its marker row; a produced trunk tunnels
+under it instead of forcing the import to turn. The target output keeps its existing placement.
+
+**Guardrail.** Do not route produced deliveries before imports, and do not run the solid imports
+before the fluid lanes/markers: the pipe lane geometry is fixed first and only the routed fluid
+fallback yields to an import. A single turn in an import makes `lastStraightEast` collapse, so the
+trimmer cannot move all markers to one column; keep the import's run straight east from its
+connector to the lane. The reported uranium-rounds URL pins the straight uranium-238 import.
+
+**See.** `routing/DeliveryPreparation.kt`, `routing/DeliveryRouter.kt`,
+`routing/ImportTrimmer.kt`, `plumbing/FluidFeeder.kt`, `BlueprintLayoutIntegrationTest`.
+
+## 2026-10-26 — A routed tunnel end connects through a belt
+
+**Decision.** `validateLayout` requires the back tile of every routed underground belt input to
+hold a same-material conveyor (or loader output) facing into the run, and the front tile of every
+routed output to hold a same-material conveyor (or loader input). A tunnel end may not feed another
+tunnel end directly. Connector ends are the exception, and are recognized by their 2-tile label or
+4-tile chest partner with the marker/chest/inserter halfway between the two ends.
+
+**Guardrail.** A corridor may not cut a belt that feeds a tunnel entrance. Evidence: the reported
+uranium-rounds URL, where compaction removed `(39,42) SOUTH` and left the input at `(39,17) SOUTH`
+beside `(39,16) EAST`; the router was correct before compaction. A candidate that only fails after
+stretching is ruled out by its seam path and the pass tries the next corridor — aborting the whole
+pass leaves a long straight belt uncollapsed (the `0.3` uranium variant). Do not weaken the check
+to "the back tile is occupied", and do not exempt a route end merely because some connector is
+adjacent — `(38,17) SOUTH` can sit beside another import's loader.
+
+**See.** `layout/validation/LayoutValidationUnderground.kt`,
+`compaction/CompactionPass.kt`, `BlueprintLayoutAssertions.kt`, `LayoutCompactionTest`.
+
 ## 2026-10-26 — Fluid ports follow the prototype rotation
 
 **Decision.** `blueprintMachineFluidPorts` is the prototype `fluid_boxes`

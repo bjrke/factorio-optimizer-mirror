@@ -16,7 +16,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
 - **A band's fluid port sits in a gap column the fluid feed cannot reach.** A
   direct-feed band interleaves its machines, so a member that takes a fluid has its
   port between two machines instead of on the row's outside edge;
-  `FluidFeeder.feed()` then routes around it and the pipe network splits
+  `FluidFeeder.routeFluids()` then routes around it and the pipe network splits
   ("sulfuric-acid is split over 3
   networks" in `realFluidNetworksAreConnected` for processing-unit and
   utility-science-pack). Recognize it as a band/fluid interaction, not a routing
@@ -89,6 +89,20 @@ An entry belongs here only with evidence, and should say how to recognize it.
   symptom is a fluid row whose far input belt is never unloaded although its near
   belt is; the ASCII shows one `^` per machine instead of two, and the blueprint
   JSON has a `fast-inserter` but no `long-handed-inserter` on that row.
+- **Compaction can orphan a tunnel entrance by removing its feeding turn.** A
+  horizontal corridor removes a plain belt in one column but not the next (the
+  tunnel end is a wall), so the entrance slides onto the row of a belt that used to
+  feed it sideways; the layout still has zero feed failures and the old "back tile
+  is occupied" check passes. Recognize it by a tunnel input whose back tile is
+  empty, a foreign belt, or a belt not facing into the run — and by a route that was
+  valid before compaction. Evidence: the reported uranium-rounds URL had
+  `(38,42) EAST -> (39,42) SOUTH -> (39,43) INPUT SOUTH` before compaction and
+  `(38,17) EAST | (39,17) INPUT SOUTH` after it. `validateLayout` now rejects it;
+  do not weaken that back to an occupancy check, and do not exempt a route end just
+  because some import connector is adjacent (another import's loader can sit
+  beside it). A post-stretch failure must also rule out that seam and continue, not
+  abort the pass: the `0.3` uranium variant kept a 13-tile straight piercing belt
+  until the retry was added.
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom

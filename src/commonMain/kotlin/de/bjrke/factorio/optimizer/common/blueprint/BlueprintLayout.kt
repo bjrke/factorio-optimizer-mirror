@@ -131,11 +131,13 @@ private class RowLayout(
             // prepare every source before routing anything, so a long early route cannot occupy a
             // marker or producer outlet that a later delivery needs
             val deliveries = deliveryRouter.prepareDeliveries()
-            // pipes go first: their underground runs are cheap and belts can tunnel under them.
-            // The rows and their edges are already in place, so a lane can read the belts it passes
-            // under and a port it cannot carry falls back to the routed feed.
-            fluidFeeder.feed()
-            deliveryRouter.routeDeliveries(deliveries)
+            // the fluid lanes and markers go first: their geometry is fixed and a lane can read
+            // the belts it passes under. The solid imports then take their direct path before the
+            // routed fluid fallback and the produced trunks.
+            fluidFeeder.placeImports()
+            deliveryRouter.routeImports(deliveries.imports)
+            fluidFeeder.routeFluids()
+            deliveryRouter.routeProduced(deliveries.produced)
             fluidFeeder.placeTargetOutput()
             // the markers may move now that the routes are fixed; then the layout is compacted
             // before electricity, so poles and wires are placed on the final geometry

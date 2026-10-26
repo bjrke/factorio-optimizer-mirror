@@ -33,9 +33,10 @@ private const val MAX_ROUTE_STARTS = 8
  * table puts on the row's north (or south) edge gets one pipe **lane** on a row of its own beyond
  * the belts, sourced inline at its west end and reaching every port through an underground shaft;
  * that lane is never routed. A machine whose port is on a side edge, or that has no port table,
- * still takes the point-to-point route from a marker. Pipes run before the deliveries, so their
- * cheap underground runs are in place when the belts route. The machine ports a lane carries are
- * shared with the underground stretcher through [fluidPorts].
+ * still takes the point-to-point route from a marker. The lanes and their markers go in before the
+ * solid imports; the routed fallback follows them, so a solid import keeps the direct path and the
+ * pipe route goes around it. The machine ports a lane carries are shared with the underground
+ * stretcher through [fluidPorts].
  */
 internal class FluidFeeder(
     stage: LayoutStage,
@@ -52,8 +53,14 @@ internal class FluidFeeder(
     private val router = stage.router
     private val lanes = FluidLaneFeed(board, imports, beltEnd, logistics)
 
-    /** Reserves every fluid machine edge, then routes each fluid from its marker nearest-first. */
-    fun feed() {
+    /** The routed fallback prepared by [placeImports], routed by [routeFluids]. */
+    private var groups: List<PipeGroup> = emptyList()
+
+    /**
+     * Places every fluid lane and source marker and reserves the machine edges a lane cannot reach.
+     * Routing those groups is left to [routeFluids], after the solid imports are laid.
+     */
+    fun placeImports() {
         // the row lanes go in first: they are placed before any routed pipe, so a route cannot take
         // a tile of one, and every port a lane reaches is left to the lane
         // a lane that could not reach a port leaves it free, so the loop below routes it
@@ -89,7 +96,7 @@ internal class FluidFeeder(
             }
         }
         // prepare a source per fluid up front, then route the groups nearest-first
-        val groups =
+        groups =
             targets.entries
                 .sortedBy { it.key.name }
                 .map { (material, sinks) ->
@@ -98,7 +105,11 @@ internal class FluidFeeder(
                     PipeGroup(material, source, sinks)
                 }
                 .sortedBy { it.nearestDistance }
-        for (group in groups) routePipeGroup(group)
+    }
+
+    /** Routes the fallback groups [placeImports] prepared, nearest-first. */
+    fun routeFluids() {
+        groups.forEach(::routePipeGroup)
     }
 
     /** Connects a fluid output pipe to each target machine, so its product has somewhere to go. */
@@ -195,7 +206,12 @@ internal class FluidFeeder(
                 }
                 .map { Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y) }
                 .distinct()
-        return ports.ifEmpty { sideEdges(row, machine) }
+        // a machine without a port table takes fluid on either side edge
+        return ports.ifEmpty {
+            listOf(machine.left - 1, machine.left + row.width).flatMap { x ->
+                (row.factoryTop until row.factoryTop + row.height).map { y -> Coordinate(x, y) }
+            }
+        }
     }
 
     /**
@@ -224,14 +240,6 @@ internal class FluidFeeder(
             it == preferred && board.isFree(it) && !board.isReserved(it)
         } ?: inlets.firstOrNull { board.isFree(it) && !board.isReserved(it) }
     }
-
-    /**
-     * The left then right edge of a machine without a port table, where any tile can take fluid.
-     */
-    private fun sideEdges(row: Row, machine: PlacedMachine) =
-        listOf(machine.left - 1, machine.left + row.width).flatMap { x ->
-            (row.factoryTop until row.factoryTop + row.height).map { y -> Coordinate(x, y) }
-        }
 
     /**
      * The tile a fluid product leaves one machine of [row] through: the machine's output port, or

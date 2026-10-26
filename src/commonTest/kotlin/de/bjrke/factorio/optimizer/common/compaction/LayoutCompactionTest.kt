@@ -200,16 +200,53 @@ class LayoutCompactionTest {
             UndergroundCase("too short", 1, 0, valid = false),
             UndergroundCase("too far", 12, 0, valid = false),
         ) { case ->
-            val entities =
-                listOf(
-                    underground(0, 0, EAST, Io.INPUT),
-                    underground(case.x, case.y, EAST, Io.OUTPUT),
-                )
+            val entities = buildList {
+                add(belt(-1, 0))
+                add(underground(0, 0, EAST, Io.INPUT))
+                add(underground(case.x, case.y, EAST, Io.OUTPUT))
+                add(belt(case.x + 1, case.y))
+            }
             val errors = validateLayout(entities)
             if (case.valid) {
                 assertEquals(emptyList(), errors)
             } else {
                 assertContains(errors.joinToString("\n"), "unpaired", message = errors.toString())
+            }
+        }
+
+    private data class TunnelFeedCase(
+        val label: String,
+        val back: LayoutEntity?,
+        val valid: Boolean,
+    )
+
+    @Test
+    fun aRoutedTunnelEntranceNeedsABeltHeadingIntoIt() =
+        assertTableOf(
+            TunnelFeedCase("straight belt", belt(0, 0, direction = SOUTH), valid = true),
+            TunnelFeedCase("sideways belt", belt(0, 0, direction = EAST), valid = false),
+            TunnelFeedCase("no belt", null, valid = false),
+            TunnelFeedCase(
+                "tunnel exit",
+                underground(0, 0, SOUTH, Io.OUTPUT),
+                valid = false,
+            ),
+        ) { case ->
+            val entities = buildList {
+                case.back?.let(::add)
+                add(underground(0, 1, SOUTH, Io.INPUT))
+                add(underground(0, 4, SOUTH, Io.OUTPUT))
+                add(belt(0, 5, direction = SOUTH))
+            }
+            val errors = validateLayout(entities)
+            if (case.valid) {
+                assertEquals(emptyList(), errors)
+            } else {
+                assertContains(
+                    errors.joinToString("\n"),
+                    "is not fed straight",
+                    message = errors.toString(),
+                )
             }
         }
 

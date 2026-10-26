@@ -28,12 +28,12 @@ import kotlin.test.assertEquals
 class BlueprintLayoutSnapshotTest {
 
     @Test
-    fun baseLayoutIsStable() = assertSignature("55cf00cf97b9bb12", fromPlaced(basePlan, logistics))
+    fun baseLayoutIsStable() = assertSignature("4ec1973fdde19118", fromPlaced(basePlan, logistics))
 
     @Test
     fun chestBeltEndIsStable() =
         assertSignature(
-            "164ef3133fd3f506",
+            "c79917e81314fd58",
             fromPlaced(basePlan, logistics, beltEnd = BeltEnd.BUFFER_CHEST),
         )
 

@@ -2,10 +2,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import kotlin.test.ExperimentalKotlinTestApi
 import kotlin.test.assertEquals
@@ -60,47 +58,6 @@ fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
     val doubled = sources.filterValues { it.size > 1 }
 
     assertEquals(emptyMap(), doubled, "material put on a belt by more than one planned recipe")
-}
-
-/** An import connector: a label, chest or inserter sits right next to the buried run. */
-fun List<BlueprintEntity>.isImportConnector(entity: BlueprintEntity) = any {
-    (it.name == "constant-combinator" ||
-        it.name.endsWith("chest") ||
-        it.name.endsWith("inserter")) && it.area.topLeft.manhattanDist(entity.area.topLeft) == 1
-}
-
-/**
- * Every underground belt must pair up (input with the output up to nine tiles ahead) and lead into
- * something: an exit is useless when the tile it faces is empty, and an entry is useless when
- * nothing feeds its back.
- */
-fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
-    val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
-
-    val underground = entities.filter { it.name.endsWith("underground-belt") }
-    val inputs = underground.filter { it.type == Io.INPUT }.map { it.area.topLeft }.toSet()
-    val outputs = underground.filter { it.type == Io.OUTPUT }.map { it.area.topLeft }.toSet()
-    val problems = mutableListOf<String>()
-    for (entity in underground) {
-        if (entities.isImportConnector(entity)) continue
-        val step = (entity.direction ?: NORTH).step
-        val topLeft = entity.area.topLeft
-        if (entity.type == Io.INPUT) {
-            val exit = (1..9).any { outputs.contains(topLeft + step * it) }
-            if (!exit) problems += "input $topLeft has no exit ahead"
-            if ((topLeft - step) !in occupied) problems += "input $topLeft is not fed"
-            // an exit empties onto a surface belt; an input right there cannot take it
-            if ((topLeft - step) in outputs)
-                problems += "input $topLeft is fed by an exit, not a belt"
-        } else {
-            val entry = (1..9).any { inputs.contains(topLeft - step * it) }
-            if (!entry) problems += "exit $topLeft has no entry behind"
-            if ((topLeft + step) !in occupied) problems += "exit $topLeft leads nowhere"
-            // an exit feeds a surface belt, never the entrance of the next run directly
-            if ((topLeft + step) in inputs) problems += "exit $topLeft leads straight into an input"
-        }
-    }
-    assertEquals(emptyList(), problems)
 }
 
 /**

@@ -26,15 +26,25 @@ internal class CompactionPass(
 ) {
 
     fun compact() {
+        // a corridor can look valid before stretching and break a tunnel feed afterwards; rule its
+        // tiles out of its own orientation and try the next candidate instead of stopping the pass
+        val rejectedVertical = mutableSetOf<Coordinate>()
+        val rejectedHorizontal = mutableSetOf<Coordinate>()
         repeat(MAX_COMPACTION_PASSES) {
             val vertical =
                 nextCompaction(
                     board.placed.toList(),
                     SeamOrientation.VERTICAL,
+                    forbidden = rejectedVertical,
                     pinned = imports.pinnedImportTiles,
                     westBound = imports.compactionWestBound,
                 )
-            val horizontal = nextCompaction(board.placed.toList(), SeamOrientation.HORIZONTAL)
+            val horizontal =
+                nextCompaction(
+                    board.placed.toList(),
+                    SeamOrientation.HORIZONTAL,
+                    forbidden = rejectedHorizontal,
+                )
             val chosen =
                 when {
                     vertical == null -> horizontal
@@ -48,7 +58,11 @@ internal class CompactionPass(
             UndergroundStretcher(board, fluidPorts).stretchAll()
             if (validateLayout(board.placed).isNotEmpty()) {
                 board.replaceAll(saved)
-                return
+                val rejected =
+                    if (chosen.orientation == SeamOrientation.VERTICAL) rejectedVertical
+                    else rejectedHorizontal
+                rejected += chosen.seamTiles
+                return@repeat
             }
             // the whole import group moved together, so its pins and the no-pole zone move with it
             if (chosen.pinnedShift != 0) {

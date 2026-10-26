@@ -27,8 +27,8 @@ private const val MARKER_SEARCH_COLUMNS = 12
  * producer trunk a material runs on and the splitters that branch off it, and the import
  * connectors. A produced material's trunk reaches its farthest consumer and the nearer consumers
  * split off it; an import gets one belt connector per sink, so unrelated consumers are not tied to
- * one long belt. The pipe routes belong to [FluidFeeder], which runs after the sources are prepared
- * and before they are routed.
+ * one long belt. The fluid lanes and markers belong to [FluidFeeder], whose routed fallback runs
+ * between the import and the produced deliveries.
  */
 internal class DeliveryRouter(
     stage: LayoutStage,
@@ -55,14 +55,22 @@ internal class DeliveryRouter(
      * reserved first, then the sources are placed, so a long early route cannot occupy a marker or
      * producer outlet that a later delivery needs.
      */
-    fun prepareDeliveries(): List<Delivery> = preparation.prepareDeliveries()
+    fun prepareDeliveries(): SolidDeliveries = preparation.prepareDeliveries()
 
     /**
-     * Routes every delivery, shortest first so a long belt can go around a confined one. A produced
-     * material's split-offs only enter the queue once its trunk exists, but then compete with the
-     * remaining deliveries.
+     * Routes the imported inputs before any produced delivery. An import gets the direct path along
+     * its marker row; a produced trunk then tunnels under it instead of forcing the import to turn.
      */
-    fun routeDeliveries(deliveries: List<Delivery>) {
+    fun routeImports(deliveries: List<Delivery>) = routeGroup(deliveries)
+
+    /**
+     * Routes the produced deliveries, shortest first so a long belt can go around a confined one. A
+     * produced material's split-offs only enter the queue once its trunk exists, but then compete
+     * with the remaining deliveries.
+     */
+    fun routeProduced(deliveries: List<Delivery>) = routeGroup(deliveries)
+
+    private fun routeGroup(deliveries: List<Delivery>) {
         val pending = deliveries.toMutableList()
         while (pending.isNotEmpty()) {
             val next = pending.minBy { it.distance }

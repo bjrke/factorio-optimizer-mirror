@@ -40,6 +40,8 @@ internal data class CompactionResult(
     val width: Int,
     val orientation: SeamOrientation,
     val pinnedShift: Int,
+    /** The seam path tiles, so a rejected candidate can be avoided next time. */
+    val seamTiles: Set<Coordinate>,
 )
 
 /** How many different seams one call tries before it gives up. */
@@ -89,7 +91,15 @@ internal fun nextCompaction(
             val (candidate, pinnedShift) =
                 CorridorShift(index, corridor, orientation, pinned, width).shift() ?: break
             if (shrinks(index, candidate, orientation) && validateLayout(candidate).isEmpty()) {
-                return CompactionResult(candidate, width, orientation, pinnedShift)
+                return CompactionResult(
+                    candidate,
+                    width,
+                    orientation,
+                    pinnedShift,
+                    seam.path.mapTo(mutableSetOf()) { (primary, secondary) ->
+                        tileAt(orientation, primary, secondary)
+                    },
+                )
             }
             width--
         }

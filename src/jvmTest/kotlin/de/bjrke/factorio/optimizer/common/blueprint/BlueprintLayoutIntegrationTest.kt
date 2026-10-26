@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertNoMergingBelt
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertNoOverlap
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertSplittersOnlyFeedSurface
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertTunnelEndsAreFed
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.entitiesFor
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.feedFailuresFor
@@ -15,10 +16,12 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.transportMaterialsFor
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.test.assertAll
@@ -208,6 +211,92 @@ class BlueprintLayoutIntegrationTest {
                     "only the band's cable feed may need an underground belt",
                 )
             },
+        )
+    }
+
+    /**
+     * The imported uranium-238 must reach its lane directly: no turn and no tunnel. Routing imports
+     * before the produced deliveries makes this the default, and the trimmer can then move all
+     * markers to one column close to the factory edge.
+     */
+    @Test
+    fun reportedUraniumRoundsUrlKeepsItsImportedInputStraight() {
+        val (plan, logistics, beltEnd) =
+            planFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
+        val dump = blueprintLayoutDump(plan, logistics, beltEnd)
+        val uranium = Material("uranium-238")
+        val belts = dump.entities.filterIsInstance<BeltEntity>().filter { it.material == uranium }
+        val tunnels =
+            dump.entities.filterIsInstance<UndergroundBeltEntity>().filter {
+                it.material == uranium
+            }
+        val inputChests =
+            dump.entities.filterIsInstance<InfinityChestEntity>().filter {
+                it.settings.item != null
+            }
+        val machineLeft =
+            dump.entities.filterIsInstance<MachineEntity>().minOf {
+                it.area.topLeft.x
+            }
+        val uraniumChest = inputChests.single { it.settings.item == uranium }
+
+        assertAll(
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), tunnels, "the uranium-238 import tunnels") },
+            { assertTrue(belts.isNotEmpty(), "no uranium-238 belt was placed") },
+            {
+                assertEquals(
+                    1,
+                    belts.map { it.area.topLeft.y }.distinct().size,
+                    "the uranium-238 import is not one straight row",
+                )
+            },
+            { assertTrue(belts.all { it.direction == EAST }, "the uranium-238 import turns") },
+            {
+                assertEquals(
+                    1,
+                    inputChests.map { it.area.topLeft.x }.distinct().size,
+                    "the import markers do not share one column",
+                )
+            },
+            {
+                assertTrue(
+                    machineLeft - uraniumChest.area.topLeft.x <= 6,
+                    "the import prefix was not trimmed",
+                )
+            },
+        )
+    }
+
+    /**
+     * The long straight piercing-rounds run must not survive compaction: a corridor that only fails
+     * after stretching is ruled out by its seam and the pass continues with the next one.
+     */
+    @Test
+    fun reportedUraniumRoundsUrlIsFullyCompactedAndFed() {
+        val (plan, logistics, beltEnd) =
+            planFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
+        val dump = blueprintLayoutDump(plan, logistics, beltEnd)
+        val entities = fromPlaced(plan, logistics, beltEnd).entities
+        val width =
+            dump.entities.maxOf { it.area.bottomRight.x } -
+                dump.entities.minOf { it.area.topLeft.x } + 1
+        val height =
+            dump.entities.maxOf { it.area.bottomRight.y } -
+                dump.entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertTrue(width <= 20, "layout is still $width tiles wide") },
+            {
+                assertTrue(
+                    height <= 32,
+                    "the long piercing-rounds belt was not collapsed: layout is $height rows tall",
+                )
+            },
+            { assertConnectedUndergroundBelts(entities) },
+            { assertTunnelEndsAreFed(entities) },
         )
     }
 

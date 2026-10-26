@@ -26,7 +26,7 @@ class BlueprintFluidIntegrationTest {
             // only the fluid checks here: utility-science-pack has a pre-existing belt side-load
             val plumbing =
                 validateLayout(dump.entities).filter {
-                    it.contains("fluid") || it.contains("underground")
+                    it.contains("fluid") || it.contains("unpaired")
                 }
             assertEquals(emptyList(), plumbing)
         }

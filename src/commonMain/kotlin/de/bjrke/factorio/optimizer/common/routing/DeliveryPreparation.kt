@@ -53,6 +53,12 @@ internal class Delivery(
 }
 
 /**
+ * The prepared solid routes, split by priority: [imports] feed inputs the plan does not produce and
+ * are routed before the [produced] trunks.
+ */
+internal class SolidDeliveries(val imports: List<Delivery>, val produced: List<Delivery>)
+
+/**
  * Prepares the solid deliveries: the sink of every row input and the source that feeds it. Every
  * source is placed up front, so a long early route cannot occupy a marker or producer outlet that a
  * later delivery needs. Routing the prepared deliveries belongs to [DeliveryRouter].
@@ -67,11 +73,11 @@ internal class DeliveryPreparation(
     private val rowPlacer = stage.rowPlacer
 
     /**
-     * Places every solid source up front and returns the deliveries to route. The sinks' feeds are
-     * reserved first, then the sources are placed, so a long early route cannot occupy a marker or
-     * producer outlet that a later delivery needs.
+     * Places every solid source up front and returns the deliveries to route, imports first. The
+     * sinks' feeds are reserved first, then the sources are placed, so a long early route cannot
+     * occupy a marker or producer outlet that a later delivery needs.
      */
-    fun prepareDeliveries(): List<Delivery> {
+    fun prepareDeliveries(): SolidDeliveries {
         val sinks = allSolidSinks()
         for ((material, _, sink) in sinks) reserve(sink.feed, material)
         return prepareSolidDeliveries(sinks)
@@ -107,36 +113,44 @@ internal class DeliveryPreparation(
     }
 
     /**
-     * Turns the solid sinks into deliveries and places every source up front. An intermediate gets
-     * one trunk from its producer to the farthest consumer; the nearer consumers split off that
-     * belt later. An import gets one belt connector per sink, so unrelated consumers are not tied
-     * to one long shared belt.
+     * Turns the solid sinks into deliveries and places every source up front. Imports are prepared
+     * first: their markers claim the free rows and the trimmer later moves them to one column. An
+     * intermediate then gets one trunk from its producer to the farthest consumer; the nearer
+     * consumers split off that belt later. An import gets one belt connector per sink, so unrelated
+     * consumers are not tied to one long shared belt.
      */
-    private fun prepareSolidDeliveries(sinks: List<Triple<Material, Row, Sink>>): List<Delivery> {
-        val grouped = sinks.groupBy { it.first }
-        val deliveries = mutableListOf<Delivery>()
-        for ((material, list) in grouped.entries.sortedBy { it.key.name }) {
-            val producerRow = rowPlacer.producerRow(material)
-            if (producerRow != null) {
-                val start = outputStart(producerRow, material)
-                val distinctSinks = list.map { it.third }.distinctBy { it.feed }
-                // the trunk reaches the farthest consumer, so it passes the nearer ones on the way
-                val sorted = distinctSinks.sortedByDescending { start.manhattanDist(it.feed) }
-                deliveries +=
-                    Delivery(
-                        material = material,
-                        start = start,
-                        direction = EAST,
-                        sink = sorted.first(),
-                        followUps = sorted.drop(1),
-                    )
-            } else {
-                for ((_, _, sink) in list) {
-                    deliveries += Delivery(material, importSource(material, sink), EAST, sink)
-                }
-            }
+    private fun prepareSolidDeliveries(sinks: List<Triple<Material, Row, Sink>>): SolidDeliveries {
+        val grouped = sinks.groupBy { it.first }.entries.sortedBy { it.key.name }
+        val imports = grouped.filter { rowPlacer.producerRow(it.key) == null }
+        val produced = grouped.filter { rowPlacer.producerRow(it.key) != null }
+        return SolidDeliveries(importDeliveries(imports), producedDeliveries(produced))
+    }
+
+    private fun importDeliveries(
+        imports: List<Map.Entry<Material, List<Triple<Material, Row, Sink>>>>,
+    ) = imports.flatMap { (material, list) ->
+        list.map { (_, _, sink) ->
+            Delivery(material, importSource(material, sink), EAST, sink)
         }
-        return deliveries
+    }
+
+    private fun producedDeliveries(
+        produced: List<Map.Entry<Material, List<Triple<Material, Row, Sink>>>>,
+    ) = produced.flatMap { (material, list) ->
+        val producerRow = rowPlacer.producerRow(material) ?: return@flatMap emptyList()
+        val start = outputStart(producerRow, material)
+        val distinctSinks = list.map { it.third }.distinctBy { it.feed }
+        // the trunk reaches the farthest consumer, so it passes the nearer ones on the way
+        val sorted = distinctSinks.sortedByDescending { start.manhattanDist(it.feed) }
+        listOf(
+            Delivery(
+                material = material,
+                start = start,
+                direction = EAST,
+                sink = sorted.first(),
+                followUps = sorted.drop(1),
+            ),
+        )
     }
 
     /** The first free belt tile east of [row]'s output lane, reserved as a source. */
