@@ -274,9 +274,9 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   per fluid from its marker (`pipeAllowed`, `pipeRoute`). The lane is primary; the
   A* path is only the fallback for a side port, a machine without a port table or a
   shaft that found no room. A fluid target whose output port is on a side edge is
-  routed to a marker by the same path (`connectTargetOutput`), not left as a stub. It runs after `RowPlacer.placeAll()`, so the belts and
-  inserters a shaft buries itself under already stand (see `decisions.md`,
-  2026-10-23).
+  routed to a marker by the same path (`connectTargetOutput`), not left as a
+  stub. It runs after `RowPlacer.placeAll()`, so the belts and inserters a shaft
+  buries itself under already stand (see `decisions.md`, 2026-10-26).
 - `routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). A **fluid**
   lane marker moves into that same column; `routing/FluidFeedLinker.kt` joins its

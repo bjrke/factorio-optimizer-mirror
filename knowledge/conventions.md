@@ -45,6 +45,10 @@ up.
   A package that outgrows 10 files is cut along its responsibilities (15 is the
   ceiling); review keeps that budget, no task does. There is no line budget; class
   length is capped by `LargeClass` (500).
+- Model a compass side as `Direction`; add a dedicated enum only when it narrows
+  the domain (`LineSide` keeps a lane to two sides and makes its `when`
+  exhaustive) or carries semantics `Direction` cannot express (`PortFlow`,
+  `BeltEnd`). A 1:1 rename adds a translation at every caller.
 - Split by responsibility, not by line count. The layout shows the target shape:
   `LayoutBoard` owns the mutable grid/placement kernel, `LayoutRouter` the A*,
   `UndergroundStretcher` the run growth, and `BlueprintLayout` the ordered

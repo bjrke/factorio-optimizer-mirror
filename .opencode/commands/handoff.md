@@ -6,6 +6,13 @@ Before the context is compacted, or the session is handed off or paused:
 
 1. Promote any reusable, stable, verified finding into `knowledge/` (see
    `knowledge/conventions.md`) and remove contradictions.
+   - When you touch `decisions.md`: prepend, keep the entry under ~20 lines, and
+     state only the current decision and guardrail — mechanics belong in
+     `architecture.md`/`pitfalls.md`, pre-change history in the commit message.
+   - Rewrite or delete the entry a change supersedes; never add a "supersedes"
+     note.
+   - Run `grep -nE 'Supersedes|is gone|first attempt|originally|had grown|shrank'`
+     on `knowledge/decisions.md` and resolve every hit.
 2. State the following in your reply, concisely, so the compaction summary keeps
    it:
    - the branch and objective;
