@@ -58,17 +58,17 @@ data class PipeEntity(
 }
 
 /**
- * A cheat fluid source: an infinity pipe that keeps [settings]' fluid at 100%. It connects to pipes
- * on any side just like a plain pipe, so it stands in for a fluid import marker.
+ * A cheat fluid marker: an infinity pipe carrying [material]. With [settings] it keeps that fluid
+ * at 100% (a test source); without settings it has no filter and deletes whatever reaches it (a
+ * test sink). It connects to pipes on any side just like a plain pipe, so it stands in for a fluid
+ * marker.
  */
 data class InfinityPipeEntity(
     override val area: Area,
     override val name: String,
-    val settings: InfinityPipeSettings,
+    override val material: Material,
+    val settings: InfinityPipeSettings? = null,
 ) : Plumbing {
-    override val material: Material
-        get() = settings.fluid
-
     override fun withArea(area: Area) = copy(area = area)
 }
 

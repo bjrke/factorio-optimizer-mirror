@@ -140,6 +140,7 @@ class LayoutEntityTest {
             InfinityPipeEntity(
                 areaTile(14, 16),
                 "infinity-pipe",
+                water,
                 InfinityPipeSettings(water, temperature = 15),
             ) to
                 BlueprintEntity(
@@ -156,4 +157,14 @@ class LayoutEntityTest {
         ) { (entity, expected) ->
             assertEquals(expected, entity.toBlueprintEntity())
         }
+
+    @Test
+    fun anInfinityPipeSinkMapsToABlueprintWithoutSettings() {
+        val entity = InfinityPipeEntity(areaTile(15, 16), "infinity-pipe", water)
+
+        assertEquals(
+            BlueprintEntity("infinity-pipe", areaTile(15, 16)),
+            entity.toBlueprintEntity(),
+        )
+    }
 }

@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipe
+import de.bjrke.factorio.optimizer.common.layout.placeInfinityPipeSink
 import de.bjrke.factorio.optimizer.common.layout.placeMarker
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -130,7 +131,7 @@ internal class FluidFeeder(
         board.reserve(coordinate, plan.target)
         board.setEdgeFluid(coordinate, plan.target)
         fluidPorts += coordinate
-        val source = fluidMarker(plan.target, coordinate)
+        val source = fluidMarker(plan.target, coordinate, sink = true)
         board.reserve(source, plan.target)
         val segment = fluidRoute(source, EAST, coordinate, plan.target)
         if (segment == null) {
@@ -253,8 +254,16 @@ internal class FluidFeeder(
         return tile.takeIf { board.isFree(it) && !board.isReserved(it) }
     }
 
-    /** Places a fluid marker and returns the free tile its pipe lane starts on. */
-    private fun fluidMarker(material: Material, target: Coordinate): Coordinate {
+    /**
+     * Places a fluid marker and returns the free tile its pipe lane starts on. A [sink] marker
+     * takes the fluid away instead of supplying it: its cheat pipe is unfiltered and deletes what
+     * enters.
+     */
+    private fun fluidMarker(
+        material: Material,
+        target: Coordinate,
+        sink: Boolean = false,
+    ): Coordinate {
         // The connector sits just west of the sink, so the fluid only runs a short lane. A solid
         // import keeps a label at the far west and is trimmed after routing; a fluid route is not
         // straight, so its marker is placed near the machine from the start instead.
@@ -271,9 +280,12 @@ internal class FluidFeeder(
                 !(firstColumn..source.x).all { board.canPlacePipes(Coordinate(it, row), material) }
         ) row++
         imports.markerRows += row
-        // the cheat variant replaces the label with a single infinity pipe that supplies the fluid
+        // the cheat variant replaces the label with a single infinity pipe: a filter supplies the
+        // fluid, while an unfiltered pipe deletes it, which is what a sink needs
         if (beltEnd == BeltEnd.INFINITY_CHEST) {
-            board.placeInfinityPipe(Coordinate(source.x - 1, row), material)
+            val pipe = Coordinate(source.x - 1, row)
+            if (sink) board.placeInfinityPipeSink(pipe, material)
+            else board.placeInfinityPipe(pipe, material)
             imports.compactionWestBound = maxOf(imports.compactionWestBound, target.x)
             return Coordinate(source.x, row)
         }

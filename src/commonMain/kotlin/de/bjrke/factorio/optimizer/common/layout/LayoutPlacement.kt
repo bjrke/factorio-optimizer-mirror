@@ -112,9 +112,18 @@ internal fun LayoutBoard.placeInfinityPipe(coordinate: Coordinate, fluid: Materi
         InfinityPipeEntity(
             coordinate.area(),
             names.infinityPipe,
+            fluid,
             InfinityPipeSettings(fluid, temperatureOf(fluid)),
         ),
     )
+}
+
+/**
+ * Places an infinity pipe (always one tile) with no filter, so it deletes whatever fluid reaches
+ * it. The blueprint writes no `infinity_settings` for it, matching the game's unfiltered sink pipe.
+ */
+internal fun LayoutBoard.placeInfinityPipeSink(coordinate: Coordinate, fluid: Material) {
+    place(InfinityPipeEntity(coordinate.area(), names.infinityPipe, fluid))
 }
 
 /** Places a medium electric pole (always one tile). */

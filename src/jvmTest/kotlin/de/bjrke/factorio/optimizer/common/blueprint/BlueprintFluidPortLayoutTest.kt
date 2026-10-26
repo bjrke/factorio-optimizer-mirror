@@ -142,7 +142,7 @@ class BlueprintFluidPortLayoutTest {
         val outputRow = machine.area.topLeft.y + 2
         val sources =
             layout.entities.filterIsInstance<InfinityPipeEntity>().filter {
-                it.settings.fluid == Material("electrolyte") &&
+                it.material == Material("electrolyte") &&
                     it.area.topLeft.y == outputRow &&
                     it.area.topLeft.x < machine.area.topLeft.x
             }

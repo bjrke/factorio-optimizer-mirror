@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
@@ -262,6 +263,37 @@ class BlueprintFluidLayoutTest {
         assertAll(
             { assertContains(names, "pipe") },
             { assertContainsNot(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
+        )
+    }
+
+    @Test
+    fun theCheatFluidOutputIsAnUnfilteredInfinityPipe() {
+        val crack =
+            recipe(
+                "lubricant",
+                Category.CHEMISTRY,
+                mapOf(lubricant to 1.0),
+                mapOf(water to 1.0),
+            )
+        val fluidPlan =
+            BlueprintPlan(
+                target = lubricant,
+                rows =
+                    listOf(PlannedRow.copies(planned(crack, lubricant, Factory.CHEMICAL_PLANT), 1)),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "lubricant",
+            )
+        val pipes =
+            blueprintLayoutDump(fluidPlan, logistics, BeltEnd.INFINITY_CHEST)
+                .entities
+                .filterIsInstance<InfinityPipeEntity>()
+
+        assertAll(
+            // the water import is a filtered source, the lubricant output an unfiltered sink
+            { assertEquals(2, pipes.size) },
+            { assertEquals(setOf(water), pipes.mapNotNull { it.settings?.fluid }.toSet()) },
+            { assertEquals(lubricant, pipes.single { it.settings == null }.material) },
         )
     }
 

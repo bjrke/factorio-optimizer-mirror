@@ -91,6 +91,10 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
             ?.let { Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y) }
     }
 
+    /** Whether [material] is an output of [row]'s recipe, so its lane drains instead of feeds. */
+    fun isOutput(row: Row, material: Material): Boolean =
+        row.machines.firstOrNull()?.let { material in outputMaterials(it) } == true
+
     /** The fluid inputs of [machine]'s recipe, in recipe order. */
     private fun inputMaterials(machine: PlacedMachine): List<Material> =
         machine.plannedRecipe.recipe.ingredients.keys.filter { logistics.isFluid(it) }

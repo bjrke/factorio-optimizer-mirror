@@ -332,8 +332,10 @@ always keeps the combinator/pipe label. `blueprint/json/BlueprintJson.kt` writes
 blueprint envelope (`label`, `icons`, `entities`, top-level `wires`);
 `blueprint/json/BlueprintEntityJson.kt` writes each entity's position and optional
 `request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
-`infinity_settings` and `neighbours` fields. See `decisions.md` (2026-10-18) for
-the geometry and `pitfalls.md` for the wire and pole traps.
+`infinity_settings` and `neighbours` fields. An infinity pipe writes
+`infinity_settings` only as a source; a sink is unfiltered and writes none, so
+the game deletes whatever reaches it. See `decisions.md` (2026-10-18) for the
+geometry and `pitfalls.md` for the wire and pole traps.
 
 The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintImportTest`, `BlueprintFluidLayoutTest`, `BlueprintBandTest`,
