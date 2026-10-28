@@ -283,12 +283,12 @@ class BlueprintPlanTest {
     @Test
     fun machineFootprintsMatchThePrototypes() =
         assertTableOf(
-            "recycler" to Dimension(4, 2),
-            "electromagnetic-plant" to Dimension(4, 4),
-            "foundry" to Dimension(5, 5),
-            "assembling-machine-3" to Dimension(3, 3),
-            "stone-furnace" to Dimension(2, 2),
-        ) { (identifier, expected) ->
-            assertEquals(expected, blueprintMachineFootprint(identifier))
+            Factory.RECYCLER to Dimension(4, 2),
+            Factory.ELECTROMAGNETIC_PLANT to Dimension(4, 4),
+            Factory.FOUNDRY to Dimension(5, 5),
+            Factory.ASSEMBLING_MACHINE_3 to Dimension(3, 3),
+            Factory.STONE_FURNACE to Dimension(2, 2),
+        ) { (factory, expected) ->
+            assertEquals(expected, blueprintMachineFootprint(factory))
         }
 }

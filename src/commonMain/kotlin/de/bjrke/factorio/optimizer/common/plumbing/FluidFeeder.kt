@@ -208,14 +208,14 @@ internal class FluidFeeder(
      * back to its left then right edge, which flows both ways.
      */
     private fun inletTiles(row: Row, machine: PlacedMachine): List<Coordinate> {
-        val identifier = machine.plannedRecipe.factory.identifier
+        val factory = machine.plannedRecipe.factory
         val ports =
-            prototypeFluidPorts(identifier)
+            prototypeFluidPorts(factory)
                 .filter {
                     blueprintMachineEdgeFlow(
-                        identifier,
+                        factory,
                         it,
-                        blueprintMachineEdge(identifier, it),
+                        blueprintMachineEdge(factory, it),
                     ) != PortFlow.OUTPUT
                 }
                 .map { Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y) }
@@ -243,11 +243,10 @@ internal class FluidFeeder(
         fed: Set<Material>,
     ): Coordinate? {
         if (material in fed) return null
-        val identifier = machine.plannedRecipe.factory.identifier
         val inlets =
             inletTiles(row, machine).filter { board.edgeFluidAt(it) in listOf(null, material) }
         val preferred =
-            blueprintMachineInputPort(identifier)?.let {
+            blueprintMachineInputPort(machine.plannedRecipe.factory)?.let {
                 Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y)
             }
         return inlets.firstOrNull {
@@ -260,8 +259,7 @@ internal class FluidFeeder(
      * null when it is taken.
      */
     private fun productEdge(row: Row, machine: PlacedMachine): Coordinate? {
-        val port =
-            blueprintMachineOutputPort(machine.plannedRecipe.factory.identifier) ?: return null
+        val port = blueprintMachineOutputPort(machine.plannedRecipe.factory) ?: return null
         val tile = Coordinate(machine.left + port.tile.x, row.factoryTop + port.tile.y)
         return tile.takeIf { board.isFree(it) && !board.isReserved(it) }
     }

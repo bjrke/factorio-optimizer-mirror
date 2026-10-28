@@ -101,10 +101,10 @@ internal class RowPlacer(
         for (machine in machines) {
             board.place(
                 MachineEntity(
+                    plannedRecipe.factory,
                     Coordinate(machine.left, row.factoryTop).area(size),
-                    plannedRecipe.factory.identifier,
                     plannedRecipe.recipe.name,
-                    blueprintMachineDirection(plannedRecipe.factory.identifier),
+                    blueprintMachineDirection(plannedRecipe.factory),
                 ),
             )
         }
@@ -156,10 +156,10 @@ internal class RowPlacer(
         for (machine in machines) {
             board.place(
                 MachineEntity(
+                    machine.plannedRecipe.factory,
                     Coordinate(machine.left, row.factoryTop).area(size),
-                    machine.plannedRecipe.factory.identifier,
                     machine.plannedRecipe.recipe.name,
-                    blueprintMachineDirection(machine.plannedRecipe.factory.identifier),
+                    blueprintMachineDirection(machine.plannedRecipe.factory),
                 ),
             )
         }

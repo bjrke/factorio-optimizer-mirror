@@ -87,14 +87,14 @@ class BlueprintFluidFeederTest {
                     assertEquals(
                         emptyList(),
                         row.failures,
-                        "${factory.identifier} left a fluid unrouted",
+                        "$factory left a fluid unrouted",
                     )
                 },
                 {
                     assertEquals(
                         1,
                         row.portPipes.size,
-                        "${factory.identifier} is fed through more than one port",
+                        "$factory is fed through more than one port",
                     )
                 },
                 // the one port is on the machine's input side, where the row feeds from above
@@ -102,7 +102,7 @@ class BlueprintFluidFeederTest {
                     assertEquals(
                         row.portPipes.keys,
                         row.inputPipes.keys,
-                        "${factory.identifier} is fed through an output port",
+                        "$factory is fed through an output port",
                     )
                 },
             )
@@ -117,7 +117,7 @@ class BlueprintFluidFeederTest {
     fun aMachineWithoutAPortTableIsFedThroughOneSidePipe() {
         assertEquals(
             emptyList(),
-            prototypeFluidPorts(Factory.ASSEMBLING_MACHINE_1.identifier),
+            prototypeFluidPorts(Factory.ASSEMBLING_MACHINE_1),
         )
         val row = FluidRowLayout(fluidRowPlan(Factory.ASSEMBLING_MACHINE_1))
         val machine = row.machines.single()

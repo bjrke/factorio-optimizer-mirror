@@ -20,6 +20,7 @@ import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.areaTile
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -47,7 +48,7 @@ private fun marker(x: Int, y: Int, material: Material = ore) =
     MarkerEntity(areaTile(x, y), MARKER, Signal(material))
 
 private fun machine(x: Int, y: Int) =
-    MachineEntity(Area(Coordinate(x, y), Dimension(3, 3)), MACHINE, "test")
+    MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(Coordinate(x, y), Dimension(3, 3)), MACHINE)
 
 private fun pipe(x: Int, y: Int, fluid: Material = water) = PipeEntity(areaTile(x, y), PIPE, fluid)
 

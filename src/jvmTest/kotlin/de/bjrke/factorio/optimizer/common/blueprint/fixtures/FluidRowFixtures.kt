@@ -58,8 +58,8 @@ class FluidRowLayout(plan: BlueprintPlan) {
 
     // keyed by corner: an Area is a Set, so two same-sized machines with different corners compare
     // by their tiles, not by their position
-    private val machinesToName: Map<Coordinate, String> = machineEntities.associate {
-        it.area.topLeft to it.name
+    private val machinesToFactory: Map<Coordinate, Factory> = machineEntities.associate {
+        it.area.topLeft to it.factory
     }
 
     /** Every pipe or pipe-to-ground of the layout, mapped to its fluid. */
@@ -87,25 +87,26 @@ class FluidRowLayout(plan: BlueprintPlan) {
      * The fed pipes on a machine's own input side: every port the edge flow leaves open to inflow.
      */
     val inputPipes: Map<Coordinate, Material> = portPipes.filterKeys { tile ->
-        portEntryAt(tile)?.let { (identifier, port) -> isInputPort(identifier, port) } == true
+        portEntryAt(tile)?.let { (factory, port) -> isInputPort(factory, port) } == true
     }
 
     /** The fed pipes on a machine's own output side: every port the edge flow lets fluid out of. */
     val outputPipes: Map<Coordinate, Material> = portPipes.filterKeys { tile ->
-        portEntryAt(tile)?.let { (identifier, port) -> isOutputPort(identifier, port) } == true
+        portEntryAt(tile)?.let { (factory, port) -> isOutputPort(factory, port) } == true
     }
 
     /** The port table entry a pipe at [tile] stands on, with the machine that owns it. */
-    private fun portEntryAt(tile: Coordinate): Pair<String, FluidPort>? =
+    private fun portEntryAt(tile: Coordinate): Pair<Factory, FluidPort>? =
         machineEntities.firstNotNullOfOrNull { machine ->
-            prototypeFluidPorts(machine.name)
+            val factory = machine.factory
+            prototypeFluidPorts(factory)
                 .firstOrNull { machine.area.topLeft + it.tile == tile }
-                ?.let { machine.name to it }
+                ?.let { factory to it }
         }
 
     /** The port tiles of [machine] alone, from the port table of the machine it runs. */
     fun portsOf(machine: Area): List<Coordinate> {
-        val identifier = machinesToName[machine.topLeft] ?: return emptyList()
-        return prototypeFluidPorts(identifier).map { machine.topLeft + it.tile }
+        val factory = machinesToFactory[machine.topLeft] ?: return emptyList()
+        return prototypeFluidPorts(factory).map { machine.topLeft + it.tile }
     }
 }

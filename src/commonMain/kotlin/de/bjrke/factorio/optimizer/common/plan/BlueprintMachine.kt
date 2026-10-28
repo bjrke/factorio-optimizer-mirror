@@ -3,22 +3,23 @@ package de.bjrke.factorio.optimizer.common.plan
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 
 /**
- * Footprint of the machine that runs a recipe, keyed by its prototype name. The width bounds how
- * many inserters (and therefore direct-insertion children) fit on one edge. Unknown machines fall
- * back to the assembling-machine size.
+ * Footprint of [factory]. The width bounds how many inserters (and therefore direct-insertion
+ * children) fit on one edge. Every machine the table does not name falls back to the assembling
+ * machine's 3×3 size.
  */
-fun blueprintMachineFootprint(identifier: String): Dimension =
-    when (identifier) {
-        "stone-furnace",
-        "steel-furnace" -> Dimension(2, 2)
-        "recycler" -> Dimension(4, 2)
-        "electromagnetic-plant" -> Dimension(4, 4)
-        "foundry",
-        "oil-refinery",
-        "cryogenic-plant" -> Dimension(5, 5)
-        "rocket-silo" -> Dimension(9, 9)
+fun blueprintMachineFootprint(factory: Factory): Dimension =
+    when (factory) {
+        Factory.STONE_FURNACE,
+        Factory.STEEL_FURNACE -> Dimension(2, 2)
+        Factory.RECYCLER -> Dimension(4, 2)
+        Factory.ELECTROMAGNETIC_PLANT -> Dimension(4, 4)
+        Factory.FOUNDRY,
+        Factory.OIL_REFINERY,
+        Factory.CRYOGENIC_PLANT -> Dimension(5, 5)
+        Factory.ROCKET_SILO -> Dimension(9, 9)
         else -> Dimension(3, 3)
     }
 
@@ -41,9 +42,9 @@ data class FluidPort(val tile: Coordinate, val flow: PortFlow) {
 }
 
 /**
- * The direction the blueprint places [identifier] in. The row feeds machines from the north (or
- * south) lanes and drains them onto the belt below, so a machine is turned until its prototype's
- * inputs face a lane side and its outputs face the other:
+ * The direction the blueprint places [factory] in. The row feeds machines from the north (or south)
+ * lanes and drains them onto the belt below, so a machine is turned until its prototype's inputs
+ * face a lane side and its outputs face the other:
  *
  * - the cryogenic plant, foundry and oil refinery take fluid on the south edge and give it on the
  *   north edge, so they are turned 180°;
@@ -51,12 +52,12 @@ data class FluidPort(val tile: Coordinate, val flow: PortFlow) {
  *   clockwise moves one input north and the other south, leaving both outputs on the side edges;
  * - the other machines already take on the north edge and give on the south edge.
  */
-fun blueprintMachineDirection(identifier: String): Direction =
-    when (identifier) {
-        "cryogenic-plant",
-        "foundry",
-        "oil-refinery" -> Direction.SOUTH
-        "electromagnetic-plant" -> Direction.EAST
+fun blueprintMachineDirection(factory: Factory): Direction =
+    when (factory) {
+        Factory.CRYOGENIC_PLANT,
+        Factory.FOUNDRY,
+        Factory.OIL_REFINERY -> Direction.SOUTH
+        Factory.ELECTROMAGNETIC_PLANT -> Direction.EAST
         else -> Direction.NORTH
     }
 
@@ -73,15 +74,15 @@ fun blueprintMachineDirection(identifier: String): Direction =
  * `sanitizePrototypeDump`), so the curated table is the source of truth; it is verified against the
  * Wube prototype definitions, not the dump.
  */
-fun prototypeFluidPorts(identifier: String): List<FluidPort> =
-    when (identifier) {
-        "assembling-machine-2",
-        "assembling-machine-3" ->
+fun prototypeFluidPorts(factory: Factory): List<FluidPort> =
+    when (factory) {
+        Factory.ASSEMBLING_MACHINE_2,
+        Factory.ASSEMBLING_MACHINE_3 ->
             listOf(FluidPort(1, -1, PortFlow.INPUT), FluidPort(1, 3, PortFlow.OUTPUT))
         // the chemical plant and the biochamber have both fluids on the top corners and both
         // outputs on the bottom corners
-        "chemical-plant",
-        "biochamber" ->
+        Factory.CHEMICAL_PLANT,
+        Factory.BIOCHAMBER ->
             listOf(
                 FluidPort(0, -1, PortFlow.INPUT),
                 FluidPort(2, -1, PortFlow.INPUT),
@@ -90,7 +91,7 @@ fun prototypeFluidPorts(identifier: String): List<FluidPort> =
             )
         // the oil refinery's prototype takes on the bottom edge and gives on the top edge; after
         // the 180° turn it takes on the north edge and gives on the south edge
-        "oil-refinery" ->
+        Factory.OIL_REFINERY ->
             listOf(
                 FluidPort(3, -1, PortFlow.INPUT),
                 FluidPort(1, -1, PortFlow.INPUT),
@@ -100,7 +101,7 @@ fun prototypeFluidPorts(identifier: String): List<FluidPort> =
             )
         // the foundry's prototype takes on the bottom edge and gives on the top edge; after the
         // 180° turn it takes on the north edge and gives on the south edge
-        "foundry" ->
+        Factory.FOUNDRY ->
             listOf(
                 FluidPort(3, -1, PortFlow.INPUT),
                 FluidPort(1, -1, PortFlow.INPUT),
@@ -109,7 +110,7 @@ fun prototypeFluidPorts(identifier: String): List<FluidPort> =
             )
         // the cryogenic plant's prototype takes on the bottom edge and gives on the top edge;
         // after the 180° turn it takes on the north edge and gives on the south edge
-        "cryogenic-plant" ->
+        Factory.CRYOGENIC_PLANT ->
             listOf(
                 FluidPort(2, -1, PortFlow.INPUT),
                 FluidPort(0, -1, PortFlow.INPUT),
@@ -121,7 +122,7 @@ fun prototypeFluidPorts(identifier: String): List<FluidPort> =
         // the electromagnetic plant's input boxes sit west/east and its output boxes north/south;
         // after the 90° clockwise turn one input faces north and the other south, and both
         // outputs sit on the side edges
-        "electromagnetic-plant" ->
+        Factory.ELECTROMAGNETIC_PLANT ->
             listOf(
                 FluidPort(1, -1, PortFlow.INPUT),
                 FluidPort(2, 4, PortFlow.INPUT),
@@ -138,8 +139,8 @@ fun prototypeFluidPorts(identifier: String): List<FluidPort> =
  * so its coordinate names the edge it is next to (`x == -1` west, `x == width` east, `y == -1`
  * north, `y == height` south).
  */
-fun blueprintMachineEdge(identifier: String, port: FluidPort): Direction {
-    val (width, height) = blueprintMachineFootprint(identifier)
+fun blueprintMachineEdge(factory: Factory, port: FluidPort): Direction {
+    val (width, height) = blueprintMachineFootprint(factory)
     val (x, y) = port.tile
     return when (x) {
         -1 -> Direction.WEST
@@ -148,7 +149,7 @@ fun blueprintMachineEdge(identifier: String, port: FluidPort): Direction {
             when (y) {
                 -1 -> Direction.NORTH
                 height -> Direction.SOUTH
-                else -> error("$identifier has no port at ${port.tile}")
+                else -> error("${factory.identifier} has no port at ${port.tile}")
             }
     }
 }
@@ -158,9 +159,9 @@ fun blueprintMachineEdge(identifier: String, port: FluidPort): Direction {
  * port's tile sits on; an edge the port does not touch keeps [PortFlow.BOTH], which is only the
  * total fallback for a caller that passes a wrong side.
  */
-fun blueprintMachineEdgeFlow(identifier: String, port: FluidPort, edge: Direction): PortFlow {
+fun blueprintMachineEdgeFlow(factory: Factory, port: FluidPort, edge: Direction): PortFlow {
     val (x, y) = port.tile
-    val (width, height) = blueprintMachineFootprint(identifier)
+    val (width, height) = blueprintMachineFootprint(factory)
     val onEdge =
         when (edge) {
             Direction.NORTH -> y == -1
@@ -172,27 +173,25 @@ fun blueprintMachineEdgeFlow(identifier: String, port: FluidPort, edge: Directio
 }
 
 /**
- * The port a fluid enters [identifier] through, if any: the first input port in
- * [prototypeFluidPorts]. A machine may list more than one such pipe (the chemical plant's two top
- * corners, the foundry's two top pipes), but a row feeds it through one — the table order is the
- * recipe's fluid order. A further fluid moves on to the next port.
+ * The port a fluid enters [factory] through, if any: the first input port in [prototypeFluidPorts].
+ * A machine may list more than one such pipe (the chemical plant's two top corners, the foundry's
+ * two top pipes), but a row feeds it through one — the table order is the recipe's fluid order. A
+ * further fluid moves on to the next port.
  */
-fun blueprintMachineInputPort(identifier: String): FluidPort? =
-    prototypeFluidPorts(identifier).firstOrNull { isInputPort(identifier, it) }
+fun blueprintMachineInputPort(factory: Factory): FluidPort? =
+    prototypeFluidPorts(factory).firstOrNull { isInputPort(factory, it) }
 
 /**
- * The port a fluid leaves [identifier] through, if any: the first output port in
+ * The port a fluid leaves [factory] through, if any: the first output port in
  * [prototypeFluidPorts], which is the recipe's first fluid result.
  */
-fun blueprintMachineOutputPort(identifier: String): FluidPort? =
-    prototypeFluidPorts(identifier).firstOrNull { isOutputPort(identifier, it) }
+fun blueprintMachineOutputPort(factory: Factory): FluidPort? =
+    prototypeFluidPorts(factory).firstOrNull { isOutputPort(factory, it) }
 
 /** Whether [port] is an input in [prototypeFluidPorts], by [blueprintMachineEdgeFlow]. */
-internal fun isInputPort(identifier: String, port: FluidPort) =
-    blueprintMachineEdgeFlow(identifier, port, blueprintMachineEdge(identifier, port)) !=
-        PortFlow.OUTPUT
+internal fun isInputPort(factory: Factory, port: FluidPort) =
+    blueprintMachineEdgeFlow(factory, port, blueprintMachineEdge(factory, port)) != PortFlow.OUTPUT
 
 /** Whether [port] is an output in [prototypeFluidPorts], by [blueprintMachineEdgeFlow]. */
-internal fun isOutputPort(identifier: String, port: FluidPort) =
-    blueprintMachineEdgeFlow(identifier, port, blueprintMachineEdge(identifier, port)) !=
-        PortFlow.INPUT
+internal fun isOutputPort(factory: Factory, port: FluidPort) =
+    blueprintMachineEdgeFlow(factory, port, blueprintMachineEdge(factory, port)) != PortFlow.INPUT

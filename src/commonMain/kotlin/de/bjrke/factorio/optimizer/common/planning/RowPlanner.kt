@@ -50,8 +50,7 @@ internal class RowPlanner(
         else 1 + producers.maxOf { (_, producer) -> depthOf(producer, next) }
     }
 
-    fun footprint(plannedRecipe: PlannedRecipe) =
-        blueprintMachineFootprint(plannedRecipe.factory.identifier)
+    fun footprint(plannedRecipe: PlannedRecipe) = blueprintMachineFootprint(plannedRecipe.factory)
 
     /** How many inserters one machine needs to pull [materials] out of its lane. */
     fun insertersFor(plannedRecipe: PlannedRecipe, materials: List<Material>): Int {

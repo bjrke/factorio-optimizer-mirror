@@ -82,8 +82,8 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The port the recipe assigns [material] to, whichever row edge that port is on. */
     internal fun assignedPort(row: Row, machine: PlacedMachine, material: Material): Coordinate? {
-        val identifier = machine.plannedRecipe.factory.identifier
-        val ports = prototypeFluidPorts(identifier)
+        val factory = machine.plannedRecipe.factory
+        val ports = prototypeFluidPorts(factory)
         val inputIndex = inputMaterials(machine).indexOf(material)
         if (inputIndex >= 0) {
             return ports
@@ -117,11 +117,11 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The horizontal edge [tile] sits on for [machine], or null when it is a side edge. */
     private fun sideOf(row: Row, machine: PlacedMachine, tile: Coordinate): LineSide? {
-        val identifier = machine.plannedRecipe.factory.identifier
-        val size = prototypeFluidPorts(identifier)
+        val factory = machine.plannedRecipe.factory
+        val size = prototypeFluidPorts(factory)
         val relative = Coordinate(tile.x - machine.left, tile.y - row.factoryTop)
         val port = size.firstOrNull { it.tile == relative } ?: return null
-        return when (blueprintMachineEdge(identifier, port)) {
+        return when (blueprintMachineEdge(factory, port)) {
             Direction.NORTH -> LineSide.NORTH
             Direction.SOUTH -> LineSide.SOUTH
             else -> null

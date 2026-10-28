@@ -36,7 +36,7 @@ internal class MachineCatalog(
                     { it.preferred },
                     { productivityOfFactory(it) },
                     { speedOfFactory(it) },
-                    { it.identifier },
+                    { it },
                 ),
             )
 

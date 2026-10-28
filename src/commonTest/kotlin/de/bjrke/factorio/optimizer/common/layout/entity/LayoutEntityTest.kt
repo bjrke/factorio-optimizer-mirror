@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.areaTile
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -74,8 +75,8 @@ class LayoutEntityTest {
     fun machinesAndInsertersMapToTheirBlueprintDto() =
         assertTableOf(
             MachineEntity(
+                Factory.ASSEMBLING_MACHINE_3,
                 Coordinate(2, 3).area(3, 2),
-                "assembling-machine-3",
                 "iron-gear-wheel",
             ) to
                 BlueprintEntity(

@@ -23,33 +23,31 @@ import kotlin.test.assertEquals
 class MachineInserterPortTest {
 
     /** Every machine with a port table; a machine without one has no fluid columns to keep. */
-    private val machines =
-        Factory.entries.filter { prototypeFluidPorts(it.identifier).isNotEmpty() }
+    private val machines = Factory.entries.filter { prototypeFluidPorts(it).isNotEmpty() }
 
     @Test
     fun thePlacerKeepsOnlyThePortsTheRecipeReallyUses() =
         assertTable(machines) { factory ->
-            val identifier = factory.identifier
-            val columns = inserterPortColumns(identifier, inputFluids = 1, outputFluids = 0)
+            val columns = inserterPortColumns(factory, inputFluids = 1, outputFluids = 0)
             // the single water input takes the first horizontal input port, in x order
             val used =
-                prototypeFluidPorts(identifier)
+                prototypeFluidPorts(factory)
                     .filter {
-                        blueprintMachineEdge(identifier, it) in
+                        blueprintMachineEdge(factory, it) in
                             listOf(Direction.NORTH, Direction.SOUTH)
                     }
                     .filter { it.flow != PortFlow.OUTPUT }
                     .take(1)
             fun expected(edge: Direction) =
                 used
-                    .filter { blueprintMachineEdge(identifier, it) == edge }
+                    .filter { blueprintMachineEdge(factory, it) == edge }
                     .mapTo(mutableSetOf()) {
                         it.tile.x
                     }
             assertEquals(
                 PortColumns(expected(Direction.NORTH), expected(Direction.SOUTH)),
                 columns,
-                "$identifier keeps the wrong inserter columns",
+                "$factory keeps the wrong inserter columns",
             )
         }
 
@@ -59,14 +57,14 @@ class MachineInserterPortTest {
             val plan = fluidRowPlan(factory)
             val row = FluidRowLayout(plan)
             val machine = row.machines.single()
-            val columns = inserterPortColumns(factory.identifier, inputFluids = 1, outputFluids = 0)
+            val columns = inserterPortColumns(factory, inputFluids = 1, outputFluids = 0)
             val blocked =
                 (columns.top.map { Coordinate(machine.x + it, machine.y - 1) } +
                     columns.bottom.map { Coordinate(machine.x + it, machine.y + machine.height) })
             assertEquals(
                 emptyList(),
                 blocked.filter { it in row.inserters },
-                "${factory.identifier} puts an inserter on a used fluid port",
+                "$factory puts an inserter on a used fluid port",
             )
         }
 }

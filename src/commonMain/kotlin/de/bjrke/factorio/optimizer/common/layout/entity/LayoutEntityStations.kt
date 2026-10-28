@@ -4,15 +4,17 @@ import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 
 data class MachineEntity(
+    val factory: Factory,
     override val area: Area,
-    override val name: String,
     val recipe: String,
     /** The blueprint direction the machine is placed in; north is the prototype's own facing. */
     val direction: Direction = Direction.NORTH,
 ) : LayoutEntity {
     override val isPowered = true
+    override val name = factory.identifier
 
     override fun withArea(area: Area) = copy(area = area)
 }

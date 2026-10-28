@@ -173,7 +173,7 @@ the entry points (UI, CLI) and the tests import `blueprint` itself, for
 | `band` | `plan`, `prototype`, `service` | the layout |
 | `route` | `model`, `prototype`, `util`, `layout` | `beltend`, `routing`, `planning`, `blueprint` |
 | `layout` | `model`, `prototype`, `layout.entity` | `special`, `beltend`, `blueprint` |
-| `layout.entity` | `model` | everything else |
+| `layout.entity` | `model`, `prototype` | everything else |
 | `layout.validation` | `model`, `layout`, `layout.entity` | `beltend` and above |
 | `beltend` | `model`, `layout`, `layout.entity` | `blueprint` |
 | `compaction` | `model`, `layout`, `layout.entity`, `layout.validation`, `plan` | `beltend`, `routing`, `blueprint` |

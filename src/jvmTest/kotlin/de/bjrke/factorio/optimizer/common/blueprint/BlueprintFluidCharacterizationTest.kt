@@ -51,10 +51,7 @@ class BlueprintFluidCharacterizationTest {
     private val fluidPlan =
         BlueprintPlan(
             target = gear,
-            rows =
-                listOf(
-                    PlannedRow(List(3) { planned(boil, gear, Factory.CHEMICAL_PLANT) }),
-                ),
+            rows = listOf(PlannedRow(List(3) { planned(boil, gear, Factory.CHEMICAL_PLANT) })),
             sources = listOf(PlannedSource(water, 1.0, fluid = true)),
             scale = 1.0,
             label = "water-boil",
@@ -70,9 +67,9 @@ class BlueprintFluidCharacterizationTest {
     @Test
     fun theMachinesTouchInOneRow() =
         assertTableOf(
-            MachineEntity(Coordinate(40, 0).area(3, 3), "chemical-plant", "water-boil"),
-            MachineEntity(Coordinate(43, 0).area(3, 3), "chemical-plant", "water-boil"),
-            MachineEntity(Coordinate(46, 0).area(3, 3), "chemical-plant", "water-boil"),
+            MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(40, 0).area(3, 3), "water-boil"),
+            MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(43, 0).area(3, 3), "water-boil"),
+            MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(46, 0).area(3, 3), "water-boil"),
         ) { expected ->
             assertEquals(expected, dump.entities.single { it.area == expected.area })
         }
@@ -235,23 +232,23 @@ class BlueprintFluidCharacterizationTest {
                     assertEquals(
                         mapOf(port to water),
                         row.inputPipes,
-                        "${factory.identifier} is not fed from above",
+                        "$factory is not fed from above",
                     )
                 },
                 {
                     assertEquals(
                         emptyMap(),
                         row.outputPipes,
-                        "${factory.identifier} still reserves a port under the machine",
+                        "$factory still reserves a port under the machine",
                     )
                 },
                 // one port per fluid, so the machine's other top pipe stays untouched
-                { assertEquals(1, row.portPipes.size, "${factory.identifier} is fed twice") },
+                { assertEquals(1, row.portPipes.size, "$factory is fed twice") },
                 {
                     assertEquals(
                         emptyList(),
                         row.failures,
-                        "${factory.identifier} left its fluid unrouted",
+                        "$factory left its fluid unrouted",
                     )
                 },
             )

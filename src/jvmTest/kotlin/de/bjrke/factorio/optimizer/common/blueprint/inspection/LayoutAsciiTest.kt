@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -26,8 +27,8 @@ class LayoutAsciiTest {
             entities =
                 listOf(
                     MachineEntity(
+                        Factory.ASSEMBLING_MACHINE_3,
                         Coordinate(0, 0).area(2, 2),
-                        "assembling-machine-3",
                         "advanced-circuit",
                     ),
                     PoleEntity(Coordinate(3, 0).area(), "medium-electric-pole"),

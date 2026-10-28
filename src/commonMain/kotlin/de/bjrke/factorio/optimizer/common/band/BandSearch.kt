@@ -62,7 +62,7 @@ internal class BandSearch(
     private fun footPrintsHaveDifferentSize(recipes: List<Recipe>) =
         recipes
             .map {
-                blueprintMachineFootprint(production.getValue(it).factory.identifier)
+                blueprintMachineFootprint(production.getValue(it).factory)
             }
             .zipWithNext()
             .any { (a, b) -> a != b }

@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 import kotlin.math.abs
 
 /**
@@ -47,7 +48,7 @@ internal class MachineInserterPlacer(
         if (!usesFluid(plannedRecipe)) return PortColumns(emptySet(), emptySet())
         val recipe = plannedRecipe.recipe
         return inserterPortColumns(
-            plannedRecipe.factory.identifier,
+            plannedRecipe.factory,
             recipe.ingredients.keys.count { logistics.isFluid(it) },
             recipe.result.keys.count { logistics.isFluid(it) },
         )
@@ -138,13 +139,13 @@ internal class MachineInserterPlacer(
  * drift apart; a side port is routed and does not take an inserter column here.
  */
 internal fun inserterPortColumns(
-    identifier: String,
+    factory: Factory,
     inputFluids: Int,
     outputFluids: Int,
 ): PortColumns {
     val horizontal =
-        prototypeFluidPorts(identifier).filter {
-            blueprintMachineEdge(identifier, it) in listOf(NORTH, SOUTH)
+        prototypeFluidPorts(factory).filter {
+            blueprintMachineEdge(factory, it) in listOf(NORTH, SOUTH)
         }
     // the recipe assigns its fluids to the horizontal ports in table order, one port per fluid
     val used =
@@ -152,7 +153,7 @@ internal fun inserterPortColumns(
             horizontal.filter { it.flow != PortFlow.INPUT }.take(outputFluids)
     fun columns(edge: Direction) =
         used
-            .filter { blueprintMachineEdge(identifier, it) == edge }
+            .filter { blueprintMachineEdge(factory, it) == edge }
             .mapTo(mutableSetOf()) {
                 it.tile.x
             }

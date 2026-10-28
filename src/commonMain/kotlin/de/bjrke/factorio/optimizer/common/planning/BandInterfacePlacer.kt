@@ -50,7 +50,7 @@ internal class BandInterfacePlacer(
                 recipe.result.keys.any { logistics.isFluid(it) }
         if (!usesFluid) return emptySet()
         val edge = if (east) row.width else -1
-        return prototypeFluidPorts(plannedRecipe.factory.identifier)
+        return prototypeFluidPorts(plannedRecipe.factory)
             .filter { it.tile.x == edge }
             .mapTo(mutableSetOf()) { row.factoryTop + it.tile.y }
     }
