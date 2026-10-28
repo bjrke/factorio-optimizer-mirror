@@ -175,7 +175,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
 - **`LongParameterList` ignores data-class constructors.** Detekt's default
   `ignoreDataClasses: true` means a data class may carry many fields without a
   finding. Use that for a genuine value object (`FactorySpec`, `Selection`,
-  `RowBox`/`RowLanes`) where the fields belong together; do not convert an
+  `RowLanes`) where the fields belong together; do not convert an
   arbitrary argument tuple into a data class just to silence the rule.
 - **A file with one top-level declaration must be named after it.**
   `MatchingDeclarationName` flagged `LayoutTunnels.kt` once `Tunnels` was its only

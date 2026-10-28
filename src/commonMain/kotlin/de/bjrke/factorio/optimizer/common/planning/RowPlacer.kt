@@ -3,8 +3,8 @@ package de.bjrke.factorio.optimizer.common.planning
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.placeBelt
+import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
@@ -18,8 +18,8 @@ import de.bjrke.factorio.optimizer.common.plan.blueprintMachineDirection
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
 
-/** Free rows between two recipe bands, so their belts can be routed between them. */
-private const val BAND_GAP = 14
+/** Free rows between two recipe rows, so their belts can be routed between them. */
+private const val ROW_GAP = 17
 
 /**
  * Places the machine rows once: a plain production as a row of copies, a direct-feed band as one
@@ -40,19 +40,18 @@ internal class RowPlacer(
 
     fun placeAll() {
         var y = 0
-        for (unit in planner.units) {
-            val row =
-                if (unit.row.links.isEmpty()) placeRow(unit.row, y) else placeBand(unit.row, y)
+        for ((plannedRow) in planner.units) {
+            val row = placeRow(plannedRow, y)
             placedRows += row
-            y = row.outputLaneRow + 3 + BAND_GAP
+            y = row.outputLaneRow + ROW_GAP
         }
     }
 
     private fun rowShape(solids: List<Material>, height: Int, bandTop: Int): RowShape {
         val lanes =
-            when {
-                solids.isEmpty() -> 0
-                solids.size == 1 -> 1
+            when (solids.size) {
+                0 -> 0
+                1 -> 1
                 else -> 2
             }
         val factoryTop = bandTop + lanes + 1
@@ -67,82 +66,38 @@ internal class RowPlacer(
         )
     }
 
-    /** Builds a plain row: repeated machines of its one production, touching each other. */
-    private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
-        val production = plannedRow.productions.single()
-        val size = planner.footprint(production)
-        val solids =
-            production.recipe.ingredients.keys
-                .filter { !logistics.isFluid(it) }
-                .sortedBy { it.name }
-        val shape = rowShape(solids, size.height, bandTop)
-        // a fluid row needs no side gap: its lane runs on a row of its own beyond the belts and
-        // reaches every port through the squash of an underground shaft, so the copies touch
-        val stride = size.width
-        val machines =
-            plannedRow.machines.mapIndexed { index, planned ->
-                PlacedMachine(planned, LANE_MARGIN + index * stride)
-            }
-        val row =
-            Row(
-                plannedRow = plannedRow,
-                machines = machines,
-                box = box(shape, size, stride),
-                lanes =
-                    RowLanes(
-                        solids,
-                        shape.laneNearRow,
-                        shape.laneFarRow,
-                        shape.laneBelowRow,
-                        shape.outputLaneRow,
-                    ),
-            )
-        for (machine in machines) {
-            board.place(
-                MachineEntity(
-                    production.factory,
-                    Coordinate(machine.left, row.factoryTop).area(size),
-                    production.recipe.name,
-                    blueprintMachineDirection(production.factory),
-                ),
-            )
-        }
-        machineInserters.place(row, emptyList())
-        placeLanes(row)
-        placeProduct(row, emptyList())
-        return row
-    }
-
-    /** The rectangle of a row: its corner, one machine footprint and the stride between copies. */
-    private fun box(shape: RowShape, size: Dimension, stride: Int) =
-        RowBox(LANE_MARGIN, shape.factoryTop, size.width, size.height, stride)
-
     /**
-     * Builds a direct-feed band as one row of interleaved machines: every machine sits a tile apart
-     * so the gap column between two of them can carry the inserters that move their intermediate,
-     * and the whole band shares the lane rows and the output belt.
+     * Builds a row: a plain production repeats its machine, while a direct-feed band interleaves
+     * machines. A gap with a link gets an extra column for the inserters that move the intermediate
+     * between the two machines; every other neighbor pair touches.
      */
-    private fun placeBand(plannedRow: PlannedRow, bandTop: Int): Row {
+    private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
         val internal = plannedRow.links.map { it.material }
         val productions = plannedRow.productions
         val size = planner.footprint(productions.first())
         val solids =
             productions
+                .asSequence()
                 .flatMap { it.recipe.ingredients.keys }
-                .filter { !logistics.isFluid(it) && it !in internal }
+                .filterNot { logistics.isFluid(it) || it in internal }
                 .distinct()
                 .sortedBy { it.name }
+                .toList()
         val shape = rowShape(solids, size.height, bandTop)
-        val stride = size.width + 1
-        val machines =
-            plannedRow.machines.mapIndexed { index, production ->
-                PlacedMachine(production, LANE_MARGIN + index * stride)
+        val linkedGaps = plannedRow.links.mapTo(mutableSetOf()) { it.gap }
+        val machines = buildList {
+            var left = LANE_MARGIN
+            for ((index, production) in plannedRow.machines.withIndex()) {
+                add(PlacedMachine(production, left))
+                left += size.width
+                if (index in linkedGaps) left += 1
             }
+        }
         val row =
             Row(
                 plannedRow = plannedRow,
                 machines = machines,
-                box = box(shape, size, stride),
+                box = Area(Coordinate(LANE_MARGIN, shape.factoryTop), size),
                 lanes =
                     RowLanes(
                         solids,

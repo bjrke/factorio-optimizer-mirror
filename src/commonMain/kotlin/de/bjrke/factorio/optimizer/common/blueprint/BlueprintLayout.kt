@@ -28,13 +28,14 @@ import de.bjrke.factorio.optimizer.common.routing.ImportTrimmer
 import de.bjrke.factorio.optimizer.common.special.PowerPlacer
 
 /**
- * Lays out [plan] as rows of connected factories. Every recipe is one row of touching machines, fed
- * by belt lanes just above (a short inserter for the near lane, a long inserter for the far one)
- * and drained by an output belt just below. Rows flow top to bottom; imports enter from the left,
- * and a material built inside the plan runs on one trunk from its producer's output belt, with a
- * splitter on that belt for every further recipe that takes it. A fluid row gets one pipe lane on a
- * row beyond its belts, with an underground shaft down to every machine port; a machine whose port
- * the lane cannot reach keeps the routed pipe instead.
+ * Lays out [plan] as rows of connected factories. A plain recipe is one row of touching machines,
+ * while a direct-feed band leaves a column at every linked machine pair, fed by belt lanes just
+ * above (a short inserter for the near lane, a long inserter for the far one) and drained by an
+ * output belt just below. Rows flow top to bottom; imports enter from the left, and a material
+ * built inside the plan runs on one trunk from its producer's output belt, with a splitter on that
+ * belt for every further recipe that takes it. A fluid row gets one pipe lane on a row beyond its
+ * belts, with an underground shaft down to every machine port; a machine whose port the lane cannot
+ * reach keeps the routed pipe instead.
  *
  * The [beltEnd] chooses how a solid belt ends: the constant-combinator label (the default), an
  * infinity chest, or a chest the belt's inserters feed from or to. A fluid belt always keeps the
@@ -46,11 +47,10 @@ fun fromPlaced(
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) =
     RowLayout(plan, logistics, beltEnd).run {
-        val entities = build()
         Blueprint(
             label = plan.label,
             icon = plan.target,
-            entities = entities,
+            entities = build(),
             wires = blueprintWires(),
         )
     }

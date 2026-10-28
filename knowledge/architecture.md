@@ -253,7 +253,7 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   (a DFS over `BlueprintPlan.rows` with a recipe path as the cycle guard), the
   `RowUnit(row, depth)` order and the pure sizing helpers (`inserterPattern`).
 - `planning/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
-  `RowBox` + `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and
+  `Area` + `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and
   product, and owns the ordered `placedRows` list and the lane direction. A
   `PlacedMachine` carries its own `production`; `producerRow(material)` scans
   `placedRows` for the row whose `plannedRow` equals
@@ -337,8 +337,11 @@ for it. A band is a `PlannedRow` whose `links` are non-empty and whose `machines
 hold one `FactoryProduction` per machine; a plain row repeats its one production
 once per machine and has no links. `band/BandSearch` finds the shortest window
 (`FeedWindow` checks that every consumer is covered and every producer feeds
-someone). `RowPlacer` places a band with `placeBand`; only belted productions
-feed belts, lanes and sinks, so a band's internal material never gets a belt. See
+someone). `RowPlacer` places every row through one `placeRow`: a plain row
+repeats its production with touching machines, while a row with links leaves a
+gap column after each machine that has a `PlannedLink` and touches everywhere
+else. Only belted productions feed belts, lanes and sinks, so a band's internal
+material never gets a belt. See
 `decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
 follow-ups, and (2026-10-24) for why the row is the occurrence.
 

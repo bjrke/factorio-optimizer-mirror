@@ -30,7 +30,7 @@ internal class BandInterfacePlacer(
         val blocked = portRows(row, left, east = true) + portRows(row, right, east = false)
         val free = (row.factoryTop..row.factoryBottom).filterNot(blocked::contains)
         val needed = maxOf(1, ceil(logistics.directInserterCount(link.flow)).toInt())
-        val x = row.left + link.gap * row.stride + row.width
+        val x = left.left + row.width
         for (y in free.take(needed)) {
             board.placeInserter(
                 Coordinate(x, y),

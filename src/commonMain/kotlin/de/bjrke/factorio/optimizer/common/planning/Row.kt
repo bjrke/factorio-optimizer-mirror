@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.planning
 
+import de.bjrke.factorio.optimizer.common.model.Area
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
@@ -7,17 +8,6 @@ import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 
 /** One machine of a row: the production it builds and the column it starts on. */
 internal class PlacedMachine(val production: FactoryProduction, val left: Int)
-
-/**
- * The rectangle a row occupies: its corner, one machine footprint and the stride between copies.
- */
-internal data class RowBox(
-    val left: Int,
-    val top: Int,
-    val width: Int,
-    val height: Int,
-    val stride: Int,
-)
 
 /**
  * The row geometry before a row exists: where the machines start and which belt rows they need.
@@ -51,7 +41,7 @@ internal class Row(
     val plannedRow: PlannedRow,
     /** The production each machine builds, left to right; one entry per machine. */
     val machines: List<PlacedMachine>,
-    val box: RowBox,
+    val box: Area,
     val lanes: RowLanes,
 ) {
 
@@ -67,19 +57,16 @@ internal class Row(
         get() = machines.size
 
     val left
-        get() = box.left
+        get() = box.topLeft.x
 
     val factoryTop
-        get() = box.top
+        get() = box.topLeft.y
 
     val width
         get() = box.width
 
     val height
         get() = box.height
-
-    val stride
-        get() = box.stride
 
     val solids
         get() = lanes.solids
@@ -100,5 +87,5 @@ internal class Row(
         get() = factoryTop + height - 1
 
     val right
-        get() = left + (copies - 1) * stride + width - 1
+        get() = machines.last().left + width - 1
 }

@@ -318,7 +318,6 @@ class BlueprintLayoutIntegrationTest {
             "electronic-circuit",
             "logistic-science-pack",
             "processing-unit",
-            "utility-science-pack",
             "copper-cable",
             "iron-gear-wheel",
         ) {
