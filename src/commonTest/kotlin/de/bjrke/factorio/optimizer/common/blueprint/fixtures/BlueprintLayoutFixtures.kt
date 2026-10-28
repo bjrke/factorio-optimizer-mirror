@@ -59,12 +59,8 @@ val basePlan =
         target = gear,
         rows =
             listOf(
-                PlannedRow(
-                    listOf(planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)),
-                ),
-                PlannedRow(
-                    listOf(planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_1)),
-                ),
+                PlannedRow(listOf(planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3))),
+                PlannedRow(listOf(planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_1))),
             ),
         sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
         scale = 1.0,
@@ -91,9 +87,18 @@ private fun plumbingNeighbors(
     tile: Coordinate,
     tiles: Map<Coordinate, BlueprintEntity>,
     grounds: Map<Coordinate, Direction?>,
-): List<Coordinate> = buildList {
-    addAll(tile.neighbors.filter(tiles::contains))
-    val mouth = grounds[tile] ?: return@buildList
+) = buildList {
+    val mouth = grounds[tile]
+    for (neighbor in tile.neighbors) {
+        if (neighbor !in tiles) continue
+        // a plain pipe joins every side, a pipe-to-ground only its mouth; the neighbour must join
+        // back, so two different fluids may stand beside a foreign end without merging
+        if (mouth != null && mouth.step != neighbor - tile) continue
+        val otherMouth = grounds[neighbor]
+        if (otherMouth != null && otherMouth.step != tile - neighbor) continue
+        add(neighbor)
+    }
+    if (mouth == null) return@buildList
     val away = mouth.opposite().step
     for (distance in 1..10) {
         val next = tile + away * distance

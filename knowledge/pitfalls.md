@@ -5,14 +5,16 @@ An entry belongs here only with evidence, and should say how to recognize it.
 
 ## Layout and fluids
 
-- **A machine's port table is the prototype table after the blueprint rotation.** The
-  sanitized dump has no `pipe_connections`/`fluid_boxes`; `blueprintMachineFluidPorts`
-  is curated from the Wube prototypes and then turned by
-  `blueprintMachineDirection`. Do not infer an input from "north/west": the cryogenic
-  plant, foundry and oil refinery take on the south edge (180° turn) and the
-  electromagnetic plant's input boxes are west/east (90° clockwise). A pipe on the
-  wrong box shows up as a fluid that never arrives while the machine's other fluid
-  works. Evidence: the four reported URLs in `BlueprintFluidPortLayoutTest`.
+- **A machine's port table is written in the placed orientation, in recipe-assignment order.**
+  The sanitized dump has no `pipe_connections`/`fluid_boxes`; `prototypeFluidPorts` is curated
+  from the Wube prototypes and already lists the tiles after `blueprintMachineDirection`'s turn,
+  so callers use them as-is. Its order is load-bearing: inputs first in the recipe's fluid order,
+  then outputs. Do not re-rotate or re-sort the table, and do not infer an input from
+  "north/west": the cryogenic plant, foundry and oil refinery take on the north edge and give on
+  the south edge (180° placement), and the electromagnetic plant's input boxes face north/south
+  (90° clockwise). A pipe on the wrong box shows up as a fluid that never arrives while the
+  machine's other fluid works. Evidence: the four reported URLs in
+  `BlueprintFluidPortLayoutTest`.
 - **A band's fluid port sits in a gap column the fluid feed cannot reach.** A
   direct-feed band interleaves its machines, so a member that takes a fluid has its
   port between two machines instead of on the row's outside edge;

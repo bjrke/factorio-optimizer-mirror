@@ -11,7 +11,7 @@ import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import kotlin.math.abs
 
 /**
@@ -134,8 +134,8 @@ internal class MachineInserterPlacer(
  * The fluid-port columns of one machine: [PortColumns.top] keeps the ports on the north edge free,
  * [PortColumns.bottom] those on the south edge. Only the ports the recipe's fluid counts use are
  * reserved: the chemical plant's unused top corner stays available for a long inserter. The ports
- * come from the same turned table the fluid feed reads, so the two stages cannot drift apart; a
- * side port is routed and does not take an inserter column here.
+ * come from the same [prototypeFluidPorts] table the fluid feed reads, so the two stages cannot
+ * drift apart; a side port is routed and does not take an inserter column here.
  */
 internal fun inserterPortColumns(
     identifier: String,
@@ -143,10 +143,10 @@ internal fun inserterPortColumns(
     outputFluids: Int,
 ): PortColumns {
     val horizontal =
-        blueprintMachineFluidPorts(identifier).filter {
+        prototypeFluidPorts(identifier).filter {
             blueprintMachineEdge(identifier, it) in listOf(NORTH, SOUTH)
         }
-    // the recipe assigns its fluids to the horizontal ports in x order, one port per fluid
+    // the recipe assigns its fluids to the horizontal ports in table order, one port per fluid
     val used =
         horizontal.filter { it.flow != PortFlow.OUTPUT }.take(inputFluids) +
             horizontal.filter { it.flow != PortFlow.INPUT }.take(outputFluids)

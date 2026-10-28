@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.west
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -117,7 +117,7 @@ class BlueprintFluidFeederTest {
     fun aMachineWithoutAPortTableIsFedThroughOneSidePipe() {
         assertEquals(
             emptyList(),
-            blueprintMachineFluidPorts(Factory.ASSEMBLING_MACHINE_1.identifier),
+            prototypeFluidPorts(Factory.ASSEMBLING_MACHINE_1.identifier),
         )
         val row = FluidRowLayout(fluidRowPlan(Factory.ASSEMBLING_MACHINE_1))
         val machine = row.machines.single()

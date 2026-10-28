@@ -20,6 +20,7 @@ class BlueprintFluidIntegrationTest {
             "utility-science-pack",
             "lubricant",
             "plastic-bar",
+            "petroleum-gas",
         ) { target ->
             val (plan, logistics) = planAndLogistics(target)
             val dump = blueprintLayoutDump(plan, logistics)
@@ -41,6 +42,7 @@ class BlueprintFluidIntegrationTest {
             "utility-science-pack",
             "lubricant",
             "plastic-bar",
+            "petroleum-gas",
         ) { target ->
             val (plan, logistics) = planAndLogistics(target)
             val dump = blueprintLayoutDump(plan, logistics)

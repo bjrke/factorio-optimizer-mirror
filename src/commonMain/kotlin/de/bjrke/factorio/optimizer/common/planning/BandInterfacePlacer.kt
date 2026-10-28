@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import kotlin.math.ceil
 
 /**
@@ -50,7 +50,7 @@ internal class BandInterfacePlacer(
                 recipe.result.keys.any { logistics.isFluid(it) }
         if (!usesFluid) return emptySet()
         val edge = if (east) row.width else -1
-        return blueprintMachineFluidPorts(plannedRecipe.factory.identifier)
+        return prototypeFluidPorts(plannedRecipe.factory.identifier)
             .filter { it.tile.x == edge }
             .mapTo(mutableSetOf()) { row.factoryTop + it.tile.y }
     }

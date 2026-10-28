@@ -6,7 +6,7 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.planning.PortColumns
 import de.bjrke.factorio.optimizer.common.planning.inserterPortColumns
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -24,7 +24,7 @@ class MachineInserterPortTest {
 
     /** Every machine with a port table; a machine without one has no fluid columns to keep. */
     private val machines =
-        Factory.entries.filter { blueprintMachineFluidPorts(it.identifier).isNotEmpty() }
+        Factory.entries.filter { prototypeFluidPorts(it.identifier).isNotEmpty() }
 
     @Test
     fun thePlacerKeepsOnlyThePortsTheRecipeReallyUses() =
@@ -33,7 +33,7 @@ class MachineInserterPortTest {
             val columns = inserterPortColumns(identifier, inputFluids = 1, outputFluids = 0)
             // the single water input takes the first horizontal input port, in x order
             val used =
-                blueprintMachineFluidPorts(identifier)
+                prototypeFluidPorts(identifier)
                     .filter {
                         blueprintMachineEdge(identifier, it) in
                             listOf(Direction.NORTH, Direction.SOUTH)

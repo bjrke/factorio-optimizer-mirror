@@ -30,26 +30,30 @@ internal class FluidLaneFeed(
     private val laneFeeds = mutableMapOf<Coordinate, Material>()
 
     /**
-     * Places the lane of every row that gets one for [side], for the fluid it carries, and returns
-     * the ports the lanes could not reach, left to the routed feed.
+     * Places a lane for every fluid of every row that gets one for [side] and returns the ports the
+     * lanes could not reach, left to the routed feed. A further fluid on the same edge gets the
+     * next lane out, so a machine's second top/bottom port is fed like the first instead of by a
+     * route.
      */
     fun place(side: LineSide, rows: List<Row>): Map<Coordinate, Material> {
         val unreached = mutableMapOf<Coordinate, Material>()
         for (row in rows) {
-            val material = model.fluids(row, side).firstOrNull() ?: continue
-            val lane = model.lane(row, side, material) ?: continue
-            val placed =
-                placer.place(lane, material, side, sink = model.isOutput(row, material)) ?: continue
-            for (port in placed.ports) laneFeeds[port] = material
-            for (skipped in placed.skipped) unreached[skipped] = material
+            for ((depth, material) in model.fluids(row, side).withIndex()) {
+                val lane = model.lane(row, side, material, depth) ?: continue
+                val placed =
+                    placer.place(lane, material, side, sink = model.isOutput(row, material))
+                        ?: continue
+                for (port in placed.ports) laneFeeds[port] = material
+                for (skipped in placed.skipped) unreached[skipped] = material
+            }
         }
         return unreached
     }
 
     /**
      * The port tile the lane of [row] feeds [material] to for [machine], or null when the machine's
-     * port of that fluid is not reached by a lane: the port is taken, or it is the machine's second
-     * port of the same edge, which the one lane of the row does not serve.
+     * port of that fluid is not reached by a lane: the port is taken, or the lane of that fluid
+     * found no room.
      */
     fun portFor(row: Row, machine: PlacedMachine, material: Material): Coordinate? =
         model.assignedPort(row, machine, material)?.takeIf { laneFeeds[it] == material }

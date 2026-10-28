@@ -83,6 +83,13 @@ data class PipeToGroundEntity(
     override val io: Io,
 ) : Plumbing, UndergroundEntity {
     override fun withArea(area: Area) = copy(area = area)
+
+    /**
+     * The side this end joins its surface pipe on. A pipe-to-ground connects only there: the other
+     * sides are closed, which is why two different fluids may stand side by side.
+     */
+    val mouth: Direction
+        get() = if (io == Io.INPUT) direction.opposite() else direction
 }
 
 data class PoleEntity(

@@ -7,6 +7,54 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-10-27 — Port tables are written in the placed orientation
+
+**Decision.** `prototypeFluidPorts` lists each machine's `fluid_boxes` already turned into the
+orientation `blueprintMachineDirection` places the machine in, so callers use the tiles as-is.
+The order is load-bearing: the inputs come first in the order the recipe's fluid ingredients take
+them, then the outputs in result order. A lane's side comes from the port the recipe assigns to
+the fluid, in that order (never alphabetical); `inserterPortColumns` reserves only the ports the
+recipe's fluids use. A fluid target with a side output port is routed to a marker like an input,
+not left as a pipe stub.
+
+**Guardrail.** Never re-rotate or coordinate-sort the table: rotating and sorting it is what
+produced wrong port assignments for the cryogenic plant, foundry and oil refinery. Never infer an
+input from "north/west" or sort fluids by name; a wrong box shows up as one fluid that never
+arrives while the other works. The four reported URLs are pinned in
+`BlueprintFluidPortLayoutTest`.
+
+**See.** `architecture.md` §Blueprint layout; `pitfalls.md` "Layout and fluids";
+`plan/BlueprintMachine.kt`.
+
+## 2026-10-27 — Every fluid port on an edge gets its own lane
+
+**Decision.** A row side places one lane per fluid that has a port there, in recipe order, each two
+rows further out than the last. The outer lanes' shafts dive under the inner lane rows to reach
+their own ports, and every lane marker joins one west column (the westmost inline fluid marker when
+the plan has no solid import). There is no route for a second fluid on the same edge.
+
+**Guardrail.** A pipe-to-ground end joins a surface pipe only on its mouth, so two fluids may share
+a wall. `touchesForeign` and `validateLayout` must read the mouth (`Plumbing.joinsAt`), or a lane's
+port pipe looks like a two-fluid merge. A shaft may only bury a pipe-to-ground end that runs on the
+other axis.
+
+**See.** `planning/RowFluidLane.kt`, `planning/FluidLanePlacer.kt`, `plumbing/FluidLaneFeed.kt`,
+`layout/LayoutPipes.kt`, `layout/validation/LayoutValidationTransport.kt`, `routing/ImportTrimmer.kt`.
+
+## 2026-10-27 — A routed fluid marker stays on its port's side
+
+**Decision.** The routed fluid fallback places its marker just west of the first sink and searches
+the marker row **outward from the port's edge**: north for a north port, south for a south port,
+south for a side port. The scan skips only rows a previous marker claimed or rows whose pipe block
+is blocked.
+
+**Guardrail.** Never scan a single direction. A north-edge second fluid (the chemical plant's
+second top corner) used to be marked below the whole row, and its feed then looped around the
+factory; the reported light-oil URL now marks heavy oil above the row, beside the water lane.
+
+**See.** `plumbing/FluidFeeder.kt` (`fluidMarker`, `portEdge`), `BlueprintFluidLayoutTest`,
+`BlueprintFluidPortLayoutTest`.
+
 ## 2026-10-26 — Import belts are routed before produced deliveries
 
 **Decision.** The solid import routes are laid after the fluid lanes and their source markers, and
@@ -42,23 +90,6 @@ adjacent — `(38,17) SOUTH` can sit beside another import's loader.
 
 **See.** `layout/validation/LayoutValidationUnderground.kt`,
 `compaction/CompactionPass.kt`, `BlueprintLayoutAssertions.kt`, `LayoutCompactionTest`.
-
-## 2026-10-26 — Fluid ports follow the prototype rotation
-
-**Decision.** `blueprintMachineFluidPorts` is the prototype `fluid_boxes`
-`production_type` **after** the blueprint rotation, not a row-side reading of the
-edge. `blueprintMachineDirection` turns machines whose prototypes do not fit the
-row: the cryogenic plant, foundry and oil refinery by 180°, the electromagnetic
-plant by 90° clockwise. A lane's side comes from the port the recipe assigns to
-the fluid, in recipe order (never alphabetical), and `inserterPortColumns` reserves
-only the ports the recipe's fluids use. A fluid target with a side output port is
-routed to a marker like an input, not left as a pipe stub.
-
-**Guardrail.** Never infer an input from "north/west" or sort fluids by name; a
-wrong box shows up as one fluid that never arrives while the other works. The
-four reported URLs are pinned in `BlueprintFluidPortLayoutTest`.
-
-**See.** `architecture.md` §Blueprint layout; `pitfalls.md` "Layout and fluids".
 
 ## 2026-10-26 — Fluid feeding: one lane per row, the route is the fallback
 

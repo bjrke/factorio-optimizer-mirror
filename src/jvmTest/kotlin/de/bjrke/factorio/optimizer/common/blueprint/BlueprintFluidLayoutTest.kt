@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
@@ -374,6 +375,66 @@ class BlueprintFluidLayoutTest {
                         component.mapNotNull { fluids[it] }.distinct().size <= 1
                     },
                     "two different fluids share one pipe network",
+                )
+            },
+        )
+    }
+
+    @Test
+    fun aSecondFluidOnTheNorthEdgeGetsItsOwnLaneBesideTheFirst() {
+        val coolant =
+            recipe(
+                "coolant",
+                Category.CHEMISTRY,
+                mapOf(gear to 1.0),
+                mapOf(water to 1.0, lubricant to 1.0),
+            )
+        val fluidPlan =
+            BlueprintPlan(
+                target = gear,
+                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
+                sources =
+                    listOf(
+                        PlannedSource(water, 1.0, fluid = true),
+                        PlannedSource(lubricant, 1.0, fluid = true),
+                    ),
+                scale = 1.0,
+                label = "coolant",
+            )
+        val dump = blueprintLayoutDump(fluidPlan, logistics)
+        val machines = dump.entities.filterIsInstance<MachineEntity>()
+        val machineTop = machines.minOf { it.area.topLeft.y }
+        val machineLeft = machines.minOf { it.area.topLeft.x }
+        val fluidMarkers = dump.entities.filterIsInstance<MarkerEntity>().filter { it.signal.fluid }
+        val waterMarker = fluidMarkers.single { it.signal.material == water }
+        val secondMarker = fluidMarkers.single { it.signal.material == lubricant }
+        val secondPipes =
+            dump.entities.filterIsInstance<Plumbing>().filter { it.material == lubricant }
+
+        assertAll(
+            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            // both lane markers sit in one west column, the second lane one row further out ...
+            { assertEquals(waterMarker.area.topLeft.x, secondMarker.area.topLeft.x) },
+            { assertTrue(secondMarker.area.topLeft.y < waterMarker.area.topLeft.y) },
+            // ... with a junction above the machine's second top corner and a shaft down to it
+            {
+                assertTrue(
+                    secondPipes.any {
+                        it is PipeEntity &&
+                            it.area.topLeft ==
+                                Coordinate(machineLeft + 2, secondMarker.area.topLeft.y)
+                    },
+                    "the second fluid got no lane junction",
+                )
+            },
+            {
+                assertTrue(
+                    secondPipes.any {
+                        it is PipeToGroundEntity &&
+                            it.area.topLeft == Coordinate(machineLeft + 2, machineTop - 1)
+                    },
+                    "the second fluid got no shaft onto its port",
                 )
             },
         )

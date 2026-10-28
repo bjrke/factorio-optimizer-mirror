@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.layout.joinsAt
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.north
@@ -53,7 +54,8 @@ private fun checkPlumbing(
     val tile = plumbing.area.topLeft
     for (side in fourNeighbours(tile)) {
         val other = index.at(side) as? Plumbing ?: continue
-        if (other.material != plumbing.material) {
+        // a pipe-to-ground end only joins on its mouth, so two different fluids may share a wall
+        if (other.material != plumbing.material && plumbing.joinsAt(side) && other.joinsAt(tile)) {
             errors += "fluids ${plumbing.material.name} and ${other.material.name} touch at $side"
         }
     }

@@ -1,15 +1,11 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.plan.FluidPort
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_BLUEPRINT_RECIPES
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
-import de.bjrke.factorio.optimizer.common.plan.PortFlow
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -294,39 +290,5 @@ class BlueprintPlanTest {
             "stone-furnace" to Dimension(2, 2),
         ) { (identifier, expected) ->
             assertEquals(expected, blueprintMachineFootprint(identifier))
-        }
-
-    @Test
-    fun fluidPortsMatchThePrototypes() =
-        assertTableOf(
-            // the electromagnetic plant is turned 90° clockwise: its input boxes now face north
-            // and south, its output boxes west and east
-            "electromagnetic-plant" to
-                listOf(
-                    FluidPort(Coordinate(-1, 2), PortFlow.OUTPUT),
-                    FluidPort(Coordinate(1, -1), PortFlow.INPUT),
-                    FluidPort(Coordinate(2, 4), PortFlow.INPUT),
-                    FluidPort(Coordinate(4, 1), PortFlow.OUTPUT),
-                ),
-            // the chemical plant takes its fluids on the two top corners, gives them on the bottom
-            "chemical-plant" to
-                listOf(
-                    FluidPort(Coordinate(0, -1), PortFlow.INPUT),
-                    FluidPort(Coordinate(0, 3), PortFlow.OUTPUT),
-                    FluidPort(Coordinate(2, -1), PortFlow.INPUT),
-                    FluidPort(Coordinate(2, 3), PortFlow.OUTPUT),
-                ),
-            // the foundry is turned 180°: it takes on the top edge and gives on the bottom
-            "foundry" to
-                listOf(
-                    FluidPort(Coordinate(1, -1), PortFlow.INPUT),
-                    FluidPort(Coordinate(1, 5), PortFlow.OUTPUT),
-                    FluidPort(Coordinate(3, -1), PortFlow.INPUT),
-                    FluidPort(Coordinate(3, 5), PortFlow.OUTPUT),
-                ),
-            // a machine without pipes has no ports
-            "electric-furnace" to emptyList(),
-        ) { (identifier, expected) ->
-            assertEquals(expected, blueprintMachineFluidPorts(identifier))
         }
 }

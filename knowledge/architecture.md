@@ -234,9 +234,11 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   in `LayoutUnderground.kt`, all as board extensions. `LayoutPipes.kt` holds the
   one pipe-tile rule, `canPlacePipes` (the tile is free and no placed pipe beside
   it carries another fluid — touching pipes merge in Factorio), which the lane
-  placer and the routed fluid feed share; `touchesForeign` is its neighbor test,
-  while a tile merely *reserved* for another fluid stays the caller's check
-  (`FluidFeeder.pipeAllowed` via `edgeFluidAt`).
+  placer and the routed fluid feed share; `touchesForeign` is its neighbor test and
+  `Plumbing.joinsAt` reads a pipe-to-ground end's single mouth
+  (`PipeToGroundEntity.mouth`), so a pipe beside a foreign end's closed side does
+  not count as a merge. A tile merely *reserved* for another fluid stays the
+  caller's check (`FluidFeeder.pipeAllowed` via `edgeFluidAt`).
 - `route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
   `route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
   the `RouteRequest`, and `route/RouteSearch.kt` owns the weighted A* frontier and node
@@ -263,8 +265,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   ends in the two-tile gap between touching machines) and one vertical shaft per
   port, whose ends sit one row inside the lane and on the port tile.
   `planning/RowFluidLane.kt` assigns the recipe's fluids to the machine ports in
-  recipe order, decides which side that puts the lane on and the lane row (two rows
-  beyond the outermost belt).
+  `prototypeFluidPorts` order — inputs before outputs, each in recipe order — and
+  decides which side that puts a lane on, the lane row (two rows beyond the
+  outermost belt) and its depth: a side places one lane per fluid, each two rows
+  further out than the last.
   `planning/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
   horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds
   no room so only that port falls back to the route.
@@ -272,23 +276,28 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
 - `plumbing/FluidFeeder.kt` — supplies every fluid. `placeImports()` lets
-  `plumbing/FluidLaneFeed.kt` place the lane of every row that gets one (north and
-  south side), records the port tiles those lanes reach and leaves them alone, then
-  reserves the remaining machine edges (`fluidEdge`) and places every routed
-  source marker, keeping the prepared pipe groups. `routeFluids()` grows those
-  networks afterwards (`pipeAllowed`, `pipeRoute`), after the solid imports. The
-  lane is primary; the A* path is only the fallback for a side port, a machine
-  without a port table or a shaft that found no room. A fluid target whose output
-  port is on a side edge is routed to a marker by the same path
-  (`connectTargetOutput`), not left as a stub. The lane/marker pass runs after
-  `RowPlacer.placeAll()`, so the belts and inserters a shaft buries itself under
-  already stand (see `decisions.md`, 2026-10-26).
+  `plumbing/FluidLaneFeed.kt` place a lane for every fluid of every row that gets
+  one (north and south side), records the port tiles those lanes reach and leaves
+  them alone, then reserves the remaining machine edges (`fluidEdge`) and places
+  every routed source marker, keeping the prepared pipe groups. A routed marker
+  sits next to its first sink and searches its row **outward from the port's edge**
+  (`portEdge`:
+  north for a north port, south for a south port, south for a side port), so a
+  second fluid on the top edge is marked above the row instead of below it.
+  `routeFluids()` grows those networks afterwards (`pipeAllowed`, `pipeRoute`),
+  after the solid imports. The lane is primary; the A* path is only the fallback
+  for a side port, a machine without a port table or a shaft that found no room.
+  A fluid target whose output port is on a side edge is routed to a marker by the
+  same path (`connectTargetOutput`), not left as a stub. The lane/marker pass runs
+  after `RowPlacer.placeAll()`, so the belts and inserters a shaft buries itself
+  under already stand (see `decisions.md`, 2026-10-26).
 - `routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). A **fluid**
   lane marker moves into that same column; `routing/FluidFeedLinker.kt` joins its
   lane head with pipe-to-ground runs along the lane row (`FluidFeed` in
-  `plan/ImportExtension.kt`). The marker, link and head are pinned so compaction
-  shifts them as one group.
+  `plan/ImportExtension.kt`). Without solid imports the column is the westmost
+  inline fluid marker, so the stacked lane markers still share one column. The
+  marker, link and head are pinned so compaction shifts them as one group.
 - `compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
   underground runs after each corridor and shifts the import pins and bounds. A
   candidate that fails only after the stretch is ruled out by its seam path and the

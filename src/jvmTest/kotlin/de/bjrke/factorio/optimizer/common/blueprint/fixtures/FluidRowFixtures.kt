@@ -12,9 +12,9 @@ import de.bjrke.factorio.optimizer.common.plan.FluidPort
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.plan.isInputPort
 import de.bjrke.factorio.optimizer.common.plan.isOutputPort
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
@@ -98,7 +98,7 @@ class FluidRowLayout(plan: BlueprintPlan) {
     /** The port table entry a pipe at [tile] stands on, with the machine that owns it. */
     private fun portEntryAt(tile: Coordinate): Pair<String, FluidPort>? =
         machineEntities.firstNotNullOfOrNull { machine ->
-            blueprintMachineFluidPorts(machine.name)
+            prototypeFluidPorts(machine.name)
                 .firstOrNull { machine.area.topLeft + it.tile == tile }
                 ?.let { machine.name to it }
         }
@@ -106,6 +106,6 @@ class FluidRowLayout(plan: BlueprintPlan) {
     /** The port tiles of [machine] alone, from the port table of the machine it runs. */
     fun portsOf(machine: Area): List<Coordinate> {
         val identifier = machinesToName[machine.topLeft] ?: return emptyList()
-        return blueprintMachineFluidPorts(identifier).map { machine.topLeft + it.tile }
+        return prototypeFluidPorts(identifier).map { machine.topLeft + it.tile }
     }
 }

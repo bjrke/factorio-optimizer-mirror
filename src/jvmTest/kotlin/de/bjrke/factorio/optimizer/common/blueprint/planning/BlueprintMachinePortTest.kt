@@ -3,15 +3,14 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.plan.FluidPort
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineDirection
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdgeFlow
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineInputPort
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineOutputPort
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
@@ -28,10 +27,10 @@ import kotlin.test.assertNotNull
  * The prototype dump in `resources/prototypes` cannot verify the ports: `sanitizePrototypeDump`
  * keeps only curated fields and none of them is a `pipe_connections` or `fluid_boxes`, so the dump
  * carries no pipe-connection data at all. The table therefore rests on the machines' real prototype
- * definitions: the tiles and flows are the prototype's, then [blueprintMachineDirection] turns the
- * machine so its inputs face a horizontal lane side. Every machine with a port table is covered
- * here, including the 180° turn of the cryogenic plant, foundry and oil refinery and the 90° turn
- * of the electromagnetic plant.
+ * definitions: [prototypeFluidPorts] lists the prototype's tiles and flows already turned into the
+ * orientation [blueprintMachineDirection] places the machine in. Every machine with a port table is
+ * covered here, including the 180° placement of the cryogenic plant, foundry and oil refinery and
+ * the 90° placement of the electromagnetic plant.
  */
 class BlueprintMachinePortTest {
 
@@ -39,10 +38,10 @@ class BlueprintMachinePortTest {
     private data class EdgePort(val tile: Coordinate, val edge: Direction, val flow: PortFlow)
 
     private val machines =
-        Factory.entries.filter { blueprintMachineFluidPorts(it.identifier).isNotEmpty() }
+        Factory.entries.filter { prototypeFluidPorts(it.identifier).isNotEmpty() }
 
     private fun edgePorts(identifier: String) =
-        blueprintMachineFluidPorts(identifier).map {
+        prototypeFluidPorts(identifier).map {
             val edge = blueprintMachineEdge(identifier, it)
             EdgePort(it.tile, edge, blueprintMachineEdgeFlow(identifier, it, edge))
         }
@@ -153,34 +152,8 @@ class BlueprintMachinePortTest {
         ) { (identifier, expected) ->
             assertEquals(
                 expected.toSet(),
-                blueprintMachineFluidPorts(identifier).map { it.tile to it.flow }.toSet(),
+                prototypeFluidPorts(identifier).map { it.tile to it.flow }.toSet(),
             )
-        }
-
-    @Test
-    fun twoPortsPerFlowKeepBothPipesInTheTable() =
-        assertTableOf(
-            "chemical-plant" to
-                listOf(Coordinate(0, -1), Coordinate(0, 3), Coordinate(2, -1), Coordinate(2, 3)),
-            "cryogenic-plant" to
-                listOf(
-                    Coordinate(0, -1),
-                    Coordinate(0, 5),
-                    Coordinate(2, -1),
-                    Coordinate(2, 5),
-                    Coordinate(4, -1),
-                    Coordinate(4, 5),
-                ),
-            "oil-refinery" to
-                listOf(
-                    Coordinate(0, 5),
-                    Coordinate(1, -1),
-                    Coordinate(2, 5),
-                    Coordinate(3, -1),
-                    Coordinate(4, 5),
-                ),
-        ) { (identifier, tiles) ->
-            assertEquals(tiles, blueprintMachineFluidPorts(identifier).map(FluidPort::tile))
         }
 
     /**
@@ -191,7 +164,7 @@ class BlueprintMachinePortTest {
     fun theChosenPortsAreOnePerDirectionAndComeFromTheTable() =
         assertTable(machines) { factory ->
             val identifier = factory.identifier
-            val ports = blueprintMachineFluidPorts(identifier)
+            val ports = prototypeFluidPorts(identifier)
             val input = blueprintMachineInputPort(identifier)
             val output = blueprintMachineOutputPort(identifier)
             assertAll(

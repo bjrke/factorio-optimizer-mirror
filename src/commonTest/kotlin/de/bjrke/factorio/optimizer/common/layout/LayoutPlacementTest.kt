@@ -12,7 +12,9 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 private val WATER = Material("water")
 
@@ -78,6 +80,25 @@ class LayoutPlacementTest {
             { assertNull(board.entityAt(Coordinate(2, 0))) },
             { assertNull(board.entityAt(Coordinate(3, 0))) },
             { assertNull(board.entityAt(Coordinate(4, 0))) },
+        )
+    }
+
+    @Test
+    fun aPipeOnlyMergesWithAForeignEndOnItsMouthSide() {
+        val board = newBoard()
+        val oil = Material("heavy-oil")
+        // a water shaft end whose mouth faces south into a machine
+        board.placeEnd(WATER, Coordinate(4, 0), Direction.SOUTH, Io.OUTPUT)
+        // a plain water pipe joins on every side
+        board.placePipe(Coordinate(8, 0), WATER)
+
+        assertAll(
+            // beside the closed side the heavy oil may stand
+            { assertTrue(board.canPlacePipes(Coordinate(3, 0), oil)) },
+            // on the mouth side it would join the water network
+            { assertFalse(board.canPlacePipes(Coordinate(4, 1), oil)) },
+            // a plain pipe has no closed side
+            { assertFalse(board.canPlacePipes(Coordinate(7, 0), oil)) },
         )
     }
 }

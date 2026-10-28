@@ -223,9 +223,9 @@ class BlueprintFluidCharacterizationTest {
     fun aMachineWithPipesOnBothEdgesIsFedFromItsTopEdge() =
         assertTableOf(
             // machine -> (its top-left corner, the pipe that feeds it)
-            Factory.FOUNDRY to (Coordinate(40, 0) to Coordinate(41, -1)),
-            Factory.CRYOGENIC_PLANT to (Coordinate(40, 0) to Coordinate(40, -1)),
-            Factory.OIL_REFINERY to (Coordinate(40, 0) to Coordinate(41, -1)),
+            Factory.FOUNDRY to (Coordinate(40, 0) to Coordinate(43, -1)),
+            Factory.CRYOGENIC_PLANT to (Coordinate(40, 0) to Coordinate(42, -1)),
+            Factory.OIL_REFINERY to (Coordinate(40, 0) to Coordinate(43, -1)),
         ) { (factory, expected) ->
             val (machine, port) = expected
             val row = FluidRowLayout(fluidRowPlan(factory))

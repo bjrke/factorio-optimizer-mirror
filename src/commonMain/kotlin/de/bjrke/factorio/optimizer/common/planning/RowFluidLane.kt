@@ -6,7 +6,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
+import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 
 /**
  * The fluid lane of one row: the shape that feeds (or drains) every machine of the row through a
@@ -18,9 +18,9 @@ import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFluidPorts
  * A port is assigned to the recipe's fluids in recipe order: the first fluid input takes the first
  * input port, the second the next one, and the same for the outputs. The side a lane runs on is
  * read from that assignment, not from a fixed "north feeds, south drains", so a machine whose
- * prototype feeds from the south (after the blueprint turns it) is still served. A row gets no lane
- * when a machine has no port for that material on the side. A machine that takes two fluids on the
- * same edge gets one lane for the first and keeps its second port for the route.
+ * prototype feeds from another edge is still served. A row gets no lane when a machine has no port
+ * for that material on the side. A machine that takes several fluids on the same edge gets one lane
+ * per fluid, stacked outward so every lane can dive to its own port.
  */
 internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
@@ -29,9 +29,13 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
         if (row.interfaces.isNotEmpty()) return emptyList()
         val first = row.machines.firstOrNull() ?: return emptyList()
         val candidates = inputMaterials(first) + outputMaterials(first)
-        return candidates.filter { material ->
-            row.machines.all { machine -> portFor(row, machine, material, side) != null }
-        }
+        return candidates
+            .filter { material ->
+                row.machines.all { machine -> portFor(row, machine, material, side) != null }
+            }
+            .sortedBy { material ->
+                portFor(row, first, material, side)?.x
+            }
     }
 
     /**
@@ -48,10 +52,14 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
         return port.takeIf { sideOf(row, machine, it) == side }
     }
 
-    /** The lane that serves [row] on [side] for [material], or null when the row gets no lane. */
-    fun lane(row: Row, side: LineSide, material: Material): FluidLane? {
+    /**
+     * The lane that serves [row] on [side] for [material], or null when the row gets no lane.
+     * [depth] counts the lanes already placed on that side: a further fluid on the same edge runs
+     * two rows further out, so its shafts can dive under the lanes between it and the machines.
+     */
+    fun lane(row: Row, side: LineSide, material: Material, depth: Int = 0): FluidLane? {
         if (material !in fluids(row, side)) return null
-        val laneRow = laneRow(row, side) ?: return null
+        val laneRow = laneRow(row, side, depth)
         val ports = row.machines.mapNotNull { machine -> portFor(row, machine, material, side) }
         if (ports.size != row.machines.size) return null
         return FluidLane.of(laneRow, ports.sortedBy { it.x }, side)
@@ -59,23 +67,23 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /**
      * The row the lane runs on: two rows beyond the outermost belt the row already uses, so the row
-     * between holds the shafts' lane-side ends. It is never between a belt and the machines.
+     * between holds the shafts' lane-side ends. It is never between a belt and the machines. A
+     * [depth] of n puts the lane 2n rows further out than the first lane of that side.
      */
-    fun laneRow(row: Row, side: LineSide): Int? {
-        val above =
-            listOfNotNull(row.laneNearRow, row.laneFarRow).minOrNull() ?: (row.factoryTop - 2)
-        // the product belt always sits under the machines, even when it carries no material
-        val below = row.beltRows.plus(row.outputLaneRow).max()
-        return when (side) {
-            LineSide.NORTH -> above - 2
-            LineSide.SOUTH -> below + 2
+    fun laneRow(row: Row, side: LineSide, depth: Int = 0) =
+        when (side) {
+            LineSide.NORTH ->
+                (listOfNotNull(row.laneNearRow, row.laneFarRow).minOrNull()
+                    ?: (row.factoryTop - 2)) - 2 - 2 * depth
+            LineSide.SOUTH ->
+                // the product belt always sits under the machines, even when it carries no material
+                row.beltRows.plus(row.outputLaneRow).max() + 2 + 2 * depth
         }
-    }
 
     /** The port the recipe assigns [material] to, whichever row edge that port is on. */
     internal fun assignedPort(row: Row, machine: PlacedMachine, material: Material): Coordinate? {
         val identifier = machine.plannedRecipe.factory.identifier
-        val ports = blueprintMachineFluidPorts(identifier)
+        val ports = prototypeFluidPorts(identifier)
         val inputIndex = inputMaterials(machine).indexOf(material)
         if (inputIndex >= 0) {
             return ports
@@ -110,7 +118,7 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
     /** The horizontal edge [tile] sits on for [machine], or null when it is a side edge. */
     private fun sideOf(row: Row, machine: PlacedMachine, tile: Coordinate): LineSide? {
         val identifier = machine.plannedRecipe.factory.identifier
-        val size = blueprintMachineFluidPorts(identifier)
+        val size = prototypeFluidPorts(identifier)
         val relative = Coordinate(tile.x - machine.left, tile.y - row.factoryTop)
         val port = size.firstOrNull { it.tile == relative } ?: return null
         return when (blueprintMachineEdge(identifier, port)) {

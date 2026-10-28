@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.layout.entity.BeltLikeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.layout.markTunnel
 import de.bjrke.factorio.optimizer.common.layout.placeEnd
@@ -133,13 +134,15 @@ internal class FluidLanePlacer(
 
     /**
      * A run passes under whatever already stands between the lane and the port: the input belts,
-     * the inserters on the machine edge and any ground. A belt carries its items on top of the
-     * ground, so a pipe goes beneath it just as it goes beneath an inserter, and the run moves
-     * nothing of the row.
+     * the inserters on the machine edge, a surface pipe and any ground. A belt carries its items on
+     * top of the ground, so a pipe goes beneath it just as it goes beneath an inserter, and the run
+     * moves nothing of the row. A pipe-to-ground end carries its own underground run along its
+     * direction, so a vertical shaft may only cross one that runs on the other axis.
      */
     private fun canBury(entity: LayoutEntity?) =
         entity == null ||
             entity is InserterEntity ||
             entity is PipeEntity ||
-            entity is BeltLikeEntity
+            entity is BeltLikeEntity ||
+            (entity is PipeToGroundEntity && (entity.direction == EAST || entity.direction == WEST))
 }
