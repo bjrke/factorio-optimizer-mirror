@@ -2,11 +2,11 @@ package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 
-/** One machine of a row: the planned recipe it builds and the column it starts on. */
-internal class PlacedMachine(val plannedRecipe: PlannedRecipe, val left: Int)
+/** One machine of a row: the production it builds and the column it starts on. */
+internal class PlacedMachine(val production: FactoryProduction, val left: Int)
 
 /**
  * The rectangle a row occupies: its corner, one machine footprint and the stride between copies.
@@ -49,7 +49,7 @@ internal data class RowLanes(
 internal class Row(
     /** The plan row this geometry places. */
     val plannedRow: PlannedRow,
-    /** The planned recipe each machine builds, left to right; one entry per machine. */
+    /** The production each machine builds, left to right; one entry per machine. */
     val machines: List<PlacedMachine>,
     val box: RowBox,
     val lanes: RowLanes,

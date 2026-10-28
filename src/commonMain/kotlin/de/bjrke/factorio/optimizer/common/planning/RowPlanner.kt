@@ -3,11 +3,11 @@ package de.bjrke.factorio.optimizer.common.planning
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
 internal data class RowUnit(val row: PlannedRow, val depth: Int) {
     /** What the row is built from, so two rows with the same depth keep a stable order. */
     val label: String
-        get() = row.plannedRecipes.map { it.recipe.name }.sorted().joinToString("+")
+        get() = row.productions.map { it.recipe.name }.sorted().joinToString("+")
 }
 
 /**
@@ -31,7 +31,7 @@ internal class RowPlanner(
     /** The rows to place, top to bottom: the deepest consumers first, then by name. */
     val units: List<RowUnit> =
         plan.rows
-            .map { row -> RowUnit(row, row.plannedRecipes.maxOf { depthOf(it, emptyList()) }) }
+            .map { row -> RowUnit(row, row.productions.maxOf { depthOf(it, emptyList()) }) }
             .sortedWith(compareBy({ it.depth }, { it.label }))
 
     /**
@@ -39,7 +39,7 @@ internal class RowPlanner(
      * the rows. A recipe already on [path] contributes zero instead of recursing forever, and a
      * path visits every recipe once, so the walk stays within the plan's recipe cap.
      */
-    private fun depthOf(planned: PlannedRecipe, path: List<Recipe>): Int {
+    private fun depthOf(planned: FactoryProduction, path: List<Recipe>): Int {
         if (planned.recipe in path) return 0
         val next = path + planned.recipe
         val producers =
@@ -50,12 +50,12 @@ internal class RowPlanner(
         else 1 + producers.maxOf { (_, producer) -> depthOf(producer, next) }
     }
 
-    fun footprint(plannedRecipe: PlannedRecipe) = blueprintMachineFootprint(plannedRecipe.factory)
+    fun footprint(production: FactoryProduction) = blueprintMachineFootprint(production.factory)
 
     /** How many inserters one machine needs to pull [materials] out of its lane. */
-    fun insertersFor(plannedRecipe: PlannedRecipe, materials: List<Material>): Int {
+    fun insertersFor(production: FactoryProduction, materials: List<Material>): Int {
         if (materials.isEmpty()) return 0
-        val rate = materials.sumOf { inputPerMachine(plannedRecipe.production, it) }
+        val rate = materials.sumOf { inputPerMachine(production, it) }
         return maxOf(1, ceil(logistics.beltInserterCount(rate)).toInt())
     }
 

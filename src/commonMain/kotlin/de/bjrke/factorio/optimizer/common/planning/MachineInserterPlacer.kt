@@ -8,11 +8,11 @@ import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.abs
 
 /**
@@ -31,10 +31,10 @@ internal class MachineInserterPlacer(
     }
 
     private fun placeMachine(row: Row, machine: PlacedMachine, internal: List<Material>) {
-        val plannedRecipe = machine.plannedRecipe
+        val production = machine.production
         val ports = portColumns(machine)
-        placeInputInserters(row, machine, plannedRecipe, ports.top)
-        placeOutputInserters(row, machine, plannedRecipe, internal, ports.bottom)
+        placeInputInserters(row, machine, production, ports.top)
+        placeOutputInserters(row, machine, production, internal, ports.bottom)
     }
 
     /**
@@ -44,11 +44,11 @@ internal class MachineInserterPlacer(
      * needed: every copy of a row keeps the same ones.
      */
     private fun portColumns(machine: PlacedMachine): PortColumns {
-        val plannedRecipe = machine.plannedRecipe
-        if (!usesFluid(plannedRecipe)) return PortColumns(emptySet(), emptySet())
-        val recipe = plannedRecipe.recipe
+        val production = machine.production
+        if (!usesFluid(production)) return PortColumns(emptySet(), emptySet())
+        val recipe = production.recipe
         return inserterPortColumns(
-            plannedRecipe.factory,
+            production.factory,
             recipe.ingredients.keys.count { logistics.isFluid(it) },
             recipe.result.keys.count { logistics.isFluid(it) },
         )
@@ -61,16 +61,16 @@ internal class MachineInserterPlacer(
     private fun placeInputInserters(
         row: Row,
         machine: PlacedMachine,
-        plannedRecipe: PlannedRecipe,
+        production: FactoryProduction,
         topPorts: Set<Int>,
     ) {
-        val recipe = plannedRecipe.recipe
-        val near = row.solids.getOrNull(0)?.takeIf { it in recipe.ingredients }
-        val far = row.solids.getOrNull(1)?.takeIf { it in recipe.ingredients }
+        val ingredients = production.recipe.ingredients
+        val near = row.solids.getOrNull(0)?.takeIf { it in ingredients }
+        val far = row.solids.getOrNull(1)?.takeIf { it in ingredients }
         val pattern =
             planner.inserterPattern(
-                near?.let { planner.insertersFor(plannedRecipe, listOf(it)) } ?: 0,
-                far?.let { planner.insertersFor(plannedRecipe, listOf(it)) } ?: 0,
+                near?.let { planner.insertersFor(production, listOf(it)) } ?: 0,
+                far?.let { planner.insertersFor(production, listOf(it)) } ?: 0,
                 row.width,
             )
         // the machine's last column is left free for a pole; a fluid port may take one of the
@@ -93,11 +93,11 @@ internal class MachineInserterPlacer(
     private fun placeOutputInserters(
         row: Row,
         machine: PlacedMachine,
-        plannedRecipe: PlannedRecipe,
+        production: FactoryProduction,
         internal: List<Material>,
         bottomPorts: Set<Int>,
     ) {
-        val recipe = plannedRecipe.recipe
+        val recipe = production.recipe
         val freeBottomColumns = (0 until row.width).filterNot(bottomPorts::contains)
         val productColumn =
             freeBottomColumns.minByOrNull { abs(it - row.width / 2) } ?: (row.width / 2)
@@ -107,7 +107,7 @@ internal class MachineInserterPlacer(
                 .filter { it != productColumn }
                 .minByOrNull { abs(it - belowPreferred) } ?: belowPreferred
         // the product is inserted onto the belt below the row
-        externalProduct(plannedRecipe, internal, logistics)?.let {
+        externalProduct(production, internal, logistics)?.let {
             board.placeInserter(
                 Coordinate(machine.left + productColumn, row.factoryBottom + 1),
                 NORTH,
@@ -126,9 +126,9 @@ internal class MachineInserterPlacer(
         }
     }
 
-    private fun usesFluid(plannedRecipe: PlannedRecipe) =
-        plannedRecipe.recipe.ingredients.keys.any { logistics.isFluid(it) } ||
-            plannedRecipe.recipe.result.keys.any { logistics.isFluid(it) }
+    private fun usesFluid(production: FactoryProduction) =
+        production.recipe.ingredients.keys.any { logistics.isFluid(it) } ||
+            production.recipe.result.keys.any { logistics.isFluid(it) }
 }
 
 /**
@@ -167,8 +167,7 @@ internal data class PortColumns(val top: Set<Int>, val bottom: Set<Int>)
  * The material a machine's product leaves the row with: its solid result, unless it is internal.
  */
 internal fun externalProduct(
-    plannedRecipe: PlannedRecipe,
+    production: FactoryProduction,
     internal: List<Material>,
     logistics: LogisticsCalculator,
-): Material? =
-    plannedRecipe.recipe.result.keys.firstOrNull { !logistics.isFluid(it) && it !in internal }
+) = production.recipe.result.keys.firstOrNull { !logistics.isFluid(it) && it !in internal }

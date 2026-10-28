@@ -82,7 +82,7 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The port the recipe assigns [material] to, whichever row edge that port is on. */
     internal fun assignedPort(row: Row, machine: PlacedMachine, material: Material): Coordinate? {
-        val factory = machine.plannedRecipe.factory
+        val factory = machine.production.factory
         val ports = prototypeFluidPorts(factory)
         val inputIndex = inputMaterials(machine).indexOf(material)
         if (inputIndex >= 0) {
@@ -105,11 +105,11 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The fluid inputs of [machine]'s recipe, in recipe order. */
     private fun inputMaterials(machine: PlacedMachine): List<Material> =
-        machine.plannedRecipe.recipe.ingredients.keys.filter { logistics.isFluid(it) }
+        machine.production.recipe.ingredients.keys.filter { logistics.isFluid(it) }
 
     /** The fluid outputs of [machine]'s recipe, in recipe order. */
     private fun outputMaterials(machine: PlacedMachine): List<Material> =
-        machine.plannedRecipe.recipe.result.keys.filter { logistics.isFluid(it) }
+        machine.production.recipe.result.keys.filter { logistics.isFluid(it) }
 
     private fun isInput(flow: PortFlow) = flow != PortFlow.OUTPUT
 
@@ -117,7 +117,7 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The horizontal edge [tile] sits on for [machine], or null when it is a side edge. */
     private fun sideOf(row: Row, machine: PlacedMachine, tile: Coordinate): LineSide? {
-        val factory = machine.plannedRecipe.factory
+        val factory = machine.production.factory
         val size = prototypeFluidPorts(factory)
         val relative = Coordinate(tile.x - machine.left, tile.y - row.factoryTop)
         val port = size.firstOrNull { it.tile == relative } ?: return null

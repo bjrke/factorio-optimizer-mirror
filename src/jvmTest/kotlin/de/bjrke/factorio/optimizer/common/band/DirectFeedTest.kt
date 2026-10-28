@@ -1,8 +1,11 @@
 package de.bjrke.factorio.optimizer.common.band
 
+import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.GROUP_MAX_MACHINES
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
@@ -10,8 +13,7 @@ import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.special.DirectFeed
 import de.bjrke.factorio.optimizer.common.special.directFeed
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
@@ -24,6 +26,14 @@ private val beta = Material("beta")
 private val gamma = Material("gamma")
 private val delta = Material("delta")
 private val acid = Material("sulfuric-acid")
+
+/** Every production in row order; a production may appear once per row. */
+private val DirectFeed.recipes: List<FactoryProduction>
+    get() = rows.flatMap { it.productions }
+
+/** The direct-feed bands among the rows. */
+private val DirectFeed.bands: List<PlannedRow>
+    get() = rows.filter { it.links.isNotEmpty() }
 
 /** The material a recipe produces, to keep the recipe names and the rates apart. */
 private val product = Material("product")
@@ -184,7 +194,7 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aMaterialWithASecondConsumerGetsOneMorePlannedRecipe() {
+    fun aMaterialWithASecondConsumerGetsOneMoreProduction() {
         val cable = recipe("copper-cable", mapOf(alpha to 1.0))
         val circuit = recipe("electronic-circuit", mapOf(gamma to 1.0), mapOf(alpha to 1.0))
         val module = recipe("module", mapOf(product to 1.0), mapOf(alpha to 0.05))
@@ -220,14 +230,14 @@ class DirectFeedTest {
             {
                 assertEquals(
                     listOf(2, 2, 1, 1),
-                    feed.rows.flatMap { row -> row.plannedRecipes.map { row.machinesOf(it) } },
+                    feed.rows.flatMap { row -> row.productions.map { row.machinesOf(it) } },
                 )
             },
         )
     }
 
     @Test
-    fun aBeltedPlannedRecipeCoversThePlansRateNotAWholeConsumerMachine() {
+    fun aBeltedProductionCoversThePlansRateNotAWholeConsumerMachine() {
         // the foundry-like consumer takes 20 alpha/s when it runs full, but the plan only ever
         // draws a twentieth of that rate; sizing the belt row by the whole machine would build nine
         // gear machines where a single one is enough

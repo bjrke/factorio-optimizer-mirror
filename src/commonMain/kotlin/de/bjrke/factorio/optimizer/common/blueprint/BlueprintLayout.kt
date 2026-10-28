@@ -125,7 +125,7 @@ private class RowLayout(
     private val deliveryRouter = DeliveryRouter(stage, connector, imports, beltEnd, failures)
 
     fun build(): List<BlueprintEntity> {
-        if (plan.recipes.isNotEmpty()) {
+        if (plan.rows.isNotEmpty()) {
             rowPlacer.placeAll()
             deliveryRouter.placeTargetOutput()
             // prepare every source before routing anything, so a long early route cannot occupy a

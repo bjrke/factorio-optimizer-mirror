@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
+import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogisticsConfig
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test

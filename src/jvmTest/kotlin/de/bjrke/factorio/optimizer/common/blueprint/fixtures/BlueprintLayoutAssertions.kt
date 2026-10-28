@@ -38,7 +38,7 @@ fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
 }
 
 /**
- * A material must reach a belt from one planned recipe only. The layout has one belt source per
+ * A material must reach a belt from one production only. The layout has one belt source per
  * material, so a second belt-fed producer would be built with a product belt no delivery ever uses
  * — the "factory with an unconnected output belt" a band already covers.
  */
@@ -47,7 +47,7 @@ fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
     val sources =
         plan.rows
             .flatMap { row ->
-                row.plannedRecipes.flatMap { planned ->
+                row.productions.flatMap { planned ->
                     planned.recipe.result.keys
                         .filter { material -> row.exports(planned, material) }
                         .map { material -> planned to material }
@@ -56,7 +56,7 @@ fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
             .groupBy({ it.second }, { it.first })
     val doubled = sources.filterValues { it.size > 1 }
 
-    assertEquals(emptyMap(), doubled, "material put on a belt by more than one planned recipe")
+    assertEquals(emptyMap(), doubled, "material put on a belt by more than one production")
 }
 
 /**

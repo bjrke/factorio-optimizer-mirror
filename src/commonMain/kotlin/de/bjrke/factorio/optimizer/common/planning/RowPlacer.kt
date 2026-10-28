@@ -22,9 +22,8 @@ private const val LANE_MARGIN = 40
 private const val BAND_GAP = 14
 
 /**
- * Places the machine rows once: a plain planned recipe as a row of copies, a direct-feed band as
- * one row of interleaved machines. Owns the placement order the later delivery and fluid stages
- * read.
+ * Places the machine rows once: a plain production as a row of copies, a direct-feed band as one
+ * row of interleaved machines. Owns the placement order the later delivery and fluid stages read.
  */
 internal class RowPlacer(
     private val board: LayoutBoard,
@@ -33,7 +32,7 @@ internal class RowPlacer(
     private val planner: RowPlanner,
 ) {
 
-    /** Every row once, in placement order; a band row serves all of its planned recipes. */
+    /** Every row once, in placement order; a band row serves all of its productions. */
     val placedRows = mutableListOf<Row>()
 
     private val machineInserters = MachineInserterPlacer(board, logistics, planner)
@@ -68,12 +67,12 @@ internal class RowPlacer(
         )
     }
 
-    /** Builds a plain row: repeated machines of its one planned recipe, touching each other. */
+    /** Builds a plain row: repeated machines of its one production, touching each other. */
     private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
-        val plannedRecipe = plannedRow.plannedRecipes.single()
-        val size = planner.footprint(plannedRecipe)
+        val production = plannedRow.productions.single()
+        val size = planner.footprint(production)
         val solids =
-            plannedRecipe.recipe.ingredients.keys
+            production.recipe.ingredients.keys
                 .filter { !logistics.isFluid(it) }
                 .sortedBy { it.name }
         val shape = rowShape(solids, size.height, bandTop)
@@ -101,10 +100,10 @@ internal class RowPlacer(
         for (machine in machines) {
             board.place(
                 MachineEntity(
-                    plannedRecipe.factory,
+                    production.factory,
                     Coordinate(machine.left, row.factoryTop).area(size),
-                    plannedRecipe.recipe.name,
-                    blueprintMachineDirection(plannedRecipe.factory),
+                    production.recipe.name,
+                    blueprintMachineDirection(production.factory),
                 ),
             )
         }
@@ -125,10 +124,10 @@ internal class RowPlacer(
      */
     private fun placeBand(plannedRow: PlannedRow, bandTop: Int): Row {
         val internal = plannedRow.links.map { it.material }
-        val plannedRecipes = plannedRow.plannedRecipes
-        val size = planner.footprint(plannedRecipes.first())
+        val productions = plannedRow.productions
+        val size = planner.footprint(productions.first())
         val solids =
-            plannedRecipes
+            productions
                 .flatMap { it.recipe.ingredients.keys }
                 .filter { !logistics.isFluid(it) && it !in internal }
                 .distinct()
@@ -136,8 +135,8 @@ internal class RowPlacer(
         val shape = rowShape(solids, size.height, bandTop)
         val stride = size.width + 1
         val machines =
-            plannedRow.machines.mapIndexed { index, plannedRecipe ->
-                PlacedMachine(plannedRecipe, LANE_MARGIN + index * stride)
+            plannedRow.machines.mapIndexed { index, production ->
+                PlacedMachine(production, LANE_MARGIN + index * stride)
             }
         val row =
             Row(
@@ -156,10 +155,10 @@ internal class RowPlacer(
         for (machine in machines) {
             board.place(
                 MachineEntity(
-                    machine.plannedRecipe.factory,
+                    machine.production.factory,
                     Coordinate(machine.left, row.factoryTop).area(size),
-                    machine.plannedRecipe.recipe.name,
-                    blueprintMachineDirection(machine.plannedRecipe.factory),
+                    machine.production.recipe.name,
+                    blueprintMachineDirection(machine.production.factory),
                 ),
             )
         }
@@ -187,7 +186,7 @@ internal class RowPlacer(
     private fun placeProduct(row: Row, internal: List<Material>) {
         val product =
             row.machines.firstNotNullOfOrNull {
-                externalProduct(it.plannedRecipe, internal, logistics)
+                externalProduct(it.production, internal, logistics)
             }
         product?.let {
             for (x in row.left..row.right) {

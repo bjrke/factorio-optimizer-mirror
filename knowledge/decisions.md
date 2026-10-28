@@ -114,11 +114,13 @@ carries the sink role so the trimmer cannot turn a drain into a supply.
 ## 2026-10-24 — The row is the occurrence, not the recipe
 
 **Decision.** A plan occurrence is a plain-data `PlannedRow`: `machines` left to
-right plus the band `links`. A plain row repeats its recipe once per machine; a
-band is its machine sequence plus links. `BlueprintPlan.recipes` is a derived view
-and band membership and order are the `rows`/`machines` lists themselves. No `Map`
-or `Set` is keyed by a planned recipe or a row: producer lookup scans `plan.rows`
-and compares `row.plannedRow == producer` by value.
+right plus the band `links`. A plain row repeats its production once per machine; a
+band is its machine sequence plus links. Band membership and order are the
+`rows`/`machines` lists themselves, and each machine is a bare `FactoryProduction`
+(no wrapper type). `BlueprintPlan` keeps no derived recipe list: the flat view the
+suites need is the `commonTest` extension `BlueprintPlan.recipes`. No `Map` or
+`Set` is keyed by a production or a row: producer lookup scans `plan.rows` and
+compares `row.plannedRow == production` by value.
 
 **Guardrail.** Do not reintroduce an allocation index, reference identity or a
 recipe-keyed map: structurally identical rows must compare equal and stay
@@ -187,9 +189,9 @@ decides when.
 **Guardrail.** Do not reintroduce a task file or a checkpoint mechanism to carry
 state between turns.
 
-## 2026-10-18 — Belt-fed planned recipes are sized by plan demand
+## 2026-10-18 — Belt-fed productions are sized by plan demand
 
-**Decision.** A belt-fed planned recipe is sized by the plan's own rate demand,
+**Decision.** A belt-fed production is sized by the plan's own rate demand,
 not by whole consumer machines:
 
 `machines = max(ceil(beltedRate ÷ outputPerMachine) − bandOutputMachines,
@@ -213,7 +215,7 @@ smallest sum, then the closest rate. The band is a window of a periodic
 arrangement cut to the shortest length where no consumer starves and no producer
 is left without a consumer. Bounds: `GROUP_MAX_MACHINES = 18`, `MAX_BAND_RECIPES = 3`,
 `MAX_BAND_LINKS = 3`. Every machine is built complete; a band's internal material
-gets no lane, sink, belt or belted planned recipe.
+gets no lane, sink, belt or belted production.
 
 **Guardrail.** Do not group by machine count or give a band's internal material a
 belt. A recipe that takes **or** produces a fluid stays belted: a band puts the

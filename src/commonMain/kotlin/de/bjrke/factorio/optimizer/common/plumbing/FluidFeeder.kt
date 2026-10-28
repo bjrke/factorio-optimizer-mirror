@@ -84,7 +84,7 @@ internal class FluidFeeder(
                     val port = fluidEdge(row, machine, material, fed.keys)
                     if (port == null) {
                         failures +=
-                            "${material.name} to ${machine.plannedRecipe.factory.identifier} " +
+                            "${material.name} to ${machine.production.factory.identifier} " +
                                 "(no fluid port)"
                         continue
                     }
@@ -123,7 +123,7 @@ internal class FluidFeeder(
         val row = rowPlacer.producerRow(plan.target) ?: return
         val producer = row.plannedRow.producerOf(plan.target) ?: return
         for (machine in row.machines) {
-            if (machine.plannedRecipe.recipe === producer.recipe) {
+            if (machine.production.recipe === producer.recipe) {
                 connectTargetOutput(row, machine)
             }
         }
@@ -148,7 +148,7 @@ internal class FluidFeeder(
         val segment = fluidRoute(source, EAST, coordinate, plan.target)
         if (segment == null) {
             failures +=
-                "${plan.target.name} from ${machine.plannedRecipe.factory.identifier} " +
+                "${plan.target.name} from ${machine.production.factory.identifier} " +
                     "(no pipe route)"
             return
         }
@@ -208,7 +208,7 @@ internal class FluidFeeder(
      * back to its left then right edge, which flows both ways.
      */
     private fun inletTiles(row: Row, machine: PlacedMachine): List<Coordinate> {
-        val factory = machine.plannedRecipe.factory
+        val factory = machine.production.factory
         val ports =
             prototypeFluidPorts(factory)
                 .filter {
@@ -246,7 +246,7 @@ internal class FluidFeeder(
         val inlets =
             inletTiles(row, machine).filter { board.edgeFluidAt(it) in listOf(null, material) }
         val preferred =
-            blueprintMachineInputPort(machine.plannedRecipe.factory)?.let {
+            blueprintMachineInputPort(machine.production.factory)?.let {
                 Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y)
             }
         return inlets.firstOrNull {
@@ -259,7 +259,7 @@ internal class FluidFeeder(
      * null when it is taken.
      */
     private fun productEdge(row: Row, machine: PlacedMachine): Coordinate? {
-        val port = blueprintMachineOutputPort(machine.plannedRecipe.factory) ?: return null
+        val port = blueprintMachineOutputPort(machine.production.factory) ?: return null
         val tile = Coordinate(machine.left + port.tile.x, row.factoryTop + port.tile.y)
         return tile.takeIf { board.isFree(it) && !board.isReserved(it) }
     }

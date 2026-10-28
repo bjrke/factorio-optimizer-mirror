@@ -43,14 +43,14 @@ internal class BandInterfacePlacer(
 
     /** The machine rows [machine] keeps free for a fluid port on the side facing the gap. */
     private fun portRows(row: Row, machine: PlacedMachine, east: Boolean): Set<Int> {
-        val plannedRecipe = machine.plannedRecipe
-        val recipe = plannedRecipe.recipe
+        val production = machine.production
+        val recipe = production.recipe
         val usesFluid =
             recipe.ingredients.keys.any { logistics.isFluid(it) } ||
                 recipe.result.keys.any { logistics.isFluid(it) }
         if (!usesFluid) return emptySet()
         val edge = if (east) row.width else -1
-        return prototypeFluidPorts(plannedRecipe.factory)
+        return prototypeFluidPorts(production.factory)
             .filter { it.tile.x == edge }
             .mapTo(mutableSetOf()) { row.factoryTop + it.tile.y }
     }

@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planAndLogistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFor
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.transportMaterialsFor
+import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityChestEntity

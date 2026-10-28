@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
@@ -8,7 +9,6 @@ import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -16,7 +16,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 
 val ore = Material("iron-ore")
@@ -37,7 +36,7 @@ fun planned(
     recipe: Recipe,
     material: Material,
     factory: Factory,
-) = PlannedRecipe(FactoryProduction(material, recipe, factory, 1.0, 0))
+) = FactoryProduction(material, recipe, factory, 1.0, 0)
 
 val logistics =
     LogisticsCalculator(

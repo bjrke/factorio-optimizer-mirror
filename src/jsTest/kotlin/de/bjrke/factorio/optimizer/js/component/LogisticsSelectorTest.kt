@@ -1,11 +1,11 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.prototype.Surface
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogisticsConfig
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo

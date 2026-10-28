@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.service.fixtures
+package de.bjrke.factorio.optimizer.common.fixtures
 
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection

@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.service
 
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.production.RecipeLoader
@@ -7,7 +8,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.prototype.Surface
 import de.bjrke.factorio.optimizer.common.prototype.selection.forSurface
-import de.bjrke.factorio.optimizer.common.service.fixtures.production
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot

@@ -1,8 +1,6 @@
 package de.bjrke.factorio.optimizer.common.plan
 
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.ceil
 
@@ -36,8 +34,8 @@ internal fun plannedMachines(production: FactoryProduction, scale: Double): Int 
  * [sources] they draw from, and the [scale] the whole plan is drawn at. A [scale] below 1 means the
  * layout had to shrink to fit its belts; [label] explains that and how many copies reach full rate.
  *
- * A [PlannedRecipe] belongs to exactly one row: a row is the occurrence, so the same recipe in two
- * rows is two independent values, not one identity that has to be tracked.
+ * A [FactoryProduction] belongs to exactly one row: a row is the occurrence, so the same recipe in
+ * two rows is two independent values, not one identity that has to be tracked.
  */
 data class BlueprintPlan(
     val target: Material,
@@ -46,100 +44,86 @@ data class BlueprintPlan(
     val scale: Double,
     val label: String,
 ) {
-    /** Every planned recipe in plan order; a recipe may appear once per row. */
-    val recipes: List<PlannedRecipe>
-        get() = rows.flatMap { it.plannedRecipes }
-
-    /** The direct-feed bands, for callers that only care about them. */
-    val bands: List<PlannedRow>
-        get() = rows.filter { it.links.isNotEmpty() }
 
     /**
      * The first row that puts [material] on a belt, or null when the plan imports it. A band
      * inserts its link material machine to machine, so that product is not a belt source; another
      * row making the same material still can be.
      */
-    fun producerOf(material: Material): PlannedRow? = rows.firstOrNull {
+    fun producerOf(material: Material) = rows.firstOrNull {
         material in it.beltMaterials
     }
 
     /**
-     * The planned recipe that produces [material] first, ignoring band inserts. Used to order rows
-     * by depth; the belt source is [producerOf].
+     * The production that produces [material] first, ignoring band inserts. Used to order rows by
+     * depth; the belt source is [producerOf].
      */
-    fun producerRecipeOf(material: Material): PlannedRecipe? = rows.firstNotNullOfOrNull { row ->
-        row.plannedRecipes.firstOrNull { material in it.recipe.result.keys }
+    fun producerRecipeOf(material: Material) = rows.firstNotNullOfOrNull { row ->
+        row.productions.firstOrNull { material in it.recipe.result.keys }
     }
 
     /** The materials the plan puts on a belt at all. */
-    val beltMaterials: List<Material> by lazy {
+    val beltMaterials by lazy {
         rows.flatMap { it.beltMaterials }.distinct()
     }
 }
 
-/** One recipe a row builds; the row's machine list decides how many copies it stands as. */
-data class PlannedRecipe(val production: FactoryProduction) {
-    val recipe: Recipe
-        get() = production.recipe
-
-    val factory: Factory
-        get() = production.factory
-
-    override fun toString() = recipe.name
-}
-
 /**
  * One row a plan builds: one entry per machine, left to right, plus the direct insertions between
- * them. A plain recipe row repeats the same planned recipe; a direct-feed band holds its recipe
- * sequence. The row owns its recipes, so a planned recipe needs no plan-wide identity.
+ * them. A plain recipe row repeats the same production; a direct-feed band holds its recipe
+ * sequence. The row owns its productions, so a production needs no plan-wide identity.
  */
 data class PlannedRow(
-    /** The planned recipe of every machine, in machine order; the same recipe may repeat. */
-    val machines: List<PlannedRecipe>,
+    /** The production of every machine, in machine order; the same recipe may repeat. */
+    val machines: List<FactoryProduction>,
     /** The direct insertions of a band, by the gap they sit in; empty for a plain row. */
     val links: List<PlannedLink> = emptyList(),
 ) {
     init {
         require(machines.isNotEmpty()) { "a row needs at least one machine" }
-        require(links.isNotEmpty() || plannedRecipes.size == 1) {
+        require(links.isNotEmpty() || productions.size == 1) {
             "a row without links builds one recipe"
         }
     }
 
-    /** The planned recipes this row builds, once each, in machine order. */
-    val plannedRecipes: List<PlannedRecipe>
+    /** The productions this row builds, once each, in machine order. */
+    val productions: List<FactoryProduction>
         get() = machines.distinct()
 
     /** The products a machine of this row puts on a belt rather than into a neighbor. */
     val beltMaterials: List<Material>
         get() =
-            plannedRecipes
-                .flatMap { planned ->
-                    planned.recipe.result.keys.filter { material -> exports(planned, material) }
+            productions
+                .flatMap { production ->
+                    production.recipe.result.keys.filter { material ->
+                        exports(production, material)
+                    }
                 }
                 .distinct()
 
-    /** How many machines of [planned] this row builds. */
-    fun machinesOf(planned: PlannedRecipe): Int = machines.count { it == planned }
+    /** How many machines of [production] this row builds. */
+    fun machinesOf(production: FactoryProduction): Int = machines.count { it == production }
 
-    /** Whether [planned]'s [material] leaves this row over a belt rather than into a neighbor. */
-    fun exports(planned: PlannedRecipe, material: Material): Boolean =
-        material in planned.recipe.result.keys &&
-            links.none { link -> link.material == material && producerOf(link) == planned }
+    /**
+     * Whether [production]'s [material] leaves this row over a belt rather than into a neighbor.
+     */
+    fun exports(production: FactoryProduction, material: Material): Boolean =
+        material in production.recipe.result.keys &&
+            links.none { link -> link.material == material && producerOf(link) == production }
 
-    /** The first planned recipe of this row that puts [material] on a belt. */
-    fun producerOf(material: Material): PlannedRecipe? = plannedRecipes.firstOrNull { planned ->
-        exports(planned, material)
+    /** The first production of this row that puts [material] on a belt. */
+    fun producerOf(material: Material): FactoryProduction? = productions.firstOrNull {
+        exports(it, material)
     }
 
-    /** The planned recipe of the machine left (or right) of [link]'s gap. */
-    fun producerOf(link: PlannedLink): PlannedRecipe =
+    /** The production of the machine left (or right) of [link]'s gap. */
+    fun producerOf(link: PlannedLink): FactoryProduction =
         machines[if (link.producerIsLeft) link.gap else link.gap + 1]
 
     companion object {
-        /** A plain row: [machines] copies of the same planned recipe. */
-        fun copies(plannedRecipe: PlannedRecipe, machines: Int): PlannedRow =
-            PlannedRow(List(machines) { plannedRecipe })
+        /** A plain row: [machines] copies of the same production. */
+        fun copies(production: FactoryProduction, machines: Int): PlannedRow =
+            PlannedRow(List(machines) { production })
     }
 }
 

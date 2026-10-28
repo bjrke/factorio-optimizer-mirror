@@ -88,9 +88,9 @@ CLI (JVM) from one shared core.
 - `src/commonTest` — shared kotlin-test suites, run by both `jvmTest` and
   `jsBrowserTest`; must stay platform-neutral. Every suite sits in the package it
   tests (`commonTest/…/common/blueprint/…`, `.../production/…`), and shared
-  helpers live in that package's `fixtures` package (`service/fixtures`:
-  `testLogistics`, `calculator`, the optimizer fixtures; `blueprint/fixtures`:
-  materials, recipes, plans, layout assertions).
+  helpers live in a `fixtures` package (`common/fixtures`: `testLogistics`,
+  `calculator`, the optimizer fixtures and the test-only `BlueprintPlan.recipes`
+  view; `blueprint/fixtures`: materials, recipes, plans, layout assertions).
 - `src/jvmTest` / `src/jsTest` — platform-specific tests; JVM suites that need
   the build output or the source tree (`IconCoverageTest`) and the CLI
   integration tests live there.
@@ -255,7 +255,7 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 - `planning/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
   `RowBox` + `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and
   product, and owns the ordered `placedRows` list and the lane direction. A
-  `PlacedMachine` carries its own `plannedRecipe`; `producerRow(material)` scans
+  `PlacedMachine` carries its own `production`; `producerRow(material)` scans
   `placedRows` for the row whose `plannedRow` equals
   `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
@@ -334,10 +334,10 @@ small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
 `BlueprintPlan.rows` (`PlannedRow`/`PlannedLink`) is the single source of truth
 for it. A band is a `PlannedRow` whose `links` are non-empty and whose `machines`
-hold one `PlannedRecipe` per machine; a plain row repeats its one recipe once per
-machine and has no links. `band/BandSearch` finds the shortest window
+hold one `FactoryProduction` per machine; a plain row repeats its one production
+once per machine and has no links. `band/BandSearch` finds the shortest window
 (`FeedWindow` checks that every consumer is covered and every producer feeds
-someone). `RowPlacer` places a band with `placeBand`; only belted planned recipes
+someone). `RowPlacer` places a band with `placeBand`; only belted productions
 feed belts, lanes and sinks, so a band's internal material never gets a belt. See
 `decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
 follow-ups, and (2026-10-24) for why the row is the occurrence.

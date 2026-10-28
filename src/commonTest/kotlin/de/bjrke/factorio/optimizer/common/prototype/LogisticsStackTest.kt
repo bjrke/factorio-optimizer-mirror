@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
+import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogisticsConfig
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf

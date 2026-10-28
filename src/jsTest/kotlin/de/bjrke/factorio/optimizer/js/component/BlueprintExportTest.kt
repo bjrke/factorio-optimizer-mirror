@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -12,14 +13,12 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
 import de.bjrke.test.assertAll
@@ -52,14 +51,12 @@ private val plan =
             listOf(
                 PlannedRow(
                     listOf(
-                        PlannedRecipe(
-                            FactoryProduction(
-                                gear,
-                                craft,
-                                Factory.ASSEMBLING_MACHINE_3,
-                                1.0,
-                                0,
-                            ),
+                        FactoryProduction(
+                            gear,
+                            craft,
+                            Factory.ASSEMBLING_MACHINE_3,
+                            1.0,
+                            0,
                         ),
                     ),
                 ),

@@ -7,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.plan.FeedLink
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_COPIES
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
@@ -24,16 +23,7 @@ private const val MAX_BAND_RECIPES = 3
 private const val MAX_BAND_LINKS = 3
 
 /** The rows a plan builds; a plain row repeats one recipe, a band interleaves several. */
-internal class DirectFeed(val rows: List<PlannedRow>) {
-
-    /** Every planned recipe in row order; a recipe may appear once per row. */
-    val recipes: List<PlannedRecipe>
-        get() = rows.flatMap { it.plannedRecipes }
-
-    /** The direct-feed bands among the rows. */
-    val bands: List<PlannedRow>
-        get() = rows.filter { it.links.isNotEmpty() }
-}
+internal class DirectFeed(val rows: List<PlannedRow>)
 
 private class DirectFeedBuilder(
     val target: Recipe,
@@ -41,7 +31,7 @@ private class DirectFeedBuilder(
     val scale: Double,
     val logistics: LogisticsCalculator,
 ) {
-    private val production = included.associateBy { it.recipe }
+    private val byRecipe = included.associateBy { it.recipe }
     private val need = included.associate { it.recipe to plannedMachines(it, scale) }
     // the single in-plan producer of each material
     private val producers =
@@ -52,7 +42,7 @@ private class DirectFeedBuilder(
             .toMap()
 
     // the band cycle search, on the plan's per-recipe data
-    private val search = BandSearch(production, need, logistics)
+    private val search = BandSearch(byRecipe, need, logistics)
 
     // every link that could be direct-fed, in a deterministic order
     private val candidates = sequence {
@@ -127,10 +117,9 @@ private class DirectFeedBuilder(
 
     /** Builds one row per arranged band, with its machine sequence and the links between them. */
     private fun buildBands(): List<PlannedRow> = bandPlans.map { plan ->
-        val plannedByRecipe =
-            plan.machines.toSet().associateWith { PlannedRecipe(production.getValue(it)) }
+        val productionByRecipe = plan.machines.toSet().associateWith { byRecipe.getValue(it) }
         PlannedRow(
-            machines = plan.machines.map { plannedByRecipe.getValue(it) },
+            machines = plan.machines.map { productionByRecipe.getValue(it) },
             links =
                 plan.feeds.map {
                     PlannedLink(it.gap, it.link.material, it.flow, it.producerIsLeft)
@@ -155,8 +144,8 @@ private class DirectFeedBuilder(
     }
 
     /**
-     * The rate a belted planned recipe still has to cover: every consumer outside the direct links,
-     * at the rate the plan was sized for.
+     * The rate a belted production still has to cover: every consumer outside the direct links, at
+     * the rate the plan was sized for.
      */
     private fun beltedRate(recipe: Recipe, grouped: Set<FeedLink>) = included.sumOf { consumer ->
         consumer.recipe.ingredients.keys.sumOf { material ->
@@ -181,22 +170,22 @@ private class DirectFeedBuilder(
             FeedLink(material, recipe, consumer.recipe) !in grouped
 
     /**
-     * One belted planned recipe per recipe: what the consumers that are not direct-fed still need,
-     * at the rate the plan was sized for, less what a band's own output already puts on a belt.
-     * Sizing by whole consumer machines would over-build: a complete foundry would demand four
-     * iron-gear machines although the plan only ever needs a fraction of its rate, and that row
-     * would then have no consumer at all.
+     * One belted production per recipe: what the consumers that are not direct-fed still need, at
+     * the rate the plan was sized for, less what a band's own output already puts on a belt. Sizing
+     * by whole consumer machines would over-build: a complete foundry would demand four iron-gear
+     * machines although the plan only ever needs a fraction of its rate, and that row would then
+     * have no consumer at all.
      */
     private fun belted(
-        factory: FactoryProduction,
+        production: FactoryProduction,
         grouped: Set<FeedLink>,
         onBelt: Map<Recipe, Int>,
         built: Map<Recipe, Int>,
     ): PlannedRow? {
-        val recipe = factory.recipe
+        val recipe = production.recipe
         val material = recipe.result.keys.singleOrNull() ?: return null
         val rate = beltedRate(recipe, grouped)
-        val perMachine = outputPerMachine(factory, material)
+        val perMachine = outputPerMachine(production, material)
         val demand =
             if (perMachine > 0.0)
                 ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[recipe] ?: 0)
@@ -205,8 +194,8 @@ private class DirectFeedBuilder(
         val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)
         return if (rate <= 0.0 || machines <= 0) null
         else {
-            require(factory == production.getValue(recipe))
-            PlannedRow.copies(PlannedRecipe(factory), machines)
+            require(production == byRecipe.getValue(recipe))
+            PlannedRow.copies(production, machines)
         }
     }
 
@@ -216,7 +205,7 @@ private class DirectFeedBuilder(
         else
             listOf(
                 PlannedRow.copies(
-                    PlannedRecipe(production.getValue(target)),
+                    byRecipe.getValue(target),
                     need.getValue(target),
                 ),
             )
@@ -231,14 +220,13 @@ private fun sharesRecipe(first: FeedLink, second: FeedLink) =
         first.consumer == second.consumer
 
 /**
- * Splits a plan's recipes into planned recipes and direct-feed bands.
+ * Splits a plan's recipes into belted productions and direct-feed bands.
  *
  * A solid input whose producer stands in a small whole-machine cycle with its consumer
  * ([cycleRatio]) is inserted machine-to-machine instead of coming over a belt, so the band holds
  * both recipes interleaved. A material the consumers outside the bands still need — after what a
- * band's own output already puts on a belt — gets one belted planned recipe, sized at the rate the
- * plan was drawn for. Anything that does not fit a band keeps its plan machine count and stays
- * belted.
+ * band's own output already puts on a belt — gets one belted production, sized at the rate the plan
+ * was drawn for. Anything that does not fit a band keeps its plan machine count and stays belted.
  */
 internal fun directFeed(
     target: Recipe,

@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
+import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
@@ -35,7 +36,6 @@ import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import kotlin.test.Test

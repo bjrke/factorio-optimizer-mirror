@@ -1,13 +1,13 @@
 package de.bjrke.factorio.optimizer.common.plan
 
+import de.bjrke.factorio.optimizer.common.fixtures.BeltCase
+import de.bjrke.factorio.optimizer.common.fixtures.beltCountAtOwnStack
+import de.bjrke.factorio.optimizer.common.fixtures.beltThroughputAtOwnStack
+import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Logistics
-import de.bjrke.factorio.optimizer.common.service.fixtures.BeltCase
-import de.bjrke.factorio.optimizer.common.service.fixtures.beltCountAtOwnStack
-import de.bjrke.factorio.optimizer.common.service.fixtures.beltThroughputAtOwnStack
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf

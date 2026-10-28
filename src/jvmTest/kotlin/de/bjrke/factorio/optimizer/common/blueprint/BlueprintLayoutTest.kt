@@ -25,7 +25,6 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.north
 import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -106,14 +105,12 @@ class BlueprintLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            PlannedRecipe(
-                                FactoryProduction(
-                                    gear,
-                                    craftRecipe,
-                                    Factory.ASSEMBLING_MACHINE_3,
-                                    1.0,
-                                    0,
-                                ),
+                            FactoryProduction(
+                                gear,
+                                craftRecipe,
+                                Factory.ASSEMBLING_MACHINE_3,
+                                1.0,
+                                0,
                             ),
                             3,
                         ),
@@ -138,14 +135,12 @@ class BlueprintLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            PlannedRecipe(
-                                FactoryProduction(
-                                    gear,
-                                    craftRecipe,
-                                    Factory.ASSEMBLING_MACHINE_3,
-                                    1.0,
-                                    0,
-                                ),
+                            FactoryProduction(
+                                gear,
+                                craftRecipe,
+                                Factory.ASSEMBLING_MACHINE_3,
+                                1.0,
+                                0,
                             ),
                             3,
                         ),

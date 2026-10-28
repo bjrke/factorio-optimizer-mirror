@@ -60,7 +60,7 @@ up.
   forcing a shared file (`OptimizerTest` → `OptimizerTest` + `OptimizerSurfaceTest`).
   When they share helpers, export them instead: top-level `internal` values and
   functions in the fixtures package of the package they belong to
-  (`service/fixtures/LogisticsFixtures.kt` holds `testLogistics`, `BeltCase` and
+  (`common/fixtures/LogisticsFixtures.kt` holds `testLogistics`, `BeltCase` and
   `calculator`; `blueprint/fixtures/` holds the materials, recipes, plans and layout
   assertions), or an abstract base
   class for helpers that capture per-test callbacks
@@ -165,12 +165,12 @@ up.
   `jsBrowserTest` too. Move a suite to
   `jvmTest` rather than filtering it out in CI — the Kotlin/JS runner cannot express
   a multi-suite exclude, and a filter hides the same cost from local runs too.
-  `blueprint/fixtures` stays in `commonTest`: `jvmTest` and the `jsTest`
-  `OptimizationResult*` suites both read it, and a shared test helper must not move
-  into a test source set it is not compiled with. Moved suites may still import
-  `service/fixtures` (`testLogistics`, `production`), which is also `internal` in
-  `commonTest`: the JVM test compilation sees those declarations as a friend module,
-  so the import keeps compiling — verified by moving the suites and rerunning
+  `blueprint/fixtures` and `common/fixtures` stay in `commonTest`: `jvmTest` and the
+  `jsTest` `OptimizationResult*` suites both read them, and a shared test helper must
+  not move into a test source set it is not compiled with. Moved suites may still
+  import `common/fixtures` (`testLogistics`, `production`), which is also `internal`
+  in `commonTest`: the JVM test compilation sees those declarations as a friend
+  module, so the import keeps compiling — verified by moving the suites and rerunning
   `compileTestKotlinJvm`.
 - A docs-only or tooling-only branch runs **no** Gradle task: `knowledge/**`,
   `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent

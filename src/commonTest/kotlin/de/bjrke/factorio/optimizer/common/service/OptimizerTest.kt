@@ -1,11 +1,11 @@
 package de.bjrke.factorio.optimizer.common.service
 
+import de.bjrke.factorio.optimizer.common.fixtures.factoryOf
+import de.bjrke.factorio.optimizer.common.fixtures.testRecipe
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.service.fixtures.factoryOf
-import de.bjrke.factorio.optimizer.common.service.fixtures.testRecipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test

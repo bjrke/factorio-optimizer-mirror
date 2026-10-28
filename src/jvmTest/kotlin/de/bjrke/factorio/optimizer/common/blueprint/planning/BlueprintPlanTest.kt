@@ -1,11 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.testBlueprintPlan
+import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.recipes
+import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.MAX_BLUEPRINT_RECIPES
-import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -13,8 +15,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.OptimizationResult
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -99,7 +99,7 @@ class BlueprintPlanTest {
 
         // the drill is place-dependent and the smelter is left out; both become imports
         assertAll(
-            { assertEquals(listOf(gear), planned.recipes.map { it.production.material }) },
+            { assertEquals(listOf(gear), planned.recipes.map { it.material }) },
             { assertEquals(listOf(plate), planned.sources.map { it.material }) },
         )
     }
@@ -169,7 +169,7 @@ class BlueprintPlanTest {
 
         assertAll(
             { assertEquals(listOf(petroleum), ingredientPlan.sources.map { it.material }) },
-            { assertEquals(listOf(petroleum), targetPlan.recipes.map { it.production.material }) },
+            { assertEquals(listOf(petroleum), targetPlan.recipes.map { it.material }) },
         )
     }
 
@@ -200,7 +200,7 @@ class BlueprintPlanTest {
                 chain + production(targetRecipe, discovery, Factory.SCIENCE_LAB, level = 99),
             )
 
-        // the cap counts every built recipe, not the planned recipes a recipe may be split into
+        // the cap counts every built recipe, not the productions a recipe may be split into
         assertEquals(MAX_BLUEPRINT_RECIPES, planned.recipes.map { it.recipe }.distinct().size)
     }
 
@@ -226,7 +226,7 @@ class BlueprintPlanTest {
                 ),
             )
 
-        val band = planned.bands.single()
+        val band = planned.rows.single { it.links.isNotEmpty() }
         assertAll(
             {
                 assertEquals(
@@ -240,11 +240,11 @@ class BlueprintPlanTest {
     }
 
     @Test
-    fun plannedRecipesOfTheSameRecipeCompareByValue() {
+    fun productionsOfTheSameRecipeCompareByValue() {
         val craft =
             recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
-        val first = PlannedRecipe(production(craft, gear, Factory.ASSEMBLING_MACHINE_3))
-        val second = PlannedRecipe(production(craft, gear, Factory.ASSEMBLING_MACHINE_3))
+        val first = production(craft, gear, Factory.ASSEMBLING_MACHINE_3)
+        val second = production(craft, gear, Factory.ASSEMBLING_MACHINE_3)
 
         assertEquals(first, second)
     }

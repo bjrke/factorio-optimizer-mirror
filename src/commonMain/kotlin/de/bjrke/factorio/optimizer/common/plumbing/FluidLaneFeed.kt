@@ -60,5 +60,5 @@ internal class FluidLaneFeed(
 
     /** The fluids [machine] takes, in recipe order: the order the lane hands its ports out in. */
     fun liquidsOf(machine: PlacedMachine): List<Material> =
-        machine.plannedRecipe.recipe.ingredients.keys.filter { logistics.isFluid(it) }
+        machine.production.recipe.ingredients.keys.filter { logistics.isFluid(it) }
 }
