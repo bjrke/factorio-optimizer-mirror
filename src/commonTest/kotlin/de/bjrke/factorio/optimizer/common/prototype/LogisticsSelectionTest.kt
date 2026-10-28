@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
-import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.service.fixtures.testLogisticsConfig
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -28,7 +28,7 @@ class LogisticsSelectionTest {
                             ),
                     ),
             )
-        val config = LogisticsConfig(partial, spaceAge = true)
+        val config = LogisticsConfig(partial)
 
         assertAll(
             { assertEquals(listOf(BeltTier.TRANSPORT_BELT), config.availableBelts) },
@@ -38,22 +38,18 @@ class LogisticsSelectionTest {
 
     @Test
     fun beltLanesDefaultToHalfAndTheFullBeltFlagSelectsBoth() {
-        val config = LogisticsConfig(testLogistics, spaceAge = true)
-
         assertTableOf(
             null to 1,
             "tx" to 1,
             "L" to 2,
             "txL" to 2,
         ) { (selection, expected) ->
-            assertEquals(expected, config.beltLanes(fullBeltIn(selection)))
+            assertEquals(expected, testLogisticsConfig.beltLanes(fullBeltIn(selection)))
         }
     }
 
     @Test
     fun beltAndInserterArePickedFromTheSelectionString() {
-        val config = LogisticsConfig(testLogistics, spaceAge = true)
-
         assertAll(
             {
                 // only the tier's own code matters, the surrounding letters are ignored
@@ -61,7 +57,7 @@ class LogisticsSelectionTest {
                     "a3t" to BeltTier.TRANSPORT_BELT,
                     "a3e" to BeltTier.EXPRESS_TRANSPORT_BELT,
                 ) { (selection, expected) ->
-                    assertEquals(expected, config.belt(selection))
+                    assertEquals(expected, testLogisticsConfig.belt(selection))
                 }
             },
             {
@@ -69,15 +65,20 @@ class LogisticsSelectionTest {
                     "a3i" to InserterTier.INSERTER,
                     "a3z" to InserterTier.STACK_INSERTER,
                 ) { (selection, expected) ->
-                    assertEquals(expected, config.inserter(selection))
+                    assertEquals(expected, testLogisticsConfig.inserter(selection))
                 }
             },
             // the red belt and the fast inserter are the defaults and carry no code
-            { assertEquals(BeltTier.FAST_TRANSPORT_BELT, config.defaultBelt) },
-            { assertEquals(InserterTier.FAST_INSERTER, config.defaultInserter) },
+            { assertEquals(BeltTier.FAST_TRANSPORT_BELT, testLogisticsConfig.defaultBelt) },
+            { assertEquals(InserterTier.FAST_INSERTER, testLogisticsConfig.defaultInserter) },
             // absent falls back to the default tier
-            { assertEquals(config.defaultBelt, config.belt(null)) },
-            { assertEquals(config.defaultInserter, config.inserter(null)) },
+            { assertEquals(testLogisticsConfig.defaultBelt, testLogisticsConfig.belt(null)) },
+            {
+                assertEquals(
+                    testLogisticsConfig.defaultInserter,
+                    testLogisticsConfig.inserter(null),
+                )
+            },
         )
     }
 
@@ -85,7 +86,7 @@ class LogisticsSelectionTest {
     fun fluidsAreDetectedFromTheDump() {
         val water = Material("water")
         val plate = Material("iron-plate")
-        val calculator = calculator(logistics = Logistics(fluids = setOf(water)))
+        val calculator = LogisticsCalculator(logistics = Logistics(fluids = setOf(water)))
 
         assertTableOf(water to true, plate to false) { (material, expected) ->
             assertEquals(expected, calculator.isFluid(material))

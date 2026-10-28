@@ -5,7 +5,7 @@ import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.prototype.Surface
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.service.fixtures.testLogisticsConfig
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo
@@ -23,7 +23,6 @@ import react.create
 import web.html.HTMLInputElement
 
 class LogisticsSelectorTest : ComponentTest() {
-    private val logisticsConfig = LogisticsConfig(testLogistics, spaceAge = true)
     private val belts = mutableListOf<BeltTier>()
     private val inserters = mutableListOf<InserterTier>()
     private val lanes = mutableListOf<Int>()
@@ -32,7 +31,7 @@ class LogisticsSelectorTest : ComponentTest() {
     private val beltEnds = mutableListOf<BeltEnd>()
 
     private fun renderSelector(
-        usedConfig: LogisticsConfig = logisticsConfig,
+        usedConfig: LogisticsConfig = testLogisticsConfig,
         surface: Surface = Surface.NAUVIS,
         belt: BeltTier = usedConfig.defaultBelt,
         inserter: InserterTier = usedConfig.defaultInserter,
@@ -129,7 +128,7 @@ class LogisticsSelectorTest : ComponentTest() {
         // a plain inserter tops out at 3 hand slots
         fireEvent.change(screen.getByTitle("inserter stack"), changeTo("9"))
 
-        assertEquals(listOf(logisticsConfig.maxStack(InserterTier.INSERTER)), inserterStacks)
+        assertEquals(listOf(testLogisticsConfig.maxStack(InserterTier.INSERTER)), inserterStacks)
     }
 
     @Test
@@ -168,7 +167,7 @@ class LogisticsSelectorTest : ComponentTest() {
     @Test
     fun theBeltStackControlIsHiddenWithoutSpaceAge() {
         // belt stacking needs the Space Age stack inserters, so there is nothing to choose
-        renderSelector(usedConfig = LogisticsConfig(testLogistics, spaceAge = false))
+        renderSelector(usedConfig = testLogisticsConfig.copy(spaceAge = false))
 
         assertNull(screen.queryByTitle("belt stack"))
     }

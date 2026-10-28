@@ -14,7 +14,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
 data class Logistics(
     val belts: Map<String, Double> = emptyMap(),
     val inserters: Map<String, InserterStats> = emptyMap(),
-    val pumpRate: Double? = null,
+    val pumpRate: Double = 1200.0,
     val fluids: Set<Material> = emptySet(),
     /** The default temperature of each fluid, used to configure an infinity pipe source. */
     val fluidTemperatures: Map<Material, Int> = emptyMap(),
@@ -97,7 +97,7 @@ enum class InserterTier(
  * The belts and inserters that can be selected for a given mod set and dump: a prototype missing
  * from [logistics] is dropped. Mirrors [FactoryConfig] for the production machines.
  */
-class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = true) {
+data class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = true) {
 
     val availableBelts =
         BeltTier.entries.filter {

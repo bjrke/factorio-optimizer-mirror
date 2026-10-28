@@ -35,7 +35,6 @@ import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -203,11 +202,6 @@ class BlueprintFluidLayoutTest {
         val cheatLogistics =
             LogisticsCalculator(
                 testLogistics.copy(fluids = setOf(water), fluidTemperatures = mapOf(water to 15)),
-                BeltTier.EXPRESS_TRANSPORT_BELT,
-                InserterTier.FAST_INSERTER,
-                lanes = 1,
-                beltStack = 1,
-                inserterStack = 1,
             )
         val entities =
             fromPlaced(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).entities

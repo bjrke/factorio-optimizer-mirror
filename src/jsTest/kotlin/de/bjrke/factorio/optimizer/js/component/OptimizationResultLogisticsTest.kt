@@ -2,8 +2,10 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
 import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe
@@ -24,14 +26,26 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
         val rendered =
             renderResult(
                 result,
-                calculator(InserterTier.BULK_INSERTER, beltStack = 4, inserterStack = 8),
+                calculator(
+                    LogisticsCalculatorSelection(
+                        inserter = InserterTier.BULK_INSERTER,
+                        beltStack = 4,
+                        inserterStack = 8,
+                    ),
+                ),
             )
         val bulkOutput = inserterInput(1)
 
         rendered.rerender(
             resultElement(
                 result,
-                calculator(InserterTier.STACK_INSERTER, beltStack = 4, inserterStack = 8),
+                calculator(
+                    LogisticsCalculatorSelection(
+                        inserter = InserterTier.STACK_INSERTER,
+                        beltStack = 4,
+                        inserterStack = 8,
+                    ),
+                ),
             ),
         )
         val stackOutput = inserterInput(1)
@@ -52,11 +66,11 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
     @Test
     fun theBigMiningDrillHonorsTheBeltStackWithoutAnInserter() {
         val result = optimizationResult(miningRecipe, ore, Factory.BIG_MINING_DRILL)
-        val rendered = renderResult(result, calculator(InserterTier.FAST_INSERTER, beltStack = 1))
+        val rendered = renderResult(result, calculator())
         val atSingle = beltInput(0)
 
         rendered.rerender(
-            resultElement(result, calculator(InserterTier.FAST_INSERTER, beltStack = 4)),
+            resultElement(result, calculator(LogisticsCalculatorSelection(beltStack = 4))),
         )
         val atStacked = beltInput(0)
 
@@ -67,11 +81,11 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
     @Test
     fun theOtherMiningDrillsIgnoreTheBeltStack() {
         val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
-        val rendered = renderResult(result, calculator(InserterTier.FAST_INSERTER, beltStack = 1))
+        val rendered = renderResult(result, calculator())
         val atSingle = beltInput(0)
 
         rendered.rerender(
-            resultElement(result, calculator(InserterTier.FAST_INSERTER, beltStack = 4)),
+            resultElement(result, calculator(LogisticsCalculatorSelection(beltStack = 4))),
         )
 
         // an electric mining drill places single items, so stacking does not change its belts
@@ -81,12 +95,21 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
     @Test
     fun otherOutputsOnlyStackWithAStackingInserter() {
         val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
-        val rendered = renderResult(result, calculator(InserterTier.STACK_INSERTER, beltStack = 4))
+        val rendered =
+            renderResult(
+                result,
+                calculator(
+                    LogisticsCalculatorSelection(
+                        inserter = InserterTier.STACK_INSERTER,
+                        beltStack = 4,
+                    ),
+                ),
+            )
         val inputStacked = beltInput(0)
         val outputStacked = beltInput(1)
 
         rendered.rerender(
-            resultElement(result, calculator(InserterTier.FAST_INSERTER, beltStack = 4)),
+            resultElement(result, calculator(LogisticsCalculatorSelection(beltStack = 4))),
         )
         val inputUnstacked = beltInput(0)
         val outputUnstacked = beltInput(1)

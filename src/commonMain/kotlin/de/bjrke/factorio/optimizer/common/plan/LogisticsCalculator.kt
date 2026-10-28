@@ -42,6 +42,14 @@ class InserterRate(
     private fun beltSlotTicks() = 1.0 / (beltSpeed * BeltTier.ITEMS_PER_LANE)
 }
 
+class LogisticsCalculatorSelection(
+    val belt: BeltTier = BeltTier.FAST_TRANSPORT_BELT,
+    val inserter: InserterTier = InserterTier.FAST_INSERTER,
+    val lanes: Int = 2,
+    val beltStack: Int = 1,
+    val inserterStack: Int = 1,
+)
+
 /**
  * Turns a material rate (items or fluid per second) into the number of belts/inserters/pumps needed
  * to move it. The stats come from the dump ([Logistics]); a prototype missing there is not usable,
@@ -52,24 +60,26 @@ class InserterRate(
  */
 class LogisticsCalculator(
     private val logistics: Logistics,
-    val belt: BeltTier,
-    val inserter: InserterTier,
-    val lanes: Int,
-    val beltStack: Int,
-    val inserterStack: Int,
+    val selection: LogisticsCalculatorSelection = LogisticsCalculatorSelection(),
 ) {
-    private val inserterStats: InserterStats
+    val inserterStack = selection.inserterStack
+    val beltStack = selection.beltStack
+    val lanes = selection.lanes
+    val inserter = selection.inserter
+    val belt = selection.belt
+
+    private val inserterStats
         get() = logistics.inserters.getValue(inserter.identifier)
 
     /** The items per hand the selected inserter actually carries; never below its hand size. */
-    val handSize: Int
+    val handSize
         get() = inserterStats.stackSize(inserterStack)
 
     /**
      * The selected inserter's rates at this hand size and belt stacking. Lazy so a calculator can
      * still be built for a partial prototype dump when only its material predicates are queried.
      */
-    val rates: InserterRate by lazy {
+    val rates by lazy {
         InserterRate(
             inserterStats,
             handSize,
@@ -85,7 +95,7 @@ class LogisticsCalculator(
     fun fluidTemperature(material: Material) = logistics.fluidTemperatures[material] ?: 0
 
     /** Items per second a single belt carries over [lanes] lanes with [stack] items per slot. */
-    fun beltThroughput(stack: Int): Double =
+    fun beltThroughput(stack: Int) =
         logistics.belts.getValue(belt.identifier) *
             TICKS_PER_SECOND *
             BeltTier.ITEMS_PER_LANE *
@@ -99,7 +109,7 @@ class LogisticsCalculator(
     fun placingThroughput() = rates.placingThroughput()
 
     /** Fluid per second a single pump moves; the pipe network itself is not the limit. */
-    fun pumpThroughput(): Double? = logistics.pumpRate
+    fun pumpThroughput() = logistics.pumpRate
 
     fun beltCount(rate: Double, stack: Int) = rate / beltThroughput(stack)
 
@@ -108,10 +118,10 @@ class LogisticsCalculator(
         if (ontoBelt) beltInserterCount(rate) else directInserterCount(rate)
 
     /** Inserters needed for [rate]; uses the slower belt-limited placing rate. */
-    fun beltInserterCount(rate: Double): Double = rate / placingThroughput()
+    fun beltInserterCount(rate: Double) = rate / placingThroughput()
 
     /** Inserters needed for [rate]; uses the faster direct inserting rate. */
-    fun directInserterCount(rate: Double): Double = rate / inserterThroughput()
+    fun directInserterCount(rate: Double) = rate / inserterThroughput()
 
-    fun pumpCount(rate: Double): Double? = pumpThroughput()?.let { rate / it }
+    fun pumpCount(rate: Double) = rate / pumpThroughput()
 }

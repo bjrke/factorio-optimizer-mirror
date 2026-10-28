@@ -1,20 +1,19 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.testBlueprintPlan
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.MAX_BLUEPRINT_RECIPES
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.OptimizationResult
+import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -55,28 +54,27 @@ private fun result(target: Material, targetRecipe: Recipe, productions: List<Fac
 
 class BlueprintPlanTest {
 
-    private val logistics =
-        LogisticsCalculator(
-            testLogistics,
-            BeltTier.EXPRESS_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 1,
-            beltStack = 1,
-            inserterStack = 1,
-        )
+    private val logistics = calculator()
 
     private fun plan(target: Material, targetRecipe: Recipe, productions: List<FactoryProduction>) =
-        blueprintPlan(result(target, targetRecipe, productions), logistics)
+        testBlueprintPlan(result(target, targetRecipe, productions), logistics)
 
     @Test
     fun theAllSciencePacksTargetIsUnavailable() {
         val smelt = recipe("iron-plate", Category.SMELTING, mapOf(plate to 1.0))
         val outcome =
-            plan(
-                Material(ALL_SCIENCE_PACKS),
-                smelt,
-                listOf(production(smelt, Material(ALL_SCIENCE_PACKS), Factory.ELECTRIC_FURNACE)),
+            blueprintPlan(
+                result(
+                    Material(ALL_SCIENCE_PACKS),
+                    smelt,
+                    listOf(
+                        production(smelt, Material(ALL_SCIENCE_PACKS), Factory.ELECTRIC_FURNACE),
+                    ),
+                ),
+                logistics,
+                scale = 1.0,
             )
+
         assertIs<BlueprintPlanResult.Unavailable>(outcome)
     }
 
@@ -87,7 +85,7 @@ class BlueprintPlanTest {
         val craft =
             recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
 
-        val outcome =
+        val planned =
             plan(
                 gear,
                 craft,
@@ -98,7 +96,6 @@ class BlueprintPlanTest {
                 ),
             )
 
-        val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         // the drill is place-dependent and the smelter is left out; both become imports
         assertAll(
             { assertEquals(listOf(gear), planned.recipes.map { it.production.material }) },
@@ -114,8 +111,8 @@ class BlueprintPlanTest {
         val craft =
             recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
 
-        val kept =
-            blueprintPlan(
+        val keptPlan =
+            testBlueprintPlan(
                 result(
                     gear,
                     craft,
@@ -126,7 +123,7 @@ class BlueprintPlanTest {
                 ),
                 logistics,
             )
-        val excluded =
+        val excludedPlan =
             plan(
                 gear,
                 craft,
@@ -136,8 +133,6 @@ class BlueprintPlanTest {
                 ),
             )
 
-        val keptPlan = assertIs<BlueprintPlanResult.Planned>(kept).plan
-        val excludedPlan = assertIs<BlueprintPlanResult.Planned>(excluded).plan
         assertAll(
             { assertContains(keptPlan.recipes.map { it.factory }, Factory.FOUNDRY) },
             // the furnace plan has only the gear recipe left; the plate is imported
@@ -152,7 +147,7 @@ class BlueprintPlanTest {
         val plastic =
             recipe("plastic-bar", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(petroleum to 2.0))
 
-        val asIngredient =
+        val ingredientPlan =
             plan(
                 gear,
                 plastic,
@@ -161,8 +156,8 @@ class BlueprintPlanTest {
                     production(refine, petroleum, Factory.OIL_REFINERY),
                 ),
             )
-        val asTarget =
-            blueprintPlan(
+        val targetPlan =
+            testBlueprintPlan(
                 result(
                     petroleum,
                     refine,
@@ -171,8 +166,6 @@ class BlueprintPlanTest {
                 logistics,
             )
 
-        val ingredientPlan = assertIs<BlueprintPlanResult.Planned>(asIngredient).plan
-        val targetPlan = assertIs<BlueprintPlanResult.Planned>(asTarget).plan
         assertAll(
             { assertEquals(listOf(petroleum), ingredientPlan.sources.map { it.material }) },
             { assertEquals(listOf(petroleum), targetPlan.recipes.map { it.production.material }) },
@@ -199,14 +192,13 @@ class BlueprintPlanTest {
                 )
             }
 
-        val outcome =
+        val planned =
             plan(
                 discovery,
                 targetRecipe,
                 chain + production(targetRecipe, discovery, Factory.SCIENCE_LAB, level = 99),
             )
 
-        val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         // the cap counts every built recipe, not the planned recipes a recipe may be split into
         assertEquals(MAX_BLUEPRINT_RECIPES, planned.recipes.map { it.recipe }.distinct().size)
     }
@@ -217,7 +209,7 @@ class BlueprintPlanTest {
         val craft =
             recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
 
-        val outcome =
+        val planned =
             plan(
                 gear,
                 craft,
@@ -227,7 +219,6 @@ class BlueprintPlanTest {
                 ),
             )
 
-        val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         val band = planned.bands.single()
         assertAll(
             // the one gear machine takes its plates straight from the two smelters beside it
@@ -258,7 +249,7 @@ class BlueprintPlanTest {
         val craft =
             recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 100.0))
 
-        val outcome =
+        val planned =
             plan(
                 gear,
                 craft,
@@ -272,7 +263,6 @@ class BlueprintPlanTest {
                 ),
             )
 
-        val planned = assertIs<BlueprintPlanResult.Planned>(outcome).plan
         assertAll(
             // even though the import would need more than two belts, the plan builds all three
             { assertEquals(3, planned.rows.single().machines.size) },

@@ -25,7 +25,7 @@ import kotlin.math.roundToInt
 fun blueprintPlan(
     result: OptimizationResult,
     logistics: LogisticsCalculator,
-    scale: Double = 1.0,
+    scale: Double,
     maxRecipes: Int = MAX_BLUEPRINT_RECIPES,
 ): BlueprintPlanResult {
     if (result.target.name == ALL_SCIENCE_PACKS) {

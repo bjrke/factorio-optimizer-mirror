@@ -5,7 +5,6 @@ import de.bjrke.factorio.optimizer.common.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Logistics
 import de.bjrke.factorio.optimizer.common.service.fixtures.BeltCase
-import de.bjrke.factorio.optimizer.common.service.fixtures.CalculatorSetup
 import de.bjrke.factorio.optimizer.common.service.fixtures.beltCountAtOwnStack
 import de.bjrke.factorio.optimizer.common.service.fixtures.beltThroughputAtOwnStack
 import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
@@ -32,7 +31,9 @@ class LogisticsTest {
         ) { (belt, lanes, stack, expected) ->
             assertEquals(
                 expected,
-                calculator(CalculatorSetup(belt = belt, lanes = lanes, beltStack = stack))
+                calculator(
+                        LogisticsCalculatorSelection(belt = belt, lanes = lanes, beltStack = stack),
+                    )
                     .beltThroughputAtOwnStack(),
                 TOLERANCE,
             )
@@ -48,7 +49,7 @@ class LogisticsTest {
         ) { (inserter, stack, expected) ->
             assertEquals(
                 expected,
-                calculator(CalculatorSetup(inserter = inserter, inserterStack = stack))
+                calculator(LogisticsCalculatorSelection(inserter = inserter, inserterStack = stack))
                     .inserterThroughput(),
                 TOLERANCE,
             )
@@ -62,7 +63,7 @@ class LogisticsTest {
                 assertEquals(
                     8 * 60.0 / 41.0,
                     calculator(
-                            CalculatorSetup(
+                            LogisticsCalculatorSelection(
                                 belt = BeltTier.TURBO_TRANSPORT_BELT,
                                 inserter = InserterTier.BULK_INSERTER,
                                 inserterStack = 8,
@@ -77,7 +78,7 @@ class LogisticsTest {
                 assertEquals(
                     8 * 60.0 / 29.0,
                     calculator(
-                            CalculatorSetup(
+                            LogisticsCalculatorSelection(
                                 belt = BeltTier.TURBO_TRANSPORT_BELT,
                                 inserter = InserterTier.STACK_INSERTER,
                                 inserterStack = 8,
@@ -94,7 +95,7 @@ class LogisticsTest {
     fun aStackInserterPlacesFasterThanABulkInserterWithTheSameHand() {
         val bulk =
             calculator(
-                CalculatorSetup(
+                LogisticsCalculatorSelection(
                     belt = BeltTier.EXPRESS_TRANSPORT_BELT,
                     inserter = InserterTier.BULK_INSERTER,
                     inserterStack = 8,
@@ -103,7 +104,7 @@ class LogisticsTest {
             )
         val stack =
             calculator(
-                CalculatorSetup(
+                LogisticsCalculatorSelection(
                     belt = BeltTier.EXPRESS_TRANSPORT_BELT,
                     inserter = InserterTier.STACK_INSERTER,
                     inserterStack = 8,
@@ -120,15 +121,14 @@ class LogisticsTest {
             {
                 assertEquals(
                     calculator(
-                            CalculatorSetup(
+                            LogisticsCalculatorSelection(
                                 inserter = InserterTier.BULK_INSERTER,
                                 inserterStack = 4,
-                                beltStack = 1,
                             ),
                         )
                         .placingThroughput(),
                     calculator(
-                            CalculatorSetup(
+                            LogisticsCalculatorSelection(
                                 inserter = InserterTier.BULK_INSERTER,
                                 inserterStack = 4,
                                 beltStack = 4,
@@ -142,7 +142,7 @@ class LogisticsTest {
             {
                 assertTrue(
                     calculator(
-                            CalculatorSetup(
+                            LogisticsCalculatorSelection(
                                 belt = BeltTier.TURBO_TRANSPORT_BELT,
                                 inserter = InserterTier.BULK_INSERTER,
                                 inserterStack = 4,
@@ -150,7 +150,7 @@ class LogisticsTest {
                         )
                         .placingThroughput() >
                         calculator(
-                                CalculatorSetup(
+                                LogisticsCalculatorSelection(
                                     belt = BeltTier.TRANSPORT_BELT,
                                     inserter = InserterTier.BULK_INSERTER,
                                     inserterStack = 4,
@@ -163,7 +163,10 @@ class LogisticsTest {
             {
                 val calculator =
                     calculator(
-                        CalculatorSetup(inserter = InserterTier.BULK_INSERTER, inserterStack = 4),
+                        LogisticsCalculatorSelection(
+                            inserter = InserterTier.BULK_INSERTER,
+                            inserterStack = 4,
+                        ),
                     )
                 assertTrue(calculator.placingThroughput() <= calculator.inserterThroughput())
             },
@@ -174,13 +177,14 @@ class LogisticsTest {
         assertAll(
             {
                 assertTableOf(
-                    Triple(1, 7.5, 1.0),
-                    Triple(1, 15.0, 2.0),
-                    Triple(2, 30.0, 2.0),
+                    Triple(1, 15.0, 1.0),
+                    Triple(1, 30.0, 2.0),
+                    Triple(2, 60.0, 2.0),
                 ) { (lanes, rate, expected) ->
                     assertEquals(
                         expected,
-                        calculator(CalculatorSetup(lanes = lanes)).beltCountAtOwnStack(rate),
+                        calculator(LogisticsCalculatorSelection(lanes = lanes))
+                            .beltCountAtOwnStack(rate),
                         TOLERANCE,
                     )
                 }
@@ -188,12 +192,12 @@ class LogisticsTest {
             {
                 assertEquals(
                     5.0,
-                    calculator(CalculatorSetup(inserter = InserterTier.FAST_INSERTER))
+                    calculator(LogisticsCalculatorSelection(inserter = InserterTier.FAST_INSERTER))
                         .inserterCount(12.0),
                     TOLERANCE,
                 )
             },
-            { assertEquals(1.0, calculator().pumpCount(1200.0)!!, TOLERANCE) },
+            { assertEquals(1.0, calculator().pumpCount(1200.0), TOLERANCE) },
         )
 
     @Test
@@ -213,14 +217,22 @@ class LogisticsTest {
                     ),
                 pumpRate = 600.0,
             )
-        val calculator = calculator(logistics = logistics)
+        val calculator =
+            LogisticsCalculator(
+                logistics,
+                LogisticsCalculatorSelection(
+                    belt = BeltTier.TRANSPORT_BELT,
+                    inserter = InserterTier.INSERTER,
+                    lanes = 1,
+                ),
+            )
 
         assertAll(
             // 0.05 tiles/tick * 60 * 4 (one lane)
             { assertEquals(12.0, calculator.beltThroughputAtOwnStack(), TOLERANCE) },
             // 0.03 turns/tick * 60
             { assertEquals(1.8, calculator.inserterThroughput(), TOLERANCE) },
-            { assertEquals(600.0, calculator.pumpThroughput()!!, TOLERANCE) },
+            { assertEquals(600.0, calculator.pumpThroughput(), TOLERANCE) },
         )
     }
 }

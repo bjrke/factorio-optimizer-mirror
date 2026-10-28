@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Surface
-import de.bjrke.factorio.optimizer.common.service.fixtures.CalculatorSetup
 import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -200,10 +200,9 @@ class CliOptimizerTest {
     fun settingsTextListsTheResolvedConfiguration() {
         val logistics =
             calculator(
-                CalculatorSetup(
+                LogisticsCalculatorSelection(
                     belt = BeltTier.EXPRESS_TRANSPORT_BELT,
                     inserter = InserterTier.STACK_INSERTER,
-                    lanes = 2,
                     beltStack = 4,
                     inserterStack = 6,
                 ),

@@ -1,10 +1,11 @@
 package de.bjrke.factorio.optimizer.common.service.fixtures
 
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.InserterStats
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Logistics
+import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
 
 /** The prototype stats the real dump provides, plus the calculator the logistics suites build. */
 internal val testLogistics =
@@ -65,6 +66,8 @@ internal val testLogistics =
         pumpRate = 1200.0,
     )
 
+internal val testLogisticsConfig = LogisticsConfig(testLogistics)
+
 internal data class BeltCase(
     val belt: BeltTier,
     val lanes: Int,
@@ -72,27 +75,11 @@ internal data class BeltCase(
     val expected: Double,
 )
 
-/** The five selected logistics values, so the fixture below takes one tuple instead of five. */
-internal data class CalculatorSetup(
-    val belt: BeltTier = BeltTier.TRANSPORT_BELT,
-    val inserter: InserterTier = InserterTier.INSERTER,
-    val lanes: Int = 1,
-    val beltStack: Int = 1,
-    val inserterStack: Int = 1,
-)
-
 /** The calculator the logistics suites build their cases from. */
-internal fun calculator(
-    setup: CalculatorSetup = CalculatorSetup(),
-    logistics: Logistics = testLogistics,
-) =
+internal fun calculator(config: LogisticsCalculatorSelection = LogisticsCalculatorSelection()) =
     LogisticsCalculator(
-        logistics,
-        setup.belt,
-        setup.inserter,
-        setup.lanes,
-        setup.beltStack,
-        setup.inserterStack,
+        testLogistics,
+        config,
     )
 
 /** The items per second a belt carries at the calculator's own stacking. */

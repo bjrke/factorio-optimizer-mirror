@@ -63,7 +63,7 @@ internal fun logisticsStats(root: JsonObject): Logistics {
             .flatMap { root.table(it).values.filterIsInstance<JsonObject>() }
             .mapNotNull { it.number("pumping_speed") }
             .maxOrNull()
-            ?.times(60.0)
+            ?.times(60.0) ?: 1200.0
 
     val fluids = root.table("fluid").keys.mapTo(mutableSetOf()) { Material(it) }
     val fluidTemperatures =

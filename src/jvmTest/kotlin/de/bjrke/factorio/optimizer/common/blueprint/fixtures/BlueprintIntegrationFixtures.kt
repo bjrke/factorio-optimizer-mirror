@@ -9,14 +9,15 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.prototype.Surface
 import de.bjrke.factorio.optimizer.common.prototype.selection.forSurface
 import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
+import de.bjrke.factorio.optimizer.common.service.OptimizationResult
 import de.bjrke.factorio.optimizer.common.service.Optimizer
 import de.bjrke.factorio.optimizer.jvm.parseArgs
 import java.util.*
@@ -40,17 +41,8 @@ fun optimize(target: String) =
 
 fun planAndLogistics(target: String): Pair<BlueprintPlan, LogisticsCalculator> {
     val result = optimize(target)
-    val logistics =
-        LogisticsCalculator(
-            result.logistics,
-            BeltTier.FAST_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 2,
-            beltStack = 1,
-            inserterStack = 1,
-        )
-    val plan = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
-    return plan to logistics
+    val logistics = LogisticsCalculator(result.logistics)
+    return testBlueprintPlan(result, logistics) to logistics
 }
 
 fun planFor(target: String): BlueprintPlan = planAndLogistics(target).first
@@ -81,20 +73,24 @@ fun planFromUrl(url: String): Triple<BlueprintPlan, LogisticsCalculator, BeltEnd
     val logistics =
         LogisticsCalculator(
             parsedRecipes.logistics,
-            belt,
-            inserter,
-            lanes,
-            beltStack,
-            inserterStack,
+            LogisticsCalculatorSelection(
+                belt,
+                inserter,
+                lanes,
+                beltStack,
+                inserterStack,
+            ),
         )
     val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
-    val plan =
-        assertIs<BlueprintPlanResult.Planned>(
-                blueprintPlan(result, logistics, cli.normalizeTarget),
-            )
-            .plan
-    return Triple(plan, logistics, cli.beltEnd)
+    val scale = cli.normalizeTarget
+    return Triple(testBlueprintPlan(result, logistics, scale), logistics, cli.beltEnd)
 }
+
+fun testBlueprintPlan(
+    result: OptimizationResult,
+    logistics: LogisticsCalculator,
+    scale: Double = 1.0,
+) = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics, scale)).plan
 
 fun decode(blueprint: String): String {
     val compressed = Base64.getDecoder().decode(blueprint.substring(1))
@@ -111,45 +107,18 @@ fun entitiesFor(
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ): List<BlueprintEntity> {
     val result = optimize(target)
-    val logistics =
-        LogisticsCalculator(
-            result.logistics,
-            BeltTier.FAST_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 2,
-            beltStack = 1,
-            inserterStack = 1,
-        )
-    val planned = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
-    return fromPlaced(planned, logistics, beltEnd).entities
+    val logistics = LogisticsCalculator(result.logistics)
+    return fromPlaced(testBlueprintPlan(result, logistics), logistics, beltEnd).entities
 }
 
 fun feedFailuresFor(target: String): List<String> {
     val result = optimize(target)
-    val logistics =
-        LogisticsCalculator(
-            result.logistics,
-            BeltTier.FAST_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 2,
-            beltStack = 1,
-            inserterStack = 1,
-        )
-    val plan = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
-    return blueprintFeedFailures(plan, logistics)
+    val logistics = LogisticsCalculator(result.logistics)
+    return blueprintFeedFailures(testBlueprintPlan(result, logistics), logistics)
 }
 
 fun transportMaterialsFor(target: String): Map<Coordinate, Material> {
     val result = optimize(target)
-    val logistics =
-        LogisticsCalculator(
-            result.logistics,
-            BeltTier.FAST_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 2,
-            beltStack = 1,
-            inserterStack = 1,
-        )
-    val plan = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
-    return blueprintTransportMaterials(plan, logistics)
+    val logistics = LogisticsCalculator(result.logistics)
+    return blueprintTransportMaterials(testBlueprintPlan(result, logistics), logistics)
 }

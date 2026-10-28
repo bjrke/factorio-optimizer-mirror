@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.production.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.production.RecipeLoader
@@ -96,11 +97,13 @@ fun main(args: Array<String>) {
     val logistics =
         LogisticsCalculator(
             parsedRecipes.logistics,
-            belt,
-            inserter,
-            lanes,
-            beltStack,
-            inserterStack,
+            LogisticsCalculatorSelection(
+                belt,
+                inserter,
+                lanes,
+                beltStack,
+                inserterStack,
+            ),
         )
 
     val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
@@ -173,7 +176,7 @@ private fun printListing(result: OptimizationResult, logistics: LogisticsCalcula
         isOutput: Boolean,
     ): String {
         if (logistics.isFluid(material)) {
-            return logistics.pumpCount(rate)?.let { "${superRound(it)} pumps + pipe" } ?: "pipe"
+            return "${superRound(logistics.pumpCount(rate))} pumps + pipe"
         }
         // the big mining drill and the recycler drop their product straight onto the belt
         val directOutput = isOutput && factory.outputsDirectly

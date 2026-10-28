@@ -29,7 +29,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
     fun ingredientAndOutputBeltsAreRotatedOppositely() {
         renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
-        val belts = screen.getAllByTitle(BeltTier.EXPRESS_TRANSPORT_BELT.identifier)
+        val belts = screen.getAllByTitle(BeltTier.FAST_TRANSPORT_BELT.identifier)
 
         assertAll(
             { assertEquals("matrix(0, 1, -1, 0, 0, 0)", computedStyle(belts[0], "transform")) },
@@ -60,7 +60,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
                 assertEquals(
                     materialSize,
                     computedStyle(
-                        screen.getAllByTitle(BeltTier.EXPRESS_TRANSPORT_BELT.identifier)[0],
+                        screen.getAllByTitle(BeltTier.FAST_TRANSPORT_BELT.identifier)[0],
                         "width",
                     ),
                 )
@@ -132,15 +132,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
                 time = 1.0,
                 categories = setOf(Category.CHEMISTRY),
             )
-        val calculator =
-            LogisticsCalculator(
-                testLogistics.copy(fluids = setOf(water)),
-                BeltTier.EXPRESS_TRANSPORT_BELT,
-                InserterTier.FAST_INSERTER,
-                lanes = 1,
-                beltStack = 1,
-                inserterStack = 1,
-            )
+        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(water)))
 
         val rendered =
             renderResult(

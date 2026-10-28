@@ -6,6 +6,7 @@ package de.bjrke.factorio.optimizer.js
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.production.normalizeTargetFromUrl
@@ -80,11 +81,13 @@ class FactorioOptimizerProps {
     val logistics =
         LogisticsCalculator(
             parsedRecipes.logistics,
-            belt,
-            inserter,
-            beltLanes,
-            beltStack,
-            inserterStack,
+            LogisticsCalculatorSelection(
+                belt,
+                inserter,
+                beltLanes,
+                beltStack,
+                inserterStack,
+            ),
         )
 
     private fun createNewUrl(): String {

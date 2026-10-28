@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
-import de.bjrke.factorio.optimizer.common.service.fixtures.CalculatorSetup
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.service.fixtures.testLogisticsConfig
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -23,7 +23,7 @@ class LogisticsStackTest {
         ) { (inserter, expected) ->
             assertEquals(
                 expected,
-                calculator(CalculatorSetup(inserter = inserter)).rates.stacksOnBelt,
+                calculator(LogisticsCalculatorSelection(inserter = inserter)).rates.stacksOnBelt,
             )
         }
 
@@ -40,7 +40,12 @@ class LogisticsStackTest {
                 ) { (inserter, handSize) ->
                     assertEquals(
                         handSize,
-                        calculator(CalculatorSetup(inserter = inserter, inserterStack = 1))
+                        calculator(
+                                LogisticsCalculatorSelection(
+                                    inserter = inserter,
+                                    inserterStack = 1,
+                                ),
+                            )
                             .handSize,
                     )
                 }
@@ -49,12 +54,7 @@ class LogisticsStackTest {
                 // the raised stack lowers the required inserter count
                 assertEquals(
                     1.0,
-                    calculator(
-                            CalculatorSetup(
-                                inserter = InserterTier.BULK_INSERTER,
-                                inserterStack = 1,
-                            ),
-                        )
+                    calculator(LogisticsCalculatorSelection(inserter = InserterTier.BULK_INSERTER))
                         .inserterCount(4.8),
                     TOLERANCE,
                 )
@@ -63,8 +63,6 @@ class LogisticsStackTest {
 
     @Test
     fun inserterStackConfigKeepsWithinTheInsertersRange() {
-        val config = LogisticsConfig(testLogistics, spaceAge = true)
-
         assertTableOf(
             Triple("1", InserterTier.BULK_INSERTER, 2),
             Triple(null, InserterTier.STACK_INSERTER, 6),
@@ -72,13 +70,20 @@ class LogisticsStackTest {
             Triple(null, InserterTier.INSERTER, 1),
             Triple("99", InserterTier.STACK_INSERTER, 16),
         ) { (stack, inserter, expected) ->
-            assertEquals(expected, config.inserterStack(stack, inserter))
+            assertEquals(expected, testLogisticsConfig.inserterStack(stack, inserter))
         }
     }
 
     @Test
     fun beltCountCanForceAnUnstackedBelt() {
-        val calculator = calculator(CalculatorSetup(lanes = 1, beltStack = 4))
+        val calculator =
+            calculator(
+                LogisticsCalculatorSelection(
+                    belt = BeltTier.TRANSPORT_BELT,
+                    lanes = 1,
+                    beltStack = 4,
+                ),
+            )
 
         assertTableOf(
             4 to 1.0,
@@ -91,8 +96,8 @@ class LogisticsStackTest {
 
     @Test
     fun beltStackingIsLimitedToSpaceAge() {
-        val spaceAge = LogisticsConfig(testLogistics, spaceAge = true)
-        val base = LogisticsConfig(testLogistics, spaceAge = false)
+        val spaceAge = testLogisticsConfig.copy(spaceAge = true)
+        val base = testLogisticsConfig.copy(spaceAge = false)
 
         assertAll(
             { assertEquals(BeltTier.MAX_STACK, spaceAge.beltStackMax) },

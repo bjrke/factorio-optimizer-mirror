@@ -103,7 +103,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
         val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
         renderResult(result)
 
-        fireEvent.click(screen.getAllByTitle(BeltTier.EXPRESS_TRANSPORT_BELT.identifier).first())
+        fireEvent.click(screen.getAllByTitle(BeltTier.FAST_TRANSPORT_BELT.identifier).first())
 
         assertEquals(firstBeltInput().value.toDouble(), normalizedTo.single(), 0.01)
     }

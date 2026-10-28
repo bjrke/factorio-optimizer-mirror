@@ -5,10 +5,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
@@ -150,15 +148,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
                 time = 1.0,
                 categories = setOf(Category.CHEMISTRY),
             )
-        val calculator =
-            LogisticsCalculator(
-                testLogistics.copy(fluids = setOf(water)),
-                BeltTier.EXPRESS_TRANSPORT_BELT,
-                InserterTier.FAST_INSERTER,
-                lanes = 1,
-                beltStack = 1,
-                inserterStack = 1,
-            )
+        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(water)))
 
         renderResult(
             optimizationResult(fluidRecipe, gear, Factory.CHEMICAL_PLANT),

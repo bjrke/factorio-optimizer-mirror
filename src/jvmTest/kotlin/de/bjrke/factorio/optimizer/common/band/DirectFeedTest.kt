@@ -6,12 +6,11 @@ import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.cycleRatio
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
+import de.bjrke.factorio.optimizer.common.service.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.special.directFeed
 import de.bjrke.test.TOLERANCE
@@ -55,15 +54,7 @@ private fun production(
 
 class DirectFeedTest {
 
-    private val logistics =
-        LogisticsCalculator(
-            testLogistics,
-            BeltTier.EXPRESS_TRANSPORT_BELT,
-            InserterTier.FAST_INSERTER,
-            lanes = 2,
-            beltStack = 1,
-            inserterStack = 1,
-        )
+    private val logistics = calculator()
 
     @Test
     fun aCycleIsOnlyAcceptedWithinTheRateTolerance() =
@@ -313,11 +304,6 @@ class DirectFeedTest {
             LogisticsCalculator(
                 // the test logistics carry no fluid by default, so name the acid as one
                 testLogistics.copy(fluids = setOf(acid)),
-                BeltTier.EXPRESS_TRANSPORT_BELT,
-                InserterTier.FAST_INSERTER,
-                lanes = 2,
-                beltStack = 1,
-                inserterStack = 1,
             )
         val feed =
             directFeed(

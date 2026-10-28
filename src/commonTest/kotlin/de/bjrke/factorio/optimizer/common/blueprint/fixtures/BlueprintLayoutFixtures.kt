@@ -7,13 +7,13 @@ import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.neighbors
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.plan.PlannedRecipe
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import de.bjrke.factorio.optimizer.common.service.fixtures.testLogistics
@@ -42,11 +42,7 @@ fun planned(
 val logistics =
     LogisticsCalculator(
         testLogistics.copy(fluids = setOf(water, lubricant)),
-        BeltTier.EXPRESS_TRANSPORT_BELT,
-        InserterTier.FAST_INSERTER,
-        lanes = 2,
-        beltStack = 1,
-        inserterStack = 1,
+        LogisticsCalculatorSelection(belt = BeltTier.EXPRESS_TRANSPORT_BELT),
     )
 
 val smeltRecipe = recipe("iron-plate", Category.CRAFTING, mapOf(plate to 1.0), mapOf(ore to 1.0))
