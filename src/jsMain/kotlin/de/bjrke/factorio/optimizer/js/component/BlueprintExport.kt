@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder
@@ -37,30 +38,31 @@ import web.cssom.px
 private const val TILE = 24.0
 
 /** Turns an entity's direction into the clockwise rotation its icon needs; icons face east. */
-private fun rotationDegrees(direction: Direction?): Int? = direction?.let {
-    when (it) {
+private fun rotationDegrees(direction: Direction) =
+    when (direction) {
         Direction.NORTH -> 270
         Direction.EAST -> 0
         Direction.SOUTH -> 90
         Direction.WEST -> 180
     }
-}
 
 /**
  * The clockwise rotation the entity's icon needs on screen. Most icons face east, but a loader's
  * arrow points north and a splitter's arrows point west; an underground exit opens the other way
  * than the belt it feeds. The blueprint itself is never changed, only the preview.
  */
-internal fun blueprintDisplayRotation(entity: BlueprintEntity): Int? {
-    val base = rotationDegrees(entity.direction) ?: return null
+internal fun blueprintDisplayRotation(entity: BlueprintEntity): Int {
+    val name = entity.name
+    if (name in Factory.factoriesByIdentifier) return 0
+    val base = rotationDegrees(entity.direction)
     val extra =
         when {
-            entity.name.endsWith("loader") -> 90
-            entity.name.endsWith("splitter") -> 180
-            entity.name.endsWith("underground-belt") && entity.type == Io.OUTPUT -> 180
+            name.endsWith("loader") -> 90
+            name.endsWith("splitter") -> 180
+            name.endsWith("underground-belt") && entity.type == Io.OUTPUT -> 180
             else -> 0
         }
-    return ((base + extra) % 360).takeIf { it != 0 }
+    return (base + extra) % 360
 }
 
 /** The recipe or material signal an entity displays, or null when it shows nothing. */
@@ -117,7 +119,7 @@ internal val blueprintView =
                         val iconRotation = blueprintDisplayRotation(entity)
                         // a quarter turn swaps the icon's box, so the rotated icon still fills the
                         // cell
-                        val quarterTurn = iconRotation != null && iconRotation % 180 != 0
+                        val quarterTurn = iconRotation % 180 != 0
                         val iconWidth = if (quarterTurn) cellHeight else cellWidth
                         val iconHeight = if (quarterTurn) cellWidth else cellHeight
                         div {
@@ -140,7 +142,7 @@ internal val blueprintView =
                                 icon(entity.name) {
                                     width = iconWidth
                                     height = iconHeight
-                                    iconRotation?.let { rotation = it }
+                                    if (iconRotation != 0) rotation = iconRotation
                                 }
                             }
                             blueprintOverlay(entity)?.let { overlay ->

@@ -17,7 +17,6 @@ import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundEntity
-import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Io
 
 /**
@@ -32,7 +31,7 @@ internal fun LayoutEntity.toBlueprintEntity(): BlueprintEntity {
         is MachineEntity ->
             common.copy(
                 recipe = recipe,
-                direction = direction.takeIf { it != NORTH },
+                direction = direction,
             )
         is MarkerEntity -> common.copy(marker = signal.material, markerFluid = signal.fluid)
         is PoleEntity -> common.copy(neighbours = neighbours)

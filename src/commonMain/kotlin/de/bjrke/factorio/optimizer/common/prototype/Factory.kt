@@ -167,6 +167,13 @@ enum class Factory(
 
     val stacksOnBelt: Boolean
         get() = spec.stacksOnBelt
+
+    companion object {
+        internal val factoriesByCode =
+            Factory.entries.filter { it.code != null }.associateBy { it.code }
+
+        val factoriesByIdentifier = Factory.entries.associateBy { it.identifier }
+    }
 }
 
 /**
@@ -229,7 +236,8 @@ class FactoryConfig(val spaceAge: Boolean = true) {
      */
     fun fromUrl(selection: String?): Set<Factory> {
         if (selection.isNullOrEmpty()) return defaults
-        val decoded = selection.mapNotNull { factoriesByCode[it] }.filter { it in available }
+        val decoded =
+            selection.mapNotNull { Factory.factoriesByCode[it] }.filter { it in available }
         var result = decoded.fold(alwaysEnabled, ::add)
         for (group in groups) {
             if (group.none { it in result }) {
@@ -269,7 +277,5 @@ class FactoryConfig(val spaceAge: Boolean = true) {
                 Factory.ROCKET_SILO,
                 Factory.SCIENCE_LAB,
             )
-        private val factoriesByCode =
-            Factory.entries.filter { it.code != null }.associateBy { it.code }
     }
 }

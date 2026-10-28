@@ -41,7 +41,7 @@ class BlueprintFluidPortLayoutTest {
         fun plumbingAt(tile: Coordinate): Material? =
             entities.filterIsInstance<Plumbing>().singleOrNull { it.area.topLeft == tile }?.material
 
-        fun direction(machine: MachineEntity): Direction? =
+        fun direction(machine: MachineEntity) =
             blueprint.entities
                 .single {
                     it.area.topLeft == machine.area.topLeft && it.name == machine.name

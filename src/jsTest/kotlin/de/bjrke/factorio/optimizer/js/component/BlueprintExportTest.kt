@@ -123,7 +123,7 @@ class BlueprintExportTest : ComponentTest() {
                 area = Coordinate(0, 0).area(1, 1),
                 direction = Direction.EAST,
                 type = Io.INPUT,
-            ) to null,
+            ) to 0,
             BlueprintEntity(
                 "fast-underground-belt",
                 area = Coordinate(0, 0).area(1, 1),

@@ -20,7 +20,7 @@ import de.bjrke.factorio.optimizer.common.model.area
 data class BlueprintEntity(
     val name: String,
     val area: Area,
-    val direction: Direction? = null,
+    val direction: Direction = Direction.NORTH,
     val recipe: String? = null,
     val type: Io? = null,
     val marker: Material? = null,
@@ -52,7 +52,7 @@ data class BlueprintEntity(
     constructor(
         name: String,
         topLeft: Coordinate,
-        direction: Direction? = null,
+        direction: Direction = Direction.NORTH,
         recipe: String? = null,
         type: Io? = null,
         marker: Material? = null,

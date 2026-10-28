@@ -29,9 +29,8 @@ fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
         entities
             .filter { it.name.endsWith("inserter") }
             .filter {
-                val direction = it.direction ?: return@filter false
                 val reach = if (it.name == "long-handed-inserter") 2 else 1
-                val tile = it.area.topLeft + direction.step * reach
+                val tile = it.area.topLeft + it.direction.step * reach
                 tile !in occupied
             }
             .map { "${it.name}@${it.area.topLeft}" }
@@ -74,9 +73,8 @@ fun assertSplittersOnlyFeedSurface(entities: List<BlueprintEntity>) {
         entities
             .filter { it.name.endsWith("splitter") }
             .flatMap { splitter ->
-                val direction = splitter.direction ?: return@flatMap emptyList()
                 splitter.area.mapNotNull { tile ->
-                    val downstream = tile + direction.step
+                    val downstream = tile + splitter.direction.step
                     if (downstream in inputs) "$tile -> $downstream" else null
                 }
             }
@@ -90,14 +88,9 @@ fun assertNoMergingBelts(
 ) {
     val belts =
         entities
-            .filter {
-                it.name.contains("transport-belt") &&
-                    !it.name.contains("underground") &&
-                    it.direction != null
-            }
-            .associate {
-                it.area.topLeft to it.direction!!
-            }
+            .filter { it.name.contains("transport-belt") }
+            .filterNot { it.name.contains("underground") }
+            .associate { it.area.topLeft to it.direction }
 
     val merges =
         belts

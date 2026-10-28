@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Io
 import kotlin.test.assertEquals
 
@@ -21,7 +20,7 @@ fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
     val problems = mutableListOf<String>()
     for (entity in underground) {
         if (entities.isImportConnector(entity)) continue
-        val step = (entity.direction ?: NORTH).step
+        val step = entity.direction.step
         val topLeft = entity.area.topLeft
         if (entity.type == Io.INPUT) {
             val exit = (1..9).any { outputs.contains(topLeft + step * it) }
@@ -61,7 +60,7 @@ private fun tunnelProblem(
     entity: BlueprintEntity,
     byTile: Map<Coordinate, BlueprintEntity>,
 ): String? {
-    val direction = entity.direction ?: return null
+    val direction = entity.direction
     val topLeft = entity.area.topLeft
     return if (entity.type == Io.INPUT) {
         inputProblem(topLeft, direction, byTile)
@@ -109,7 +108,7 @@ private fun outputProblem(
  * route entrance can lose its feeding belt and land beside another import's loader.
  */
 private fun List<BlueprintEntity>.isImportConnector(entity: BlueprintEntity): Boolean {
-    val direction = entity.direction ?: return false
+    val direction = entity.direction
     val type = entity.type ?: return false
     val step = direction.step
     val sign = if (type == Io.INPUT) 1 else -1

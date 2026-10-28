@@ -25,8 +25,7 @@ internal fun BlueprintEntity.toJson(entityNumber: Int) = buildJsonObject {
     put("entity_number", entityNumber)
     put("name", name)
     put("position", positionJson())
-
-    direction?.let { put("direction", it.blueprintNumber) }
+    if (direction != Direction.NORTH) put("direction", direction.blueprintNumber)
     recipe?.let { put("recipe", it) }
     type?.let { put("type", it.typeName) }
     putSettings(this)

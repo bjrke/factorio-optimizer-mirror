@@ -52,21 +52,15 @@ class BlueprintJsonTest {
     @Test
     fun directionsSerializeToTheirBlueprintNumbers() =
         assertTableOf(
-            Direction.NORTH to 0,
+            Direction.NORTH to null,
             Direction.EAST to 4,
             Direction.SOUTH to 8,
             Direction.WEST to 12,
         ) { (direction, expected) ->
             val entity = BlueprintEntity("transport-belt", areaTile(0, 0), direction = direction)
-            val written = entityJson(entity).getValue("direction").jsonPrimitive.int
+            val written = entityJson(entity)["direction"]?.jsonPrimitive?.int
             assertEquals(expected, written)
         }
-
-    @Test
-    fun anEntityWithoutDirectionOmitsIt() {
-        val entity = BlueprintEntity("pipe", areaTile(0, 0))
-        assertNull(entityJson(entity)["direction"])
-    }
 
     @Test
     fun ioSerializesToTheTypeString() =
