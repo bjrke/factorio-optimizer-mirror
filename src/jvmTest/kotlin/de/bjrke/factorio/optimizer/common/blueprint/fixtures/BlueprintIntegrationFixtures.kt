@@ -105,10 +105,11 @@ fun decode(blueprint: String): String {
 fun entitiesFor(
     target: String,
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
+    scale: Double = 1.0,
 ): List<BlueprintEntity> {
     val result = optimize(target)
     val logistics = LogisticsCalculator(result.logistics)
-    return fromPlaced(testBlueprintPlan(result, logistics), logistics, beltEnd).entities
+    return fromPlaced(testBlueprintPlan(result, logistics, scale), logistics, beltEnd).entities
 }
 
 fun feedFailuresFor(target: String): List<String> {

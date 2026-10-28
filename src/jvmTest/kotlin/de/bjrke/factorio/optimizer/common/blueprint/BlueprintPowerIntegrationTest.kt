@@ -12,24 +12,16 @@ class BlueprintPowerIntegrationTest {
     @Test
     fun realBlueprintsPowerEveryMachine() =
         assertTableOf(
-            "advanced-circuit",
-            "electronic-circuit",
-            "logistic-science-pack",
-            "processing-unit",
-            "utility-science-pack",
-            "lubricant",
-        ) {
-            assertPolesCoverAndConnect(entitiesFor(it))
-        }
-
-    @Test
-    fun realBlueprintsWireTheirPoles() =
-        assertTableOf(
-            "advanced-circuit",
-            "logistic-science-pack",
-            "processing-unit",
-            "utility-science-pack",
-        ) {
-            assertPolesWired(entitiesFor(it))
+            "advanced-circuit" to 1.0,
+            "electronic-circuit" to 1.0,
+            "logistic-science-pack" to 1.0,
+            "processing-unit" to 1.0,
+            "utility-science-pack" to 1.0,
+            "lubricant" to 1.0,
+            "petroleum-gas" to 50.0,
+        ) { (target, scale) ->
+            val entities = entitiesFor(target = target, scale = scale)
+            assertPolesCoverAndConnect(entities)
+            assertPolesWired(entities)
         }
 }

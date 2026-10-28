@@ -45,7 +45,7 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
         val poles = mutableSetOf<Coordinate>()
         for (area in machineAreas) {
             if (!area.any(covered::contains)) {
-                val spot = bestPoleSpot(area, covered) ?: continue
+                val spot = bestPoleSpot(area, covered, poles) ?: continue
                 poles += spot
                 board.placePole(spot)
                 covered.addAll(spot.area().grow(SUPPLY_RADIUS))
@@ -55,19 +55,28 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
     }
 
     /** The free tile near [tile] that powers the most not-yet-[covered] machines, if any. */
-    private fun bestPoleSpot(tile: Area, covered: Set<Coordinate>) =
-        tile
-            .grow(SUPPLY_RADIUS)
-            .filter { board.isFree(it) && it.x >= westBound }
-            .maxByOrNull {
-                it.area().grow(SUPPLY_RADIUS).sumOf { other ->
-                    when {
-                        other in covered -> 0
-                        board.entityAt(other)?.isPowered == true -> 2
-                        else -> 1
-                    }
+    private fun bestPoleSpot(
+        tile: Area,
+        covered: Set<Coordinate>,
+        poles: MutableSet<Coordinate>,
+    ): Coordinate? {
+        val tilesWhichWouldCover =
+            tile.grow(SUPPLY_RADIUS).filter { board.isFree(it) && it.x >= westBound }
+        val tilesInReachOfOtherPoles = tilesWhichWouldCover.filter { pos ->
+            poles.any { pos.distanceSq(it) <= WIRE_REACH_SQ }
+        }
+        val possibleTiles = tilesInReachOfOtherPoles.ifEmpty { tilesWhichWouldCover }
+
+        return possibleTiles.maxByOrNull {
+            it.area().grow(SUPPLY_RADIUS).sumOf { other ->
+                when {
+                    other in covered -> 0
+                    board.entityAt(other)?.isPowered == true -> 2
+                    else -> 1
                 }
             }
+        }
+    }
 
     /** Adds poles until every pole can reach another, so the whole set is one wire network. */
     private fun connectPoles(poles: MutableSet<Coordinate>) {

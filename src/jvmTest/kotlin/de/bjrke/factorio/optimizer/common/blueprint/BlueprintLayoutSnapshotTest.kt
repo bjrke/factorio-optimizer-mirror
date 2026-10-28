@@ -33,7 +33,7 @@ class BlueprintLayoutSnapshotTest {
     @Test
     fun chestBeltEndIsStable() =
         assertSignature(
-            "2698cf8f24db62a6",
+            "3304c4b8e48c28fe",
             fromPlaced(basePlan, logistics, beltEnd = BeltEnd.BUFFER_CHEST),
         )
 
