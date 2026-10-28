@@ -25,6 +25,7 @@ import kotlin.test.assertIs
 private val ore = Material("iron-ore")
 private val plate = Material("iron-plate")
 private val gear = Material("iron-gear-wheel")
+private val transportBelt = Material("transport-belt")
 private val petroleum = Material("petroleum-gas")
 private val discovery = Material("utility-science-pack")
 
@@ -205,32 +206,36 @@ class BlueprintPlanTest {
 
     @Test
     fun aMaterialMadeAndTakenByOneRecipeIsDirectInserted() {
-        val smelt = recipe("iron-plate", Category.SMELTING, mapOf(plate to 1.0), mapOf(ore to 1.0))
+        val belt =
+            recipe(
+                "transport-belt",
+                Category.CRAFTING,
+                mapOf(transportBelt to 1.0),
+                mapOf(gear to 1.0, plate to 1.0),
+            )
         val craft =
             recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
 
         val planned =
             plan(
-                gear,
-                craft,
+                transportBelt,
+                belt,
                 listOf(
-                    production(smelt, plate, Factory.ASSEMBLING_MACHINE_3, level = 1),
-                    production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 2),
+                    production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 1),
+                    production(belt, transportBelt, Factory.ASSEMBLING_MACHINE_3, level = 2),
                 ),
             )
 
         val band = planned.bands.single()
         assertAll(
-            // the one gear machine takes its plates straight from the two smelters beside it
             {
                 assertEquals(
-                    setOf(smelt, craft),
+                    setOf(belt, craft),
                     band.machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
-            { assertEquals(setOf(plate), band.links.mapTo(mutableSetOf()) { it.material }) },
-            // the plate only moves machine to machine, so it never becomes a belt source
-            { assertEquals(listOf(gear), planned.beltMaterials) },
+            { assertEquals(setOf(gear), band.links.mapTo(mutableSetOf()) { it.material }) },
+            { assertEquals(listOf(transportBelt), planned.beltMaterials) },
         )
     }
 

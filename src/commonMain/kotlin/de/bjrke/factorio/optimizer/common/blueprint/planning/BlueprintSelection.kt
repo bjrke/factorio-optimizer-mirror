@@ -24,11 +24,9 @@ private val externallyProcessedCategories =
         Category.CRYOGENICS,
         Category.RECYCLING,
         Category.CRUSHING,
+        Category.SMELTING,
+        Category.SPOILING,
     )
-
-/** Classic smelters are left out (their plates are imported); the foundry is kept. */
-private val classicSmelters =
-    setOf(Factory.STONE_FURNACE, Factory.STEEL_FURNACE, Factory.ELECTRIC_FURNACE)
 
 /**
  * The factory a plan starts from: the one producing the target [recipe]. Null means none does. The
@@ -78,7 +76,6 @@ private fun buildable(factory: FactoryProduction, target: Recipe): Boolean {
     if (factory.factory == Factory.NO_FACTORY) return false
     if (factory.recipe.name == target.name) return true
     if (factory.recipe.categories.any { it in extractionCategories }) return false
-    if (factory.factory in classicSmelters) return false
     if (factory.recipe.categories.any { it in externallyProcessedCategories }) return false
     // a recipe yielding several materials would need a mixed output belt, not supported yet
     if (factory.recipe.result.size > 1) return false
