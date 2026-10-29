@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineDirection
+import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
 
 /** Tiles on the left kept clear for the import markers and the feed belts. */
 private const val LANE_MARGIN = 40
@@ -47,22 +48,23 @@ internal class RowPlacer(
         }
     }
 
-    private fun rowShape(solids: List<Material>, height: Int, bandTop: Int): RowShape {
-        val lanes =
+    private fun rowShape(solids: List<Material>, height: Int, bandTop: Int): RowLanes {
+        val topLanes =
             when (solids.size) {
                 0 -> 0
                 1 -> 1
                 else -> 2
             }
-        val factoryTop = bandTop + lanes + 1
+        val factoryTop = bandTop + topLanes + 1
         val factoryBottomIncl = factoryTop + height - 1
-        return RowShape(
+        return RowLanes(
+            solids = solids,
             factoryTop = factoryTop,
-            laneNearRow = if (lanes >= 1) factoryTop - 2 else null,
-            laneFarRow = if (lanes >= 2) factoryTop - 3 else null,
+            nearRow = if (topLanes >= 1) factoryTop - 2 else null,
+            farRow = if (topLanes >= 2) factoryTop - 3 else null,
             // a third solid input goes on a second belt below the row
-            laneBelowRow = if (solids.size >= 3) factoryBottomIncl + 3 else null,
-            outputLaneRow = factoryBottomIncl + 2,
+            belowRow = if (solids.size >= 3) factoryBottomIncl + 3 else null,
+            outputRow = factoryBottomIncl + 2,
         )
     }
 
@@ -73,17 +75,22 @@ internal class RowPlacer(
      */
     private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
         val internal = plannedRow.links.map { it.material }
-        val productions = plannedRow.productions
-        val size = planner.footprint(productions.first())
+        val size = planner.footprint(plannedRow.machines.first())
         val solids =
-            productions
-                .asSequence()
-                .flatMap { it.recipe.ingredients.keys }
-                .filterNot { logistics.isFluid(it) || it in internal }
-                .distinct()
-                .sortedBy { it.name }
+            plannedRow.machines
+                .flatMap { production ->
+                    production.recipe.ingredients.keys.map { material ->
+                        material to inputPerMachine(production, material)
+                    }
+                }
+                .filterNot { (material, _) -> logistics.isFluid(material) || material in internal }
+                .groupingBy { (material, _) -> material }
+                .fold(0.0) { acc, (_, rate) -> acc + rate }
+                .entries
+                .sortedByDescending { it.value }
+                .map { it.key }
                 .toList()
-        val shape = rowShape(solids, size.height, bandTop)
+        val lanes = rowShape(solids, size.height, bandTop)
         val linkedGaps = plannedRow.links.mapTo(mutableSetOf()) { it.gap }
         val machines = buildList {
             var left = LANE_MARGIN
@@ -97,15 +104,8 @@ internal class RowPlacer(
             Row(
                 plannedRow = plannedRow,
                 machines = machines,
-                box = Area(Coordinate(LANE_MARGIN, shape.factoryTop), size),
-                lanes =
-                    RowLanes(
-                        solids,
-                        shape.laneNearRow,
-                        shape.laneFarRow,
-                        shape.laneBelowRow,
-                        shape.outputLaneRow,
-                    ),
+                box = Area(Coordinate(LANE_MARGIN, lanes.factoryTop), size),
+                lanes = lanes,
             )
         for (machine in machines) {
             board.place(

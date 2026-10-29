@@ -44,17 +44,17 @@ fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
  */
 fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
     // a band inserts its link machine to machine, so that producer never puts material on a belt
-    val sources =
+    val doubled =
         plan.rows
             .flatMap { row ->
                 row.productions.flatMap { planned ->
                     planned.recipe.result.keys
                         .filter { material -> row.exports(planned, material) }
-                        .map { material -> planned to material }
+                        .map { material -> material to planned }
                 }
             }
-            .groupBy({ it.second }, { it.first })
-    val doubled = sources.filterValues { it.size > 1 }
+            .groupBy({ it.first }, { it.second })
+            .filterValues { it.size > 1 }
 
     assertEquals(emptyMap(), doubled, "material put on a belt by more than one production")
 }

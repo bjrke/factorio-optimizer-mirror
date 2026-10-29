@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.model.Material
  * The route tiles of every produced material, so a nearer consumer can split off an existing belt.
  * A band or import material has no belt trunk, so its tiles are never recorded.
  */
-internal class DeliveryNetworks(private val beltMaterials: List<Material>) {
+internal class DeliveryNetworks(private val beltMaterials: Set<Material>) {
 
     private val tiles = mutableMapOf<Material, MutableSet<Coordinate>>()
 

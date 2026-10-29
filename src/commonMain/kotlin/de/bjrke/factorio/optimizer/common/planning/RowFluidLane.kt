@@ -77,7 +77,13 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
                     ?: (row.factoryTop - 2)) - 2 - 2 * depth
             LineSide.SOUTH ->
                 // the product belt always sits under the machines, even when it carries no material
-                row.beltRows.plus(row.outputLaneRow).max() + 2 + 2 * depth
+                listOfNotNull(
+                        row.laneNearRow,
+                        row.laneFarRow,
+                        row.laneBelowRow,
+                        row.outputLaneRow,
+                    )
+                    .max() + 2 + 2 * depth
         }
 
     /** The port the recipe assigns [material] to, whichever row edge that port is on. */

@@ -235,7 +235,7 @@ class BlueprintPlanTest {
                 )
             },
             { assertEquals(setOf(gear), band.links.mapTo(mutableSetOf()) { it.material }) },
-            { assertEquals(listOf(transportBelt), planned.beltMaterials) },
+            { assertEquals(setOf(transportBelt), planned.beltMaterials) },
         )
     }
 

@@ -57,7 +57,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   a band (`advancedCircuitUrlOnlyTunnelsForItsCableFeed` locks the new state in).
   Line breaking a band too wide is a deferred follow-up, not a bug in the router.
 - **A row with more than two solid inputs breaks the import lanes, and that reads
-  as "compaction does not run".** `RowShape` gives a row a near, a far and a below
+  as "compaction does not run".** `RowLanes` gives a row a near, a far and a below
   lane; `sinkOf` feeds every further input from below (`NORTH`) at
   `row.left + (index - 3)`. The copies share one y, so those sinks line up with the
   lane columns the row's own product runs through. When the row sits in a

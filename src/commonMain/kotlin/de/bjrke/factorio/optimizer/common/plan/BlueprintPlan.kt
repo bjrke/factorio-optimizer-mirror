@@ -54,17 +54,9 @@ data class BlueprintPlan(
         material in it.beltMaterials
     }
 
-    /**
-     * The production that produces [material] first, ignoring band inserts. Used to order rows by
-     * depth; the belt source is [producerOf].
-     */
-    fun producerRecipeOf(material: Material) = rows.firstNotNullOfOrNull { row ->
-        row.productions.firstOrNull { material in it.recipe.result.keys }
-    }
-
     /** The materials the plan puts on a belt at all. */
     val beltMaterials by lazy {
-        rows.flatMap { it.beltMaterials }.distinct()
+        rows.flatMap { it.beltMaterials }.toSet()
     }
 }
 
@@ -87,11 +79,11 @@ data class PlannedRow(
     }
 
     /** The productions this row builds, once each, in machine order. */
-    val productions: List<FactoryProduction>
-        get() = machines.distinct()
+    val productions
+        get() = machines.toSet()
 
     /** The products a machine of this row puts on a belt rather than into a neighbor. */
-    val beltMaterials: List<Material>
+    val beltMaterials
         get() =
             productions
                 .flatMap { production ->
@@ -99,25 +91,22 @@ data class PlannedRow(
                         exports(production, material)
                     }
                 }
-                .distinct()
-
-    /** How many machines of [production] this row builds. */
-    fun machinesOf(production: FactoryProduction): Int = machines.count { it == production }
+                .toSet()
 
     /**
      * Whether [production]'s [material] leaves this row over a belt rather than into a neighbor.
      */
-    fun exports(production: FactoryProduction, material: Material): Boolean =
+    fun exports(production: FactoryProduction, material: Material) =
         material in production.recipe.result.keys &&
             links.none { link -> link.material == material && producerOf(link) == production }
 
     /** The first production of this row that puts [material] on a belt. */
-    fun producerOf(material: Material): FactoryProduction? = productions.firstOrNull {
+    fun producerOf(material: Material) = productions.firstOrNull {
         exports(it, material)
     }
 
     /** The production of the machine left (or right) of [link]'s gap. */
-    fun producerOf(link: PlannedLink): FactoryProduction =
+    fun producerOf(link: PlannedLink) =
         machines[if (link.producerIsLeft) link.gap else link.gap + 1]
 
     companion object {

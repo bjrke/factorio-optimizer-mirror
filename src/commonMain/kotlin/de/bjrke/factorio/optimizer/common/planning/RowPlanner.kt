@@ -44,7 +44,13 @@ internal class RowPlanner(
         val next = path + planned.recipe
         val producers =
             planned.recipe.ingredients.keys.mapNotNull { material ->
-                plan.producerRecipeOf(material)?.takeIf { it != planned }?.let { material to it }
+                plan.rows
+                    .firstNotNullOfOrNull { row ->
+                        row.productions.firstOrNull {
+                            it != planned && material in it.recipe.result.keys
+                        }
+                    }
+                    ?.let { material to it }
             }
         return if (producers.isEmpty()) 0
         else 1 + producers.maxOf { (_, producer) -> depthOf(producer, next) }
@@ -61,37 +67,29 @@ internal class RowPlanner(
 
     /**
      * A list of inserters per machine edge: one entry per inserter, `true` for a long one (the far
-     * lane). The two lanes are interleaved; when the edge is too short for both, the counts are
-     * scaled down fairly.
+     * lane). [width] is how many columns the edge leaves free for inserters. The two lanes are
+     * interleaved; when they do not fit, the counts are scaled down fairly.
      */
-    fun inserterPattern(near: Int, far: Int, width: Int): List<Boolean> {
-        var short = near
-        var long = far
-        // leave the machine's last column free: a pole can sit there and reach the machine row
-        val edge = maxOf(1, width - 1)
-        if (short + long > edge) {
-            short = (short.toDouble() * edge / (short + long)).roundToInt().coerceIn(0, edge)
-            long = edge - short
-            if (near == 0) {
-                short = 0
-                long = edge
+    fun inserterPattern(near: Int, far: Int, width: Int) = buildList {
+        var (short, long) =
+            when {
+                near + far <= width -> near to far
+                near == 0 -> 0 to width
+                far == 0 || width <= 1 -> width to 0
+                else -> {
+                    val short =
+                        (near.toDouble() * width / (near + far)).roundToInt().coerceIn(1, width - 1)
+                    short to width - short
+                }
             }
-            if (far == 0) {
-                short = edge
-                long = 0
-            }
-        }
-        val pattern = mutableListOf<Boolean>()
+
         while (short > 0 || long > 0) {
-            if (short > 0) {
-                pattern += false
-                short--
+            if (short-- > 0) {
+                add(false)
             }
-            if (long > 0) {
-                pattern += true
-                long--
+            if (long-- > 0) {
+                add(true)
             }
         }
-        return pattern
     }
 }

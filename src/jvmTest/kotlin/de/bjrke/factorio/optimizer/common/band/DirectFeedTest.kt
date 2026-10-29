@@ -195,16 +195,21 @@ class DirectFeedTest {
 
     @Test
     fun aMaterialWithASecondConsumerGetsOneMoreProduction() {
-        val cable = recipe("copper-cable", mapOf(alpha to 1.0))
-        val circuit = recipe("electronic-circuit", mapOf(gamma to 1.0), mapOf(alpha to 1.0))
-        val module = recipe("module", mapOf(product to 1.0), mapOf(alpha to 0.05))
+        val cable = "copper-cable"
+        val circuit = "electronic-circuit"
+        val module = "module"
+
+        val cableRecipe = recipe(cable, mapOf(alpha to 1.0))
+        val circuitRecipe = recipe(circuit, mapOf(gamma to 1.0), mapOf(alpha to 1.0))
+        val moduleRecipe = recipe(module, mapOf(product to 1.0), mapOf(alpha to 0.05))
+
         val feed =
             directFeed(
-                module,
+                moduleRecipe,
                 listOf(
-                    production(module, product),
-                    production(circuit, gamma, amount = 2.0),
-                    production(cable, alpha, amount = 0.1),
+                    production(moduleRecipe, product),
+                    production(circuitRecipe, gamma, amount = 2.0),
+                    production(cableRecipe, alpha, amount = 0.1),
                 ),
                 scale = 1.0,
                 logistics = logistics,
@@ -215,7 +220,7 @@ class DirectFeedTest {
             // the circuit takes its cable straight from the band: two cable and two circuits
             {
                 assertEquals(
-                    listOf("copper-cable", "electronic-circuit"),
+                    listOf(cable, circuit),
                     band.machines.map { it.recipe.name }.distinct(),
                 )
             },
@@ -223,14 +228,25 @@ class DirectFeedTest {
             // the module still needs its cable over a belt, so one more cable machine is built
             {
                 assertEquals(
-                    listOf("copper-cable", "electronic-circuit", "module", "copper-cable"),
+                    listOf(cable, circuit, module, cable),
                     feed.recipes.map { it.recipe.name },
                 )
             },
             {
                 assertEquals(
-                    listOf(2, 2, 1, 1),
-                    feed.rows.flatMap { row -> row.productions.map { row.machinesOf(it) } },
+                    listOf(
+                        listOf(
+                            cable,
+                            circuit,
+                            cable,
+                            circuit,
+                        ),
+                        listOf(module),
+                        listOf(cable),
+                    ),
+                    feed.rows.map { row ->
+                        row.machines.map { it.recipe.name }
+                    },
                 )
             },
         )

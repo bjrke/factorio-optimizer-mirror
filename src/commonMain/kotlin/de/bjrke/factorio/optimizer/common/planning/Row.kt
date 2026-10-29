@@ -10,21 +10,15 @@ import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 internal class PlacedMachine(val production: FactoryProduction, val left: Int)
 
 /**
+ * The input and output belt rows of a row and the solid materials those lanes carry.
+ *
  * The row geometry before a row exists: where the machines start and which belt rows they need.
- * [laneNearRow] and [laneFarRow] are the input belts above the machines, [laneBelowRow] a third
- * input belt below them, [outputLaneRow] the product belt.
+ * [nearRow] and [farRow] are the input belts above the machines, [belowRow] a third input belt
+ * below them, [outputRow] the product belt.
  */
-internal class RowShape(
-    val factoryTop: Int,
-    val laneNearRow: Int?,
-    val laneFarRow: Int?,
-    val laneBelowRow: Int?,
-    val outputLaneRow: Int,
-)
-
-/** The input and output belt rows of a row and the solid materials those lanes carry. */
 internal data class RowLanes(
     val solids: List<Material>,
+    val factoryTop: Int,
     val nearRow: Int?,
     val farRow: Int?,
     val belowRow: Int?,
@@ -48,10 +42,6 @@ internal class Row(
     /** The direct insertions between the machines, by the gap they sit in. */
     val interfaces: List<PlannedLink>
         get() = plannedRow.links
-
-    /** The belt rows around the machines: the input lanes above and a third input belt below. */
-    val beltRows: List<Int>
-        get() = listOfNotNull(lanes.nearRow, lanes.farRow, lanes.belowRow)
 
     val copies
         get() = machines.size

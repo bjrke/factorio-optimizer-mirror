@@ -67,18 +67,21 @@ internal class MachineInserterPlacer(
         val ingredients = production.recipe.ingredients
         val near = row.solids.getOrNull(0)?.takeIf { it in ingredients }
         val far = row.solids.getOrNull(1)?.takeIf { it in ingredients }
+        val width = row.width
+
+        // Inserters take precedence over poles: fill columns 1..width-1 first and keep column 0 as
+        // the spare, so the edge only gives up an inserter when it is truly full. A fluid port may
+        // claim one of the preferred columns; the pattern is sized to the columns that remain.
+        val freeColumns = (1 until width).plus(0).minus(topPorts)
+
         val pattern =
             planner.inserterPattern(
                 near?.let { planner.insertersFor(production, listOf(it)) } ?: 0,
                 far?.let { planner.insertersFor(production, listOf(it)) } ?: 0,
-                row.width,
+                freeColumns.size,
             )
-        // the machine's last column is left free for a pole; a fluid port may take one of the
-        // remaining columns, and the long inserter must not fall off the edge with it: use the
-        // pole column as the spare slot before dropping an inserter
-        val preferred = (0 until maxOf(1, row.width - 1)).filterNot(topPorts::contains)
-        val spare = (0 until row.width).filterNot(topPorts::contains).filterNot(preferred::contains)
-        val insertColumns = (preferred + spare).take(pattern.size)
+
+        val insertColumns = freeColumns.take(pattern.size)
         insertColumns.zip(pattern).forEach { (column, long) ->
             board.placeInserter(
                 Coordinate(machine.left + column, row.factoryTop - 1),
