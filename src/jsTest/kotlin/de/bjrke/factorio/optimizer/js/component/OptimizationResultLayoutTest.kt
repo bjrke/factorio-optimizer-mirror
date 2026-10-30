@@ -1,10 +1,10 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -53,7 +53,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
     fun beltAndInserterIconsAreAsLargeAsTheMaterialIcons() {
         renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
-        val materialSize = computedStyle(screen.getByTitle(plate.name), "width")
+        val materialSize = computedStyle(screen.getByTitle(ironPlate.name), "width")
 
         assertAll(
             {
@@ -111,7 +111,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
         val rendered =
             renderResult(
                 twoProductions(
-                    Triple(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL),
+                    Triple(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
                     Triple(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
                 ),
             )
@@ -123,7 +123,6 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
 
     @Test
     fun solidAndFluidRowsHaveTheSameWidth() {
-        val water = Material("water")
         val fluidRecipe =
             Recipe(
                 name = "heavy-oil",

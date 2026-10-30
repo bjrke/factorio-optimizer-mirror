@@ -1,7 +1,10 @@
 package de.bjrke.factorio.optimizer.common.service
 
 import de.bjrke.factorio.optimizer.common.fixtures.factoryOf
+import de.bjrke.factorio.optimizer.common.fixtures.ice
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.testRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -13,10 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class OptimizerTest {
-
-    private val ironOre = Material("iron-ore")
-    private val water = Material("water")
-    private val ice = Material("ice")
 
     private val miningIron =
         testRecipe("iron-ore", Category.MINING_BASIC_SOLID, mapOf(ironOre to 1.0))

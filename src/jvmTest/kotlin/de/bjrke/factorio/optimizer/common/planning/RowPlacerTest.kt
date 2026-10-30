@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.model.Io
@@ -37,7 +37,7 @@ class RowPlacerTest {
                             3,
                         ),
                     ),
-                sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
                 scale = 1.0,
                 label = "iron-gear-wheel",
             )
@@ -54,7 +54,7 @@ class RowPlacerTest {
     @Test
     fun onlyALinkedGapGetsASeparatingColumn() {
         val gearMachine = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateMachine = planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_3)
+        val plateMachine = planned(smeltRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,
@@ -63,10 +63,12 @@ class RowPlacerTest {
                         PlannedRow(
                             machines = listOf(gearMachine, plateMachine, plateMachine),
                             links =
-                                listOf(PlannedLink(0, plate, flow = 0.1, producerIsLeft = false)),
+                                listOf(
+                                    PlannedLink(0, ironPlate, flow = 0.1, producerIsLeft = false),
+                                ),
                         ),
                     ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
                 scale = 1.0,
                 label = "iron-gear-wheel",
             )

@@ -1,5 +1,9 @@
 package de.bjrke.factorio.optimizer.common.compaction
 
+import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
@@ -36,15 +40,10 @@ private const val PIPE = "pipe"
 private const val MARKER = "constant-combinator"
 private const val MACHINE = "assembling-machine-3"
 
-private val ore = Material("iron-ore")
-private val plate = Material("iron-plate")
-private val water = Material("water")
-private val oil = Material("crude-oil")
-
-private fun belt(x: Int, y: Int, material: Material = ore, direction: Direction = EAST) =
+private fun belt(x: Int, y: Int, material: Material = ironOre, direction: Direction = EAST) =
     BeltEntity(areaTile(x, y), BELT, material, direction)
 
-private fun marker(x: Int, y: Int, material: Material = ore) =
+private fun marker(x: Int, y: Int, material: Material = ironOre) =
     MarkerEntity(areaTile(x, y), MARKER, Signal(material))
 
 private fun machine(x: Int, y: Int) =
@@ -57,7 +56,7 @@ private fun underground(
     y: Int,
     direction: Direction,
     io: Io,
-    material: Material = ore,
+    material: Material = ironOre,
 ) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, material, direction, io)
 
 class LayoutCompactionTest {
@@ -118,7 +117,8 @@ class LayoutCompactionTest {
 
     @Test
     fun differentMaterialsAreNeverMerged() {
-        val entities = listOf(marker(-1, 0), belt(0, 0, ore), belt(5, 0, plate), marker(6, 0))
+        val entities =
+            listOf(marker(-1, 0), belt(0, 0, ironOre), belt(5, 0, ironPlate), marker(6, 0))
         val result = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
         val belts = result.entities.filterIsInstance<BeltEntity>().sortedBy { it.area.topLeft.x }
 
@@ -131,13 +131,13 @@ class LayoutCompactionTest {
 
     @Test
     fun aMaterialRunningIntoAnotherIsRejected() {
-        val errors = validateLayout(listOf(belt(0, 0, ore), belt(1, 0, plate)))
+        val errors = validateLayout(listOf(belt(0, 0, ironOre), belt(1, 0, ironPlate)))
         assertContains(errors.joinToString("\n"), "runs into", message = errors.toString())
     }
 
     @Test
     fun differentFluidsAreNeverMerged() {
-        val entities = listOf(marker(-1, 0), pipe(0, 0, water), pipe(5, 0, oil), marker(6, 0))
+        val entities = listOf(marker(-1, 0), pipe(0, 0, water), pipe(5, 0, crudeOil), marker(6, 0))
         val result = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
         val pipes = result.entities.filterIsInstance<PipeEntity>().sortedBy { it.area.topLeft.x }
 
@@ -150,7 +150,7 @@ class LayoutCompactionTest {
 
     @Test
     fun touchingFluidsAreRejected() {
-        val errors = validateLayout(listOf(pipe(0, 0, water), pipe(1, 0, oil)))
+        val errors = validateLayout(listOf(pipe(0, 0, water), pipe(1, 0, crudeOil)))
         assertContains(errors.joinToString("\n"), "touch", message = errors.toString())
     }
 
@@ -165,13 +165,13 @@ class LayoutCompactionTest {
         assertTableOf(
             InserterCase("empty", null, valid = false),
             InserterCase("marker", marker(0, -2), valid = false),
-            InserterCase("belt", belt(0, -2, ore), valid = true),
-            InserterCase("wrong belt", belt(0, -2, plate), valid = false),
+            InserterCase("belt", belt(0, -2, ironOre), valid = true),
+            InserterCase("wrong belt", belt(0, -2, ironPlate), valid = false),
             InserterCase("pipe", pipe(0, -2, water), valid = false),
         ) { case ->
             val entities = buildList {
                 add(machine(0, 0))
-                add(InserterEntity(areaTile(0, -1), "fast-inserter", ore, NORTH, long = false))
+                add(InserterEntity(areaTile(0, -1), "fast-inserter", ironOre, NORTH, long = false))
                 case.source?.let(::add)
             }
             val errors = validateLayout(entities)
@@ -256,9 +256,7 @@ class LayoutCompactionTest {
         val entities = listOf(machine(0, 0), belt(5, 0), marker(6, 0))
         val free = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
         val bounded =
-            assertNotNull(
-                nextCompaction(entities, SeamOrientation.VERTICAL, westBound = 4),
-            )
+            assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL, westBound = 4))
 
         assertAll(
             {

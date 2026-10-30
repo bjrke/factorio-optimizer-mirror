@@ -1,7 +1,8 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
 import de.bjrke.test.assertAll
@@ -84,11 +85,9 @@ class LogisticsSelectionTest {
 
     @Test
     fun fluidsAreDetectedFromTheDump() {
-        val water = Material("water")
-        val plate = Material("iron-plate")
         val calculator = LogisticsCalculator(logistics = Logistics(fluids = setOf(water)))
 
-        assertTableOf(water to true, plate to false) { (material, expected) ->
+        assertTableOf(water to true, ironPlate to false) { (material, expected) ->
             assertEquals(expected, calculator.isFluid(material))
         }
     }

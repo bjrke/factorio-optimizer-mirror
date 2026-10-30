@@ -3,7 +3,7 @@
 
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
+import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
@@ -239,7 +239,8 @@ internal val blueprintButton =
                     +BUTTON_TEXT
                 }
                 if (open) {
-                    val blueprint = fromPlaced(outcome.plan, props.logistics, props.beltEnd)
+                    val blueprint =
+                        RowLayout(outcome.plan, props.logistics, props.beltEnd).blueprint()
                     blueprintDialog {
                         label = outcome.plan.label
                         text = blueprintString(blueprint.toJson())

@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.FluidRowLayout
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.fluidRowPlan
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.lubricant
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
+import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.west
@@ -26,29 +26,40 @@ class BlueprintFluidFeederTest {
 
     @Test
     fun aWaterChemicalPlantIsFedThroughExactlyOneTopCorner() {
-        val row = FluidRowLayout(boilPlan)
-        val machine = row.machines.single()
+        val layout = Layout(boilPlan)
+        val machine = layout.machineEntities.single().area
 
         assertAll(
             {
                 assertEquals(
                     listOf(Coordinate(machine.x, machine.y - 1)),
-                    row.portPipes.keys.toList(),
+                    layout.portPipes.keys.toList(),
                     "the chemical plant should be fed through one pipe, on its top-left corner",
                 )
             },
-            { assertEquals(mapOf(Coordinate(machine.x, machine.y - 1) to water), row.inputPipes) },
-            { assertEquals(emptyMap(), row.outputPipes, "nothing is drained from the input side") },
+            {
+                assertEquals(
+                    mapOf(Coordinate(machine.x, machine.y - 1) to water),
+                    layout.inputPipes,
+                )
+            },
+            {
+                assertEquals(
+                    emptyMap(),
+                    layout.outputPipes,
+                    "nothing is drained from the input side",
+                )
+            },
         )
     }
 
     @Test
     fun aSecondFluidTakesTheOtherTopCornerAndStillOnePortEach() {
         val row =
-            FluidRowLayout(
+            Layout(
                 fluidRowPlan(Factory.CHEMICAL_PLANT, fluidInputs = mapOf(lubricant to 1.0)),
             )
-        val machine = row.machines.single()
+        val machine = row.machineEntities.single().area
         val feed = row.portPipes
 
         assertAll(
@@ -81,27 +92,27 @@ class BlueprintFluidFeederTest {
             Factory.OIL_REFINERY,
             Factory.ELECTROMAGNETIC_PLANT,
         ) { factory ->
-            val row = FluidRowLayout(fluidRowPlan(factory))
+            val layout = Layout(fluidRowPlan(factory))
             assertAll(
                 {
                     assertEquals(
                         emptyList(),
-                        row.failures,
+                        layout.failures,
                         "$factory left a fluid unrouted",
                     )
                 },
                 {
                     assertEquals(
                         1,
-                        row.portPipes.size,
+                        layout.portPipes.size,
                         "$factory is fed through more than one port",
                     )
                 },
                 // the one port is on the machine's input side, where the row feeds from above
                 {
                     assertEquals(
-                        row.portPipes.keys,
-                        row.inputPipes.keys,
+                        layout.portPipes.keys,
+                        layout.inputPipes.keys,
                         "$factory is fed through an output port",
                     )
                 },
@@ -119,16 +130,16 @@ class BlueprintFluidFeederTest {
             emptyList(),
             prototypeFluidPorts(Factory.ASSEMBLING_MACHINE_1),
         )
-        val row = FluidRowLayout(fluidRowPlan(Factory.ASSEMBLING_MACHINE_1))
-        val machine = row.machines.single()
+        val layout = Layout(fluidRowPlan(Factory.ASSEMBLING_MACHINE_1))
+        val machine = layout.machineEntities.single().area
 
         assertAll(
-            { assertEquals(emptyList(), row.failures) },
+            { assertEquals(emptyList(), layout.failures) },
             // the pipe that serves the machine is the one touching its side, not a lane pipe
             {
                 assertEquals(
                     listOf(Coordinate(machine.x - 1, machine.y)),
-                    row.plumbing.keys.filter { it.west() in machine || it.east() in machine },
+                    layout.plumbing.keys.filter { it.west() in machine || it.east() in machine },
                 )
             },
         )

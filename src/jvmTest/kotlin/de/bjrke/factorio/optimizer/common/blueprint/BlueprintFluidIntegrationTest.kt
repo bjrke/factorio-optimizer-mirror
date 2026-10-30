@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.fluidNetworkProblems
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planAndLogistics
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -22,11 +22,10 @@ class BlueprintFluidIntegrationTest {
             "plastic-bar",
             "petroleum-gas",
         ) { target ->
-            val (plan, logistics) = planAndLogistics(target)
-            val dump = blueprintLayoutDump(plan, logistics)
+            val layout = Layout(target)
             // only the fluid checks here: utility-science-pack has a pre-existing belt side-load
             val plumbing =
-                validateLayout(dump.entities).filter {
+                validateLayout(layout.entities).filter {
                     it.contains("fluid") || it.contains("unpaired")
                 }
             assertEquals(emptyList(), plumbing)
@@ -44,8 +43,9 @@ class BlueprintFluidIntegrationTest {
             "plastic-bar",
             "petroleum-gas",
         ) { target ->
-            val (plan, logistics) = planAndLogistics(target)
-            val dump = blueprintLayoutDump(plan, logistics)
-            assertEquals(emptyList(), fluidNetworkProblems(dump.entities))
+            assertEquals(
+                emptyList(),
+                fluidNetworkProblems(Layout(target).entities),
+            )
         }
 }

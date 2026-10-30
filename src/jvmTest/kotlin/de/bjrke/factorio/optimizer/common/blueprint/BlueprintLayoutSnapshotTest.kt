@@ -1,16 +1,16 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
@@ -27,14 +27,13 @@ import kotlin.test.assertEquals
  */
 class BlueprintLayoutSnapshotTest {
 
-    @Test
-    fun baseLayoutIsStable() = assertSignature("62aab5d333ae2087", fromPlaced(basePlan, logistics))
+    @Test fun baseLayoutIsStable() = assertSignature("62aab5d333ae2087", Layout(basePlan).blueprint)
 
     @Test
     fun chestBeltEndIsStable() =
         assertSignature(
             "68cb78b85179b9b7",
-            fromPlaced(basePlan, logistics, beltEnd = BeltEnd.BUFFER_CHEST),
+            Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).blueprint,
         )
 
     @Test
@@ -48,13 +47,13 @@ class BlueprintLayoutSnapshotTest {
                 scale = 1.0,
                 label = "water-boil",
             )
-        assertSignature("3c82696e66a849da", fromPlaced(plan, logistics))
+        assertSignature("3c82696e66a849da", Layout(plan).blueprint)
     }
 
     @Test
     fun bandLayoutIsStable() {
         val gearRow = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(smeltRecipe, plate, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(smeltRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,
@@ -64,15 +63,15 @@ class BlueprintLayoutSnapshotTest {
                             machines = listOf(gearRow, plateRow),
                             links =
                                 listOf(
-                                    PlannedLink(0, plate, flow = 0.1, producerIsLeft = false),
+                                    PlannedLink(0, ironPlate, flow = 0.1, producerIsLeft = false),
                                 ),
                         ),
                     ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
                 scale = 1.0,
                 label = "iron-gear-wheel",
             )
-        assertSignature("9bf03c509ea282eb", fromPlaced(plan, logistics))
+        assertSignature("9bf03c509ea282eb", Layout(plan).blueprint)
     }
 
     private fun assertSignature(expected: String, blueprint: Blueprint) {

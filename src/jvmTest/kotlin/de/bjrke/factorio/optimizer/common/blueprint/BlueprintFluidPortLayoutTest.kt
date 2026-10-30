@@ -1,9 +1,11 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
-import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
@@ -26,29 +28,6 @@ import kotlin.test.assertTrue
  */
 class BlueprintFluidPortLayoutTest {
 
-    private class Layout(url: String) {
-        private val args = planFromUrl(url)
-        private val dump = blueprintLayoutDump(args.first, args.second, args.third)
-        val entities: List<LayoutEntity> = dump.entities
-        val failures: List<String> = dump.failures
-        val blueprint = fromPlaced(args.first, args.second, args.third)
-
-        fun machine(name: String): MachineEntity =
-            entities.filterIsInstance<MachineEntity>().single {
-                it.name == name
-            }
-
-        fun plumbingAt(tile: Coordinate): Material? =
-            entities.filterIsInstance<Plumbing>().singleOrNull { it.area.topLeft == tile }?.material
-
-        fun direction(machine: MachineEntity) =
-            blueprint.entities
-                .single {
-                    it.area.topLeft == machine.area.topLeft && it.name == machine.name
-                }
-                .direction
-    }
-
     @Test
     fun theReportedLayoutsKeepEveryFluidRouted() =
         assertTableOf(
@@ -57,24 +36,24 @@ class BlueprintFluidPortLayoutTest {
             "http://localhost:8080/#/0.03511777708/light-oil/FSXmor/1/1",
             "http://localhost:8080/#/6/electrolyte/FSXmor/1/1",
         ) { url ->
-            assertEquals(emptyList(), Layout(url).failures)
+            assertEquals(emptyList(), layoutFromUrl(url).failures)
         }
 
     @Test
     fun thePlasticCryogenicPlantIsTurnedAround() {
-        val layout = Layout("http://localhost:8080/#/0.03511777708/plastic-bar/CFSXmr/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/plastic-bar/CFSXmr/1/1")
         val machine = layout.machine("cryogenic-plant")
         val north = machine.area.topLeft + Coordinate(2, -1)
 
         assertAll(
             { assertEquals(Direction.SOUTH, layout.direction(machine)) },
-            { assertEquals(Material("petroleum-gas"), layout.plumbingAt(north)) },
+            { assertEquals(petroleum, layout.plumbing[north]) },
         )
     }
 
     @Test
     fun theSulfuricChemicalPlantGetsInsertersOnBothSides() {
-        val layout = Layout("http://localhost:8080/#/0.03511777708/sulfuric-acid/FSXmr/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/sulfuric-acid/FSXmr/1/1")
         val inserters = layout.entities.filterIsInstance<InserterEntity>()
 
         assertAll(
@@ -89,7 +68,7 @@ class BlueprintFluidPortLayoutTest {
                     mapOf(
                         Coordinate(41, 1) to Material("sulfur"),
                         Coordinate(42, 1) to Material("sulfur"),
-                        Coordinate(41, 5) to Material("iron-plate"),
+                        Coordinate(41, 5) to ironPlate,
                     ),
                     inserters.associateBy({ it.area.topLeft }, { it.material }),
                 )
@@ -99,14 +78,14 @@ class BlueprintFluidPortLayoutTest {
 
     @Test
     fun theLightOilChemicalPlantFeedsWaterFromTheNorthLane() {
-        val layout = Layout("http://localhost:8080/#/0.03511777708/light-oil/FSXmor/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/light-oil/FSXmor/1/1")
         val machine = layout.machine("chemical-plant")
         val left = machine.area.topLeft + Coordinate(0, -1)
         val right = machine.area.topLeft + Coordinate(2, -1)
 
         assertAll(
-            { assertEquals(Material("water"), layout.plumbingAt(left)) },
-            { assertEquals(Material("heavy-oil"), layout.plumbingAt(right)) },
+            { assertEquals(water, layout.plumbing[left]) },
+            { assertEquals(Material("heavy-oil"), layout.plumbing[right]) },
         )
     }
 
@@ -117,12 +96,11 @@ class BlueprintFluidPortLayoutTest {
      */
     @Test
     fun theLightOilHeavyOilLaneMirrorsTheWaterLane() {
-        val layout = Layout("http://localhost:8080/#/0.03511777708/light-oil/FSXmor/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/light-oil/FSXmor/1/1")
         val machine = layout.machine("chemical-plant")
         val left = machine.area.topLeft.x
         val top = machine.area.topLeft.y
         val heavyOil = Material("heavy-oil")
-        val water = Material("water")
         val marker =
             layout.entities.filterIsInstance<InfinityPipeEntity>().single {
                 it.material == heavyOil
@@ -159,9 +137,8 @@ class BlueprintFluidPortLayoutTest {
 
     @Test
     fun theLightOilLaneReachesEverySecondTopCorner() {
-        val layout = Layout("http://localhost:8080/#/60/light-oil/FSXmor/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/60/light-oil/FSXmor/1/1")
         val heavyOil = Material("heavy-oil")
-        val water = Material("water")
         val markers = layout.entities.filterIsInstance<InfinityPipeEntity>()
         val heavyMarker = markers.single { it.material == heavyOil }
         val waterMarker = markers.single { it.material == water }
@@ -189,32 +166,32 @@ class BlueprintFluidPortLayoutTest {
 
     @Test
     fun theElectrolyteElectromagneticPlantTurnsClockwiseAndSwapsItsPipes() {
-        val layout = Layout("http://localhost:8080/#/6/electrolyte/FSXmor/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/6/electrolyte/FSXmor/1/1")
         val machine = layout.machine("electromagnetic-plant")
         val topLeft = machine.area.topLeft
 
         assertAll(
             { assertEquals(Direction.EAST, layout.direction(machine)) },
-            { assertEquals(Material("heavy-oil"), layout.plumbingAt(topLeft + Coordinate(1, -1))) },
+            { assertEquals(Material("heavy-oil"), layout.plumbing[topLeft + Coordinate(1, -1)]) },
             {
                 assertEquals(
                     Material("holmium-solution"),
-                    layout.plumbingAt(topLeft + Coordinate(2, 4)),
+                    layout.plumbing[topLeft + Coordinate(2, 4)],
                 )
             },
             {
                 assertEquals(
                     Material("electrolyte"),
-                    layout.plumbingAt(topLeft + Coordinate(-1, 2)),
+                    layout.plumbing[topLeft + Coordinate(-1, 2)],
                 )
             },
-            { assertNull(layout.plumbingAt(topLeft + Coordinate(4, 1))) },
+            { assertNull(layout.plumbing[topLeft + Coordinate(4, 1)]) },
         )
     }
 
     @Test
     fun theElectrolyteOutputKeepsItsWestSource() {
-        val layout = Layout("http://localhost:8080/#/6/electrolyte/FSXmor/1/1")
+        val layout = layoutFromUrl("http://localhost:8080/#/6/electrolyte/FSXmor/1/1")
         val machine = layout.machine("electromagnetic-plant")
         val outputRow = machine.area.topLeft.y + 2
         val sources =

@@ -1,10 +1,10 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -26,7 +26,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun recipeWithoutIngredientsRendersTheFactoryOutputAndLogisticsInputs() {
-        val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
 
         val rendered = renderResult(result)
 
@@ -111,7 +111,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
             renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         val titles = imageTitles(rendered.container)
-        val ingredient = titles.indexOf(plate.name)
+        val ingredient = titles.indexOf(ironPlate.name)
         val factory = titles.indexOf(Factory.ASSEMBLING_MACHINE_1.identifier)
         // the recipe icon shares the output material's title, so the output column is the last
         // match
@@ -139,7 +139,6 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun fluidIngredientsShowAPumpAndAPipeMarker() {
-        val water = Material("water")
         val fluidRecipe =
             Recipe(
                 name = "sulfuric-acid",

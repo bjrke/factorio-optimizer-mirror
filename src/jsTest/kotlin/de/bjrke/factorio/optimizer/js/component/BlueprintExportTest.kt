@@ -1,15 +1,14 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
@@ -38,7 +37,7 @@ import web.html.HTMLTextAreaElement
 private val craft =
     Recipe(
         "iron-gear-wheel",
-        mapOf(plate to 2.0),
+        mapOf(ironPlate to 2.0),
         mapOf(gear to 1.0),
         1.0,
         setOf(Category.CRAFTING),
@@ -61,7 +60,7 @@ private val plan =
                     ),
                 ),
             ),
-        sources = listOf(PlannedSource(plate, 1.0, fluid = false)),
+        sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
         scale = 1.0,
         label = "iron-gear-wheel",
     )
@@ -226,7 +225,7 @@ class BlueprintExportTest : ComponentTest() {
                 BlueprintEntity(
                     "constant-combinator",
                     area = Coordinate(0, 0).area(1, 1),
-                    marker = Material("iron-plate"),
+                    marker = ironPlate,
                 ),
                 "iron-plate",
                 12,
@@ -236,7 +235,7 @@ class BlueprintExportTest : ComponentTest() {
                 BlueprintEntity(
                     "infinity-chest",
                     area = Coordinate(0, 0).area(1, 1),
-                    infinity = InfinitySettings(item = Material("iron-plate")),
+                    infinity = InfinitySettings(item = ironPlate),
                 ),
                 "iron-plate",
                 12,

@@ -1,9 +1,9 @@
 package de.bjrke.factorio.optimizer.js.component.fixtures
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -24,7 +24,7 @@ internal val miningRecipe =
     Recipe(
         name = "iron-ore",
         ingredients = emptyMap(),
-        result = mapOf(ore to 1.0),
+        result = mapOf(ironOre to 1.0),
         time = 1.0,
         categories = setOf(Category.MINING_BASIC_SOLID),
     )
@@ -32,7 +32,7 @@ internal val miningRecipe =
 internal val craftingRecipe =
     Recipe(
         name = "iron-gear-wheel",
-        ingredients = mapOf(plate to 2.0),
+        ingredients = mapOf(ironPlate to 2.0),
         result = mapOf(gear to 1.0),
         time = 0.5,
         categories = setOf(Category.CRAFTING),

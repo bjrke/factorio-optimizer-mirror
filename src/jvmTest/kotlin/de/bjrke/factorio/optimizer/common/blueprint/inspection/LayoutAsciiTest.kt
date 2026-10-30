@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.inspection
 
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
@@ -20,8 +22,6 @@ import kotlin.test.assertEquals
 
 class LayoutAsciiTest {
 
-    private fun material(name: String) = Material(name)
-
     private val layout =
         LayoutDump(
             entities =
@@ -35,21 +35,21 @@ class LayoutAsciiTest {
                     InserterEntity(
                         Coordinate(2, 1).area(),
                         "fast-inserter",
-                        material("iron-plate"),
+                        ironPlate,
                         Direction.NORTH,
                         false,
                     ),
-                    PipeEntity(Coordinate(3, 1).area(), "pipe", material("water")),
+                    PipeEntity(Coordinate(3, 1).area(), "pipe", water),
                     BeltEntity(
                         Coordinate(0, 2).area(),
                         "fast-transport-belt",
-                        material("iron-plate"),
+                        ironPlate,
                         Direction.EAST,
                     ),
                     MarkerEntity(
                         Coordinate(3, 2).area(),
                         "constant-combinator",
-                        Signal(material("copper-plate")),
+                        Signal(Material("copper-plate")),
                     ),
                 ),
             failures = listOf("water to (2, 3) (no route)"),

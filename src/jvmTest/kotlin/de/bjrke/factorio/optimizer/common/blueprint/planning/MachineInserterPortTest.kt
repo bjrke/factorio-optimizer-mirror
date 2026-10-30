@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.FluidRowLayout
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.fluidRowPlan
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
@@ -55,15 +55,15 @@ class MachineInserterPortTest {
     fun theLayoutKeepsEveryUsedFeedPortFreeOfInserters() =
         assertTable(machines) { factory ->
             val plan = fluidRowPlan(factory)
-            val row = FluidRowLayout(plan)
-            val machine = row.machines.single()
+            val layout = Layout(plan)
+            val machine = layout.machineEntities.single().area
             val columns = inserterPortColumns(factory, inputFluids = 1, outputFluids = 0)
             val blocked =
                 (columns.top.map { Coordinate(machine.x + it, machine.y - 1) } +
                     columns.bottom.map { Coordinate(machine.x + it, machine.y + machine.height) })
             assertEquals(
                 emptyList(),
-                blocked.filter { it in row.inserters },
+                blocked.filter { it in layout.inserters },
                 "$factory puts an inserter on a used fluid port",
             )
         }

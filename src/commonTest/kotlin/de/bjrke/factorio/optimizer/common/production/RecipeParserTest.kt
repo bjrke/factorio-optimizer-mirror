@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.production
 
+import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
@@ -56,7 +58,7 @@ class RecipeParserTest {
             listOf(
                 Recipe(
                     name = "copper-plate",
-                    ingredients = mapOf(Material("copper-ore") to 1.0),
+                    ingredients = mapOf(copperOre to 1.0),
                     result = mapOf(Material("copper-plate") to 1.0),
                     time = 3.2,
                     categories = setOf(Category.SMELTING),
@@ -168,7 +170,7 @@ class RecipeParserTest {
             // amount (0) + extra_count_fraction (0.5) is the expected yield
             {
                 assertEquals(
-                    mapOf(Material("iron-plate") to 0.5),
+                    mapOf(ironPlate to 0.5),
                     recipes.getValue("iron-gear-wheel-recycling").result,
                 )
             },

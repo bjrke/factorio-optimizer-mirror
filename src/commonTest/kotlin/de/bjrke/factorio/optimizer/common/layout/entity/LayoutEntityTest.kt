@@ -2,13 +2,14 @@ package de.bjrke.factorio.optimizer.common.layout.entity
 
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
-import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.area
 import de.bjrke.factorio.optimizer.common.model.areaTile
 import de.bjrke.factorio.optimizer.common.prototype.Factory
@@ -18,20 +19,17 @@ import kotlin.test.assertEquals
 
 class LayoutEntityTest {
 
-    private val plate = Material("iron-plate")
-    private val water = Material("water")
-
     @Test
     fun placedEntitiesMapToTheirBlueprintDto() =
         assertTableOf(
-            BeltEntity(areaTile(7, 2), "transport-belt", plate, EAST) to
+            BeltEntity(areaTile(7, 2), "transport-belt", ironPlate, EAST) to
                 BlueprintEntity("transport-belt", areaTile(7, 2), EAST),
-            SplitterEntity(areaTile(9, 4), "fast-splitter", plate, EAST) to
+            SplitterEntity(areaTile(9, 4), "fast-splitter", ironPlate, EAST) to
                 BlueprintEntity("fast-splitter", areaTile(9, 4), EAST),
             UndergroundBeltEntity(
                 areaTile(1, 8),
                 "transport-belt",
-                plate,
+                ironPlate,
                 EAST,
                 Io.INPUT,
             ) to
@@ -44,7 +42,7 @@ class LayoutEntityTest {
             UndergroundBeltEntity(
                 areaTile(3, 8),
                 "transport-belt",
-                plate,
+                ironPlate,
                 SOUTH,
                 OUTPUT,
             ) to
@@ -57,7 +55,7 @@ class LayoutEntityTest {
             LoaderEntity(
                 Coordinate(6, 6).area(2, 1),
                 "fast-loader",
-                plate,
+                ironPlate,
                 OUTPUT,
                 EAST,
             ) to
@@ -87,7 +85,7 @@ class LayoutEntityTest {
             InserterEntity(
                 areaTile(5, 1),
                 "fast-inserter",
-                plate,
+                ironPlate,
                 EAST,
                 long = false,
             ) to BlueprintEntity("fast-inserter", areaTile(5, 1), EAST),
@@ -101,15 +99,15 @@ class LayoutEntityTest {
             InfinityChestEntity(
                 areaTile(2, 12),
                 "infinity-chest",
-                InfinitySettings(item = plate),
+                InfinitySettings(item = ironPlate),
             ) to
                 BlueprintEntity(
                     "infinity-chest",
                     areaTile(2, 12),
-                    infinity = InfinitySettings(item = plate),
+                    infinity = InfinitySettings(item = ironPlate),
                 ),
-            MarkerEntity(areaTile(4, 14), "constant-combinator", Signal(plate)) to
-                BlueprintEntity("constant-combinator", areaTile(4, 14), marker = plate),
+            MarkerEntity(areaTile(4, 14), "constant-combinator", Signal(ironPlate)) to
+                BlueprintEntity("constant-combinator", areaTile(4, 14), marker = ironPlate),
             MarkerEntity(
                 areaTile(6, 14),
                 "constant-combinator",

@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.common.production
 
+import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
@@ -51,7 +53,7 @@ class ResourceRecipesTest {
         assertAll(
             { assertEquals(setOf(Category.MINING_BASIC_SOLID), iron.categories) },
             { assertEquals(1.0, iron.time) },
-            { assertEquals(mapOf(Material("iron-ore") to 1.0), iron.result) },
+            { assertEquals(mapOf(ironOre to 1.0), iron.result) },
             { assertEquals(emptyMap(), iron.ingredients) },
         )
     }
@@ -67,10 +69,10 @@ class ResourceRecipesTest {
 
     @Test
     fun fluidResourceUsesPumpjackAmount() {
-        val oil = recipes.getValue("crude-oil")
+        val oilRecipe = recipes.getValue("crude-oil")
         assertAll(
-            { assertEquals(setOf(Category.MINING_FLUID), oil.categories) },
-            { assertEquals(mapOf(Material("crude-oil") to 10.0), oil.result) },
+            { assertEquals(setOf(Category.MINING_FLUID), oilRecipe.categories) },
+            { assertEquals(mapOf(crudeOil to 10.0), oilRecipe.result) },
         )
     }
 

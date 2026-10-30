@@ -2,8 +2,14 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.testBlueprintPlan
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
+import de.bjrke.factorio.optimizer.common.fixtures.utilitySciencePack
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
@@ -21,13 +27,6 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-
-private val ore = Material("iron-ore")
-private val plate = Material("iron-plate")
-private val gear = Material("iron-gear-wheel")
-private val transportBelt = Material("transport-belt")
-private val petroleum = Material("petroleum-gas")
-private val discovery = Material("utility-science-pack")
 
 private fun recipe(
     name: String,
@@ -62,7 +61,7 @@ class BlueprintPlanTest {
 
     @Test
     fun theAllSciencePacksTargetIsUnavailable() {
-        val smelt = recipe("iron-plate", Category.SMELTING, mapOf(plate to 1.0))
+        val smelt = recipe("iron-plate", Category.SMELTING, mapOf(ironPlate to 1.0))
         val outcome =
             blueprintPlan(
                 result(
@@ -81,18 +80,24 @@ class BlueprintPlanTest {
 
     @Test
     fun aMiningRecipeBecomesASourceInsteadOfABuilding() {
-        val mining = recipe("iron-ore", Category.MINING_BASIC_SOLID, mapOf(ore to 1.0))
-        val smelt = recipe("iron-plate", Category.SMELTING, mapOf(plate to 1.2), mapOf(ore to 1.0))
+        val mining = recipe("iron-ore", Category.MINING_BASIC_SOLID, mapOf(ironOre to 1.0))
+        val smelt =
+            recipe("iron-plate", Category.SMELTING, mapOf(ironPlate to 1.2), mapOf(ironOre to 1.0))
         val craft =
-            recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
+            recipe(
+                "iron-gear-wheel",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ironPlate to 2.0),
+            )
 
         val planned =
             plan(
                 gear,
                 craft,
                 listOf(
-                    production(mining, ore, Factory.ELECTRIC_MINING_DRILL, level = 1),
-                    production(smelt, plate, Factory.ELECTRIC_FURNACE, level = 2),
+                    production(mining, ironOre, Factory.ELECTRIC_MINING_DRILL, level = 1),
+                    production(smelt, ironPlate, Factory.ELECTRIC_FURNACE, level = 2),
                     production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 3),
                 ),
             )
@@ -100,17 +105,27 @@ class BlueprintPlanTest {
         // the drill is place-dependent and the smelter is left out; both become imports
         assertAll(
             { assertEquals(listOf(gear), planned.recipes.map { it.material }) },
-            { assertEquals(listOf(plate), planned.sources.map { it.material }) },
+            { assertEquals(listOf(ironPlate), planned.sources.map { it.material }) },
         )
     }
 
     @Test
     fun aFoundryRecipeIsKeptWhileAFurnaceRecipeIsNot() {
         val foundry =
-            recipe("molten-iron", Category.METALLURGY, mapOf(plate to 1.0), mapOf(ore to 1.0))
-        val furnace = recipe("iron-plate", Category.SMELTING, mapOf(plate to 1.0))
+            recipe(
+                "molten-iron",
+                Category.METALLURGY,
+                mapOf(ironPlate to 1.0),
+                mapOf(ironOre to 1.0),
+            )
+        val furnace = recipe("iron-plate", Category.SMELTING, mapOf(ironPlate to 1.0))
         val craft =
-            recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
+            recipe(
+                "iron-gear-wheel",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ironPlate to 2.0),
+            )
 
         val keptPlan =
             testBlueprintPlan(
@@ -118,7 +133,7 @@ class BlueprintPlanTest {
                     gear,
                     craft,
                     listOf(
-                        production(foundry, plate, Factory.FOUNDRY, level = 2),
+                        production(foundry, ironPlate, Factory.FOUNDRY, level = 2),
                         production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 3),
                     ),
                 ),
@@ -130,14 +145,14 @@ class BlueprintPlanTest {
                 craft,
                 listOf(
                     production(craft, gear, Factory.ASSEMBLING_MACHINE_3),
-                    production(furnace, plate, Factory.STEEL_FURNACE),
+                    production(furnace, ironPlate, Factory.STEEL_FURNACE),
                 ),
             )
 
         assertAll(
             { assertContains(keptPlan.recipes.map { it.factory }, Factory.FOUNDRY) },
             // the furnace plan has only the gear recipe left; the plate is imported
-            { assertEquals(listOf(plate), excludedPlan.sources.map { it.material }) },
+            { assertEquals(listOf(ironPlate), excludedPlan.sources.map { it.material }) },
         )
     }
 
@@ -177,7 +192,12 @@ class BlueprintPlanTest {
     fun atMostTheRecipeLimitIsBuilt() {
         val materials = (0..12).map { Material("step-$it") }
         val targetRecipe =
-            recipe("target", Category.CRAFTING, mapOf(discovery to 1.0), mapOf(materials[0] to 1.0))
+            recipe(
+                "target",
+                Category.CRAFTING,
+                mapOf(utilitySciencePack to 1.0),
+                mapOf(materials[0] to 1.0),
+            )
         val chain =
             (0 until 12).map { index ->
                 production(
@@ -195,9 +215,10 @@ class BlueprintPlanTest {
 
         val planned =
             plan(
-                discovery,
+                utilitySciencePack,
                 targetRecipe,
-                chain + production(targetRecipe, discovery, Factory.SCIENCE_LAB, level = 99),
+                chain +
+                    production(targetRecipe, utilitySciencePack, Factory.SCIENCE_LAB, level = 99),
             )
 
         // the cap counts every built recipe, not the productions a recipe may be split into
@@ -211,10 +232,15 @@ class BlueprintPlanTest {
                 "transport-belt",
                 Category.CRAFTING,
                 mapOf(transportBelt to 1.0),
-                mapOf(gear to 1.0, plate to 1.0),
+                mapOf(gear to 1.0, ironPlate to 1.0),
             )
         val craft =
-            recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
+            recipe(
+                "iron-gear-wheel",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ironPlate to 2.0),
+            )
 
         val planned =
             plan(
@@ -242,7 +268,12 @@ class BlueprintPlanTest {
     @Test
     fun productionsOfTheSameRecipeCompareByValue() {
         val craft =
-            recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 2.0))
+            recipe(
+                "iron-gear-wheel",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ironPlate to 2.0),
+            )
         val first = production(craft, gear, Factory.ASSEMBLING_MACHINE_3)
         val second = production(craft, gear, Factory.ASSEMBLING_MACHINE_3)
 
@@ -252,7 +283,12 @@ class BlueprintPlanTest {
     @Test
     fun thePlanBuildsTheRequestedMachineCount() {
         val craft =
-            recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(plate to 100.0))
+            recipe(
+                "iron-gear-wheel",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ironPlate to 100.0),
+            )
 
         val planned =
             plan(

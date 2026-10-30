@@ -1,5 +1,9 @@
 package de.bjrke.factorio.optimizer.common.service
 
+import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
@@ -59,8 +63,7 @@ class OptimizerSurfaceTest {
         // the spoiling recipe must not shadow mining where ore patches exist
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS))
 
-        val material = Material("iron-ore")
-        val production = optimizer[material].production(material)
+        val production = optimizer[ironOre].production(ironOre)
         assertAll(
             { assertEquals(Factory.BIG_MINING_DRILL, production.factory) },
             { assertEquals("iron-ore", production.recipe.name) },
@@ -73,9 +76,8 @@ class OptimizerSurfaceTest {
         // which is one of the scrap-recycling outputs
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
 
-        val material = Material("iron-ore")
-        val result = optimizer[material]
-        val production = result.production(material)
+        val result = optimizer[ironOre]
+        val production = result.production(ironOre)
         assertAll(
             { assertEquals(Factory.RECYCLER, production.factory) },
             { assertEquals("concrete-recycling", production.recipe.name) },
@@ -94,9 +96,7 @@ class OptimizerSurfaceTest {
         // nothing on Fulgora recycles into copper ore, so it is imported instead of being spoiled
         // from imported bacteria
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
-
-        val material = Material("copper-ore")
-        val production = optimizer[material].production(material)
+        val production = optimizer[copperOre].production(copperOre)
         assertAll(
             { assertEquals(Factory.NO_FACTORY, production.factory) },
             { assertEquals("copper-ore", production.recipe.name) },
@@ -261,7 +261,6 @@ class OptimizerSurfaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val gear = Material("iron-gear-wheel")
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
             optimizer[gear].production(gear).factory,
@@ -293,7 +292,6 @@ class OptimizerSurfaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val lubricant = Material("lubricant")
         assertEquals(
             Factory.CHEMICAL_PLANT,
             optimizer[lubricant].production(lubricant).factory,

@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertPolesWired
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.entitiesFor
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 
@@ -20,7 +20,7 @@ class BlueprintPowerIntegrationTest {
             "lubricant" to 1.0,
             "petroleum-gas" to 50.0,
         ) { (target, scale) ->
-            val entities = entitiesFor(target = target, scale = scale)
+            val entities = Layout(target, scale).blueprint.entities
             assertPolesCoverAndConnect(entities)
             assertPolesWired(entities)
         }

@@ -1,14 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.FluidRowLayout
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.fluidRowPlan
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
 import de.bjrke.factorio.optimizer.common.blueprint.inspection.layoutAscii
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
@@ -57,9 +56,9 @@ class BlueprintFluidCharacterizationTest {
             label = "water-boil",
         )
 
-    private val dump = blueprintLayoutDump(fluidPlan, logistics)
+    private val layout = Layout(fluidPlan)
 
-    private fun plumbingAt(tile: Coordinate) = dump.entities.single { it.area.topLeft == tile }
+    private fun plumbingAt(tile: Coordinate) = layout.entities.single { it.area.topLeft == tile }
 
     private fun end(tile: Coordinate, material: Material, direction: Direction, io: Io) =
         PipeToGroundEntity(tile.area(), "pipe-to-ground", material, direction, io)
@@ -71,7 +70,7 @@ class BlueprintFluidCharacterizationTest {
             MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(43, 0).area(3, 3), "water-boil"),
             MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(46, 0).area(3, 3), "water-boil"),
         ) { expected ->
-            assertEquals(expected, dump.entities.single { it.area == expected.area })
+            assertEquals(expected, layout.entities.single { it.area == expected.area })
         }
 
     @Test
@@ -116,7 +115,7 @@ class BlueprintFluidCharacterizationTest {
 
     @Test
     fun theMarkerSitsInlineWestOfTheLaneHead() {
-        val markers = dump.entities.filterIsInstance<MarkerEntity>()
+        val markers = layout.entities.filterIsInstance<MarkerEntity>()
         val fluidMarker = markers.single { it.signal.fluid }
 
         assertAll(
@@ -147,7 +146,7 @@ class BlueprintFluidCharacterizationTest {
 
     @Test
     fun theRowCarriesTheWaterInJunctionsRunsMarkerAndShafts() {
-        val plumbing = dump.entities.filterIsInstance<Plumbing>()
+        val plumbing = layout.entities.filterIsInstance<Plumbing>()
         val pipes = plumbing.filterIsInstance<PipeEntity>().map { it.area.topLeft }
 
         assertAll(
@@ -167,8 +166,8 @@ class BlueprintFluidCharacterizationTest {
     @Test
     fun theFluidRowNeedsNoFailedRouteAndValidates() {
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
     }
 
@@ -198,7 +197,7 @@ class BlueprintFluidCharacterizationTest {
               C = constant-combinator: water
             """
                 .trimIndent()
-        assertEquals(normalized(expected), normalized(layoutAscii(dump)))
+        assertEquals(normalized(expected), normalized(layoutAscii(layout.dump)))
     }
 
     /** A drawing without the trailing blanks of its grid rows, so only the glyphs are pinned. */
@@ -207,7 +206,7 @@ class BlueprintFluidCharacterizationTest {
 
     @Test
     fun theFluidRowKeepsEveryUndergroundRunStretched() {
-        assertUndergroundRunsAreStretched(dump.entities)
+        assertUndergroundRunsAreStretched(layout.entities)
     }
 
     /**
@@ -225,29 +224,29 @@ class BlueprintFluidCharacterizationTest {
             Factory.OIL_REFINERY to (Coordinate(40, 0) to Coordinate(43, -1)),
         ) { (factory, expected) ->
             val (machine, port) = expected
-            val row = FluidRowLayout(fluidRowPlan(factory))
+            val layout = Layout(fluidRowPlan(factory))
             assertAll(
-                { assertEquals(listOf(machine), row.machines.map { it.topLeft }) },
+                { assertEquals(listOf(machine), layout.machineEntities.map { it.area.topLeft }) },
                 {
                     assertEquals(
                         mapOf(port to water),
-                        row.inputPipes,
+                        layout.inputPipes,
                         "$factory is not fed from above",
                     )
                 },
                 {
                     assertEquals(
                         emptyMap(),
-                        row.outputPipes,
+                        layout.outputPipes,
                         "$factory still reserves a port under the machine",
                     )
                 },
                 // one port per fluid, so the machine's other top pipe stays untouched
-                { assertEquals(1, row.portPipes.size, "$factory is fed twice") },
+                { assertEquals(1, layout.portPipes.size, "$factory is fed twice") },
                 {
                     assertEquals(
                         emptyList(),
-                        row.failures,
+                        layout.failures,
                         "$factory left its fluid unrouted",
                     )
                 },

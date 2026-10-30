@@ -61,8 +61,9 @@ up.
   When they share helpers, export them instead: top-level `internal` values and
   functions in the fixtures package of the package they belong to
   (`common/fixtures/LogisticsFixtures.kt` holds `testLogistics`, `BeltCase` and
-  `calculator`; `blueprint/fixtures/` holds the materials, recipes, plans and layout
-  assertions), or an abstract base
+  `calculator`; `common/fixtures/MaterialFixtures.kt` holds the shared materials;
+  `jvmTest/…/blueprint/fixtures/` holds the recipes, plans and layout assertions),
+  or an abstract base
   class for helpers that capture per-test callbacks
   (`OptimizationResultTestBase`). A base class of a public test class must itself be
   public, or Kotlin reports "'public' subclass exposes its 'internal' supertype".
@@ -70,7 +71,7 @@ up.
   after (`grep -oP 'fun \K[a-zA-Z]+(?=\()' | sort`); keep the suite's original name
   on one part.
   A fixtures file in the **same package** must live in a subpackage (e.g.
-  `commonTest/…/common/blueprint/fixtures/`): an `internal` top-level fixture with the same
+  `jvmTest/…/common/blueprint/fixtures/`): an `internal` top-level fixture with the same
   name as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
   Kotlin does not allow star-importing an `object`. Import each fixture by name; the
   project's packages no longer use wildcards.
@@ -79,9 +80,10 @@ up.
   full `BlueprintPlan` to test.
 - Test-only code lives in the test source set, not in `commonMain`. A stage's test
   accessors go in a `fixtures/` file built on a production entry point: the layout
-  suites read entities and failures back through `blueprintLayoutDump` (the CLI's
-  `--layout` also uses it), so no production type had to widen its visibility
-  (`RowLayout` stays `private`) or keep a wrapper only tests call.
+  suites read entities and failures back through `RowLayout.layoutDump()` (the
+  CLI's `--layout` also uses it) or through the `Layout` fixture that wraps both
+  read-backs. No production type widens its visibility beyond `RowLayout`'s
+  `internal` or keeps a wrapper only tests call.
 
 ## Spelling and naming
 
@@ -158,20 +160,22 @@ up.
   `jsBrowserTest` on every pipeline. The heavy layout and blueprint suites
   (`BlueprintLayout*`, `BlueprintFluid*`, `BlueprintImportTest`,
   `BlueprintBeltEndTest`, `BlueprintLayoutSnapshotTest`, `band/`, the ascii, plan and
-  encoder suites) therefore live in `src/jvmTest`. The light kernel and unit suites
-  still run in `commonTest` (`LayoutCompactionTest`, `LayoutPipesTest`,
-  `LayoutEntityTest`, `FluidLaneTest`, `MaterialSearchTest`, plus the model,
-  prototype, production, optimizer and service suites) and appear in
-  `jsBrowserTest` too. Move a suite to
-  `jvmTest` rather than filtering it out in CI — the Kotlin/JS runner cannot express
-  a multi-suite exclude, and a filter hides the same cost from local runs too.
-  `blueprint/fixtures` and `common/fixtures` stay in `commonTest`: `jvmTest` and the
-  `jsTest` `OptimizationResult*` suites both read them, and a shared test helper must
-  not move into a test source set it is not compiled with. Moved suites may still
-  import `common/fixtures` (`testLogistics`, `production`), which is also `internal`
-  in `commonTest`: the JVM test compilation sees those declarations as a friend
-  module, so the import keeps compiling — verified by moving the suites and rerunning
-  `compileTestKotlinJvm`.
+  encoder suites, and the `planning` row/lane suites `FluidLaneTest`,
+  `RowPlacerTest`, `RowPlannerTest` and `routing/DeliveryPreparationTest`) therefore
+  live in `src/jvmTest`. The light kernel and unit suites still run in `commonTest`
+  (`LayoutCompactionTest`, `LayoutPipesTest`, `LayoutEntityTest`,
+  `MaterialSearchTest`, plus the model, prototype, production, optimizer and service
+  suites) and appear in `jsBrowserTest` too. Move a suite to `jvmTest` rather than
+  filtering it out in CI — the Kotlin/JS runner cannot express a multi-suite exclude,
+  and a filter hides the same cost from local runs too.
+  `common/fixtures` stays in `commonTest` because the `jsTest`
+  `OptimizationResult*` suites read it. `blueprint/fixtures` moved to `jvmTest` with
+  the layout suites that are its only readers; a helper needed by both source sets
+  belongs in `common/fixtures`. Moved `jvmTest` suites may still import
+  `common/fixtures` (`testLogistics`, `production`, the `MaterialFixtures`
+  materials): the JVM test compilation sees the `commonTest` source set as a friend
+  module, so both `internal` and public declarations keep compiling — verified by
+  moving the suites and rerunning `compileTestKotlinJvm`.
 - A docs-only or tooling-only branch runs **no** Gradle task: `knowledge/**`,
   `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent
   tooling. `spotlessApply` would be a no-op there anyway. A branch that mixes code

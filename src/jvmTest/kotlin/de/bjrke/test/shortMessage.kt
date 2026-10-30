@@ -5,6 +5,7 @@ internal actual fun shortMessage(failure: Throwable): String {
     val frame =
         failure.stackTrace.firstOrNull {
             !it.className.startsWith("kotlin.") &&
+                !it.className.startsWith("org.junit.") &&
                 !it.className.startsWith("AssertionsKt") &&
                 !it.className.startsWith("de.bjrke.test.")
         }

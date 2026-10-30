@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.blueprint.blueprintLayoutDump
-import de.bjrke.factorio.optimizer.common.blueprint.fromPlaced
+import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.inspection.layoutAscii
 import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
@@ -158,14 +157,24 @@ private fun emitBlueprint(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
     beltEnd: BeltEnd,
-) =
+) {
+    blueprintGenerator(output)?.let { println(it(RowLayout(plan, logistics, beltEnd))) }
+}
+
+private fun blueprintGenerator(output: Output) =
     when (output) {
-        Output.LAYOUT -> println(layoutAscii(blueprintLayoutDump(plan, logistics, beltEnd)))
-        Output.JSON -> println(fromPlaced(plan, logistics, beltEnd).toJson())
-        Output.BLUEPRINT -> println(blueprintString(fromPlaced(plan, logistics, beltEnd).toJson()))
-        Output.SETTINGS,
-        Output.LISTING -> Unit
+        Output.LAYOUT -> ::layout
+        Output.JSON -> ::json
+        Output.BLUEPRINT -> ::blueprint
+        Output.SETTINGS -> null
+        Output.LISTING -> null
     }
+
+private fun blueprint(rowLayout: RowLayout) = blueprintString(json(rowLayout))
+
+private fun json(rowLayout: RowLayout) = rowLayout.blueprint().toJson()
+
+private fun layout(rowLayout: RowLayout) = layoutAscii(rowLayout.layoutDump())
 
 /** Prints the per-recipe production listing: rates, machines and how each material is moved. */
 private fun printListing(result: OptimizationResult, logistics: LogisticsCalculator) {

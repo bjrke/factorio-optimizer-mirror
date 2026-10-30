@@ -1,5 +1,8 @@
 package de.bjrke.factorio.optimizer.common.prototype
 
+import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.selection.forSurface
 import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromPlanet
@@ -101,7 +104,7 @@ class SurfaceTest {
         val global =
             Recipe(
                 name = "copper-plate",
-                ingredients = mapOf(Material("copper-ore") to 1.0),
+                ingredients = mapOf(copperOre to 1.0),
                 result = mapOf(Material("copper-plate") to 1.0),
                 time = 1.0,
                 categories = setOf(Category.SMELTING),
@@ -258,7 +261,7 @@ class SurfaceTest {
             Recipe(
                 name = "scrap-recycling",
                 ingredients = mapOf(Material("scrap") to 1.0),
-                result = mapOf(Material("iron-gear-wheel") to 1.0),
+                result = mapOf(gear to 1.0),
                 time = 1.0,
                 categories = setOf(Category.RECYCLING),
             )
@@ -289,7 +292,7 @@ class SurfaceTest {
             Recipe(
                 name = "iron-bacteria-spoiling",
                 ingredients = mapOf(Material("iron-bacteria") to 1.0),
-                result = mapOf(Material("iron-ore") to 1.0),
+                result = mapOf(ironOre to 1.0),
                 time = 1.0,
                 categories = setOf(Category.SPOILING),
             )

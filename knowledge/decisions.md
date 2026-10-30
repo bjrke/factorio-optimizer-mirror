@@ -7,6 +7,24 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-10-30 — One fixture reads a layout back for every suite
+
+**Decision.** `RowLayout` is `internal` and owns the ordered pipeline through
+`blueprint()` and `layoutDump()`. Its build is idempotent, so both read-backs share
+one instance instead of rebuilding the layout. The `jvmTest` `Layout` fixture wraps
+those two calls and exposes the facts the suites assert on (entities, failures,
+machines, plumbing, belt materials, port pipes); `blueprint/fixtures` lives in
+`jvmTest` with the layout suites that read it, while material values stay in
+`commonTest/common/fixtures` for `jsTest`.
+
+**Guardrail.** Do not reintroduce top-level `fromPlaced`/`blueprintLayoutDump`
+wrappers, and do not make `blueprint()` or `layoutDump()` run the pipeline again
+after it has built. A new layout fact gets a property on the `Layout` fixture, not a
+second dump function or a widened production accessor.
+
+**See.** `architecture.md` §Blueprint layout; `conventions.md` §Testing and
+§Behavior-preserving refactors.
+
 ## 2026-10-27 — Port tables are written in the placed orientation
 
 **Decision.** `prototypeFluidPorts` lists each machine's `fluid_boxes` already turned into the

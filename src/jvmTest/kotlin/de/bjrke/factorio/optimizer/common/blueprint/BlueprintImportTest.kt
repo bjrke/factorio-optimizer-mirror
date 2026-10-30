@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.coal
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
+import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
@@ -37,15 +37,17 @@ class BlueprintImportTest {
 
     @Test
     fun solidImportMarkersHideTheirBeltUnderTheLabel() {
-        val dump = blueprintLayoutDump(basePlan, logistics)
+        val layout = Layout(basePlan)
         val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == ore }
+            layout.entities.filterIsInstance<MarkerEntity>().single {
+                it.signal.material == ironOre
+            }
         val input =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+            layout.entities.filterIsInstance<UndergroundBeltEntity>().single {
                 it.area.topLeft == marker.area.topLeft.west()
             }
         val output =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+            layout.entities.filterIsInstance<UndergroundBeltEntity>().single {
                 it.area.topLeft == marker.area.topLeft.east()
             }
 
@@ -60,15 +62,15 @@ class BlueprintImportTest {
 
     @Test
     fun targetOutputHidesItsBeltUnderTheLabel() {
-        val dump = blueprintLayoutDump(basePlan, logistics)
+        val layout = Layout(basePlan)
         val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == gear }
+            layout.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == gear }
         val input =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+            layout.entities.filterIsInstance<UndergroundBeltEntity>().single {
                 it.area.topLeft == marker.area.topLeft.west()
             }
         val output =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().single {
+            layout.entities.filterIsInstance<UndergroundBeltEntity>().single {
                 it.area.topLeft == marker.area.topLeft.east()
             }
 
@@ -84,10 +86,12 @@ class BlueprintImportTest {
 
     @Test
     fun polesStayEastOfTheImportExtension() {
-        val dump = blueprintLayoutDump(basePlan, logistics)
+        val layout = Layout(basePlan)
         val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.material == ore }
-        val poles = dump.entities.filterIsInstance<PoleEntity>()
+            layout.entities.filterIsInstance<MarkerEntity>().single {
+                it.signal.material == ironOre
+            }
+        val poles = layout.entities.filterIsInstance<PoleEntity>()
 
         assertAll(
             { assertTrue(poles.isNotEmpty(), "no poles were placed") },
@@ -107,7 +111,7 @@ class BlueprintImportTest {
                 "gear",
                 Category.CRAFTING,
                 mapOf(gear to 1.0),
-                mapOf(ore to 1.0, coal to 1.0),
+                mapOf(ironOre to 1.0, coal to 1.0),
             )
         val mixedPlan =
             BlueprintPlan(
@@ -121,18 +125,19 @@ class BlueprintImportTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ore, 1.0, fluid = false),
+                        PlannedSource(ironOre, 1.0, fluid = false),
                         PlannedSource(coal, 1.0, fluid = false),
                     ),
                 scale = 1.0,
                 label = "gear",
             )
-        val dump = blueprintLayoutDump(mixedPlan, logistics)
+        val layout = Layout(mixedPlan)
         val markers =
-            dump.entities.filterIsInstance<MarkerEntity>().filter {
-                it.signal.material == ore || it.signal.material == coal
+            layout.entities.filterIsInstance<MarkerEntity>().filter {
+                it.signal.material == ironOre || it.signal.material == coal
             }
-        val machine = dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
+        val machine =
+            layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
 
         assertAll(
             { assertEquals(2, markers.size, "one marker per imported input") },
@@ -144,8 +149,8 @@ class BlueprintImportTest {
                 )
             },
             { assertTrue(markers.all { it.area.topLeft.x < machine.area.topLeft.x }) },
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
     }
 
@@ -163,7 +168,7 @@ class BlueprintImportTest {
                 "gear",
                 Category.CRAFTING,
                 mapOf(gear to 1.0),
-                mapOf(ore to 1.0, coal to 1.0, rare to 1.0),
+                mapOf(ironOre to 1.0, coal to 1.0, rare to 1.0),
             )
         val plan =
             BlueprintPlan(
@@ -174,22 +179,23 @@ class BlueprintImportTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ore, 1.0, fluid = false),
+                        PlannedSource(ironOre, 1.0, fluid = false),
                         PlannedSource(coal, 1.0, fluid = false),
                         PlannedSource(rare, 1.0, fluid = false),
                     ),
                 scale = 1.0,
                 label = "gear",
             )
-        val dump = blueprintLayoutDump(plan, logistics)
-        val machine = dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
+        val layout = Layout(plan)
+        val machine =
+            layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
         val laneRow = machine.area.topLeft.y - 3
         val lane =
-            dump.entities.filterIsInstance<BeltEntity>().filter {
+            layout.entities.filterIsInstance<BeltEntity>().filter {
                 it.material == rare && it.area.topLeft.y == laneRow
             }
         val marker =
-            dump.entities.filterIsInstance<MarkerEntity>().single {
+            layout.entities.filterIsInstance<MarkerEntity>().single {
                 it.signal.material == rare
             }
         // the connector's own tiles sit between the label column and the feed, so the lane must run
@@ -197,8 +203,8 @@ class BlueprintImportTest {
         val byColumn = lane.map { it.area.topLeft.x }
 
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
             {
                 assertEquals(
                     byColumn.max() - byColumn.min() + 1,
@@ -221,7 +227,7 @@ class BlueprintImportTest {
         val cable = Material("copper-cable")
         val top = Material("top")
         val makeCable =
-            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ore to 1.0))
+            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ironOre to 1.0))
         val makeTop = recipe("top", Category.CRAFTING, mapOf(top to 1.0), mapOf(cable to 1.0))
         val produced =
             BlueprintPlan(
@@ -237,12 +243,12 @@ class BlueprintImportTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
                 scale = 1.0,
                 label = "top",
             )
 
-        val entities = blueprintLayoutDump(produced, logistics).entities
+        val entities = Layout(produced).entities
         val machineArea =
             entities.filterIsInstance<MachineEntity>().single { it.recipe == "top" }.area
         val laneRow = machineArea.topLeft.y - 2

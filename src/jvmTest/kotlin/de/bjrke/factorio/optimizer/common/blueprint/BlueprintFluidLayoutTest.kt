@@ -1,16 +1,15 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertUndergroundRunsAreStretched
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.blueprintPipeFluids
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.water
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
@@ -58,14 +57,14 @@ class BlueprintFluidLayoutTest {
                 scale = 1.0,
                 label = "water-boil",
             )
-        val dump = blueprintLayoutDump(fluidPlan, logistics)
-        val marker = dump.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
+        val layout = Layout(fluidPlan)
+        val marker = layout.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
         val input =
-            dump.entities.filterIsInstance<PipeToGroundEntity>().single {
+            layout.entities.filterIsInstance<PipeToGroundEntity>().single {
                 it.area.topLeft == marker.area.topLeft.west()
             }
         val output =
-            dump.entities.filterIsInstance<PipeToGroundEntity>().single {
+            layout.entities.filterIsInstance<PipeToGroundEntity>().single {
                 it.area.topLeft == marker.area.topLeft.east()
             }
 
@@ -91,7 +90,7 @@ class BlueprintFluidLayoutTest {
             )
         // the pipe-to-ground carries no input/output type, so its direction is the side the
         // surface pipe attaches on: the entrance faces west (away from the label), the exit east
-        val blueprint = fromPlaced(fluidPlan, logistics)
+        val blueprint = Layout(fluidPlan).blueprint
         val label =
             blueprint.entities.single {
                 it.name == "constant-combinator" && it.markerFluid
@@ -121,18 +120,18 @@ class BlueprintFluidLayoutTest {
                 scale = 1.0,
                 label = "electro",
             )
-        val dump = blueprintLayoutDump(fluidPlan, logistics)
-        val machine = dump.entities.filterIsInstance<MachineEntity>().single()
+        val layout = Layout(fluidPlan)
+        val machine = layout.entities.filterIsInstance<MachineEntity>().single()
         val left = machine.area.topLeft.x
         val top = machine.area.topLeft.y
         // the prototype's top pipe is a BOTH port at (1, -1), which the lane above feeds
         val port = Coordinate(left + 1, top - 1)
 
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertTrue(
-                    dump.entities.any { it is Plumbing && it.area.topLeft == port },
+                    layout.entities.any { it is Plumbing && it.area.topLeft == port },
                     "no pipe at the machine's top port $port",
                 )
             },
@@ -146,7 +145,7 @@ class BlueprintFluidLayoutTest {
                 "wet-gear",
                 Category.CRAFTING,
                 mapOf(gear to 1.0),
-                mapOf(plate to 1.0, water to 1.0),
+                mapOf(ironPlate to 1.0, water to 1.0),
             )
         val plan =
             BlueprintPlan(
@@ -155,17 +154,17 @@ class BlueprintFluidLayoutTest {
                     listOf(PlannedRow.copies(planned(wet, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
                 sources =
                     listOf(
-                        PlannedSource(plate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(water, 1.0, fluid = true),
                     ),
                 scale = 1.0,
                 label = "wet-gear",
             )
-        val dump = blueprintLayoutDump(plan, logistics)
-        val markers = dump.entities.filterIsInstance<MarkerEntity>()
-        val solidImport = markers.single { it.signal.material == plate }
+        val layout = Layout(plan)
+        val markers = layout.entities.filterIsInstance<MarkerEntity>()
+        val solidImport = markers.single { it.signal.material == ironPlate }
         val fluidMarker = markers.single { it.signal.fluid }
-        val machine = dump.entities.filterIsInstance<MachineEntity>().single()
+        val machine = layout.entities.filterIsInstance<MachineEntity>().single()
         val laneRow = fluidMarker.area.topLeft.y
 
         assertAll(
@@ -174,7 +173,7 @@ class BlueprintFluidLayoutTest {
             // the marker's output is joined to the lane head along its own row, underground
             {
                 assertTrue(
-                    dump.entities.any {
+                    layout.entities.any {
                         it is PipeToGroundEntity &&
                             it.area.topLeft.y == laneRow &&
                             it.area.topLeft.x > fluidMarker.area.topLeft.x &&
@@ -183,8 +182,8 @@ class BlueprintFluidLayoutTest {
                     "no underground link between the fluid marker and the lane head",
                 )
             },
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
     }
 
@@ -204,7 +203,7 @@ class BlueprintFluidLayoutTest {
                 testLogistics.copy(fluids = setOf(water), fluidTemperatures = mapOf(water to 15)),
             )
         val entities =
-            fromPlaced(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).entities
+            Layout(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
 
         assertAll(
             { assertEquals(1, entities.count { it.name == "infinity-pipe" }) },
@@ -233,7 +232,7 @@ class BlueprintFluidLayoutTest {
                 label = "water-boil",
             )
 
-        val names = fromPlaced(fluidPlan, logistics).entities.map { it.name }
+        val names = Layout(fluidPlan).blueprint.entities.map { it.name }
         assertContains(names, "pipe-to-ground")
     }
 
@@ -256,7 +255,7 @@ class BlueprintFluidLayoutTest {
                 label = "lubricant",
             )
 
-        val names = fromPlaced(fluidPlan, logistics).entities.map { it.name }
+        val names = Layout(fluidPlan).blueprint.entities.map { it.name }
         assertAll(
             { assertContains(names, "pipe") },
             { assertContainsNot(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
@@ -282,7 +281,7 @@ class BlueprintFluidLayoutTest {
                 label = "lubricant",
             )
         val pipes =
-            blueprintLayoutDump(fluidPlan, logistics, BeltEnd.INFINITY_CHEST)
+            Layout(fluidPlan, beltEnd = BeltEnd.INFINITY_CHEST)
                 .entities
                 .filterIsInstance<InfinityPipeEntity>()
 
@@ -301,7 +300,7 @@ class BlueprintFluidLayoutTest {
                 "drain",
                 Category.CHEMISTRY,
                 mapOf(lubricant to 1.0),
-                mapOf(plate to 1.0, water to 1.0),
+                mapOf(ironPlate to 1.0, water to 1.0),
             )
         val plan =
             BlueprintPlan(
@@ -310,18 +309,20 @@ class BlueprintFluidLayoutTest {
                     listOf(PlannedRow.copies(planned(drain, lubricant, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
-                        PlannedSource(plate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(water, 1.0, fluid = true),
                     ),
                 scale = 1.0,
                 label = "drain",
             )
-        val dump = blueprintLayoutDump(plan, logistics, BeltEnd.INFINITY_CHEST)
+        val layout = Layout(plan, beltEnd = BeltEnd.INFINITY_CHEST)
         val sink =
-            dump.entities.filterIsInstance<InfinityPipeEntity>().single { it.material == lubricant }
+            layout.entities.filterIsInstance<InfinityPipeEntity>().single {
+                it.material == lubricant
+            }
         val solidImport =
-            dump.entities.filterIsInstance<InfinityChestEntity>().single {
-                it.settings.item == plate
+            layout.entities.filterIsInstance<InfinityChestEntity>().single {
+                it.settings.item == ironPlate
             }
 
         assertAll(
@@ -329,8 +330,8 @@ class BlueprintFluidLayoutTest {
             { assertNull(sink.settings) },
             // it joins the same west column as the solid import
             { assertEquals(solidImport.area.topLeft.x, sink.area.topLeft.x) },
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
     }
 
@@ -356,17 +357,17 @@ class BlueprintFluidLayoutTest {
                 label = "coolant",
             )
 
-        val entities = fromPlaced(fluidPlan, logistics).entities
-        val fluids = blueprintPipeFluids(fluidPlan, logistics)
+        val layout = Layout(fluidPlan)
+        val entities = layout.blueprint.entities
         val components = plumbingComponents(entities)
 
         // each connected pipe network must carry exactly one fluid, so two fluids never merge
         assertAll(
-            { assertEquals(setOf(water, lubricant), fluids.values.toSet()) },
+            { assertEquals(setOf(water, lubricant), layout.plumbing.values.toSet()) },
             {
                 assertTrue(
                     components.all { component ->
-                        component.mapNotNull { fluids[it] }.distinct().size <= 1
+                        component.mapNotNull { layout.plumbing[it] }.distinct().size <= 1
                     },
                     "two different fluids share one pipe network",
                 )
@@ -395,19 +396,20 @@ class BlueprintFluidLayoutTest {
                 scale = 1.0,
                 label = "coolant",
             )
-        val dump = blueprintLayoutDump(fluidPlan, logistics)
-        val machines = dump.entities.filterIsInstance<MachineEntity>()
+        val layout = Layout(fluidPlan)
+        val machines = layout.entities.filterIsInstance<MachineEntity>()
         val machineTop = machines.minOf { it.area.topLeft.y }
         val machineLeft = machines.minOf { it.area.topLeft.x }
-        val fluidMarkers = dump.entities.filterIsInstance<MarkerEntity>().filter { it.signal.fluid }
+        val fluidMarkers =
+            layout.entities.filterIsInstance<MarkerEntity>().filter { it.signal.fluid }
         val waterMarker = fluidMarkers.single { it.signal.material == water }
         val secondMarker = fluidMarkers.single { it.signal.material == lubricant }
         val secondPipes =
-            dump.entities.filterIsInstance<Plumbing>().filter { it.material == lubricant }
+            layout.entities.filterIsInstance<Plumbing>().filter { it.material == lubricant }
 
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
             // both lane markers sit in one west column, the second lane one row further out ...
             { assertEquals(waterMarker.area.topLeft.x, secondMarker.area.topLeft.x) },
             { assertTrue(secondMarker.area.topLeft.y < waterMarker.area.topLeft.y) },
@@ -445,7 +447,7 @@ class BlueprintFluidLayoutTest {
                 scale = 1.0,
                 label = "water-boil",
             )
-        val entities = fromPlaced(fluidPlan, logistics).entities
+        val entities = Layout(fluidPlan).blueprint.entities
         val machineTiles =
             entities
                 .filter { it.name == Factory.CHEMICAL_PLANT.identifier }
@@ -484,7 +486,7 @@ class BlueprintFluidLayoutTest {
                 scale = 1.0,
                 label = "coolant",
             )
-        val entities = fromPlaced(fluidPlan, logistics).entities
+        val entities = Layout(fluidPlan).blueprint.entities
         val grounds = entities.count { it.name == "pipe-to-ground" }
         val components = plumbingComponents(entities)
 
@@ -516,6 +518,6 @@ class BlueprintFluidLayoutTest {
                 scale = 1.0,
                 label = "coolant",
             )
-        assertUndergroundRunsAreStretched(blueprintLayoutDump(fluidPlan, logistics).entities)
+        assertUndergroundRunsAreStretched(Layout(fluidPlan).entities)
     }
 }

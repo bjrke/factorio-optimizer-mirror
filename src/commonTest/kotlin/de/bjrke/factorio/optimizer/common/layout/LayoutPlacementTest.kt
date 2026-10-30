@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.layout
 
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
@@ -15,8 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-
-private val WATER = Material("water")
 
 class LayoutPlacementTest {
 
@@ -36,16 +35,16 @@ class LayoutPlacementTest {
     @Test
     fun aCheatFluidSourceIsAFilteredInfinityPipe() {
         val board = newBoard()
-        board.placeFluidSource(BeltEnd.INFINITY_CHEST, Coordinate(4, 0), WATER)
+        board.placeFluidSource(BeltEnd.INFINITY_CHEST, Coordinate(4, 0), water)
 
         val pipe = board.entityAt(Coordinate(4, 0)) as InfinityPipeEntity
-        assertEquals(InfinityPipeSettings(WATER, temperature = 0), pipe.settings)
+        assertEquals(InfinityPipeSettings(water, temperature = 0), pipe.settings)
     }
 
     @Test
     fun aCheatFluidSinkIsAnUnfilteredInfinityPipe() {
         val board = newBoard()
-        board.placeFluidSource(BeltEnd.INFINITY_CHEST, Coordinate(4, 0), WATER, sink = true)
+        board.placeFluidSource(BeltEnd.INFINITY_CHEST, Coordinate(4, 0), water, sink = true)
 
         val pipe = board.entityAt(Coordinate(4, 0)) as InfinityPipeEntity
         assertNull(pipe.settings)
@@ -54,7 +53,7 @@ class LayoutPlacementTest {
     @Test
     fun aRealFluidSourceBuildsWestFromItsEnd() {
         val board = newBoard()
-        board.placeFluidSource(BeltEnd.CONSTANT_COMBINATOR, Coordinate(4, 0), WATER)
+        board.placeFluidSource(BeltEnd.CONSTANT_COMBINATOR, Coordinate(4, 0), water)
 
         val input = board.entityAt(Coordinate(2, 0)) as PipeToGroundEntity
         val marker = board.entityAt(Coordinate(3, 0)) as MarkerEntity
@@ -62,7 +61,7 @@ class LayoutPlacementTest {
         assertAll(
             { assertEquals(Io.INPUT, input.io) },
             { assertEquals(Direction.EAST, input.direction) },
-            { assertEquals(Signal(WATER, fluid = true), marker.signal) },
+            { assertEquals(Signal(water, fluid = true), marker.signal) },
             { assertEquals(Io.OUTPUT, output.io) },
             { assertEquals(Direction.EAST, output.direction) },
             { assertEquals(output, board.undergroundOutputOf(input)) },
@@ -72,7 +71,7 @@ class LayoutPlacementTest {
     @Test
     fun removingAFluidSourceRemovesItsWholeBlock() {
         val board = newBoard()
-        board.placeFluidSource(BeltEnd.CONSTANT_COMBINATOR, Coordinate(4, 0), WATER)
+        board.placeFluidSource(BeltEnd.CONSTANT_COMBINATOR, Coordinate(4, 0), water)
 
         board.removeFluidSource(BeltEnd.CONSTANT_COMBINATOR, Coordinate(4, 0))
 
@@ -88,9 +87,9 @@ class LayoutPlacementTest {
         val board = newBoard()
         val oil = Material("heavy-oil")
         // a water shaft end whose mouth faces south into a machine
-        board.placeEnd(WATER, Coordinate(4, 0), Direction.SOUTH, Io.OUTPUT)
+        board.placeEnd(water, Coordinate(4, 0), Direction.SOUTH, Io.OUTPUT)
         // a plain water pipe joins on every side
-        board.placePipe(Coordinate(8, 0), WATER)
+        board.placePipe(Coordinate(8, 0), water)
 
         assertAll(
             // beside the closed side the heavy oil may stand

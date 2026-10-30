@@ -1,11 +1,10 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertNoOverlap
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.chestMarkers
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.entitiesFor
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planAndLogistics
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
@@ -18,25 +17,29 @@ class BlueprintBeltEndIntegrationTest {
     @Test
     fun realChestMarkerBlueprintsHaveNoOverlappingEntities() =
         assertTable(chestMarkers) { beltEnd ->
-            assertNoOverlap(entitiesFor("electronic-circuit", beltEnd))
+            assertNoOverlap(Layout("electronic-circuit", beltEnd = beltEnd).blueprint.entities)
         }
 
     @Test
     fun realChestMarkerBlueprintsHaveConnectedUndergroundBelts() =
         assertTable(chestMarkers) { beltEnd ->
-            assertConnectedUndergroundBelts(entitiesFor("advanced-circuit", beltEnd))
+            assertConnectedUndergroundBelts(
+                Layout("advanced-circuit", beltEnd = beltEnd).blueprint.entities,
+            )
         }
 
     @Test
     fun realChestMarkerBlueprintsPowerEveryInserter() =
         assertTable(chestMarkers) { beltEnd ->
-            assertPolesCoverAndConnect(entitiesFor("advanced-circuit", beltEnd))
+            assertPolesCoverAndConnect(
+                Layout("advanced-circuit", beltEnd = beltEnd).blueprint.entities,
+            )
         }
 
     @Test
     fun theRealChestOutputWiresItsInsertersToTheChest() {
-        val (plan, logistics) = planAndLogistics("advanced-circuit")
-        val blueprint = fromPlaced(plan, logistics, BeltEnd.BUFFER_CHEST)
+        val blueprint =
+            Layout(target = "advanced-circuit", beltEnd = BeltEnd.BUFFER_CHEST).blueprint
         val chest =
             blueprint.entities.withIndex().single { (_, entity) ->
                 entity.name == "buffer-chest" && entity.circuitConditionEnabled == false

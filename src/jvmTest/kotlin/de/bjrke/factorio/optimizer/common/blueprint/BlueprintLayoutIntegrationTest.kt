@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertNoDanglingInserter
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertNoMergingBelts
@@ -8,12 +9,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertOneBeltSource
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertSplittersOnlyFeedSurface
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertTunnelEndsAreFed
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertUndergroundRunsAreStretched
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.entitiesFor
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.feedFailuresFor
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planAndLogistics
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFor
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.transportMaterialsFor
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
@@ -45,7 +41,7 @@ class BlueprintLayoutIntegrationTest {
             "utility-science-pack",
             "lubricant",
         ) {
-            assertNoOverlap(entitiesFor(it))
+            assertNoOverlap(Layout(it).blueprint.entities)
         }
 
     @Test
@@ -56,12 +52,13 @@ class BlueprintLayoutIntegrationTest {
             "utility-science-pack",
             "processing-unit",
         ) {
-            assertNoOverlap(entitiesFor(it, beltEnd = BeltEnd.INFINITY_CHEST))
+            assertNoOverlap(Layout(it, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities)
         }
 
     @Test
     fun theCheatFluidImportIsAnInfinityPipeAtTheFluidsDefaultTemperature() {
-        val entities = entitiesFor("processing-unit", BeltEnd.INFINITY_CHEST)
+        val entities =
+            Layout("processing-unit", beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
         val pipe = entities.singleOrNull { it.name == "infinity-pipe" }
 
         assertNotNull(pipe) { "no infinity pipe for the imported sulfuric acid" }
@@ -80,7 +77,7 @@ class BlueprintLayoutIntegrationTest {
             "processing-unit",
             "utility-science-pack",
         ) {
-            assertNoDanglingInserter(entitiesFor(it))
+            assertNoDanglingInserter(Layout(it).blueprint.entities)
         }
 
     @Test
@@ -93,7 +90,7 @@ class BlueprintLayoutIntegrationTest {
             "utility-science-pack",
             "lubricant",
         ) {
-            assertOneBeltSourcePerMaterial(planFor(it))
+            assertOneBeltSourcePerMaterial(Layout(it).plan)
         }
 
     @Test
@@ -105,18 +102,19 @@ class BlueprintLayoutIntegrationTest {
             "processing-unit",
             "utility-science-pack",
         ) {
-            assertConnectedUndergroundBelts(entitiesFor(it))
+            assertConnectedUndergroundBelts(Layout(it).blueprint.entities)
         }
 
     @Test
     fun splitterBranchesStartOnTheSurface() {
-        val (plan, logistics, beltEnd) =
-            planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-        val entities = fromPlaced(plan, logistics, beltEnd).entities
+        val blueprintEntities =
+            layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+                .blueprint
+                .entities
 
         assertAll(
-            { assertSplittersOnlyFeedSurface(entities) },
-            { assertConnectedUndergroundBelts(entities) },
+            { assertSplittersOnlyFeedSurface(blueprintEntities) },
+            { assertConnectedUndergroundBelts(blueprintEntities) },
         )
     }
 
@@ -126,37 +124,37 @@ class BlueprintLayoutIntegrationTest {
      */
     @Test
     fun compactionHalvesTheAdvancedCircuitLayout() {
-        val (plan, logistics) = planAndLogistics("advanced-circuit")
-        val dump = blueprintLayoutDump(plan, logistics)
+        val layout = Layout(target = "advanced-circuit")
         val width =
-            dump.entities.maxOf { it.area.bottomRight.x } -
-                dump.entities.minOf { it.area.topLeft.x } + 1
+            layout.entities.maxOf { it.area.bottomRight.x } -
+                layout.entities.minOf { it.area.topLeft.x } + 1
         val height =
-            dump.entities.maxOf { it.area.bottomRight.y } -
-                dump.entities.minOf { it.area.topLeft.y } + 1
+            layout.entities.maxOf { it.area.bottomRight.y } -
+                layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
             { assertTrue(width < 40, "layout is still $width tiles wide") },
             { assertTrue(height < 80, "layout is still $height tiles tall") },
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
     }
 
     @Test
     fun reportedUrlKeepsInputLanesAtTheMachineEdge() =
         assertTableOf(BeltEnd.CONSTANT_COMBINATOR, BeltEnd.INFINITY_CHEST) { beltEnd ->
-            val (plan, logistics, _) =
-                planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-            val dump = blueprintLayoutDump(plan, logistics, beltEnd)
-            val entities = dump.entities
-            val recipes = plan.recipes.associate { it.recipe.name to it.recipe }
+            val layout =
+                layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+                    .copy(beltEnd = beltEnd)
+            val entities = layout.entities
+            val recipes = layout.plan.recipes.associate { it.recipe.name to it.recipe }
             val belts = entities.filterIsInstance<BeltEntity>()
 
             val missing =
                 entities.filterIsInstance<MachineEntity>().mapNotNull { machine ->
                     val recipe = recipes[machine.recipe] ?: return@mapNotNull null
-                    val solids = recipe.ingredients.keys.filterNot(logistics::isFluid).toSet()
+                    val solids =
+                        recipe.ingredients.keys.filterNot(layout.logistics::isFluid).toSet()
                     if (solids.isEmpty()) return@mapNotNull null
                     val laneRows =
                         setOf(
@@ -174,7 +172,7 @@ class BlueprintLayoutIntegrationTest {
                 }
 
             assertAll(
-                { assertEquals(emptyList(), dump.failures) },
+                { assertEquals(emptyList(), layout.failures) },
                 {
                     assertEquals(
                         emptyList(),
@@ -193,19 +191,18 @@ class BlueprintLayoutIntegrationTest {
      */
     @Test
     fun advancedCircuitUrlOnlyTunnelsForItsCableFeed() {
-        val (plan, logistics, beltEnd) =
-            planFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-        val dump = blueprintLayoutDump(plan, logistics, beltEnd)
+        val layout = layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+
         // the import connectors are fixed marker pairs; only route tunnels are checked here
         val routeTunnels =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
-                dump.entities.none {
+            layout.entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
+                layout.entities.none {
                     it is MarkerEntity && it.area.topLeft.manhattanDist(tunnel.area.topLeft) == 1
                 }
             }
 
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
                     listOf(Material("copper-cable")),
@@ -223,27 +220,26 @@ class BlueprintLayoutIntegrationTest {
      */
     @Test
     fun reportedUraniumRoundsUrlKeepsItsImportedInputStraight() {
-        val (plan, logistics, beltEnd) =
-            planFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
-        val dump = blueprintLayoutDump(plan, logistics, beltEnd)
+        val layout =
+            layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
         val uranium = Material("uranium-238")
-        val belts = dump.entities.filterIsInstance<BeltEntity>().filter { it.material == uranium }
+        val belts = layout.entities.filterIsInstance<BeltEntity>().filter { it.material == uranium }
         val tunnels =
-            dump.entities.filterIsInstance<UndergroundBeltEntity>().filter {
+            layout.entities.filterIsInstance<UndergroundBeltEntity>().filter {
                 it.material == uranium
             }
         val inputChests =
-            dump.entities.filterIsInstance<InfinityChestEntity>().filter {
+            layout.entities.filterIsInstance<InfinityChestEntity>().filter {
                 it.settings.item != null
             }
         val machineLeft =
-            dump.entities.filterIsInstance<MachineEntity>().minOf {
+            layout.entities.filterIsInstance<MachineEntity>().minOf {
                 it.area.topLeft.x
             }
         val uraniumChest = inputChests.single { it.settings.item == uranium }
 
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), tunnels, "the uranium-238 import tunnels") },
             { assertTrue(belts.isNotEmpty(), "no uranium-238 belt was placed") },
             {
@@ -276,20 +272,19 @@ class BlueprintLayoutIntegrationTest {
      */
     @Test
     fun reportedUraniumRoundsUrlIsFullyCompactedAndFed() {
-        val (plan, logistics, beltEnd) =
-            planFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
-        val dump = blueprintLayoutDump(plan, logistics, beltEnd)
-        val entities = fromPlaced(plan, logistics, beltEnd).entities
+        val layout =
+            layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
+        val blueprintEntities = layout.blueprint.entities
         val width =
-            dump.entities.maxOf { it.area.bottomRight.x } -
-                dump.entities.minOf { it.area.topLeft.x } + 1
+            layout.entities.maxOf { it.area.bottomRight.x } -
+                layout.entities.minOf { it.area.topLeft.x } + 1
         val height =
-            dump.entities.maxOf { it.area.bottomRight.y } -
-                dump.entities.minOf { it.area.topLeft.y } + 1
+            layout.entities.maxOf { it.area.bottomRight.y } -
+                layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
-            { assertEquals(emptyList(), dump.failures) },
-            { assertEquals(emptyList(), validateLayout(dump.entities)) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
             { assertTrue(width <= 20, "layout is still $width tiles wide") },
             {
                 assertTrue(
@@ -297,17 +292,18 @@ class BlueprintLayoutIntegrationTest {
                     "the long piercing-rounds belt was not collapsed: layout is $height rows tall",
                 )
             },
-            { assertConnectedUndergroundBelts(entities) },
-            { assertTunnelEndsAreFed(entities) },
+            { assertConnectedUndergroundBelts(blueprintEntities) },
+            { assertTunnelEndsAreFed(blueprintEntities) },
         )
     }
 
     @Test
     fun realBlueprintsStretchUndergroundRuns() =
         assertTableOf("advanced-circuit", "electronic-circuit", "processing-unit") { target ->
+            val layout = Layout(target)
             assertUndergroundRunsAreStretched(
-                entitiesFor(target),
-                transportMaterialsFor(target),
+                layout.blueprint.entities,
+                layout.beltMaterials,
             )
         }
 
@@ -323,12 +319,16 @@ class BlueprintLayoutIntegrationTest {
             "iron-gear-wheel",
             "utility-science-pack",
         ) {
-            assertEquals(emptyList(), feedFailuresFor(it))
+            assertEquals(emptyList(), Layout(it).failures)
         }
 
     @Test
     fun realBlueprintsDoNotMergeMaterials() =
         assertTableOf("inserter", "advanced-circuit", "electronic-circuit") { target ->
-            assertNoMergingBelts(entitiesFor(target), transportMaterialsFor(target))
+            val layout = Layout(target)
+            assertNoMergingBelts(
+                layout.blueprint.entities,
+                layout.beltMaterials,
+            )
         }
 }

@@ -69,8 +69,8 @@ CLI (JVM) from one shared core.
   - `blueprint/model` — the wire DTO: `Blueprint`, `BlueprintEntity`,
     `BlueprintWire`. It imports only `model` and `layout.entity`, so the encoders
     and the assembly can share it without a cycle.
-  - `blueprint` — the assembly: `BlueprintLayout.kt` (`fromPlaced`, the ordered
-    stage pipeline). `blueprint/planning` turns an `OptimizationResult` into a plan
+  - `blueprint` — the assembly: `RowLayout.kt` (`RowLayout`, the ordered stage
+    pipeline). `blueprint/planning` turns an `OptimizationResult` into a plan
     (`blueprintPlan`, `includedRecipes`, `plannedSources`); `blueprint/output`
     encodes it (`BlueprintString.kt`, `FactorioUrl.kt`, `toBlueprintEntity` in
     `LayoutSerialization.kt`, `chestWires`); `blueprint/inspection` renders the
@@ -158,8 +158,7 @@ blueprint.planning, blueprint.inspection < blueprint
 `blueprint.model` is the DTO leaf the encoders share; `blueprint` is the assembly
 root and imports `blueprint.planning`, `blueprint.output` (`toBlueprintEntity`,
 `chestWires`), `blueprint.inspection` (`LayoutDump`) and `blueprint.model`. Only
-the entry points (UI, CLI) and the tests import `blueprint` itself, for
-`fromPlaced`.
+the entry points (UI, CLI) and the tests import `blueprint` itself, for `RowLayout`.
 
 | package | may use | may not reach |
 | --- | --- | --- |
@@ -203,10 +202,10 @@ edges).
 ## Blueprint layout
 
 `blueprint/planning/blueprintPlan` (`BlueprintPlan.kt`) builds the plan from the
-optimizer's `OptimizationResult`; `blueprint/BlueprintLayout.kt` turns a
+optimizer's `OptimizationResult`; `blueprint/RowLayout.kt` turns a
 `BlueprintPlan` plus a `LogisticsCalculator` into a `Blueprint`
-(`blueprint/model/Blueprint.kt`). `fromPlaced(plan, logistics, beltEnd)` runs
-`RowLayout` in ordered passes — recipe rows, target output, import preparation,
+(`blueprint/model/Blueprint.kt`). `RowLayout(plan, logistics, beltEnd).blueprint()`
+runs the ordered passes — recipe rows, target output, import preparation,
 fluid lanes and source markers, solid import deliveries, the routed fluid
 fallback, produced solid deliveries, the fluid target output, trim import
 prefixes, stretch underground runs, compaction, poles (which place their wires) —
@@ -218,11 +217,11 @@ before the poles. `layout/validation` also requires every routed underground bel
 end to connect through a same-material belt; compaction rejects a corridor that
 would leave an entrance or exit orphaned (connector ends are recognized by their
 2/4-tile partner pattern).
-`blueprintLayoutDump` (`blueprint/inspection/`) is the one read-back of a finished
-layout (`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's
-`--layout` renders it and
-the test suites assert on it via `commonTest/…/common/blueprint/fixtures/BlueprintLayoutAccess.kt`,
-so `RowLayout` and its accessors stay private.
+`RowLayout.layoutDump()` is the one read-back of a finished layout
+(`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's `--layout`
+renders it and the `jvmTest` suites assert on it through the `Layout` fixture in
+`jvmTest/…/common/blueprint/fixtures/BlueprintIntegrationFixtures.kt`, so `RowLayout`
+is `internal` and keeps its accessors private.
 
 The layout is split into a small mutable kernel plus stages, and every stage takes
 one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
@@ -322,7 +321,8 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   the produced trunks and `BeltRouteRules` is the belt-tile predicate shared by
   both routes. `routing/FluidFeedLinker.kt` links a trimmed fluid marker to its
   lane head.
-- `RowLayout` keeps the ordered `build()` pipeline; the `RowPlacer`,
+- `RowLayout` keeps the ordered `build()` pipeline (idempotent, so `blueprint()`
+  and `layoutDump()` can share one instance); the `RowPlacer`,
   `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and `CompactionPass` stages own
   the rest.
 

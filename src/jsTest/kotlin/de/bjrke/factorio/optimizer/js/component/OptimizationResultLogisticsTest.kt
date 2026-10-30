@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.InserterTier
@@ -57,7 +57,7 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
 
     @Test
     fun miningOutputNeedsNoInserter() {
-        renderResult(optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL))
+        renderResult(optimizationResult(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL))
 
         assertNotNull(screen.queryByTitle("belts"))
         assertNull(screen.queryByTitle("inserters"))
@@ -65,7 +65,7 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
 
     @Test
     fun theBigMiningDrillHonorsTheBeltStackWithoutAnInserter() {
-        val result = optimizationResult(miningRecipe, ore, Factory.BIG_MINING_DRILL)
+        val result = optimizationResult(miningRecipe, ironOre, Factory.BIG_MINING_DRILL)
         val rendered = renderResult(result, calculator())
         val atSingle = beltInput(0)
 
@@ -80,7 +80,7 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
 
     @Test
     fun theOtherMiningDrillsIgnoreTheBeltStack() {
-        val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
         val rendered = renderResult(result, calculator())
         val atSingle = beltInput(0)
 

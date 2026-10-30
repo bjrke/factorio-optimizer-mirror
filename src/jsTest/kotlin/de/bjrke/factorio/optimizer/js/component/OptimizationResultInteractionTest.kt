@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.gear
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.ore
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plate
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
@@ -18,10 +18,9 @@ import kotlin.test.assertEquals
 
 /** What a click does: normalize an amount, select a material, or pin a count. */
 class OptimizationResultInteractionTest : OptimizationResultTestBase() {
-
     @Test
     fun clickingTheFactoryIconNormalizesToTheFactoryAmount() {
-        val result = optimizationResult(miningRecipe, ore, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
         renderResult(result)
 
         fireEvent.click(screen.getByTitle(Factory.ELECTRIC_MINING_DRILL.identifier))
@@ -33,9 +32,9 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
     fun middleClickingAnIngredientIconSelectsThatMaterial() {
         renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
-        fireEvent.mouseDown(screen.getByTitle(plate.name), middleButton())
+        fireEvent.mouseDown(screen.getByTitle(ironPlate.name), middleButton())
 
-        assertEquals(listOf(plate), changedMaterials)
+        assertEquals(listOf(ironPlate), changedMaterials)
     }
 
     @Test
@@ -64,7 +63,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
     fun leftClickingAMaterialIconOnlyNormalizesTheAmount() {
         renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
-        fireEvent.click(screen.getByTitle(plate.name))
+        fireEvent.click(screen.getByTitle(ironPlate.name))
 
         assertAll(
             { assertEquals(emptyList(), changedMaterials) },

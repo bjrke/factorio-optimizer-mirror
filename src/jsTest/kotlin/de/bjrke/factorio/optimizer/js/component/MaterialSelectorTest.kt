@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
@@ -15,8 +17,6 @@ import kotlin.test.assertNull
 import react.create
 import web.html.HTMLInputElement
 
-private val ironOre = Material("iron-ore")
-private val copperOre = Material("copper-ore")
 private val materials = listOf(ironOre, copperOre)
 
 class MaterialSelectorTest : ComponentTest() {

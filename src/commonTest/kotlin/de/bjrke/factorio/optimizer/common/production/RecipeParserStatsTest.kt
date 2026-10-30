@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.production
 
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.prototype.MachineStats
@@ -112,7 +113,7 @@ class RecipeParserStatsTest {
             { assertEquals(1200.0, logistics.pumpRate) },
             {
                 assertEquals(
-                    setOf(Material("water"), Material("crude-oil")),
+                    setOf(water, crudeOil),
                     logistics.fluids,
                 )
             },

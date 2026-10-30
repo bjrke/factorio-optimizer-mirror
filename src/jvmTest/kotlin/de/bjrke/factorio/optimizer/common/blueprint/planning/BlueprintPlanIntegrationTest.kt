@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertOneBeltSourcePerMaterial
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFor
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planFromUrl
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -18,7 +18,7 @@ class BlueprintPlanIntegrationTest {
 
     @Test
     fun advancedCircuitsImportPlasticButBuildTheCopperCable() {
-        val planned = planFor("advanced-circuit")
+        val planned = Layout("advanced-circuit").plan
         val categories = planned.recipes.flatMap { it.recipe.categories }.toSet()
         val sourceMaterials = planned.sources.map { it.material }
         val recipeNames = planned.recipes.map { it.recipe.name }
@@ -65,7 +65,7 @@ class BlueprintPlanIntegrationTest {
 
     @Test
     fun lubricantIsBuiltAndItsHeavyOilIsImported() {
-        val planned = planFor("lubricant")
+        val planned = Layout("lubricant").plan
 
         assertAll(
             { assertContains(planned.recipes.map { it.recipe.name }, "lubricant") },
@@ -80,8 +80,8 @@ class BlueprintPlanIntegrationTest {
 
     @Test
     fun theReportedLogisticSciencePackUrlBuildsNoRedundantFactory() {
-        val (plan, _, _) =
-            planFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1")
+        val plan =
+            layoutFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1").plan
         val machines = plan.rows.flatMap { it.machines }.groupingBy { it.recipe.name }.eachCount()
 
         assertAll(

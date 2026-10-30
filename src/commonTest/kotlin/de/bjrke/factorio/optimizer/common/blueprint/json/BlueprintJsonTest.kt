@@ -3,6 +3,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.json
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintWire
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
@@ -12,7 +14,6 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.areaTile
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -106,7 +107,7 @@ class BlueprintJsonTest {
     @Test
     fun infinityChestSettingsWriteTheirFiltersAndVoidFlag() =
         assertTableOf(
-            InfinitySettings(Material("iron-plate"), removeUnfiltered = true) to
+            InfinitySettings(ironPlate, removeUnfiltered = true) to
                 buildJsonObject {
                     put("remove_unfiltered_items", true)
                     putJsonArray("filters") {
@@ -134,7 +135,7 @@ class BlueprintJsonTest {
                 areaTile(0, 0),
                 infinityPipe =
                     InfinityPipeSettings(
-                        Material("water"),
+                        water,
                         temperature = 25,
                         percentage = 1,
                         mode = "at-least",
@@ -165,8 +166,8 @@ class BlueprintJsonTest {
     @Test
     fun aMarkerWritesAConstantCombinatorFilter() =
         assertTableOf(
-            Triple(Material("iron-plate"), false, null),
-            Triple(Material("water"), true, JsonPrimitive("fluid")),
+            Triple(ironPlate, false, null),
+            Triple(water, true, JsonPrimitive("fluid")),
         ) { (material, fluid, expectedType) ->
             val entity =
                 BlueprintEntity(

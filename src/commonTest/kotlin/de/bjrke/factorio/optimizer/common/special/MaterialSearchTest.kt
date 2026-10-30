@@ -1,5 +1,8 @@
 package de.bjrke.factorio.optimizer.common.special
 
+import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -31,7 +34,7 @@ class MaterialSearchTest {
     @Test
     fun matchingIsCaseInsensitive() {
         assertEquals(
-            listOf(Material("iron-ore"), Material("iron-plate")),
+            listOf(ironOre, ironPlate),
             searchMaterials(materials, "IRON"),
         )
     }
@@ -39,7 +42,7 @@ class MaterialSearchTest {
     @Test
     fun matchesPrefixAcrossWords() {
         assertEquals(
-            listOf(Material("copper-ore"), Material("copper-plate")),
+            listOf(copperOre, Material("copper-plate")),
             searchMaterials(materials, "copp"),
         )
     }
@@ -47,7 +50,7 @@ class MaterialSearchTest {
     @Test
     fun requiresEveryQueryTokenToMatch() =
         assertTableOf(
-            "iron plate" to listOf(Material("iron-plate")),
+            "iron plate" to listOf(ironPlate),
             "iron zzz" to emptyList(),
         ) { (query, expected) ->
             assertEquals(expected, searchMaterials(materials, query))
@@ -56,8 +59,8 @@ class MaterialSearchTest {
     @Test
     fun matchesQueryWithSeparators() =
         assertTableOf(
-            "iron-plate" to listOf(Material("iron-plate")),
-            "ironplate" to listOf(Material("iron-plate")),
+            "iron-plate" to listOf(ironPlate),
+            "ironplate" to listOf(ironPlate),
         ) { (query, expected) ->
             assertEquals(expected, searchMaterials(materials, query))
         }
@@ -79,7 +82,7 @@ class MaterialSearchTest {
 
     @Test
     fun matchesFuzzySubsequence() {
-        assertEquals(listOf(Material("iron-plate")), searchMaterials(materials, "irnplt"))
+        assertEquals(listOf(ironPlate), searchMaterials(materials, "irnplt"))
     }
 
     @Test

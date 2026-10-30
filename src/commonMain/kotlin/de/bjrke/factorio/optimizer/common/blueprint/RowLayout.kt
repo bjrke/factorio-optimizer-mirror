@@ -3,8 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint
 import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.blueprint.inspection.LayoutDump
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
-import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.blueprint.output.chestWires
 import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.compaction.CompactionPass
@@ -12,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.compaction.UndergroundStretcher
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.LayoutNames
-import de.bjrke.factorio.optimizer.common.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
@@ -27,51 +24,12 @@ import de.bjrke.factorio.optimizer.common.routing.DeliveryRouter
 import de.bjrke.factorio.optimizer.common.routing.ImportTrimmer
 import de.bjrke.factorio.optimizer.common.special.PowerPlacer
 
-/**
- * Lays out [plan] as rows of connected factories. A plain recipe is one row of touching machines,
- * while a direct-feed band leaves a column at every linked machine pair, fed by belt lanes just
- * above (a short inserter for the near lane, a long inserter for the far one) and drained by an
- * output belt just below. Rows flow top to bottom; imports enter from the left, and a material
- * built inside the plan runs on one trunk from its producer's output belt, with a splitter on that
- * belt for every further recipe that takes it. A fluid row gets one pipe lane on a row beyond its
- * belts, with an underground shaft down to every machine port; a machine whose port the lane cannot
- * reach keeps the routed pipe instead.
- *
- * The [beltEnd] chooses how a solid belt ends: the constant-combinator label (the default), an
- * infinity chest, or a chest the belt's inserters feed from or to. A fluid belt always keeps the
- * constant-combinator/pipe label, since a chest cannot carry a fluid.
- */
-fun fromPlaced(
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-) =
-    RowLayout(plan, logistics, beltEnd).run {
-        Blueprint(
-            label = plan.label,
-            icon = plan.target,
-            entities = build(),
-            wires = blueprintWires(),
-        )
-    }
-
-/** The placed entities and the feed routes that failed, for the CLI's text layout. */
-internal fun blueprintLayoutDump(
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-) =
-    RowLayout(plan, logistics, beltEnd).run {
-        build()
-        LayoutDump(placedEntities(), failures.toList())
-    }
-
-private class RowLayout(
-    private val plan: BlueprintPlan,
+internal class RowLayout(
+    val plan: BlueprintPlan,
     // logistics and beltEnd only feed the stage constructors below, so they stay plain
     // constructor parameters instead of fields.
     logistics: LogisticsCalculator,
-    beltEnd: BeltEnd,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
 ) {
     private val board =
         LayoutBoard(
@@ -95,9 +53,6 @@ private class RowLayout(
 
     private val connector = BeltEndConnector(board, beltEnd)
 
-    private val placed
-        get() = board.placed
-
     /**
      * The machine-port tiles a fluid must reach. An underground run never swallows one, so growing
      * a run cannot pull a pipe off the machine it feeds.
@@ -105,7 +60,7 @@ private class RowLayout(
     private val fluidPorts = mutableSetOf<Coordinate>()
 
     /** Inputs whose belt could not be routed; a non-empty list means the blueprint is broken. */
-    val failures = mutableListOf<String>()
+    private val failures = mutableListOf<String>()
 
     /** The import markers and west bounds the trim, compaction and power stages share. */
     private val imports = ImportExtension()
@@ -124,8 +79,11 @@ private class RowLayout(
 
     private val deliveryRouter = DeliveryRouter(stage, connector, imports, beltEnd, failures)
 
-    fun build(): List<BlueprintEntity> {
-        if (plan.rows.isNotEmpty()) {
+    private var initialized = false
+
+    private fun build() {
+        if (!initialized && plan.rows.isNotEmpty()) {
+            initialized = true
             rowPlacer.placeAll()
             deliveryRouter.placeTargetOutput()
             // prepare every source before routing anything, so a long early route cannot occupy a
@@ -146,14 +104,37 @@ private class RowLayout(
             compactionPass.compact()
             PowerPlacer(board, imports.poleWestBound).place()
         }
-        return placed.map { it.toBlueprintEntity() }
     }
 
-    /** The entities placed so far, in placement order. Used by [blueprintLayoutDump]. */
-    fun placedEntities(): List<LayoutEntity> = placed.toList()
-
-    /** The circuit wires a chest marker needs, relative to the final entity order. */
-    fun blueprintWires(): List<BlueprintWire> = chestWires(placed)
-
     private fun stretchUndergroundRuns() = UndergroundStretcher(board, fluidPorts).stretchAll()
+
+    /** The placed entities and the feed routes that failed, for the CLI's text layout. */
+    internal fun layoutDump(): LayoutDump {
+        build()
+        return LayoutDump(board.placed.toList(), failures.toList())
+    }
+
+    /**
+     * Lays out [plan] as rows of connected factories. A plain recipe is one row of touching
+     * machines, while a direct-feed band leaves a column at every linked machine pair, fed by belt
+     * lanes just above (a short inserter for the near lane, a long inserter for the far one) and
+     * drained by an output belt just below. Rows flow top to bottom; imports enter from the left,
+     * and a material built inside the plan runs on one trunk from its producer's output belt, with
+     * a splitter on that belt for every further recipe that takes it. A fluid row gets one pipe
+     * lane on a row beyond its belts, with an underground shaft down to every machine port; a
+     * machine whose port the lane cannot reach keeps the routed pipe instead.
+     *
+     * The [beltEnd] chooses how a solid belt ends: the constant-combinator label (the default), an
+     * infinity chest, or a chest the belt's inserters feed from or to. A fluid belt always keeps
+     * the constant-combinator/pipe label, since a chest cannot carry a fluid.
+     */
+    internal fun blueprint(): Blueprint {
+        build()
+        return Blueprint(
+            label = plan.label,
+            icon = plan.target,
+            entities = board.placed.map { it.toBlueprintEntity() },
+            wires = chestWires(board.placed),
+        )
+    }
 }
