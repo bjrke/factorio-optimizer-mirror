@@ -47,12 +47,6 @@ class BlueprintFluidPortLayoutTest {
                     it.area.topLeft == machine.area.topLeft && it.name == machine.name
                 }
                 .direction
-
-        fun insertersAbove(machine: MachineEntity): List<InserterEntity> =
-            entities.filterIsInstance<InserterEntity>().filter {
-                it.area.topLeft.y == machine.area.topLeft.y - 1 &&
-                    it.area.topLeft.x in machine.area.xRange
-            }
     }
 
     @Test
@@ -79,23 +73,25 @@ class BlueprintFluidPortLayoutTest {
     }
 
     @Test
-    fun theSulfuricChemicalPlantGetsItsLongInserter() {
+    fun theSulfuricChemicalPlantGetsInsertersOnBothSides() {
         val layout = Layout("http://localhost:8080/#/0.03511777708/sulfuric-acid/FSXmr/1/1")
-        val machine = layout.machine("chemical-plant")
-        val top = layout.insertersAbove(machine)
+        val inserters = layout.entities.filterIsInstance<InserterEntity>()
 
         assertAll(
-            { assertEquals(2, top.size) },
             {
                 assertEquals(
-                    setOf("fast-inserter", "long-handed-inserter"),
-                    top.map { it.name }.toSet(),
+                    setOf("fast-inserter"),
+                    inserters.map { it.name }.toSet(),
                 )
             },
             {
                 assertEquals(
-                    machine.area.topLeft.x + 2,
-                    top.single { it.name == "long-handed-inserter" }.area.topLeft.x,
+                    mapOf(
+                        Coordinate(41, 1) to Material("sulfur"),
+                        Coordinate(42, 1) to Material("sulfur"),
+                        Coordinate(41, 5) to Material("iron-plate"),
+                    ),
+                    inserters.associateBy({ it.area.topLeft }, { it.material }),
                 )
             },
         )

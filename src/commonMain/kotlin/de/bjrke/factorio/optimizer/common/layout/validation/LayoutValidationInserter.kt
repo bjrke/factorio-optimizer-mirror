@@ -30,7 +30,7 @@ private fun checkInserter(
     // a long inserter reaches one tile further, but still drops right beside itself
     val reach = if (inserter.long) 2 else 1
     checkSource(index.at(tile + inserter.direction.step * reach), inserter, errors)
-    checkDrop(index.at(tile - inserter.direction.step), inserter, errors)
+    checkDrop(index.at(tile - inserter.direction.step * reach), inserter, errors)
 }
 
 private fun checkSource(

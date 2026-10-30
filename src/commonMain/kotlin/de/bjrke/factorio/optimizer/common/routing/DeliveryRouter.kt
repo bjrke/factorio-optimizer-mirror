@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.layout.placeSurface
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.west
@@ -39,7 +40,6 @@ internal class DeliveryRouter(
 ) {
     private val board = stage.board
     private val plan = stage.plan
-    private val logistics = stage.logistics
     private val rowPlacer = stage.rowPlacer
     private val router = stage.router
 
@@ -123,9 +123,9 @@ internal class DeliveryRouter(
     fun placeTargetOutput() {
         val targetMaterial = plan.target
         val row = rowPlacer.producerRow(targetMaterial) ?: return
-        val producer = row.plannedRow.producerOf(targetMaterial) ?: return
-        if (!producer.recipe.result.keys.any { !logistics.isFluid(it) }) return
-        var coordinate = Coordinate(row.right + 1, row.outputLaneRow)
+        val outputBelt =
+            row.belts.firstOrNull { it.io == Io.OUTPUT && it.material == targetMaterial } ?: return
+        var coordinate = Coordinate(row.right + 1, outputBelt.y)
 
         while (coordinate.x <= row.right + OUTPUT_BELT_LEAD && board.isFree(coordinate)) {
             board.placeBelt(coordinate, targetMaterial, EAST)

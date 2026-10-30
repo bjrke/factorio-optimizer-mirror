@@ -253,10 +253,11 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   (a DFS over `BlueprintPlan.rows` with a recipe path as the cycle guard), the
   `RowUnit(row, depth)` order and the pure sizing helpers (`inserterPattern`).
 - `planning/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
-  `Area` + `RowLanes` + machines, declared in `Row.kt`), the bands, lanes and
-  product, and owns the ordered `placedRows` list and the lane direction. A
-  `PlacedMachine` carries its own `production`; `producerRow(material)` scans
-  `placedRows` for the row whose `plannedRow` equals
+  `Area` + `RowLanes` + machines, declared in `Row.kt`) and the bands, and owns
+  the ordered `placedRows` list and the lane direction. `RowLanes` holds the fixed
+  belt locations as `RowBelt` values (y, material, direction, io and side),
+  including the product. A `PlacedMachine` carries its own `production`;
+  `producerRow(material)` scans `placedRows` for the row whose `plannedRow` equals
   `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
   `BandInterfacePlacer` the gap inserters.

@@ -1,15 +1,14 @@
 package de.bjrke.factorio.optimizer.common.planning
 
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
+import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 /** One row to place, ordered by how deep it sits from the sources. */
 internal data class RowUnit(val row: PlannedRow, val depth: Int) {
@@ -58,38 +57,49 @@ internal class RowPlanner(
 
     fun footprint(production: FactoryProduction) = blueprintMachineFootprint(production.factory)
 
-    /** How many inserters one machine needs to pull [materials] out of its lane. */
-    fun insertersFor(production: FactoryProduction, materials: List<Material>): Int {
-        if (materials.isEmpty()) return 0
-        val rate = materials.sumOf { inputPerMachine(production, it) }
-        return maxOf(1, ceil(logistics.beltInserterCount(rate)).toInt())
-    }
+    /** How many inserters one machine needs to pull [items] out of its lane. */
+    fun insertersFor(production: FactoryProduction, io: Io, items: Double) =
+        logistics.beltInserterCount(
+            when (io) {
+                Io.INPUT -> inputPerMachine(production, items)
+                Io.OUTPUT -> outputPerMachine(production, items)
+            },
+        )
 
     /**
      * A list of inserters per machine edge: one entry per inserter, `true` for a long one (the far
      * lane). [width] is how many columns the edge leaves free for inserters. The two lanes are
      * interleaved; when they do not fit, the counts are scaled down fairly.
      */
-    fun inserterPattern(near: Int, far: Int, width: Int) = buildList {
-        var (short, long) =
-            when {
-                near + far <= width -> near to far
-                near == 0 -> 0 to width
-                far == 0 || width <= 1 -> width to 0
-                else -> {
-                    val short =
-                        (near.toDouble() * width / (near + far)).roundToInt().coerceIn(1, width - 1)
-                    short to width - short
-                }
+    fun <T> inserterPattern(amounts: Map<T, Number>, width: Int) = sequence {
+        if (width <= 0) return@sequence
+        val sum =
+            amounts.values.sumOf {
+                val v = it.toDouble()
+                if (v > 0) v else 0.0
             }
+        if (sum <= 0) return@sequence
+        val ratio = (width / sum).coerceAtMost(1.0)
 
-        while (short > 0 || long > 0) {
-            if (short-- > 0) {
-                add(false)
+        val queue =
+            amounts.entries.mapNotNullTo(ArrayDeque()) { (k, v) ->
+                val v = v.toDouble()
+                if (v > 0) k to v * ratio else null
             }
-            if (long-- > 0) {
-                add(true)
+        queue.sortByDescending { (_, v) -> v }
+
+        while (true) {
+            val (k, v) = queue.removeFirstOrNull() ?: return@sequence
+            when {
+                v > 1 -> {
+                    yield(k)
+                    queue += k to v - 1
+                }
+                v > 0 -> {
+                    yield(k)
+                }
             }
         }
     }
+        .take(width)
 }

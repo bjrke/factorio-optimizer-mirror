@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.model.neighbors
@@ -22,7 +23,6 @@ import de.bjrke.factorio.optimizer.common.plan.blueprintMachineInputPort
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineOutputPort
 import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.planning.LayoutStage
-import de.bjrke.factorio.optimizer.common.planning.LineSide
 import de.bjrke.factorio.optimizer.common.planning.PlacedMachine
 import de.bjrke.factorio.optimizer.common.planning.Row
 import de.bjrke.factorio.optimizer.common.route.RouteRequest

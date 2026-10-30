@@ -5,14 +5,16 @@ import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.plan.ImportFeed
 import de.bjrke.factorio.optimizer.common.planning.LayoutStage
 import de.bjrke.factorio.optimizer.common.planning.Row
+import de.bjrke.factorio.optimizer.common.planning.RowBelt
 
 /** How far east of a row a free output source is searched for. */
 private const val SOURCE_SEARCH_RANGE = 60
@@ -83,34 +85,17 @@ internal class DeliveryPreparation(
         return prepareSolidDeliveries(sinks)
     }
 
-    private fun sinkOf(row: Row, material: Material): Sink? =
-        when (val index = row.solids.indexOf(material)) {
-            -1 -> null
-            0 -> row.laneNearRow?.let { laneSink(row, it, material) }
-            1 -> row.laneFarRow?.let { laneSink(row, it, material) }
-            2 -> row.laneBelowRow?.let { laneSink(row, it, material) }
-            else ->
-                // any further input side-loads the lower belt from below
-                row.laneBelowRow?.let {
-                    val x = row.left + (index - 3)
-                    Sink(Coordinate(x, it), Coordinate(x, it + 1), NORTH)
-                }
-        }
+    private fun sinkOf(row: Row, belt: RowBelt): Sink =
+        if (belt.direction == EAST)
+            Sink(Coordinate(row.left, belt.y), Coordinate(row.left - 1, belt.y), EAST)
+        else Sink(Coordinate(row.right, belt.y), Coordinate(row.right + 1, belt.y), WEST)
 
-    private fun laneSink(row: Row, y: Int, material: Material): Sink =
-        if (rowPlacer.laneDirection(row, material) == EAST) {
-            Sink(Coordinate(row.left, y), Coordinate(row.left - 1, y), EAST)
-        } else {
-            Sink(Coordinate(row.right, y), Coordinate(row.right + 1, y), WEST)
+    private fun allSolidSinks() =
+        rowPlacer.placedRows.flatMap { row ->
+            row.belts
+                .filter { it.io == Io.INPUT }
+                .map { belt -> Triple(belt.material, row, sinkOf(row, belt)) }
         }
-
-    private fun allSolidSinks() = buildList {
-        for (row in rowPlacer.placedRows) {
-            for (material in row.solids) {
-                sinkOf(row, material)?.let { add(Triple(material, row, it)) }
-            }
-        }
-    }
 
     /**
      * Turns the solid sinks into deliveries and places every source up front. Imports are prepared
@@ -138,7 +123,7 @@ internal class DeliveryPreparation(
         produced: List<Map.Entry<Material, List<Triple<Material, Row, Sink>>>>,
     ) = produced.flatMap { (material, list) ->
         val producerRow = rowPlacer.producerRow(material) ?: return@flatMap emptyList()
-        val start = outputStart(producerRow, material)
+        val start = outputStart(producerRow, material) ?: return@flatMap emptyList()
         val distinctSinks = list.map { it.third }.distinctBy { it.feed }
         // the trunk reaches the farthest consumer, so it passes the nearer ones on the way
         val sorted = distinctSinks.sortedByDescending { start.manhattanDist(it.feed) }
@@ -154,10 +139,11 @@ internal class DeliveryPreparation(
     }
 
     /** The first free belt tile east of [row]'s output lane, reserved as a source. */
-    private fun outputStart(row: Row, material: Material): Coordinate {
-        var x = row.right + 1
-        while (x < row.right + SOURCE_SEARCH_RANGE && !isFree(Coordinate(x, row.outputLaneRow))) x++
-        val start = Coordinate(x, row.outputLaneRow)
+    private fun outputStart(row: Row, material: Material): Coordinate? {
+        val outputBelt =
+            row.belts.firstOrNull { it.io == Io.OUTPUT && it.material == material } ?: return null
+        var start = Coordinate(row.right + 1, outputBelt.y)
+        while (start.x < row.right + SOURCE_SEARCH_RANGE && !isFree(start)) start = start.east()
         reserve(start, material)
         return start
     }

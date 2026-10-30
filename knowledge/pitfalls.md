@@ -45,35 +45,33 @@ An entry belongs here only with evidence, and should say how to recognize it.
   port**, joined across each gap by a horizontal pipe-to-ground run (a pair of
   adjacent ends in the two-tile gap between touching machines). Do not replace
   those runs with surface pipes: the surface line walls the row off, while the run
-  is what the player walks across. A lane derived from `laneNearRow - 1` instead of
-  the outermost belt lands **on the far belt row**, `board.isFree` fails on the belt
+  is what the player walks across. A lane derived from the near belt instead of the
+  outermost belt lands **on the far belt row**, `board.isFree` fails on the belt
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
 - **A band stands in one row of up to 18 machines, so a wide band forces belt
   crossings.** `GROUP_MAX_MACHINES = 18` (`plan/DirectFeedModel.kt`) is what a band
   may hold; rows above a band then have to reach past it, and a belt that crosses
-  another belt can only tunnel. Evidence: the reported `advanced-circuit` URL went
-  from "no underground belts" to two copper-cable tunnels once its cable row joined
-  a band (`advancedCircuitUrlOnlyTunnelsForItsCableFeed` locks the new state in).
-  Line breaking a band too wide is a deferred follow-up, not a bug in the router.
-- **A row with more than two solid inputs breaks the import lanes, and that reads
-  as "compaction does not run".** `RowLanes` gives a row a near, a far and a below
-  lane; `sinkOf` feeds every further input from below (`NORTH`) at
-  `row.left + (index - 3)`. The copies share one y, so those sinks line up with the
-  lane columns the row's own product runs through. When the row sits in a
-  direct-feed band, or a producer trunk already runs westward on those columns, the
-  import has to enter a tile that already holds a foreign belt. `BeltRouteRules`
-  allows it at the goal (`goal` skips both `routable` and `poursIntoSide`), so the
-  layout is invalid before compaction starts, and `CompactionPass` rejects every
-  corridor because `validateLayout` never comes back empty. Recognize it by
-  `foreign side-load into …` at a few adjacent lane tiles after routing with zero
-  feed failures, not by a compaction log line. Evidence (2026-10-23): the reported
-  `utility-science-pack` URL puts low-density-structure/processing-unit/steel-plate
-  on `(40..42, 127)` over the westbound electronic-circuit belt of the
-  flying-robot-frame row, and the layout stays 93x131 in every configuration. The
-  flying-robot-frame recipe has four solid inputs plus two more on the target row,
-  which in a single-material layout only a **mixed belt** can feed; that is out of
-  scope and not a router bug.
+  another belt can only tunnel. Evidence: the reported `advanced-circuit` URL's
+  copper-cable feed tunnels where its cable row joins a band
+  (`advancedCircuitUrlOnlyTunnelsForItsCableFeed` locks that in). Its
+  electronic-circuit feed does **not** need to: the lane tail beside the machines
+  blocks the straight column, so the router turns east one column and comes back on the
+  surface.
+  Two things make that work: the tile beside the goal must be judged by the direction
+  **into** the goal, not by the direction it arrived from (a corner belt faces its next
+  tile), and the belt tunnel entry costs 16 (four surface tiles), so a short detour wins
+  over an unnecessary tunnel. Line breaking a band too wide is a deferred follow-up, not
+  a bug in the router.
+- **A row has four solid belt locations, so a recipe needing a fifth solid lane is
+  out of scope.** `RowPlacer.rowShape` ranks inputs and outputs together and zips
+  them onto two top and two bottom locations (near/far each); every input belt is
+  end-fed by `DeliveryPreparation.sinkOf`, so the old below-row side-load into the
+  row's product columns is gone. Recipes such as `flying-robot-frame` (four solid
+  inputs plus a product) still need a **mixed belt** in a single-material layout;
+  that is out of scope and not a router bug. Recognize a genuine routing failure by
+  `foreign side-load into …` while the row still has a free input lane, not by
+  compaction rejecting every corridor.
 - **A fluid marker joins the solid import column unless the source block or a run
   end is taken.** The link (`routing/FluidFeedLinker.kt`) buries under a belt,
   underground belt or inserter that crosses the lane row in the west corridor, so a
@@ -91,6 +89,13 @@ An entry belongs here only with evidence, and should say how to recognize it.
   symptom is a fluid row whose far input belt is never unloaded although its near
   belt is; the ASCII shows one `^` per machine instead of two, and the blueprint
   JSON has a `fast-inserter` but no `long-handed-inserter` on that row.
+- **A long-handed inserter reaches two tiles in both directions.** It picks up
+  *and places* items two tiles from its own tile, not one tile behind like a short
+  inserter ([Factorio wiki](https://wiki.factorio.com/Long-handed_inserter)).
+  `LayoutValidationInserter.checkDrop` therefore uses the same `reach` as
+  `checkSource`, and an output belt on the far row (`factoryBottom + 3`) is valid.
+  Do not "fix" a far output to the near row or validate its drop at
+  `tile - direction.step`.
 - **Compaction can orphan a tunnel entrance by removing its feeding turn.** A
   horizontal corridor removes a plain belt in one column but not the next (the
   tunnel end is a wall), so the entrance slides onto the row of a belt that used to

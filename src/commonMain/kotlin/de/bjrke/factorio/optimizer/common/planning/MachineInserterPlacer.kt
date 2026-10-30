@@ -6,7 +6,8 @@ import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.Io
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
@@ -26,15 +27,14 @@ internal class MachineInserterPlacer(
     private val planner: RowPlanner,
 ) {
 
-    fun place(row: Row, internal: List<Material>) {
-        for (machine in row.machines) placeMachine(row, machine, internal)
+    fun place(row: Row) {
+        for (machine in row.machines) placeMachine(row, machine)
     }
 
-    private fun placeMachine(row: Row, machine: PlacedMachine, internal: List<Material>) {
-        val production = machine.production
+    private fun placeMachine(row: Row, machine: PlacedMachine) {
         val ports = portColumns(machine)
-        placeInputInserters(row, machine, production, ports.top)
-        placeOutputInserters(row, machine, production, internal, ports.bottom)
+        placeBeltInserters(row, machine, LineSide.NORTH, ports)
+        placeBeltInserters(row, machine, LineSide.SOUTH, ports)
     }
 
     /**
@@ -58,73 +58,60 @@ internal class MachineInserterPlacer(
      * A short inserter reaches the near lane one tile up, a long one the far lane two tiles up; a
      * lane whose rate needs more than one inserter gets several, spread over the edge.
      */
-    private fun placeInputInserters(
+    private fun placeBeltInserters(
         row: Row,
         machine: PlacedMachine,
-        production: FactoryProduction,
-        topPorts: Set<Int>,
+        side: LineSide,
+        ports: PortColumns,
     ) {
+        val production = machine.production
         val ingredients = production.recipe.ingredients
-        val near = row.solids.getOrNull(0)?.takeIf { it in ingredients }
-        val far = row.solids.getOrNull(1)?.takeIf { it in ingredients }
-        val width = row.width
+        val results = production.recipe.result
+        val sideDirection =
+            when (side) {
+                LineSide.NORTH -> NORTH
+                LineSide.SOUTH -> SOUTH
+            }
 
-        // Inserters take precedence over poles: fill columns 1..width-1 first and keep column 0 as
-        // the spare, so the edge only gives up an inserter when it is truly full. A fluid port may
-        // claim one of the preferred columns; the pattern is sized to the columns that remain.
-        val freeColumns = (1 until width).plus(0).minus(topPorts)
+        // Inserters take precedence over poles: fill columns 1 until width first and keep column 0
+        // as the spare, so the edge only gives up an inserter when it is truly full. A fluid port
+        // may claim one of the preferred columns; the pattern is sized to the columns that remain.
+        val freeColumns = (1 until row.width).plus(0).minus(ports.getSide(side))
 
-        val pattern =
-            planner.inserterPattern(
-                near?.let { planner.insertersFor(production, listOf(it)) } ?: 0,
-                far?.let { planner.insertersFor(production, listOf(it)) } ?: 0,
-                freeColumns.size,
-            )
+        val inserterRow = row.inserterRow(side)
 
-        val insertColumns = freeColumns.take(pattern.size)
-        insertColumns.zip(pattern).forEach { (column, long) ->
+        val amounts =
+            row.belts
+                .filter { it.side == side }
+                .associateWith { belt ->
+                    val recipesMaterials =
+                        when (belt.io) {
+                            Io.INPUT -> ingredients
+                            Io.OUTPUT -> results
+                        }
+                    planner.insertersFor(
+                        production,
+                        belt.io,
+                        recipesMaterials[belt.material] ?: 0.0,
+                    )
+                }
+
+        val pattern = planner.inserterPattern(amounts, freeColumns.size)
+
+        freeColumns.asSequence().zip(pattern).forEach { (column, belt) ->
+            val long = abs(inserterRow - belt.y) > 1
+            val coordinate = Coordinate(machine.left + column, inserterRow)
+            val ioDirection =
+                when (belt.io) {
+                    Io.OUTPUT -> sideDirection.opposite()
+                    Io.INPUT -> sideDirection
+                }
+
             board.placeInserter(
-                Coordinate(machine.left + column, row.factoryTop - 1),
-                NORTH,
-                if (long) row.solids[1] else row.solids[0],
+                coordinate,
+                ioDirection,
+                belt.material,
                 long,
-            )
-        }
-    }
-
-    /** The product inserter and the extra lane's long inserter keep off the bottom fluid ports. */
-    private fun placeOutputInserters(
-        row: Row,
-        machine: PlacedMachine,
-        production: FactoryProduction,
-        internal: List<Material>,
-        bottomPorts: Set<Int>,
-    ) {
-        val recipe = production.recipe
-        val freeBottomColumns = (0 until row.width).filterNot(bottomPorts::contains)
-        val productColumn =
-            freeBottomColumns.minByOrNull { abs(it - row.width / 2) } ?: (row.width / 2)
-        val belowPreferred = if (row.width == 2) 0 else row.width - 1
-        val belowColumn =
-            freeBottomColumns
-                .filter { it != productColumn }
-                .minByOrNull { abs(it - belowPreferred) } ?: belowPreferred
-        // the product is inserted onto the belt below the row
-        externalProduct(production, internal, logistics)?.let {
-            board.placeInserter(
-                Coordinate(machine.left + productColumn, row.factoryBottom + 1),
-                NORTH,
-                it,
-                false,
-            )
-        }
-        // a long inserter reaches over the output belt to a third input belt below the row
-        if (row.laneBelowRow != null && row.solids.getOrNull(2) in recipe.ingredients) {
-            board.placeInserter(
-                Coordinate(machine.left + belowColumn, row.factoryBottom + 1),
-                SOUTH,
-                row.solids[2],
-                true,
             )
         }
     }
@@ -164,13 +151,10 @@ internal fun inserterPortColumns(
 }
 
 /** The inserter columns to keep free of a machine: the top feed and the bottom drain ports. */
-internal data class PortColumns(val top: Set<Int>, val bottom: Set<Int>)
-
-/**
- * The material a machine's product leaves the row with: its solid result, unless it is internal.
- */
-internal fun externalProduct(
-    production: FactoryProduction,
-    internal: List<Material>,
-    logistics: LogisticsCalculator,
-) = production.recipe.result.keys.firstOrNull { !logistics.isFluid(it) && it !in internal }
+internal data class PortColumns(val top: Set<Int>, val bottom: Set<Int>) {
+    fun getSide(side: LineSide) =
+        when (side) {
+            LineSide.NORTH -> top
+            LineSide.SOUTH -> bottom
+        }
+}

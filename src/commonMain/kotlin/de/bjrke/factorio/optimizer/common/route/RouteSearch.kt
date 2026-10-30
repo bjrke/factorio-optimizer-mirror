@@ -91,7 +91,10 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
         if (profile.tunnels.forbidReverse && direction == current.heading.opposite()) return
         // a split route must not step back onto its start: that would leave a dead end
         if (strictStart && surface == from) return
-        if (!inRegion(surface) || !allowed(surface, direction)) return
+        // the belt next to the goal has to face the goal, so judge that tile by the direction it
+        // will leave in, not by the one it arrived from
+        val towardGoal = Direction.entries.firstOrNull { surface + it.step == to }
+        if (!inRegion(surface) || !allowed(surface, towardGoal ?: direction)) return
 
         val turn = if (current.heading != direction) profile.costs.turnCost else 0
         val detour = if (inCorridor(surface)) 0 else profile.costs.detourCost

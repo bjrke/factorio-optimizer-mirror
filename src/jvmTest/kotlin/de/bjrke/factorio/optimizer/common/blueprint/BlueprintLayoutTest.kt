@@ -200,7 +200,7 @@ class BlueprintLayoutTest {
             recipe(
                 "two",
                 Category.CRAFTING,
-                mapOf(gear to 1.0),
+                mapOf(gear to 2.0),
                 mapOf(plate to 1.0, ore to 1.0, water to 1.0),
             )
         val twoPlan =
@@ -407,7 +407,7 @@ class BlueprintLayoutTest {
             recipe(
                 "three",
                 Category.CRAFTING,
-                mapOf(gear to 1.0),
+                mapOf(gear to 2.0),
                 mapOf(ore to 1.0, plate to 1.0, localCoal to 1.0),
             )
         val threePlan =

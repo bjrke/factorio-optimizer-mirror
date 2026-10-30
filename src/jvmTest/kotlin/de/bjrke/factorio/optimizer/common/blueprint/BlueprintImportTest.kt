@@ -183,7 +183,7 @@ class BlueprintImportTest {
             )
         val dump = blueprintLayoutDump(plan, logistics)
         val machine = dump.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
-        val laneRow = machine.area.bottomRight.y + 3
+        val laneRow = machine.area.topLeft.y - 3
         val lane =
             dump.entities.filterIsInstance<BeltEntity>().filter {
                 it.material == rare && it.area.topLeft.y == laneRow

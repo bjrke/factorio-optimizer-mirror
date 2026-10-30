@@ -21,6 +21,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.plan.FluidFeed

@@ -22,24 +22,32 @@ class RowPlannerTest {
     fun theInserterPatternInterleavesTheLanesAndScalesThemToTheFreeColumns() =
         assertTableOf(
             InserterCase(2, 1, 4, listOf(false, true, false)),
-            InserterCase(1, 2, 4, listOf(false, true, true)),
+            InserterCase(1, 2, 4, listOf(true, false, true)),
             InserterCase(2, 0, 3, listOf(false, false)),
             InserterCase(0, 2, 3, listOf(true, true)),
             InserterCase(0, 0, 3, emptyList()),
             InserterCase(3, 2, 3, listOf(false, true, false)),
             InserterCase(2, 2, 3, listOf(false, true, false)),
-            InserterCase(1, 5, 3, listOf(false, true, true)),
+            InserterCase(1, 5, 3, listOf(true, false, true)),
             InserterCase(0, 5, 2, listOf(true, true)),
             InserterCase(5, 0, 2, listOf(false, false)),
             InserterCase(5, 5, 2, listOf(false, true)),
-            InserterCase(5, 50, 2, listOf(false, true)),
+            InserterCase(5, 50, 2, listOf(true, false)),
             InserterCase(50, 5, 2, listOf(false, true)),
             InserterCase(2, 1, 1, listOf(false)),
             InserterCase(2, 1, 0, emptyList()),
         ) { case ->
             assertEquals(
                 case.expected,
-                planner.inserterPattern(case.near, case.far, case.width),
+                planner
+                    .inserterPattern(
+                        mapOf(
+                            false to case.near.toDouble(),
+                            true to case.far.toDouble(),
+                        ),
+                        case.width,
+                    )
+                    .toList(),
             )
         }
 }

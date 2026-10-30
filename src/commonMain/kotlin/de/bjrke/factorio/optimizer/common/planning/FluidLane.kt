@@ -1,16 +1,11 @@
 package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import kotlin.math.abs
 
 /** The shortest a vertical shaft can be: every run has at least one tile between its ends. */
 private const val SHAFT_MIN_REACH = 2
-
-/** Which side of a row a lane serves: the feed above its machines, or the drain below them. */
-internal enum class LineSide {
-    NORTH,
-    SOUTH,
-}
 
 /**
  * One fluid lane of a row **beyond its belts**, as a shape decided without the board so it can be

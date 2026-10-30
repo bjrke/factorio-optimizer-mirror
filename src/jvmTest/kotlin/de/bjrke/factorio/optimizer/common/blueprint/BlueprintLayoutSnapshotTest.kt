@@ -72,7 +72,7 @@ class BlueprintLayoutSnapshotTest {
                 scale = 1.0,
                 label = "iron-gear-wheel",
             )
-        assertSignature("2c63a04f1ef2af73", fromPlaced(plan, logistics))
+        assertSignature("9bf03c509ea282eb", fromPlaced(plan, logistics))
     }
 
     private fun assertSignature(expected: String, blueprint: Blueprint) {

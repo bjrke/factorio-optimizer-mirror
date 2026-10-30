@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.math.abs

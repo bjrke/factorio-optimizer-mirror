@@ -3,11 +3,11 @@ package de.bjrke.factorio.optimizer.common.plumbing
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.planning.FluidLanePlacer
-import de.bjrke.factorio.optimizer.common.planning.LineSide
 import de.bjrke.factorio.optimizer.common.planning.PlacedMachine
 import de.bjrke.factorio.optimizer.common.planning.Row
 import de.bjrke.factorio.optimizer.common.planning.RowFluidLane

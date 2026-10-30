@@ -39,10 +39,18 @@ enum class Direction(val step: Coordinate) {
         }
 }
 
-/** Which end of a directional entity (an underground belt or a loader) this is: its `type`. */
+/**
+ * Which end of a directional entity (an underground belt or a loader or belt) this is: its `type`.
+ */
 enum class Io {
     INPUT,
     OUTPUT,
+}
+
+/** Which side of a row a lane serves: the feed above its machines, or the drain below them. */
+enum class LineSide {
+    NORTH,
+    SOUTH,
 }
 
 data class Dimension(val width: Int, val height: Int) {

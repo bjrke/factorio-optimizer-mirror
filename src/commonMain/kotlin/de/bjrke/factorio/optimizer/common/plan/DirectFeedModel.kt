@@ -26,8 +26,10 @@ internal const val MAX_RATIO_MACHINES = 6
 internal const val FEED_EPSILON = 1e-9
 
 /** Items of [material] one machine of [production] takes per second. */
-internal fun inputPerMachine(production: FactoryProduction, material: Material): Double {
-    val items = production.recipe.ingredients[material] ?: return 0.0
+internal fun inputPerMachine(production: FactoryProduction, material: Material) =
+    inputPerMachine(production, production.recipe.ingredients[material] ?: 0.0)
+
+internal fun inputPerMachine(production: FactoryProduction, items: Double): Double {
     val time = production.recipe.time
     return if (time <= 0.0) 0.0 else production.speed * items / time
 }
@@ -36,8 +38,10 @@ internal fun inputPerMachine(production: FactoryProduction, material: Material):
  * Items of [material] one machine of [production] makes per second. The productivity bonus counts:
  * that is what a direct-fed consumer actually receives, so it belongs in the ratio.
  */
-internal fun outputPerMachine(production: FactoryProduction, material: Material): Double {
-    val items = production.recipe.result[material] ?: return 0.0
+internal fun outputPerMachine(production: FactoryProduction, material: Material) =
+    outputPerMachine(production, production.recipe.result[material] ?: 0.0)
+
+internal fun outputPerMachine(production: FactoryProduction, items: Double): Double {
     val time = production.recipe.time
     return if (time <= 0.0) 0.0
     else production.speed * (1.0 + production.productivity) * items / time

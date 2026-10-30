@@ -162,6 +162,7 @@ class BlueprintLayoutIntegrationTest {
                         setOf(
                             machine.area.topLeft.y - 2,
                             machine.area.topLeft.y - 3,
+                            machine.area.bottomRight.y + 2,
                             machine.area.bottomRight.y + 3,
                         )
                     val reachesEdge = belts.any {
@@ -320,6 +321,7 @@ class BlueprintLayoutIntegrationTest {
             "processing-unit",
             "copper-cable",
             "iron-gear-wheel",
+            "utility-science-pack",
         ) {
             assertEquals(emptyList(), feedFailuresFor(it))
         }

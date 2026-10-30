@@ -12,16 +12,18 @@ import de.bjrke.factorio.optimizer.common.model.Direction
 internal class LayoutRouter(private val board: LayoutBoard) {
 
     /**
-     * Belts tunnel only over an obstacle, so surface stays their first choice; a slight per-tile
-     * discount keeps a blocked tile tunneled rather than detoured, while the stretcher decides how
-     * long the run becomes.
+     * Belts tunnel only over an obstacle. The fixed entry cost makes a short surface detour cheaper
+     * than an unnecessary tunnel, while the per-tile discount keeps a long crossing underground and
+     * the stretcher decides how long the run becomes.
      */
     val beltProfile =
         RouteProfile(
             costs =
                 RouteCosts(
                     undergroundCost = 3,
-                    tunnelEntry = 1,
+                    // high enough that a short surface detour around an obstacle wins, while a long
+                    // crossing is still cheaper underground.
+                    tunnelEntry = 16,
                     detourCost = 0,
                 ),
             tunnels =

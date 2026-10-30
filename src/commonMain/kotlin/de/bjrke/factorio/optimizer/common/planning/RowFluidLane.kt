@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PortFlow
@@ -70,21 +71,19 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
      * between holds the shafts' lane-side ends. It is never between a belt and the machines. A
      * [depth] of n puts the lane 2n rows further out than the first lane of that side.
      */
-    fun laneRow(row: Row, side: LineSide, depth: Int = 0) =
-        when (side) {
-            LineSide.NORTH ->
-                (listOfNotNull(row.laneNearRow, row.laneFarRow).minOrNull()
-                    ?: (row.factoryTop - 2)) - 2 - 2 * depth
-            LineSide.SOUTH ->
-                // the product belt always sits under the machines, even when it carries no material
-                listOfNotNull(
-                        row.laneNearRow,
-                        row.laneFarRow,
-                        row.laneBelowRow,
-                        row.outputLaneRow,
-                    )
-                    .max() + 2 + 2 * depth
+    fun laneRow(row: Row, side: LineSide, depth: Int = 0): Int {
+        val depthDist = 2 + 2 * depth
+        val belts = sequence {
+            for ((y) in row.belts) yield(y)
+            yield(row.factoryTop - 2)
+            yield(row.factoryBottom + 2)
         }
+
+        return when (side) {
+            LineSide.NORTH -> belts.min() - depthDist
+            LineSide.SOUTH -> belts.max() + depthDist
+        }
+    }
 
     /** The port the recipe assigns [material] to, whichever row edge that port is on. */
     internal fun assignedPort(row: Row, machine: PlacedMachine, material: Material): Coordinate? {
