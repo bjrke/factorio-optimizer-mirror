@@ -2,18 +2,16 @@ package de.bjrke.factorio.optimizer.common.beltend
 
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.endName
 import de.bjrke.factorio.optimizer.common.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.CircuitCondition
 import de.bjrke.factorio.optimizer.common.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.RequestFilter
 import de.bjrke.factorio.optimizer.common.layout.entity.Signal
-import de.bjrke.factorio.optimizer.common.layout.markTunnel
-import de.bjrke.factorio.optimizer.common.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.layout.placeInfinityChest
 import de.bjrke.factorio.optimizer.common.layout.placeLoader
 import de.bjrke.factorio.optimizer.common.layout.placeMarker
+import de.bjrke.factorio.optimizer.common.layout.placeTunnel
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
@@ -55,31 +53,22 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
      * output passes `false` so a cheat chest loads from the belt instead.
      */
     fun placeSolidConnector(material: Material, left: Int, row: Int, input: Boolean) {
+        val from = Coordinate(left, row)
+        val to = Coordinate(left + 2, row)
         when (beltEnd) {
             BeltEnd.CONSTANT_COMBINATOR -> {
                 // the label sits above an underground run, so the belt can pass underneath
-                board.placeEnd(material, Coordinate(left, row), EAST, INPUT)
                 board.placeMarker(Coordinate(left + 1, row), Signal(material))
-                board.placeEnd(material, Coordinate(left + 2, row), EAST, OUTPUT)
-                board.markTunnel(
-                    Coordinate(left, row),
-                    Coordinate(left + 2, row),
-                    board.endName(material),
-                )
+
+                board.placeTunnel(material, from, to, Direction.EAST)
             }
             BeltEnd.INFINITY_CHEST -> {
                 if (input) {
-                    board.placeInfinityChest(
-                        Coordinate(left, row),
-                        InfinitySettings(item = material),
-                    )
+                    board.placeInfinityChest(from, InfinitySettings(item = material))
                     board.placeLoader(Coordinate(left + 1, row), EAST, OUTPUT, material)
                 } else {
-                    board.placeLoader(Coordinate(left, row), EAST, INPUT, material)
-                    board.placeInfinityChest(
-                        Coordinate(left + 2, row),
-                        InfinitySettings(removeUnfiltered = true),
-                    )
+                    board.placeLoader(from, EAST, INPUT, material)
+                    board.placeInfinityChest(to, InfinitySettings(removeUnfiltered = true))
                 }
             }
             else -> placeChestConnector(material, left, row, input)
@@ -92,13 +81,13 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
      * fills the chest from the belt, and the plain wooden and steel chests do both at once.
      */
     private fun placeChestConnector(material: Material, left: Int, row: Int, input: Boolean) {
-        board.placeEnd(material, Coordinate(left, row), EAST, INPUT)
-        board.placeEnd(material, Coordinate(left + 4, row), EAST, OUTPUT)
-        board.markTunnel(
+        board.placeTunnel(
+            material,
             Coordinate(left, row),
             Coordinate(left + 4, row),
-            board.endName(material),
+            EAST,
         )
+
         val buffer = beltEnd == BeltEnd.BUFFER_CHEST
         val count = if (buffer) if (input) 100 else 200 else 1
         when {

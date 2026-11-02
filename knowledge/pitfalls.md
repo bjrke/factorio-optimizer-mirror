@@ -15,15 +15,20 @@ An entry belongs here only with evidence, and should say how to recognize it.
   (90° clockwise). A pipe on the wrong box shows up as a fluid that never arrives while the
   machine's other fluid works. Evidence: the four reported URLs in
   `BlueprintFluidPortLayoutTest`.
-- **A band's fluid port sits in a gap column the fluid feed cannot reach.** A
-  direct-feed band interleaves its machines, so a member that takes a fluid has its
-  port between two machines instead of on the row's outside edge;
-  `FluidFeeder.routeFluids()` then routes around it and the pipe network splits
-  ("sulfuric-acid is split over 3
-  networks" in `realFluidNetworksAreConnected` for processing-unit and
-  utility-science-pack). Recognize it as a band/fluid interaction, not a routing
-  regression. `special/DirectFeed.kt` therefore skips any recipe that takes a fluid,
-  as producer *and* as consumer (see `decisions.md`, 2026-10-18).
+- **Never merge a row's fluid lanes by material alone.** A fluid can be both an
+  input and an output of the same machine (vanilla `coal-liquefaction` takes and
+  gives heavy oil), and the input and output ports usually sit on opposite edges.
+  The old `RowFluidLane.fluids` took its candidates from `row.machines.first()`
+  and returned a material once per occurrence in `inputMaterials +
+  outputMaterials`, while `assignedPort` preferred the input port. A both-way
+  fluid therefore got two lanes over the *same* input port (the second shaft
+  could not fit and was silently skipped) and its output port was never drained;
+  a band row got no lane at all (the `interfaces` guard returned early), and a
+  row whose first machine takes no fluid missed a later machine's fluid. Keep one
+  lane per `(material, flow)` and let `FluidFeeder.connectLanes` join the drain
+  to the feed on the row's east side. Evidence:
+  `aFluidThatIsBothInputAndOutputJoinsItsTwoLanes` in
+  `BlueprintFluidLaneLinkTest`, and `heavy-oil --planet=vulcanus` in the CLI.
 - **A pipe-to-ground's blueprint `direction` is the side its surface pipe attaches
   on, not the run's travel direction.** `toBlueprintEntity`
   (`blueprint/output/LayoutSerialization.kt`) flips **only the input end**

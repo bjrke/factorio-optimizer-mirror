@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertUndergroundRunsAreStretched
+import de.bjrke.factorio.optimizer.common.blueprint.fixtures.fluidNetworkProblems
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
@@ -21,6 +22,7 @@ import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io
@@ -30,6 +32,7 @@ import de.bjrke.factorio.optimizer.common.model.south
 import de.bjrke.factorio.optimizer.common.model.west
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.prototype.BeltTier
@@ -519,5 +522,63 @@ class BlueprintFluidLayoutTest {
                 label = "coolant",
             )
         assertUndergroundRunsAreStretched(Layout(fluidPlan).entities)
+    }
+
+    @Test
+    fun aBandMachineThatTakesAFluidIsFedFromItsLane() {
+        // the plate is inserted machine to machine, so the row is a band though the consumer also
+        // takes a fluid; the fluid lane has to reach the consumer's own top port
+        val smelt = recipe("smelt", Category.CRAFTING, mapOf(ironPlate to 1.0))
+        val craft =
+            recipe(
+                "wet-gear",
+                Category.CRAFTING,
+                mapOf(gear to 1.0),
+                mapOf(ironPlate to 1.0, water to 1.0),
+            )
+        val plan =
+            BlueprintPlan(
+                target = gear,
+                rows =
+                    listOf(
+                        PlannedRow(
+                            machines =
+                                listOf(
+                                    planned(smelt, ironPlate, Factory.ASSEMBLING_MACHINE_3),
+                                    planned(craft, gear, Factory.ASSEMBLING_MACHINE_3),
+                                ),
+                            links = listOf(PlannedLink(0, ironPlate, 1.0, producerIsLeft = true)),
+                        ),
+                    ),
+                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                scale = 1.0,
+                label = "wet-gear",
+            )
+        val layout = Layout(plan)
+        val consumer =
+            layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "wet-gear" }
+        // the prototype's top pipe is an input at (1, -1), on the row's outside edge
+        val port = Coordinate(consumer.area.topLeft.x + 1, consumer.area.topLeft.y - 1)
+        // a lane reaches the port through a vertical shaft whose port-side end is its output; the
+        // routed fallback would put a plain pipe there instead
+        val shaftEnd =
+            layout.entities.filterIsInstance<PipeToGroundEntity>().singleOrNull {
+                it.area.topLeft == port
+            }
+
+        assertAll(
+            // two machines and one insertion: the row really is a band
+            { assertEquals(2, layout.entities.filterIsInstance<MachineEntity>().size) },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(Io.OUTPUT, shaftEnd?.io) },
+            { assertEquals(Direction.SOUTH, shaftEnd?.direction) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            {
+                assertEquals(
+                    emptyList(),
+                    fluidNetworkProblems(layout.entities),
+                )
+            },
+        )
     }
 }

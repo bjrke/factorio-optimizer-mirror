@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.plan
 
 import de.bjrke.factorio.optimizer.common.model.Coordinate
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 
 /**
@@ -25,12 +26,10 @@ internal class FluidFeed(
     val material: Material,
     val row: Int,
     val head: Coordinate,
-    /** Whether the lane flows east (a north feed); a south drain flows west. */
-    val flowEast: Boolean,
     /** The eastmost tile of the source block as placed inline. */
     val source: Coordinate,
     /** Whether the lane drains its fluid, so its source block is an unfiltered sink. */
-    val sink: Boolean,
+    val io: Io,
 )
 
 /**

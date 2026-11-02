@@ -3,7 +3,7 @@ package de.bjrke.factorio.optimizer.common.model
 import kotlin.math.abs
 import kotlin.math.sign
 
-/** The squared euclidean distance, kept squared so a comparison never needs a square root. */
+/** The squared Euclidean distance, kept squared so a comparison never needs a square root. */
 fun Coordinate.distanceSq(b: Coordinate): Long {
     val dx = x.toLong() - b.x
     val dy = y.toLong() - b.y

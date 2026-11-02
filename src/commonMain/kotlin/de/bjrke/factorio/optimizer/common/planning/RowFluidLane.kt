@@ -2,12 +2,24 @@ package de.bjrke.factorio.optimizer.common.planning
 
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
+
+/**
+ * One fluid lane a row needs on one edge: the machine ports of that flow, left to right. [io]
+ * describes if the fluid is an input or an output. A fluid that is both an input and an output of
+ * the same machine yields both a feed lane and a drain lane; the two lanes are joined after
+ * placement.
+ */
+internal class RowFluid(
+    val material: Material,
+    val ports: List<Coordinate>,
+    val io: Io,
+)
 
 /**
  * The fluid lane of one row: the shape that feeds (or drains) every machine of the row through a
@@ -25,45 +37,41 @@ import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
  */
 internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
-    /** The materials [row] can take or give through a port on [side], in recipe order. */
-    fun fluids(row: Row, side: LineSide): List<Material> {
-        if (row.interfaces.isNotEmpty()) return emptyList()
-        val first = row.machines.firstOrNull() ?: return emptyList()
-        val candidates = inputMaterials(first) + outputMaterials(first)
-        return candidates
-            .filter { material ->
-                row.machines.all { machine -> portFor(row, machine, material, side) != null }
+    /**
+     * The fluid lanes [row] needs on [side], the leftmost port first. One lane per fluid and flow:
+     * a fluid that is both an input and an output yields a feed lane and a drain lane.
+     */
+    fun fluids(row: Row, side: LineSide) =
+        row.machines
+            .asSequence()
+            .flatMap { machine ->
+                flowsOf(machine).mapNotNull { (material, io) ->
+                    portFor(row, machine, material, side, io)?.let { port ->
+                        RowFluid(material, listOf(port), io)
+                    }
+                }
             }
-            .sortedBy { material ->
-                portFor(row, first, material, side)?.x
+            .groupBy { it.material to it.io }
+            .map { (key, lanes) ->
+                RowFluid(key.first, lanes.flatMap { it.ports }.sortedBy { it.x }, key.second)
             }
-    }
+            // a both-way port is one pipe: keep the feed lane instead of stacking a drain on it
+            .distinctBy { it.material to it.ports }
+            .sortedBy { it.ports.first().x }
 
     /**
-     * The port tile of [machine] the lane of [side] carries [material] to: the machine's ports on
-     * that edge in recipe order, one per fluid. Null when that port is not on [side].
+     * The port tile of [machine] the lane of [side] carries [material] to (or from), in recipe
+     * order, one per fluid. Null when the machine has no port of that flow on [side].
      */
     fun portFor(
         row: Row,
         machine: PlacedMachine,
         material: Material,
         side: LineSide,
+        io: Io,
     ): Coordinate? {
-        val port = assignedPort(row, machine, material) ?: return null
-        return port.takeIf { sideOf(row, machine, it) == side }
-    }
-
-    /**
-     * The lane that serves [row] on [side] for [material], or null when the row gets no lane.
-     * [depth] counts the lanes already placed on that side: a further fluid on the same edge runs
-     * two rows further out, so its shafts can dive under the lanes between it and the machines.
-     */
-    fun lane(row: Row, side: LineSide, material: Material, depth: Int = 0): FluidLane? {
-        if (material !in fluids(row, side)) return null
-        val laneRow = laneRow(row, side, depth)
-        val ports = row.machines.mapNotNull { machine -> portFor(row, machine, material, side) }
-        if (ports.size != row.machines.size) return null
-        return FluidLane.of(laneRow, ports.sortedBy { it.x }, side)
+        val port = assignedPort(row, machine, material, io)
+        return port?.takeIf { sideOf(row, machine, it) == side }
     }
 
     /**
@@ -85,28 +93,34 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
         }
     }
 
-    /** The port the recipe assigns [material] to, whichever row edge that port is on. */
-    internal fun assignedPort(row: Row, machine: PlacedMachine, material: Material): Coordinate? {
-        val factory = machine.production.factory
-        val ports = prototypeFluidPorts(factory)
-        val inputIndex = inputMaterials(machine).indexOf(material)
-        if (inputIndex >= 0) {
-            return ports
-                .filter { isInput(it.flow) }
-                .getOrNull(inputIndex)
-                ?.let { Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y) }
-        }
-        val outputIndex = outputMaterials(machine).indexOf(material)
-        if (outputIndex < 0) return null
-        return ports
-            .filter { isOutput(it.flow) }
-            .getOrNull(outputIndex)
-            ?.let { Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y) }
+    /** The port [machine] takes (or gives) [material] through, whichever row edge it is on. */
+    internal fun assignedPort(
+        row: Row,
+        machine: PlacedMachine,
+        material: Material,
+        io: Io,
+    ): Coordinate? {
+        val index =
+            if (io == Io.OUTPUT) outputMaterials(machine).indexOf(material)
+            else inputMaterials(machine).indexOf(material)
+        return if (index < 0) null else portAt(row, machine, index, io)
     }
 
-    /** Whether [material] is an output of [row]'s recipe, so its lane drains instead of feeds. */
-    fun isOutput(row: Row, material: Material): Boolean =
-        row.machines.firstOrNull()?.let { material in outputMaterials(it) } == true
+    private fun portAt(
+        row: Row,
+        machine: PlacedMachine,
+        index: Int,
+        io: Io,
+    ): Coordinate? =
+        prototypeFluidPorts(machine.production.factory)
+            .filter { io in it.flow.io }
+            .getOrNull(index)
+            ?.let { Coordinate(machine.left + it.tile.x, row.factoryTop + it.tile.y) }
+
+    /** The fluid flows of [machine], as (material, sink) pairs in recipe order. */
+    private fun flowsOf(machine: PlacedMachine): List<Pair<Material, Io>> =
+        inputMaterials(machine).map { it to Io.INPUT } +
+            outputMaterials(machine).map { it to Io.OUTPUT }
 
     /** The fluid inputs of [machine]'s recipe, in recipe order. */
     private fun inputMaterials(machine: PlacedMachine): List<Material> =
@@ -115,10 +129,6 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
     /** The fluid outputs of [machine]'s recipe, in recipe order. */
     private fun outputMaterials(machine: PlacedMachine): List<Material> =
         machine.production.recipe.result.keys.filter { logistics.isFluid(it) }
-
-    private fun isInput(flow: PortFlow) = flow != PortFlow.OUTPUT
-
-    private fun isOutput(flow: PortFlow) = flow != PortFlow.INPUT
 
     /** The horizontal edge [tile] sits on for [machine], or null when it is a side edge. */
     private fun sideOf(row: Row, machine: PlacedMachine, tile: Coordinate): LineSide? {

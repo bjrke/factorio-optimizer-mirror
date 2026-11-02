@@ -323,14 +323,10 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aRecipeThatTakesAFluidStaysBelted() {
+    fun aRecipeThatTakesAFluidStillJoinsABand() {
         val mine = recipe("mine", mapOf(alpha to 1.0))
         val refine = recipe("refine", mapOf(product to 1.0), mapOf(alpha to 1.0, acid to 5.0))
-        val fluids =
-            LogisticsCalculator(
-                // the test logistics carry no fluid by default, so name the acid as one
-                testLogistics.copy(fluids = setOf(acid)),
-            )
+        val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(acid)))
         val feed =
             directFeed(
                 refine,
@@ -339,8 +335,29 @@ class DirectFeedTest {
                 logistics = fluids,
             )
 
-        // the band would put the refinery's fluid port between two machines, where the fluid feed
-        // cannot reach it yet, so the rate fits but the recipe still keeps its belt
+        // the linked material is the solid alpha, so the band is built even though the consumer
+        // also takes a fluid; the fluid lane serves its port on the row's outside edge
+        assertEquals(
+            listOf(listOf(mine, refine)),
+            feed.bands.map { it.machines.map(FactoryProduction::recipe) },
+        )
+    }
+
+    @Test
+    fun aFluidMaterialIsNeverDirectFed() {
+        val mine = recipe("mine", mapOf(acid to 1.0))
+        val refine = recipe("refine", mapOf(product to 1.0), mapOf(acid to 1.0, alpha to 5.0))
+        val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(acid)))
+        val feed =
+            directFeed(
+                refine,
+                listOf(production(refine, product), production(mine, acid)),
+                scale = 1.0,
+                logistics = fluids,
+            )
+
+        // a fluid link would need a pipe between the machines, so the rate fits but the band is
+        // not built and both recipes stay belted
         assertEquals(emptyList(), feed.bands)
     }
 }

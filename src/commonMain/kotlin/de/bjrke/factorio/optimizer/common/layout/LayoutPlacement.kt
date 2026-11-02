@@ -9,10 +9,8 @@ import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PipeEntity
-import de.bjrke.factorio.optimizer.common.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.Signal
-import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io
@@ -30,37 +28,6 @@ internal fun LayoutBoard.placeBelt(
     direction: Direction,
 ) {
     place(BeltEntity(coordinate.area(), names.belt, material, direction))
-}
-
-/** Places a belt or a pipe, whichever [material] rides: a fluid goes through a pipe. */
-internal fun LayoutBoard.placeSurface(
-    material: Material,
-    coordinate: Coordinate,
-    direction: Direction,
-) {
-    if (isFluid(material)) placePipe(coordinate, material)
-    else placeBelt(coordinate, material, direction)
-}
-
-/** Places an underground belt or pipe-to-ground end (always one tile) for [material]. */
-internal fun LayoutBoard.placeEnd(
-    material: Material,
-    coordinate: Coordinate,
-    direction: Direction,
-    io: Io,
-) {
-    place(
-        if (isFluid(material))
-            PipeToGroundEntity(coordinate.area(), names.pipeToGround, material, direction, io)
-        else
-            UndergroundBeltEntity(
-                coordinate.area(),
-                names.undergroundBelt,
-                material,
-                direction,
-                io,
-            ),
-    )
 }
 
 /** Places an inserter (always one tile) of the selected tier, long when [long]. */

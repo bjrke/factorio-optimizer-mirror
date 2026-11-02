@@ -31,7 +31,7 @@ internal class LayoutRouter(private val board: LayoutBoard) {
                     range = board.undergroundRange,
                     undergroundType = board.names.undergroundBelt,
                     tunnelOnlyWhenBlocked = true,
-                    // a belt exit feeds a surface belt, which then feeds the next entrance
+                    // keep a surface stretch between runs so a route can turn and surface cleanly
                     landingStraight = 2,
                 ),
         )

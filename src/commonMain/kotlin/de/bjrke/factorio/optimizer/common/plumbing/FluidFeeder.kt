@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.LineSide
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
@@ -76,7 +77,7 @@ internal class FluidFeeder(
                 // one port per fluid: a machine that already reserved a port for a fluid is fed
                 val fed = mutableMapOf<Material, Coordinate>()
                 for (material in fluids) {
-                    val lanePort = lanes.portFor(row, machine, material)
+                    val lanePort = lanes.portFor(row, machine, material, Io.INPUT)
                     if (lanePort != null) {
                         fed[material] = lanePort
                         continue
@@ -105,7 +106,7 @@ internal class FluidFeeder(
                 .sortedBy { it.key.name }
                 .map { (material, sinks) ->
                     val first = sinks.first()
-                    val source = fluidMarker(material, first.port, edge = first.edge, sink = false)
+                    val source = fluidMarker(material, first.port, edge = first.edge, io = Io.INPUT)
                     board.reserve(source, material)
                     PipeGroup(material, source, sinks.map { it.port })
                 }
@@ -115,6 +116,26 @@ internal class FluidFeeder(
     /** Routes the fallback groups [placeImports] prepared, nearest-first. */
     fun routeFluids() {
         groups.forEach(::routePipeGroup)
+    }
+
+    /**
+     * Joins every drain lane to the feed lane of the same fluid on the same row, preferring the
+     * row's east side, so a machine's product supplies its own input instead of leaving the
+     * blueprint. Runs after the other routes so the link can go around what they placed.
+     */
+    fun connectLanes() {
+        for (connection in lanes.connections()) {
+            if (connection.drainTail == connection.feedTail) continue
+            val segment =
+                fluidRoute(connection.drainTail, EAST, connection.feedTail, connection.material)
+            if (segment == null) {
+                failures +=
+                    "${connection.material.name} from its drain lane " +
+                        "(no pipe route to its feed lane)"
+                continue
+            }
+            placePath(board, connection.material, listOf(connection.drainTail) + segment)
+        }
     }
 
     /** Connects a fluid output pipe to each target machine, so its product has somewhere to go. */
@@ -132,8 +153,12 @@ internal class FluidFeeder(
     /** Routes the target fluid from one producer's output port to a marker beside it. */
     private fun connectTargetOutput(row: Row, machine: PlacedMachine) {
         // a lane on the machine's output edge already drains the product
-        if (lanes.portFor(row, machine, plan.target) != null) return
-        val coordinate = productEdge(row, machine) ?: return
+        if (lanes.portFor(row, machine, plan.target, Io.OUTPUT) != null) return
+        val port = blueprintMachineOutputPort(machine.production.factory) ?: return
+        val coordinate =
+            Coordinate(machine.left + port.tile.x, row.factoryTop + port.tile.y).takeIf {
+                board.isFree(it) && !board.isReserved(it)
+            } ?: return
         board.reserve(coordinate, plan.target)
         board.setEdgeFluid(coordinate, plan.target)
         fluidPorts += coordinate
@@ -141,7 +166,7 @@ internal class FluidFeeder(
             fluidMarker(
                 plan.target,
                 coordinate,
-                sink = true,
+                io = Io.OUTPUT,
                 edge = portEdge(row, machine, coordinate),
             )
         board.reserve(source, plan.target)
@@ -255,24 +280,13 @@ internal class FluidFeeder(
     }
 
     /**
-     * The tile a fluid product leaves one machine of [row] through: the machine's output port, or
-     * null when it is taken.
-     */
-    private fun productEdge(row: Row, machine: PlacedMachine): Coordinate? {
-        val port = blueprintMachineOutputPort(machine.production.factory) ?: return null
-        val tile = Coordinate(machine.left + port.tile.x, row.factoryTop + port.tile.y)
-        return tile.takeIf { board.isFree(it) && !board.isReserved(it) }
-    }
-
-    /**
-     * Places a fluid marker and returns the free tile its pipe lane starts on. A [sink] marker
-     * takes the fluid away instead of supplying it: its cheat pipe is unfiltered and deletes what
-     * enters.
+     * Places a fluid marker and returns the free tile its pipe lane starts on. A sink marker takes
+     * the fluid away instead of supplying it: its cheat pipe is unfiltered and deletes what enters.
      */
     private fun fluidMarker(
         material: Material,
         target: Coordinate,
-        sink: Boolean,
+        io: Io,
         /**
          * The side of the machine the target port is on; the marker row is searched away from it.
          */
@@ -298,7 +312,7 @@ internal class FluidFeeder(
         imports.markerRows += row
         // the cheat variant replaces the label with a single infinity pipe: a filter supplies the
         // fluid, while an unfiltered pipe deletes it, which is what a sink needs
-        board.placeFluidSource(beltEnd, Coordinate(source.x - 1, row), material, sink)
+        board.placeFluidSource(beltEnd, Coordinate(source.x - 1, row), material, io)
         imports.compactionWestBound = maxOf(imports.compactionWestBound, target.x)
         return Coordinate(source.x, row)
     }

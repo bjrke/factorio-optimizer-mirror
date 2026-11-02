@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.plan
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Dimension
 import de.bjrke.factorio.optimizer.common.model.Direction
+import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 
 /**
@@ -24,10 +25,10 @@ fun blueprintMachineFootprint(factory: Factory): Dimension =
     }
 
 /** Which way a machine's fluid port flows: it only takes fluid, only gives it, or does both. */
-enum class PortFlow {
-    INPUT,
-    OUTPUT,
-    BOTH,
+enum class PortFlow(val io: Set<Io>) {
+    INPUT(setOf(Io.INPUT)),
+    OUTPUT(setOf(Io.OUTPUT)),
+    BOTH(setOf(Io.INPUT, Io.OUTPUT)),
 }
 
 /**

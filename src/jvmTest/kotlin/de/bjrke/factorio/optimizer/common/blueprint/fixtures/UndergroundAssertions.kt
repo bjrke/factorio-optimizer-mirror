@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 /**
  * Every underground belt must pair up (input with the output up to nine tiles ahead) and lead into
  * something: an exit is useless when the tile it faces is empty, and an entry is useless when
- * nothing feeds its back.
+ * nothing feeds its back. An output may feed the next run's input directly.
  */
 fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
     val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
@@ -26,25 +26,21 @@ fun assertConnectedUndergroundBelts(entities: List<BlueprintEntity>) {
             val exit = (1..9).any { outputs.contains(topLeft + step * it) }
             if (!exit) problems += "input $topLeft has no exit ahead"
             if ((topLeft - step) !in occupied) problems += "input $topLeft is not fed"
-            // an exit empties onto a surface belt; an input right there cannot take it
-            if ((topLeft - step) in outputs)
-                problems += "input $topLeft is fed by an exit, not a belt"
         } else {
             val entry = (1..9).any { inputs.contains(topLeft - step * it) }
             if (!entry) problems += "exit $topLeft has no entry behind"
             if ((topLeft + step) !in occupied) problems += "exit $topLeft leads nowhere"
-            // an exit feeds a surface belt, never the entrance of the next run directly
-            if ((topLeft + step) in inputs) problems += "exit $topLeft leads straight into an input"
         }
     }
     assertEquals(emptyList(), problems)
 }
 
 /**
- * A routed tunnel end must connect through a belt of its material: the entrance is entered straight
- * from the belt behind it, and the exit empties onto a belt that can take the material. A
- * compaction corridor can remove the feeding turn while leaving the pair intact, so checking only
- * that the back tile is occupied is not enough.
+ * A routed tunnel end must connect through a belt of its material or the previous run: the entrance
+ * is entered straight from the belt behind it or from an output end facing it, and the exit empties
+ * onto a belt that can take the material or into the next run's input. A compaction corridor can
+ * remove the feeding turn while leaving the pair intact, so checking only that the back tile is
+ * occupied is not enough.
  */
 fun assertTunnelEndsAreFed(entities: List<BlueprintEntity>) {
     val byTile = entities.flatMap { entity -> entity.area.map { it to entity } }.toMap()
@@ -79,8 +75,10 @@ private fun inputProblem(
         feeder.name.isLoader() ->
             if (feeder.type == Io.OUTPUT && feeder.direction == direction) null
             else "input $topLeft is not fed by the loader behind it"
+        feeder.name.endsWith("underground-belt") ->
+            if (feeder.type == Io.OUTPUT && feeder.direction == direction) null
+            else "input $topLeft is not fed by the run behind it"
         !feeder.name.isConveyor() -> "input $topLeft is not fed by a belt"
-        feeder.type != null -> "input $topLeft is fed by a tunnel end, not a belt"
         feeder.direction != direction -> "input $topLeft is fed from the side, not straight"
         else -> null
     }
@@ -95,8 +93,10 @@ private fun outputProblem(
     return when {
         target.name.isLoader() ->
             if (target.type == Io.INPUT) null else "exit $topLeft leads into a loader output"
+        target.name.endsWith("underground-belt") ->
+            if (target.type == Io.INPUT && target.direction == direction) null
+            else "exit $topLeft leads into the run's output end"
         !target.name.isConveyor() -> "exit $topLeft leads onto no belt"
-        target.type != null -> "exit $topLeft leads straight into a tunnel end"
         target.direction == direction.opposite() -> "exit $topLeft faces into a belt"
         else -> null
     }

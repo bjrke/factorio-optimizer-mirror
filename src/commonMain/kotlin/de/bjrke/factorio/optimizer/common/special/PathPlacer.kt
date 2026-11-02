@@ -7,13 +7,10 @@ import de.bjrke.factorio.optimizer.common.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.layout.placeSurface
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
-import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
-import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Io
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.adjacent
+import de.bjrke.factorio.optimizer.common.model.directionBetween
 
 /** A tile's role in a route: a plain belt, a tunnel input or a tunnel output, all facing. */
 internal sealed interface PathRole {
@@ -89,12 +86,3 @@ private fun roles(
 
     return roles
 }
-
-/** The cardinal direction from [from] to [to]; the caller guarantees they share a row or column. */
-internal fun directionBetween(from: Coordinate, to: Coordinate) =
-    when {
-        to.x > from.x -> EAST
-        to.x < from.x -> WEST
-        to.y > from.y -> SOUTH
-        else -> NORTH
-    }

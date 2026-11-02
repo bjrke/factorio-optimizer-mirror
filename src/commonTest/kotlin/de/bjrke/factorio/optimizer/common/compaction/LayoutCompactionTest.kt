@@ -222,15 +222,16 @@ class LayoutCompactionTest {
     )
 
     @Test
-    fun aRoutedTunnelEntranceNeedsABeltHeadingIntoIt() =
+    fun aTunnelEntranceIsFedByABeltOrThePreviousRun() =
         assertTableOf(
             TunnelFeedCase("straight belt", belt(0, 0, direction = SOUTH), valid = true),
             TunnelFeedCase("sideways belt", belt(0, 0, direction = EAST), valid = false),
             TunnelFeedCase("no belt", null, valid = false),
+            // an output end may feed the next run's input directly
             TunnelFeedCase(
                 "tunnel exit",
                 underground(0, 0, SOUTH, Io.OUTPUT),
-                valid = false,
+                valid = true,
             ),
         ) { case ->
             val entities = buildList {

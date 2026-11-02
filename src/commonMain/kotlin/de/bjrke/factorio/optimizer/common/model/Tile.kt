@@ -1,5 +1,10 @@
 package de.bjrke.factorio.optimizer.common.model
 
+import de.bjrke.factorio.optimizer.common.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
+import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.model.Direction.WEST
+
 /**
  * A tile position. The arithmetic operators stay on the type; the geometry and compass helpers live
  * in `CoordinateGeometry.kt`, so a tile stays a small value and the helpers can be read as one
@@ -38,6 +43,15 @@ enum class Direction(val step: Coordinate) {
             WEST -> EAST
         }
 }
+
+/** The cardinal direction from [from] to [to]; the caller guarantees they share a row or column. */
+internal fun directionBetween(from: Coordinate, to: Coordinate) =
+    when {
+        to.x > from.x -> EAST
+        to.x < from.x -> WEST
+        to.y > from.y -> SOUTH
+        else -> NORTH
+    }
 
 /**
  * Which end of a directional entity (an underground belt or a loader or belt) this is: its `type`.

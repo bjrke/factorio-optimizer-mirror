@@ -10,14 +10,12 @@ import de.bjrke.factorio.optimizer.common.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.layout.hasTunnel
-import de.bjrke.factorio.optimizer.common.layout.markTunnel
-import de.bjrke.factorio.optimizer.common.layout.placeEnd
+import de.bjrke.factorio.optimizer.common.layout.placeTunnel
 import de.bjrke.factorio.optimizer.common.layout.range
 import de.bjrke.factorio.optimizer.common.layout.undergroundOutputOf
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Io.INPUT
-import de.bjrke.factorio.optimizer.common.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.east
 import de.bjrke.factorio.optimizer.common.model.manhattanDist
@@ -98,10 +96,7 @@ private class RunGrowth(
         val newInput = inputTile + backward * back
         val newOutput = outputTile + step * forward
 
-        board.placeEnd(material, newInput, direction, INPUT)
-        board.placeEnd(material, newOutput, direction, OUTPUT)
-
-        board.markTunnel(newInput, newOutput, type)
+        board.placeTunnel(material, newInput, newOutput, direction)
     }
 
     /**

@@ -35,7 +35,10 @@ internal fun validateUndergrounds(
     }
 }
 
-/** A tunnel entrance is only entered straight from a belt that faces into it. */
+/**
+ * A tunnel entrance is entered straight from a belt or from the output end of the previous run,
+ * both facing into it.
+ */
 private fun checkBeltFeed(
     index: LayoutIndex,
     input: UndergroundBeltEntity,
@@ -46,7 +49,10 @@ private fun checkBeltFeed(
     val feeder = index.at(back)
     val facesIn =
         when (feeder) {
-            is UndergroundEntity -> false
+            is UndergroundBeltEntity ->
+                feeder.material == input.material &&
+                    feeder.io == Io.OUTPUT &&
+                    feeder.direction == input.direction
             is ConveyorEntity ->
                 feeder.material == input.material && feeder.direction == input.direction
             is LoaderEntity ->
@@ -62,7 +68,10 @@ private fun checkBeltFeed(
     }
 }
 
-/** A tunnel exit empties onto a belt of its material, never into the next tunnel end. */
+/**
+ * A tunnel exit empties onto a belt of its material or into the input end of the next run, both
+ * facing along the run.
+ */
 private fun checkBeltExit(
     index: LayoutIndex,
     output: UndergroundBeltEntity,
@@ -73,7 +82,10 @@ private fun checkBeltExit(
     val target = index.at(ahead)
     val accepts =
         when (target) {
-            is UndergroundEntity -> false
+            is UndergroundBeltEntity ->
+                target.material == output.material &&
+                    target.io == Io.INPUT &&
+                    target.direction == output.direction
             is ConveyorEntity ->
                 target.material == output.material &&
                     target.direction != output.direction.opposite()

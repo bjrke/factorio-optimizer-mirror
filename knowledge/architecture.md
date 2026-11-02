@@ -51,8 +51,9 @@ CLI (JVM) from one shared core.
     `RouteSearch`, `RouteProfile`); it sits below `routing`, `plumbing` and
     `planning`, which all drive it.
   - `layout` — the grid kernel: `LayoutBoard` (tiles, reservations, primitives),
-    `LayoutPlacement` (entity-kind helpers), `LayoutUnderground`, `Tunnels`,
-    `LayoutIndex` (the read-only tile index), `BeltEnd` (how a belt is
+    `LayoutPlacement` (single-tile entity-kind helpers), `LayoutTunnels` (the
+    surface/end/tunnel placement and the tunnel-link plan), `LayoutUnderground`,
+    `Tunnels`, `LayoutIndex` (the read-only tile index), `BeltEnd` (how a belt is
     terminated). `layout/entity` holds the entity hierarchy (`LayoutEntity`,
     `LayoutTransportEntities`, `LayoutEntityStations`, `LayoutSettings`);
     `layout/validation` holds the invariant checks (`LayoutValidation*.kt`).
@@ -207,16 +208,18 @@ optimizer's `OptimizationResult`; `blueprint/RowLayout.kt` turns a
 (`blueprint/model/Blueprint.kt`). `RowLayout(plan, logistics, beltEnd).blueprint()`
 runs the ordered passes — recipe rows, target output, import preparation,
 fluid lanes and source markers, solid import deliveries, the routed fluid
-fallback, produced solid deliveries, the fluid target output, trim import
-prefixes, stretch underground runs, compaction, poles (which place their wires) —
-and returns a `Blueprint` whose `entities` are numbered by list position and whose
-`wires` are the chest-connector wires from `blueprint/output/ChestWires.kt`. The
-order is load-bearing: fluid lanes go before solid belts, solid imports go before
-produced deliveries, the import trim before the underground stretch, compaction
-before the poles. `layout/validation` also requires every routed underground belt
-end to connect through a same-material belt; compaction rejects a corridor that
-would leave an entrance or exit orphaned (connector ends are recognized by their
-2/4-tile partner pattern).
+fallback, produced solid deliveries, the drain/feed lane link, the fluid target
+output, trim import prefixes, stretch underground runs, compaction, poles (which
+place their wires) — and returns a `Blueprint` whose `entities` are numbered by
+list position and whose `wires` are the chest-connector wires from
+`blueprint/output/ChestWires.kt`. The order is load-bearing: fluid lanes go
+before solid belts, solid imports go before produced deliveries, the lane link
+after the other routes so it can go around them, the import trim before the
+underground stretch, compaction before the poles. `layout/validation` also
+requires every routed underground belt end to connect through a same-material
+belt or the previous run (an output end may feed the next input directly);
+compaction rejects a corridor that would leave an entrance or exit orphaned
+(connector ends are recognized by their 2/4-tile partner pattern).
 `RowLayout.layoutDump()` is the one read-back of a finished layout
 (`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's `--layout`
 renders it and the `jvmTest` suites assert on it through the `Layout` fixture in
@@ -228,9 +231,15 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 `rowPlacer`, `router`) instead of repeating those collaborators:
 
 - `layout/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
-  the reserve/place/remove primitives. Entity placement lives in
-  `LayoutPlacement.kt`, the tunnel index in `Tunnels.kt` and the underground queries
-  in `LayoutUnderground.kt`, all as board extensions. `LayoutPipes.kt` holds the
+  the reserve/place/remove primitives. Single-tile entity placement lives in
+  `LayoutPlacement.kt`; `LayoutTunnels.kt` owns the surface tile, the underground
+  end and the tunnel, plus `tunnelPlan(from, to)` — the one calculation of a link's
+  tiles (surface tiles and run ends, at the material's reach) — which `placeTunnelPlan`
+  places and callers reuse for their fit checks, so a link is never computed twice.
+  Runs meet end to end: an output end may feed the next run's input directly (pipes
+  and belts alike), and the validator accepts that.
+  The tunnel index is in `Tunnels.kt` and the underground queries in
+  `LayoutUnderground.kt`, all as board extensions. `LayoutPipes.kt` holds the
   one pipe-tile rule, `canPlacePipes` (the tile is free and no placed pipe beside
   it carries another fluid — touching pipes merge in Factorio), which the lane
   placer and the routed fluid feed share; `touchesForeign` is its neighbor test and
@@ -242,9 +251,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   `route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
   the `RouteRequest`, and `route/RouteSearch.kt` owns the weighted A* frontier and node
   expansion.
-- `special/PathPlacer.kt` — `placePath`, the tile roles for plain and underground
-  runs, and `directionBetween`; shared by belt and pipe routes. It is the shared
+- `special/PathPlacer.kt` — `placePath` and the tile roles for plain and
+  underground runs; shared by belt and pipe routes. It is the shared
   helper `routing` reaches (the `special` edge in the package dependency table).
+  `directionBetween` is the compass helper on the model (`model/Tile.kt`).
 - `compaction/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
   end sharing.
@@ -271,7 +281,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   further out than the last.
   `planning/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
   horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds
-  no room so only that port falls back to the route.
+  no room so only that port falls back to the route. It plans each run once
+  (`tunnelPlan`) and checks exactly the tiles that plan claims, so a run longer
+  than the pipe reach (a band whose fluid port is far from its lane head) is
+  checked and placed from the same list.
 - `plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
@@ -279,7 +292,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   `plumbing/FluidLaneFeed.kt` place a lane for every fluid of every row that gets
   one (north and south side), records the port tiles those lanes reach and leaves
   them alone, then reserves the remaining machine edges (`fluidEdge`) and places
-  every routed source marker, keeping the prepared pipe groups. A routed marker
+  every routed source marker, keeping the prepared pipe groups. A lane carries one
+  `(fluid, flow)` pair, so a fluid that is both an input and an output gets a feed
+  lane and a drain lane; `connectLanes()` routes the drain back into the feed after
+  the other routes. A routed marker
   sits next to its first sink and searches its row **outward from the port's edge**
   (`portEdge`:
   north for a north port, south for a south port, south for a side port), so a
@@ -297,7 +313,10 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   lane head with pipe-to-ground runs along the lane row (`FluidFeed` in
   `plan/ImportExtension.kt`). Without solid imports the column is the westmost
   inline fluid marker, so the stacked lane markers still share one column. The
-  marker, link and head are pinned so compaction shifts them as one group.
+  marker, link and head are pinned so compaction shifts them as one group. The
+  link is not pre-checked for room: the lane row was laid before any route ran, so
+  a link that would overlap a placed tile or touch a foreign fluid is placed,
+  rejected by `validateLayout` and rolled back, keeping the inline marker.
 - `compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
   underground runs after each corridor and shifts the import pins and bounds. A
   candidate that fails only after the stretch is ruled out by its seam path and the
@@ -341,9 +360,11 @@ once per machine and has no links. `band/BandSearch` finds the shortest window
 someone). `RowPlacer` places every row through one `placeRow`: a plain row
 repeats its production with touching machines, while a row with links leaves a
 gap column after each machine that has a `PlannedLink` and touches everywhere
-else. Only belted productions feed belts, lanes and sinks, so a band's internal
-material never gets a belt. See
-`decisions.md` (2026-10-18) for the rules and the open fluid/line-breaking
+else. Only belted productions feed belts and sinks, so a band's internal material
+never gets a belt; the row still gets **fluid lanes** for its machines' fluid
+ports, including a machine that takes a fluid while its solid input comes from a
+neighbor (see `decisions.md`, 2026-11-02). See
+`decisions.md` (2026-10-18) for the band rules and the open line-breaking
 follow-ups, and (2026-10-24) for why the row is the occurrence.
 
 A solid belt's end is a `BeltEnd` (`layout/BeltEnd.kt`): the constant-combinator

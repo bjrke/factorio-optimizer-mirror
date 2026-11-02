@@ -44,13 +44,10 @@ private class DirectFeedBuilder(
     // the band cycle search, on the plan's per-recipe data
     private val search = BandSearch(byRecipe, need, logistics)
 
-    // every link that could be direct-fed, in a deterministic order
+    // every link that could be direct-fed, in a deterministic order; a consumer that also takes a
+    // fluid is left in, because the band row gets the same fluid lane as a plain row
     private val candidates = sequence {
         for (consumer in included) {
-            // a machine that takes a fluid needs its port on the outside of the row, where no
-            // interface inserter sits; the fluid feed is not reworked for bands yet, so those
-            // recipes stay belted
-            if (consumer.recipe.ingredients.keys.any { logistics.isFluid(it) }) continue
             for (material in consumer.recipe.ingredients.keys.sortedBy { it.name }) {
                 linkOf(consumer, material)?.let { yield(it) }
             }

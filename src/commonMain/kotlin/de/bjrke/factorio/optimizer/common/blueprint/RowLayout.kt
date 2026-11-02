@@ -96,6 +96,7 @@ internal class RowLayout(
             deliveryRouter.routeImports(deliveries.imports)
             fluidFeeder.routeFluids()
             deliveryRouter.routeProduced(deliveries.produced)
+            fluidFeeder.connectLanes()
             fluidFeeder.placeTargetOutput()
             // the markers may move now that the routes are fixed; then the layout is compacted
             // before electricity, so poles and wires are placed on the final geometry

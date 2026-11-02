@@ -44,9 +44,9 @@ internal data class TunnelRules(
     /** Whether the route may immediately reverse into the tile it came from. */
     val forbidReverse: Boolean = true,
     /**
-     * How many straight surface tiles a tunnel landing must run before the next tunnel may start. A
-     * belt exit only feeds a surface tile, so a belt needs one tile there plus the next entrance; a
-     * pipe-to-ground exit joins its neighbor directly.
+     * How many straight surface tiles a tunnel landing must run before the next tunnel may start.
+     * An exit can join the next entrance directly, but a belt route keeps one surface tile for
+     * clearance; a pipe-to-ground route may dive again immediately.
      */
     val landingStraight: Int = 1,
 )

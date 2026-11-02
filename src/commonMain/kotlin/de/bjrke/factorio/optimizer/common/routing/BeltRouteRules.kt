@@ -5,8 +5,8 @@ import de.bjrke.factorio.optimizer.common.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction
 import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.model.directionBetween
 import de.bjrke.factorio.optimizer.common.model.neighbors
-import de.bjrke.factorio.optimizer.common.special.directionBetween
 
 /**
  * What a belt route may do: stay off foreign belts, leave every other sink's feed clear, and avoid

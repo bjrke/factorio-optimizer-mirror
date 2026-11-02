@@ -7,6 +7,25 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-02 — Fluid-taking recipes may join a band
+
+**Decision.** `special/DirectFeed.kt` no longer skips a consumer that takes a
+fluid; only the *link* material must be solid. A band row gets the same fluid
+lanes as a plain row (`RowFluidLane.fluids` walks every machine), so a member's
+port on the row's north or south edge is fed (or drained) by the lane. A band's
+producer still needs fluid-free ingredients, and a fluid is never a link. The lane
+serves a band machine's port like any other, so the consumer's fluid need no
+longer keep the recipe belted.
+
+**Guardrail.** Keep the two halves in step: a band may contain a fluid-taking
+recipe only because `FluidLaneFeed` can serve its port. Never drop the
+`!logistics.isFluid(material)` test in `linkOf`. A fluid that is both an input
+and an output gets one feed lane and one drain lane (keyed by material **and**
+flow, never merged by material); `FluidFeeder.connectLanes` joins the drain to
+the feed east of the row.
+
+**See.** `architecture.md` §Blueprint layout; `pitfalls.md` §Layout and fluids.
+
 ## 2026-10-30 — One fixture reads a layout back for every suite
 
 **Decision.** `RowLayout` is `internal` and owns the ordered pipeline through
@@ -236,9 +255,9 @@ is left without a consumer. Bounds: `GROUP_MAX_MACHINES = 18`, `MAX_BAND_RECIPES
 gets no lane, sink, belt or belted production.
 
 **Guardrail.** Do not group by machine count or give a band's internal material a
-belt. A recipe that takes **or** produces a fluid stays belted: a band puts the
-port in a gap the feed cannot reach. Open: line-breaking a too-wide band and
-mixed-footprint bands.
+belt. A fluid is never a link material (`linkOf`), and a band's producer must have
+fluid-free ingredients; a fluid-taking consumer may join since 2026-11-02. Open:
+line-breaking a too-wide band and mixed-footprint bands.
 
 **See.** `architecture.md` §Blueprint layout; `special/DirectFeed.kt`,
 `band/BandSearch.kt`.
