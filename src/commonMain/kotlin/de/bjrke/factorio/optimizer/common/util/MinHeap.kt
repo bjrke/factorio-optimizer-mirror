@@ -1,7 +1,10 @@
 package de.bjrke.factorio.optimizer.common.util
 
-/** A binary min-heap; commonMain has no priority queue and A* needs one. */
-class MinHeap<T : Comparable<T>> {
+/**
+ * A binary min-heap ordered by [comparator]; commonMain has no priority queue and A* needs one.
+ * Naturally ordered elements can use `MinHeap<T>()`, which orders them by themselves.
+ */
+class MinHeap<T>(private val comparator: Comparator<T>) {
     private val items = mutableListOf<T>()
 
     fun isEmpty(): Boolean = items.isEmpty()
@@ -16,7 +19,7 @@ class MinHeap<T : Comparable<T>> {
 
         val parent = (index - 1) / 2
         val parentValue = items[parent]
-        if (item >= parentValue) return index
+        if (comparator.compare(item, parentValue) >= 0) return index
 
         items[index] = parentValue
         return siftUp(parent, item)
@@ -45,15 +48,23 @@ class MinHeap<T : Comparable<T>> {
         val right = left + 1
         if (right < items.size) {
             val rightValue = items[right]
-            if (rightValue < smallestValue) {
+            if (comparator.compare(rightValue, smallestValue) < 0) {
                 smallest = right
                 smallestValue = rightValue
             }
         }
 
-        if (item <= smallestValue) return index
+        if (comparator.compare(item, smallestValue) <= 0) return index
 
         items[index] = smallestValue
         return siftDown(smallest, item)
+    }
+
+    companion object {
+        /**
+         * A heap for naturally ordered elements, so callers without a comparator keep
+         * `MinHeap<T>()`.
+         */
+        operator fun <T : Comparable<T>> invoke(): MinHeap<T> = MinHeap(naturalOrder())
     }
 }
