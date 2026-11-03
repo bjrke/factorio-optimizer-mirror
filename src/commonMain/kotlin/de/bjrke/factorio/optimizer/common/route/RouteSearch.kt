@@ -68,7 +68,7 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
         heap.add(RouteEntry(cheapestTile * from.manhattanDist(to), 0, seq++, start))
 
         while (!heap.isEmpty() && popped++ < MAX_ROUTE_EXPANSIONS) {
-            val entry = heap.poll()
+            val entry = heap.removeFirst()
             val current = entry.node
             if (entry.g > (gScore[current] ?: Int.MAX_VALUE)) continue
             if (current.tile == to) return reconstructRoute(current)
