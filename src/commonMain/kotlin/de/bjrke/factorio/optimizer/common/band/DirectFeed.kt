@@ -10,9 +10,6 @@ import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 import kotlin.math.ceil
 
-/** The recipes one band may hold; a wider group is left to a later increment. */
-internal const val MAX_BAND_RECIPES = 3
-
 /** The links one band may realize. */
 private const val MAX_BAND_LINKS = 3
 

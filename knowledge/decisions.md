@@ -278,8 +278,8 @@ consumer stand in a small whole-machine cycle into a belt-free band, judged by
 accepted when `r / 1.05 ≤ p / q ≤ r × 1.25` with `p + q ≤ 6`; ties go to the
 smallest sum, then the closest rate. The band is a window of a periodic
 arrangement cut to the shortest length where no consumer starves and no producer
-is left without a consumer. Bounds: `GROUP_MAX_MACHINES = 18`, `MAX_BAND_RECIPES = 3`,
-`MAX_BAND_LINKS = 3`. Every machine is built complete; a band's internal material
+is left without a consumer. Bounds: `GROUP_MAX_MACHINES = 18`, `MAX_BAND_LINKS = 3`.
+Every machine is built complete; a band's internal material
 gets no lane, sink, belt or belted production.
 
 **Guardrail.** Do not group by machine count or give a band's internal material a

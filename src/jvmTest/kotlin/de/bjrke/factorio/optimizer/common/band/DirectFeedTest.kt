@@ -426,6 +426,43 @@ class DirectFeedTest {
     }
 
     @Test
+    fun aChainOfFourRecipesIsBuiltAsOneBand() {
+        // the third link joins the chain now that the band recipe cap is gone. No real chain has
+        // small ratios all the way: the only real four-recipe chain, ore -> plate -> battery ->
+        // frame, needs a 14-machine cycle beyond MAX_CYCLE, so this stays synthetic like the
+        // three-recipe chain above
+        val firstRecipe = recipe("first", mapOf(alpha to 1.0))
+        val secondRecipe = recipe("second", mapOf(beta to 1.0), mapOf(alpha to 1.0))
+        val thirdRecipe = recipe("third", mapOf(product to 1.0), mapOf(beta to 1.0))
+        val fourthRecipe = recipe("fourth", mapOf(delta to 1.0), mapOf(product to 1.0))
+        val feed =
+            directFeed(
+                fourthRecipe,
+                listOf(
+                    production(fourthRecipe, delta),
+                    production(thirdRecipe, product),
+                    production(secondRecipe, beta),
+                    production(firstRecipe, alpha),
+                ),
+                scale = 1.0,
+                logistics = logistics,
+            )
+
+        val band = feed.bands.single()
+        assertAll(
+            {
+                assertEquals(
+                    mapOf("first" to 1, "second" to 1, "third" to 1, "fourth" to 1),
+                    band.machines.groupingBy { it.recipe.name }.eachCount(),
+                )
+            },
+            { assertEquals(listOf(alpha, beta, product), band.links.map { it.material }) },
+            // nothing of the chain is left over: the four recipes fill the one row
+            { assertEquals(1, feed.rows.size) },
+        )
+    }
+
+    @Test
     fun aBandMayOutputAFluidAsItsFinalOutput() {
         val feed =
             directFeed(

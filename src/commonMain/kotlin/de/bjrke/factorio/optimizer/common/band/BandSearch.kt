@@ -18,7 +18,6 @@ private const val MAX_CYCLE = 8
  */
 internal fun DirectFeedContext.arrange(links: List<FeedLink>): BandPlan? {
     val recipes = links.flatMap { listOfNotNull(it.producer, it.consumer) }.distinct()
-    if (recipes.size > MAX_BAND_RECIPES) return null
 
     // all members share the row, so they must share the footprint
     if (footPrintsHaveDifferentSize2(links)) return null
