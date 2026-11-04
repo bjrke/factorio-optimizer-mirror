@@ -71,23 +71,24 @@ internal class BandFeed(
 internal class BandPlan(val machines: List<Recipe>, val feeds: List<BandFeed>)
 
 /**
- * One link in the direct-feed graph: [production] makes [material], and [parent] is the link whose
- * consumer takes it. The root link (the target) has no parent, so its material leaves the plan.
+ * One link in the direct-feed graph: [production] makes [material], and [consumer] is the link
+ * whose production consumes it. The root link (the target) has no consumer, so its material leaves
+ * the plan.
  */
 internal data class FeedLink(
     val ctx: DirectFeedContext,
     val production: FactoryProduction = ctx.target,
-    val parent: FeedLink? = null,
+    val consumer: FeedLink? = null,
 ) {
 
-    val producer = production.recipe
+    val producerRecipe = production.recipe
 
-    val consumer = parent?.production?.recipe
+    val consumerRecipe = consumer?.production?.recipe
 
     val material = production.material
 
     val inputPerMachine by lazy {
-        parent?.production?.inputPerMachine(material) ?: 0.0
+        consumer?.production?.inputPerMachine(material) ?: 0.0
     }
 
     val outputPerMachine by lazy { production.outputPerMachine() }
@@ -96,17 +97,17 @@ internal data class FeedLink(
 
     /** The links from this one up to the root, nearest first. */
     fun pathReverse(): Sequence<FeedLink> = sequence {
-        var current = parent
+        var current = consumer
         while (current != null) {
             yield(current)
-            current = current.parent
+            current = current.consumer
         }
     }
 
     /** Yields this link (unless it is the root) and then every link reachable through it. */
     context(seq: SequenceScope<FeedLink>)
     suspend fun traverse() {
-        if (parent != null) seq.yield(this)
+        if (consumer != null) seq.yield(this)
 
         ingredients.forEach { it.traverse() }
     }

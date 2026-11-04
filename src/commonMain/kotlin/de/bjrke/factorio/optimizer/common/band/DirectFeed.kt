@@ -66,7 +66,7 @@ private fun DirectFeedContext.buildBands(bandPlans: List<BandPlan>) = bandPlans.
 // consumers
 private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
     for (plan in bandPlans) {
-        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer }
+        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producerRecipe }
         for ((recipe, machines) in plan.machines.groupingBy { it }.eachCount()) {
             if (recipe in inserted) continue
             this[recipe] = (this[recipe] ?: 0) + machines
@@ -98,7 +98,9 @@ private fun DirectFeedContext.countsForBelt(
         !logistics.isFluid(material) &&
         producers[material]?.singleOrNull()?.recipe == recipe &&
         grouped.none {
-            it.material == material && it.producer == recipe && it.consumer == consumer.recipe
+            it.material == material &&
+                it.producerRecipe == recipe &&
+                it.consumerRecipe == consumer.recipe
         }
 
 /**
@@ -133,9 +135,9 @@ private fun DirectFeedContext.targetRow(built: Map<Recipe, Int>) =
     if ((built[target.recipe] ?: 0) > 0) emptyList()
     else listOf(PlannedRow.copies(target, plannedMachines(target, scale)))
 
-/** Whether two links belong to one band: one is the other's parent, or they share one. */
+/** Whether two links belong to one band: one is the other's consumer, or they share one. */
 private fun sharesRecipe(first: FeedLink, second: FeedLink) =
-    first.parent == second || second.parent == first || first.parent == second.parent
+    first.consumer == second || second.consumer == first || first.consumer == second.consumer
 
 /**
  * Splits a plan's recipes into belted productions and direct-feed bands.

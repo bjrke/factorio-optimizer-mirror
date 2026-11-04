@@ -540,7 +540,7 @@ class DirectFeedTest {
 
     @Test
     fun aCyclicIngredientIsPrunedAndMarksTheLink() {
-        // to-beta needs alpha, and alpha is the material of its parent link: the walk must not
+        // to-beta needs alpha, and alpha is the material of its consumer link: the walk must not
         // enter the cycle again, and the link must be dropped from the band candidates
         val toBetaRecipe = recipe("to-beta", mapOf(beta to 1.0), mapOf(alpha to 1.0))
         val toAlphaRecipe = recipe("to-alpha", mapOf(alpha to 1.0), mapOf(beta to 1.0))
