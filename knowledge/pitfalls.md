@@ -55,7 +55,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
 - **A band stands in one row of up to 18 machines, so a wide band forces belt
-  crossings.** `GROUP_MAX_MACHINES = 18` (`plan/DirectFeedModel.kt`) is what a band
+  crossings.** `GROUP_MAX_MACHINES = 18` (`band/DirectFeedModel.kt`) is what a band
   may hold; rows above a band then have to reach past it, and a belt that crosses
   another belt can only tunnel. Evidence: the reported `advanced-circuit` URL's
   copper-cable feed tunnels where its cable row joins a band

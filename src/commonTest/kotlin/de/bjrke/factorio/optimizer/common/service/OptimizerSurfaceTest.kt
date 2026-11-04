@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.service
 
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
@@ -244,10 +245,9 @@ class OptimizerSurfaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val circuit = Material("electronic-circuit")
         assertEquals(
             Factory.ELECTROMAGNETIC_PLANT,
-            optimizer[circuit].production(circuit).factory,
+            optimizer[electronicCircuit].production(electronicCircuit).factory,
         )
     }
 

@@ -1,20 +1,17 @@
 package de.bjrke.factorio.optimizer.common.band
 
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.efficiencyModule
+import de.bjrke.factorio.optimizer.common.fixtures.efficiencyModule2
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.plan.GROUP_MAX_MACHINES
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedRow
-import de.bjrke.factorio.optimizer.common.plan.cycleRatio
-import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
-import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
 import de.bjrke.factorio.optimizer.common.prototype.Category
 import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
-import de.bjrke.factorio.optimizer.common.special.DirectFeed
-import de.bjrke.factorio.optimizer.common.special.directFeed
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
@@ -27,12 +24,12 @@ private val gamma = Material("gamma")
 private val delta = Material("delta")
 private val acid = Material("sulfuric-acid")
 
-/** Every production in row order; a production may appear once per row. */
-private val DirectFeed.recipes: List<FactoryProduction>
-    get() = rows.flatMap { it.productions }
+/** Every recipe in row order; a recipe may appear once per row. */
+private val DirectFeed.recipes
+    get() = rows.flatMap { it.productions }.map { it.recipe }
 
 /** The direct-feed bands among the rows. */
-private val DirectFeed.bands: List<PlannedRow>
+private val DirectFeed.bands
     get() = rows.filter { it.links.isNotEmpty() }
 
 /** The material a recipe produces, to keep the recipe names and the rates apart. */
@@ -71,8 +68,8 @@ class DirectFeedTest {
         assertTable(
             listOf<Pair<Double, Pair<Int, Int>?>>(
                 // a rate below the pattern is fine: the consumer takes what it needs. A rate too
-                // far
-                // above it is not: the machines would pile up material the consumer cannot take.
+                // far above it is not: the machines would pile up material the consumer cannot
+                // take.
                 0.8 to (1 to 1),
                 1.0 to (1 to 1),
                 1.05 to (1 to 1),
@@ -94,9 +91,9 @@ class DirectFeedTest {
         val machine = production(smelt, product, speed = 2.0, productivity = 0.5)
 
         assertAll(
-            { assertEquals(1.0, inputPerMachine(machine, alpha), TOLERANCE) },
+            { assertEquals(1.0, machine.inputPerMachine(alpha), TOLERANCE) },
             // the productivity bonus is what a direct-fed consumer really receives
-            { assertEquals(1.5, outputPerMachine(machine, product), TOLERANCE) },
+            { assertEquals(1.5, machine.outputPerMachine(), TOLERANCE) },
         )
     }
 
@@ -130,12 +127,7 @@ class DirectFeedTest {
             { assertEquals(listOf(alpha, alpha, alpha, alpha), band.links.map { it.material }) },
             { assertEquals(3.0, band.links.sumOf { it.flow }, TOLERANCE) },
             // the cable only feeds the band, so no belt row of it is built
-            {
-                assertEquals(
-                    listOf("copper-cable", "electronic-circuit"),
-                    feed.recipes.map { it.recipe.name },
-                )
-            },
+            { assertEquals(listOf(cable, circuit), feed.recipes) },
         )
     }
 
@@ -184,70 +176,88 @@ class DirectFeedTest {
 
         assertAll(
             { assertEquals(emptyList(), feed.bands) },
-            {
-                assertEquals(
-                    setOf("mine", "smelt"),
-                    feed.recipes.mapTo(mutableSetOf()) { it.recipe.name },
-                )
-            },
+            { assertEquals(setOf(mine, smelt), feed.recipes.toSet()) },
         )
     }
 
     @Test
-    fun aMaterialWithASecondConsumerGetsOneMoreProduction() {
-        val cable = "copper-cable"
-        val circuit = "electronic-circuit"
-        val module = "module"
-
-        val cableRecipe = recipe(cable, mapOf(alpha to 1.0))
-        val circuitRecipe = recipe(circuit, mapOf(gamma to 1.0), mapOf(alpha to 1.0))
-        val moduleRecipe = recipe(module, mapOf(product to 1.0), mapOf(alpha to 0.05))
-
+    fun aMaterialWithTwoProducersIsNotDirectFed() {
+        val first = recipe("first", mapOf(alpha to 1.0))
+        val second = recipe("second", mapOf(alpha to 1.0))
+        val consumer = recipe("consumer", mapOf(product to 1.0), mapOf(alpha to 1.0))
         val feed =
             directFeed(
-                moduleRecipe,
+                consumer,
                 listOf(
-                    production(moduleRecipe, product),
-                    production(circuitRecipe, gamma, amount = 2.0),
-                    production(cableRecipe, alpha, amount = 0.1),
+                    production(consumer, product),
+                    production(first, alpha),
+                    production(second, alpha),
+                ),
+                scale = 1.0,
+                logistics = logistics,
+            )
+
+        // direct feeding would have to pick one of the two producers, so the link stays belted
+        assertEquals(emptyList(), feed.bands)
+    }
+
+    @Test
+    fun aMaterialWithASecondConsumerGetsOneMoreProduction() {
+        val cableRecipe = recipe("copper-cable", mapOf(copperCable to 1.0))
+        val circuitRecipe =
+            recipe("electronic-circuit", mapOf(electronicCircuit to 1.0), mapOf(copperCable to 1.0))
+        val moduleRecipe =
+            recipe(
+                "module",
+                mapOf(efficiencyModule to 1.0),
+                mapOf(copperCable to 0.05),
+            )
+        val module2Recipe =
+            recipe(
+                "module2",
+                mapOf(efficiencyModule2 to 1.0),
+                mapOf(electronicCircuit to 1.0, efficiencyModule to 1.0),
+            )
+        val feed =
+            directFeed(
+                module2Recipe,
+                listOf(
+                    production(module2Recipe, efficiencyModule2),
+                    production(moduleRecipe, efficiencyModule),
+                    production(circuitRecipe, electronicCircuit, amount = 2.0),
+                    production(cableRecipe, copperCable, amount = 0.1),
                 ),
                 scale = 1.0,
                 logistics = logistics,
             )
 
         val band = feed.bands.single()
+        val machines = band.machines
         assertAll(
             // the circuit takes its cable straight from the band: two cable and two circuits
             {
-                assertEquals(
-                    listOf(cable, circuit),
-                    band.machines.map { it.recipe.name }.distinct(),
-                )
+                val expected = listOf(cableRecipe, circuitRecipe, module2Recipe)
+                assertEquals(expected, machines.map { it.recipe }.distinct())
             },
-            { assertEquals(4, band.machines.size) },
+            { assertEquals(3, machines.size) },
             // the module still needs its cable over a belt, so one more cable machine is built
             {
-                assertEquals(
-                    listOf(cable, circuit, module, cable),
-                    feed.recipes.map { it.recipe.name },
-                )
+                val expected =
+                    setOf(cableRecipe, circuitRecipe, moduleRecipe, cableRecipe, module2Recipe)
+                assertEquals(expected, feed.recipes.toSet())
             },
             {
-                assertEquals(
+                val expected =
                     listOf(
                         listOf(
-                            cable,
-                            circuit,
-                            cable,
-                            circuit,
+                            cableRecipe,
+                            circuitRecipe,
+                            module2Recipe,
                         ),
-                        listOf(module),
-                        listOf(cable),
-                    ),
-                    feed.rows.map { row ->
-                        row.machines.map { it.recipe.name }
-                    },
-                )
+                        listOf(cableRecipe),
+                        listOf(moduleRecipe),
+                    )
+                assertEquals(expected, feed.rows.map { row -> row.machines.map { it.recipe } })
             },
         )
     }
@@ -286,7 +296,7 @@ class DirectFeedTest {
                 )
             },
             // the band's own inserter output already covers the target, so no second inserter row
-            { assertEquals(1, feed.recipes.count { it.recipe.name == "inserter" }) },
+            { assertEquals(1, feed.recipes.count { it.name == "inserter" }) },
         )
     }
 
@@ -310,12 +320,7 @@ class DirectFeedTest {
         assertAll(
             // the rod and the unit fill a 1:1 band of the 18 machines a band may hold
             { assertEquals(GROUP_MAX_MACHINES, feed.bands.single().machines.size) },
-            {
-                assertEquals(
-                    listOf("alpha-rod", "beta-unit", "gamma-plate"),
-                    feed.recipes.map { it.recipe.name },
-                )
-            },
+            { assertEquals(listOf(rod, unit, plateMill), feed.recipes) },
             // the plate does not fit into that band any more, so it is built as a belt row of its
             // own
             { assertEquals(5, feed.rows.last().machines.size) },

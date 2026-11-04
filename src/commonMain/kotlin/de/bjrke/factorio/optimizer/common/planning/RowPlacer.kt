@@ -16,8 +16,6 @@ import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineDirection
-import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
-import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
 import de.bjrke.factorio.optimizer.common.planning.RowPlacer.FixedBeltLocation.FAR_BOTTOM
 import de.bjrke.factorio.optimizer.common.planning.RowPlacer.FixedBeltLocation.FAR_TOP
 import de.bjrke.factorio.optimizer.common.planning.RowPlacer.FixedBeltLocation.NEAR_BOTTOM
@@ -119,12 +117,12 @@ internal class RowPlacer(
 
     private fun outputRates(production: FactoryProduction) =
         production.recipe.result.entries.map { (material, amount) ->
-            material to outputPerMachine(production, amount)
+            material to production.outputPerMachine(amount)
         }
 
     private fun inputRates(production: FactoryProduction) =
         production.recipe.ingredients.entries.map { (material, amount) ->
-            material to inputPerMachine(production, amount)
+            material to production.inputPerMachine(amount)
         }
 
     /**

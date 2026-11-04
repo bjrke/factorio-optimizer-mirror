@@ -5,8 +5,6 @@ import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.plan.blueprintMachineFootprint
-import de.bjrke.factorio.optimizer.common.plan.inputPerMachine
-import de.bjrke.factorio.optimizer.common.plan.outputPerMachine
 import de.bjrke.factorio.optimizer.common.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 
@@ -61,8 +59,8 @@ internal class RowPlanner(
     fun insertersFor(production: FactoryProduction, io: Io, items: Double) =
         logistics.beltInserterCount(
             when (io) {
-                Io.INPUT -> inputPerMachine(production, items)
-                Io.OUTPUT -> outputPerMachine(production, items)
+                Io.INPUT -> production.inputPerMachine(items)
+                Io.OUTPUT -> production.outputPerMachine(items)
             },
         )
 

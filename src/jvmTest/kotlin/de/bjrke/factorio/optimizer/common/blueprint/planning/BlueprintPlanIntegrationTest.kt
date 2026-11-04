@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.prototype.Category
@@ -41,7 +42,7 @@ class BlueprintPlanIntegrationTest {
             {
                 assertContainsNot(
                     sourceMaterials,
-                    Material("copper-cable"),
+                    copperCable,
                     "copper cable should not be imported",
                 )
             },

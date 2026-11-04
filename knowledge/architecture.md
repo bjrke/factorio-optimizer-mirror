@@ -40,13 +40,16 @@ CLI (JVM) from one shared core.
     (`OptimizationResult`, `FactoryProduction`). It takes a `ParsedRecipe` in and
     returns an `OptimizationResult`; it never loads the dump or builds a
     blueprint.
-  - `util` — `MinHeap`, `connectedComponents`.
+  - `util` — `MinHeap`, `connectedComponents`, and `MathUtils` (`countVectors`,
+    `permute`, `greatestCommonDivisor`).
   - `plan` — the vocabulary the stages share: `BlueprintPlan` and its result,
     the `Planned*` types, the machine footprint and fluid ports, their budgets
-    (`MAX_COPIES`, `GROUP_MAX_MACHINES`), `ImportExtension` (the import state the
-    marker, trim, compaction and power stages share), and `LogisticsCalculator`
-    (the layout's belt/inserter rates).
-  - `band` — the direct-feed band: `BandSearch`.
+    (`MAX_COPIES`, `MAX_BLUEPRINT_RECIPES`), `ImportExtension` (the import state
+    the marker, trim, compaction and power stages share), and
+    `LogisticsCalculator` (the layout's belt/inserter rates).
+  - `band` — the direct-feed band: `DirectFeed` (the graph walk and row split),
+    `DirectFeedModel` (the link/context model and rate rules) and `BandSearch`
+    (the arrangement search).
   - `route` — the weighted A* shared by belts and pipes (`LayoutRouter`,
     `RouteSearch`, `RouteProfile`); it sits below `routing`, `plumbing` and
     `planning`, which all drive it.
@@ -101,7 +104,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 `expect`/`actual` pairs with the common declaration, both in
 `common.production`).
 
-Package sizes (files, verified 2026-10-26). **Files** are the budget: past 10 is a
+Package sizes (files, verified 2026-11-04). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
 removed, so review keeps it (see `decisions.md`, 2026-10-22). There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
@@ -109,7 +112,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 
 | package | files |
 | --- | --- |
-| band | 1 |
+| band | 3 |
 | beltend | 1 |
 | blueprint | 1 |
 | blueprint/inspection | 3 |
@@ -118,11 +121,11 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint/output | 4 |
 | blueprint/planning | 2 |
 | compaction | 4 |
-| layout | 8 |
+| layout | 9 |
 | layout/entity | 4 |
 | layout/validation | 4 |
 | model | 4 |
-| plan | 5 |
+| plan | 4 |
 | planning | 9 |
 | plumbing | 2 |
 | production | 10 |
@@ -131,8 +134,8 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | route | 3 |
 | routing | 7 |
 | service | 4 |
-| special | 4 |
-| util | 2 |
+| special | 3 |
+| util | 3 |
 
 `production` is at 10 files — the warn line itself, so split it before adding a
 file; `planning` (9) is next.
@@ -170,7 +173,7 @@ the entry points (UI, CLI) and the tests import `blueprint` itself, for `RowLayo
 | `service` | `model`, `prototype` | `production` (the dump loader), `layout`, `blueprint`, the URL codecs |
 | `util` | nothing | every project package |
 | `plan` | `model`, `prototype`, `service` | `layout`, `blueprint`, the stages |
-| `band` | `plan`, `prototype`, `service` | the layout |
+| `band` | `plan`, `prototype`, `service`, `util` | the layout |
 | `route` | `model`, `prototype`, `util`, `layout` | `beltend`, `routing`, `planning`, `blueprint` |
 | `layout` | `model`, `prototype`, `layout.entity` | `special`, `beltend`, `blueprint` |
 | `layout.entity` | `model`, `prototype` | everything else |
@@ -178,12 +181,12 @@ the entry points (UI, CLI) and the tests import `blueprint` itself, for `RowLayo
 | `beltend` | `model`, `layout`, `layout.entity` | `blueprint` |
 | `compaction` | `model`, `layout`, `layout.entity`, `layout.validation`, `plan` | `beltend`, `routing`, `blueprint` |
 | `planning` | `model`, `prototype`, `plan`, `layout`, `layout.entity`, `route` | `special`, `routing`, `blueprint` |
-| `special` | `model`, `prototype`, `plan`, `band`, `service`, `util`, `layout`, `layout.entity` | `routing`, `beltend`, `blueprint` |
+| `special` | `model`, `util`, `layout`, `layout.entity` | `routing`, `beltend`, `blueprint` |
 | `plumbing` | `model`, `prototype`, `plan`, `planning`, `route`, `special`, `layout`, `layout.entity` | `routing`, `beltend`, `blueprint` |
 | `routing` | `model`, `prototype`, `plan`, `planning`, `route`, `special`, `beltend`, `layout`, `layout.entity`, `layout.validation` | `compaction`, `blueprint` |
 | `blueprint` | the stage packages it drives, plus `blueprint.planning`, `blueprint.model`, `blueprint.output`, `blueprint.inspection` (the assembly root) | `blueprint.json` |
 | `blueprint.model` | `model`, `layout.entity` | everything above (the DTO leaf) |
-| `blueprint.planning` | `model`, `prototype`, `production`, `service`, `plan`, `special` | `layout` (it builds a plan, not a grid), `band` directly |
+| `blueprint.planning` | `model`, `prototype`, `production`, `service`, `plan`, `band` | `layout` (it builds a plan, not a grid) |
 | `blueprint.output` | `model`, `production`, `layout.entity`, `blueprint.model` | `blueprint`, `blueprint.json` |
 | `blueprint.inspection` | `model`, `layout.entity` | `blueprint` and above (it only reads a finished layout) |
 | `blueprint.json` | `model`, `layout.entity`, `blueprint.model` | — and **nothing may import it**: it is a leaf writer |
@@ -347,25 +350,34 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 
 `common/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the
 layout test fixtures instead of a per-suite breadth-first walk.
+`common/util/MathUtils.kt` holds the generic `countVectors`, `permute` and
+`greatestCommonDivisor` the band search uses.
 
-`special/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
+`band/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
 a **direct-feed band**: a solid material whose producer and consumer stand in a
 small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
 `BlueprintPlan.rows` (`PlannedRow`/`PlannedLink`) is the single source of truth
 for it. A band is a `PlannedRow` whose `links` are non-empty and whose `machines`
 hold one `FactoryProduction` per machine; a plain row repeats its one production
-once per machine and has no links. `band/BandSearch` finds the shortest window
-(`FeedWindow` checks that every consumer is covered and every producer feeds
-someone). `RowPlacer` places every row through one `placeRow`: a plain row
-repeats its production with touching machines, while a row with links leaves a
-gap column after each machine that has a `PlannedLink` and touches everywhere
-else. Only belted productions feed belts and sinks, so a band's internal material
-never gets a belt; the row still gets **fluid lanes** for its machines' fluid
-ports, including a machine that takes a fluid while its solid input comes from a
-neighbor (see `decisions.md`, 2026-11-02). See
-`decisions.md` (2026-10-18) for the band rules and the open line-breaking
-follow-ups, and (2026-10-24) for why the row is the occurrence.
+once per machine and has no links. The search is a graph walk from the target:
+`DirectFeedModel.FeedLink` carries its producing `FactoryProduction`, its parent
+link and the inserted material, and lazily expands its ingredients, skipping
+fluids and any material already on the path so a recipe cycle is entered once.
+`DirectFeedContext` owns the target, the included productions, the scale, the
+logistics and the per-material producer index; a material is direct-fed only
+when the plan has exactly one producer for it. `band/BandSearch` is a set of
+extensions on that context and finds the shortest window (`FeedWindow` checks
+that every consumer is covered and every producer feeds someone). `RowPlacer`
+places every row through one `placeRow`: a plain row repeats its production with
+touching machines, while a row with links leaves a gap column after each machine
+that has a `PlannedLink` and touches everywhere else. Only belted productions
+feed belts and sinks, so a band's internal material never gets a belt; the row
+still gets **fluid lanes** for its machines' fluid ports, including a machine
+that takes a fluid while its solid input comes from a neighbor (see
+`decisions.md`, 2026-11-02). See `decisions.md` (2026-10-18) for the band rules
+and the open line-breaking follow-ups, (2026-10-24) for why the row is the
+occurrence, and (2026-11-04) for the recursive link graph.
 
 A solid belt's end is a `BeltEnd` (`layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed

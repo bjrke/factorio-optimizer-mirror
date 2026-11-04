@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
@@ -224,11 +225,15 @@ class BlueprintImportTest {
 
     @Test
     fun aProducedLaneIsFedFacingIntoTheLane() {
-        val cable = Material("copper-cable")
         val top = Material("top")
         val makeCable =
-            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ironOre to 1.0))
-        val makeTop = recipe("top", Category.CRAFTING, mapOf(top to 1.0), mapOf(cable to 1.0))
+            recipe(
+                "copper-cable",
+                Category.CRAFTING,
+                mapOf(copperCable to 1.0),
+                mapOf(ironOre to 1.0),
+            )
+        val makeTop = recipe("top", Category.CRAFTING, mapOf(top to 1.0), mapOf(copperCable to 1.0))
         val produced =
             BlueprintPlan(
                 target = top,
@@ -239,7 +244,7 @@ class BlueprintImportTest {
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(makeCable, copperCable, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -259,7 +264,7 @@ class BlueprintImportTest {
             assertNotNull(
                 entities
                     .filterIsInstance<BeltEntity>()
-                    .filter { it.material == cable && it.area.topLeft.y == laneRow }
+                    .filter { it.material == copperCable && it.area.topLeft.y == laneRow }
                     .maxByOrNull { it.area.topLeft.x },
                 "no feed at the produced lane",
             )

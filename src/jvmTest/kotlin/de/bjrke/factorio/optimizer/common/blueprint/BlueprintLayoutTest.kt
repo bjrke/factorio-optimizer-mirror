@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
@@ -246,13 +247,19 @@ class BlueprintLayoutTest {
 
     @Test
     fun aSharedInputIsSplitBetweenItsConsumers() {
-        val cable = Material("copper-cable")
         val alpha = Material("alpha")
         val beta = Material("beta")
         val makeCable =
-            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ironOre to 1.0))
-        val makeAlpha = recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(cable to 1.0))
-        val makeBeta = recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(cable to 1.0))
+            recipe(
+                "copper-cable",
+                Category.CRAFTING,
+                mapOf(copperCable to 1.0),
+                mapOf(ironOre to 1.0),
+            )
+        val makeAlpha =
+            recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(copperCable to 1.0))
+        val makeBeta =
+            recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(copperCable to 1.0))
         val shared =
             BlueprintPlan(
                 target = alpha,
@@ -267,7 +274,7 @@ class BlueprintLayoutTest {
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(makeCable, copperCable, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -283,13 +290,19 @@ class BlueprintLayoutTest {
 
     @Test
     fun aSharedInputSplitsOnItsBeltNotAtTheProducer() {
-        val cable = Material("copper-cable")
         val alpha = Material("alpha")
         val beta = Material("beta")
         val makeCable =
-            recipe("copper-cable", Category.CRAFTING, mapOf(cable to 1.0), mapOf(ironOre to 1.0))
-        val makeAlpha = recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(cable to 1.0))
-        val makeBeta = recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(cable to 1.0))
+            recipe(
+                "copper-cable",
+                Category.CRAFTING,
+                mapOf(copperCable to 1.0),
+                mapOf(ironOre to 1.0),
+            )
+        val makeAlpha =
+            recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(copperCable to 1.0))
+        val makeBeta =
+            recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(copperCable to 1.0))
         val shared =
             BlueprintPlan(
                 target = alpha,
@@ -304,7 +317,7 @@ class BlueprintLayoutTest {
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeCable, cable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(makeCable, copperCable, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -322,7 +335,7 @@ class BlueprintLayoutTest {
         val outlet =
             layout.entities
                 .filterIsInstance<BeltEntity>()
-                .filter { it.material == cable && it.area.topLeft.y == outletRow }
+                .filter { it.material == copperCable && it.area.topLeft.y == outletRow }
                 .maxByOrNull { it.area.topLeft.x }
                 ?.area
                 ?.topLeft
