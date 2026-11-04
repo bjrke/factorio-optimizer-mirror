@@ -119,6 +119,14 @@ up.
   matching source set (`commonMain`/`jsMain`/`jvmMain` →
   `commonTest`/`jsTest`/`jvmTest`); a missing test means the change is incomplete.
   Exception: pure formatting/docs. Use `kotlin.test`.
+- Use the shared material and recipe fixtures before defining a local recipe:
+  `common/fixtures/MaterialFixtures.kt` and `common/fixtures/RecipeFixtures.kt`
+  hold real game recipes (`smeltRecipe`, `makeCopperCable`,
+  `makeElectricEngineUnit`, …) with the `data.raw` amounts and times. A synthetic
+  recipe is fine for a contrived rate, a cycle no vanilla recipe has, or a minimal
+  fluid-row geometry; say why in a comment. `blueprint/fixtures/FluidRowFixtures.kt`
+  keeps `water-boil` as that geometry double: a real fluid-to-solid recipe adds
+  inputs and rates that move the exact lane tiles the characterization suites pin.
 - Floating-point `assertEquals` uses the shared `TOLERANCE` (`1e-9`) from
   `de.bjrke.test`, not a per-assert literal. Keep a coarser local delta only when
   the expectation is deliberately rounded or measured: display/UI pixels, a value

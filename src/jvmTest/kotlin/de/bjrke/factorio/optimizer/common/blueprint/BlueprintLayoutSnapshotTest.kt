@@ -2,14 +2,14 @@ package de.bjrke.factorio.optimizer.common.blueprint
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
@@ -38,11 +38,18 @@ class BlueprintLayoutSnapshotTest {
 
     @Test
     fun fluidLayoutIsStable() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val waterBoilRecipe =
+            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val plan =
             BlueprintPlan(
                 target = gear,
-                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",
@@ -52,8 +59,8 @@ class BlueprintLayoutSnapshotTest {
 
     @Test
     fun bandLayoutIsStable() {
-        val gearRow = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(smeltRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
+        val gearRow = planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,

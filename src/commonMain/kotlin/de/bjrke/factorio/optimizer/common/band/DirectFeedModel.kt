@@ -111,46 +111,41 @@ internal data class FeedLink(
         ingredients.forEach { it.traverse() }
     }
 
-    /**
-     * The links that feed this production: one per solid ingredient with exactly one in-plan
-     * producer, skipping fluids and any material already on the path so a cycle is entered once.
-     */
-    val ingredients by lazy {
-        production.recipe.ingredients.keys.flatMap { material ->
-            // fluids
-            if (ctx.logistics.isFluid(material)) return@flatMap emptyList()
-            // cycle
-            if (pathReverse().any { it.material == material }) return@flatMap emptyList()
-            // exactly one producer
-            ctx.producers[material]
-                .orEmpty()
-                .singleOrNull()
-                ?.let {
-                    listOf(FeedLink(ctx, it, this))
-                }
-                .orEmpty()
+    private val pathRecipes by lazy {
+        buildSet {
+            add(production.recipe)
+            for (link in pathReverse()) add(link.production.recipe)
         }
     }
 
-    private val beltSofar: Set<Material> by lazy {
-        if (parent == null) setOf(material)
-        else
-            parent.beltSofar +
-                (parent.production.recipe.ingredients.keys - production.recipe.result.keys)
-    }
+    private fun producerOf(material: Material) = ctx.producers[material]?.singleOrNull()
 
-    val beltMaterials by lazy { production.recipe.ingredients.keys + beltSofar }
+    /**
+     * Whether [material] closes a recipe cycle: an ancestor already supplies it, or its single
+     * in-plan producer (this recipe included) is already on the path.
+     */
+    private fun closesCycle(material: Material) =
+        !ctx.logistics.isFluid(material) &&
+            (pathReverse().any { it.material == material } ||
+                (producerOf(material)?.recipe?.let(pathRecipes::contains) ?: false))
 
-    val stuff by lazy {
-        if (parent != null) {
-            parent.production.recipe.ingredients.keys - production.recipe.result.keys
-        } else setOf(material)
-    }
+    /**
+     * Whether an ingredient can only come from a cycle. The walk prunes such an ingredient so it
+     * terminates, and the link itself is dropped so a band cannot be built with a machine it can
+     * never feed (`aTwoRecipeCycleStaysBelted`).
+     */
+    val hasCyclicIngredient by lazy { production.recipe.ingredients.keys.any(::closesCycle) }
 
-    val beltFromBottom by lazy {
-        buildSet {
-            val current = this@FeedLink
-            addAll(current.production.recipe.ingredients.keys)
+    /**
+     * The links that feed this production: one per solid ingredient with exactly one in-plan
+     * producer, skipping fluids and cyclic materials so a recipe cycle is never entered twice.
+     */
+    val ingredients by lazy {
+        production.recipe.ingredients.keys.flatMap { material ->
+            // fluids and cycles
+            if (ctx.logistics.isFluid(material) || closesCycle(material)) return@flatMap emptyList()
+            // exactly one producer
+            producerOf(material)?.let { listOf(FeedLink(ctx, it, this)) }.orEmpty()
         }
     }
 

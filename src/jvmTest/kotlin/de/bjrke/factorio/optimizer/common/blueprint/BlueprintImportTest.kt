@@ -6,8 +6,13 @@ import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MarkerEntity
@@ -225,37 +230,39 @@ class BlueprintImportTest {
 
     @Test
     fun aProducedLaneIsFedFacingIntoTheLane() {
-        val top = Material("top")
-        val makeCable =
-            recipe(
-                "copper-cable",
-                Category.CRAFTING,
-                mapOf(copperCable to 1.0),
-                mapOf(ironOre to 1.0),
-            )
-        val makeTop = recipe("top", Category.CRAFTING, mapOf(top to 1.0), mapOf(copperCable to 1.0))
         val produced =
             BlueprintPlan(
-                target = top,
+                target = electronicCircuit,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(makeTop, top, Factory.ASSEMBLING_MACHINE_3),
+                            planned(
+                                electronicCircuitRecipe,
+                                electronicCircuit,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeCable, copperCable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
+                sources =
+                    listOf(
+                        PlannedSource(copperPlate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, 1.0, fluid = false),
+                    ),
                 scale = 1.0,
-                label = "top",
+                label = "electronic-circuit",
             )
 
         val entities = Layout(produced).entities
         val machineArea =
-            entities.filterIsInstance<MachineEntity>().single { it.recipe == "top" }.area
+            entities
+                .filterIsInstance<MachineEntity>()
+                .single { it.recipe == "electronic-circuit" }
+                .area
         val laneRow = machineArea.topLeft.y - 2
 
         // a produced lane runs west into the machine; compaction may shorten it, so take the

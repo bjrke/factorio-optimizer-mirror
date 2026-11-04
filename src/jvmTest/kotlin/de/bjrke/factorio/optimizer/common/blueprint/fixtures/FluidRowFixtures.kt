@@ -11,7 +11,9 @@ import de.bjrke.factorio.optimizer.common.prototype.Factory
 import de.bjrke.factorio.optimizer.common.service.FactoryProduction
 
 /**
- * A water-only chemistry recipe: the whole row is fluid, so nothing but a pipe can reach a port.
+ * A minimal fluid-to-solid chemistry recipe: one fluid input, one solid output. It is a test
+ * double, not a game recipe; a real one adds inputs and rates that move the exact lane tiles the
+ * characterization suites pin.
  */
 fun waterRecipe(also: Map<Material, Double> = emptyMap()) =
     recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0) + also)
@@ -24,8 +26,8 @@ fun fluidRowPlan(
     machines: Double = 1.0,
     fluidInputs: Map<Material, Double> = emptyMap(),
 ): BlueprintPlan {
-    val boil = waterRecipe(fluidInputs)
-    val planned = FactoryProduction(gear, boil, factory, amount = 1.0, level = 0)
+    val waterBoilRecipe = waterRecipe(fluidInputs)
+    val planned = FactoryProduction(gear, waterBoilRecipe, factory, amount = 1.0, level = 0)
     return BlueprintPlan(
         target = gear,
         rows = listOf(PlannedRow(List(machines.toInt().coerceAtLeast(1)) { planned })),

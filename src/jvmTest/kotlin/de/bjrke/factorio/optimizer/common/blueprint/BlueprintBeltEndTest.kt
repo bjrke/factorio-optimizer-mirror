@@ -164,11 +164,18 @@ class BlueprintBeltEndTest {
 
     @Test
     fun fluidImportsKeepTheCombinatorLabelEvenWithAChestMarker() {
-        val boil = recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
+        val waterBoilRecipe =
+            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
                 target = gear,
-                rows = listOf(PlannedRow.copies(planned(boil, gear, Factory.CHEMICAL_PLANT), 1)),
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources = listOf(PlannedSource(water, 1.0, fluid = true)),
                 scale = 1.0,
                 label = "water-boil",

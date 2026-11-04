@@ -2,9 +2,13 @@ package de.bjrke.factorio.optimizer.common.blueprint.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.model.Coordinate
@@ -38,14 +42,9 @@ fun planned(
 
 val logistics =
     LogisticsCalculator(
-        testLogistics.copy(fluids = setOf(water, lubricant)),
+        testLogistics.copy(fluids = setOf(water, lubricant, petroleum, sulfuricAcid)),
         LogisticsCalculatorSelection(belt = BeltTier.EXPRESS_TRANSPORT_BELT),
     )
-
-val smeltRecipe =
-    recipe("iron-plate", Category.CRAFTING, mapOf(ironPlate to 1.0), mapOf(ironOre to 1.0))
-val craftRecipe =
-    recipe("iron-gear-wheel", Category.CRAFTING, mapOf(gear to 1.0), mapOf(ironPlate to 2.0))
 
 /** A gear machine fed by a plate machine, with iron ore imported from a belt. */
 val basePlan =
@@ -53,8 +52,12 @@ val basePlan =
         target = gear,
         rows =
             listOf(
-                PlannedRow(listOf(planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3))),
-                PlannedRow(listOf(planned(smeltRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_1))),
+                PlannedRow(
+                    listOf(planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)),
+                ),
+                PlannedRow(
+                    listOf(planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_1)),
+                ),
             ),
         sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
         scale = 1.0,

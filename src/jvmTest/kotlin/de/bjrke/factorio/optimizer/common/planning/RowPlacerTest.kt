@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.common.planning
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.model.Io
@@ -33,7 +33,7 @@ class RowPlacerTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
+                            planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
                             3,
                         ),
                     ),
@@ -53,8 +53,8 @@ class RowPlacerTest {
 
     @Test
     fun onlyALinkedGapGetsASeparatingColumn() {
-        val gearMachine = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateMachine = planned(smeltRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
+        val gearMachine = planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
+        val plateMachine = planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,

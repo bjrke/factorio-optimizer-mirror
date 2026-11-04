@@ -44,13 +44,16 @@ import kotlin.test.assertEquals
  */
 class BlueprintFluidCharacterizationTest {
 
-    private val boil =
+    private val waterBoilRecipe =
         recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
 
     private val fluidPlan =
         BlueprintPlan(
             target = gear,
-            rows = listOf(PlannedRow(List(3) { planned(boil, gear, Factory.CHEMICAL_PLANT) })),
+            rows =
+                listOf(
+                    PlannedRow(List(3) { planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT) }),
+                ),
             sources = listOf(PlannedSource(water, 1.0, fluid = true)),
             scale = 1.0,
             label = "water-boil",

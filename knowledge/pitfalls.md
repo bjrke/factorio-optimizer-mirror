@@ -68,6 +68,14 @@ An entry belongs here only with evidence, and should say how to recognize it.
   tile), and the belt tunnel entry costs 16 (four surface tiles), so a short detour wins
   over an unnecessary tunnel. Line breaking a band too wide is a deferred follow-up, not
   a bug in the router.
+- **A material-only cycle guard misses a recipe that consumes its own product.**
+  `kovarex-enrichment-process` takes and gives uranium-235/uranium-238; a guard
+  that only checks "has this material been seen on the path" recurses forever
+  because the parent link's material is the other isotope. `FeedLink.pathRecipes`
+  must reject a producer whose *recipe* is already on the path, and `hasCycle`
+  must drop a link with any cyclic ingredient (the band would starve it).
+  Evidence: `aRecipeThatFeedsItselfStaysBelted` and `aTwoRecipeCycleStaysBelted`
+  in `DirectFeedTest`.
 - **A row has four solid belt locations, so a recipe needing a fifth solid lane is
   out of scope.** `RowPlacer.rowShape` ranks inputs and outputs together and zips
   them onto two top and two bottom locations (near/far each); every input belt is

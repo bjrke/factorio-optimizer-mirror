@@ -23,30 +23,34 @@ direct-fed consumer receives.
 
 **Guardrail.** A material is direct-fed only when the plan has exactly one
 producer for it, matching the single-producer assumption in `countsForBelt`.
-Never expand a fluid or a material already on the link path, and keep the
-`countVectors` empty-list guard (it used to recurse without end). `special` no
-longer owns the direct feed; `blueprint.planning` imports `band.directFeed`
-directly.
+Never expand a fluid, and never create a link whose producer recipe is already
+on the path: the recipe check is what stops a recipe that consumes its own
+product (`kovarex-enrichment-process`) from recursing. A link with any cyclic
+ingredient (`FeedLink.hasCycle`) is dropped from the candidates, because the
+band would starve that machine. Keep the `countVectors` empty-list guard (it
+used to recurse without end). `special` no longer owns the direct feed;
+`blueprint.planning` imports `band.directFeed` directly.
 
 **See.** `architecture.md` §Blueprint layout; `band/DirectFeed.kt`,
 `band/DirectFeedModel.kt`, `band/BandSearch.kt`, `util/MathUtils.kt`.
 
-## 2026-11-02 — Fluid-taking recipes may join a band
+## 2026-11-02 — Band machines may take or give a fluid
 
-**Decision.** `band/DirectFeed.kt` no longer skips a consumer that takes a
-fluid; only the *link* material must be solid. A band row gets the same fluid
-lanes as a plain row (`RowFluidLane.fluids` walks every machine), so a member's
-port on the row's north or south edge is fed (or drained) by the lane. A band's
-producer still needs fluid-free ingredients, and a fluid is never a link. The lane
-serves a band machine's port like any other, so the consumer's fluid need no
-longer keep the recipe belted.
+**Decision.** Any machine in a direct-feed band may take a fluid ingredient or
+give a fluid output; the band row gets the same fluid lanes as a plain row
+(`RowFluidLane.fluids` walks every machine), so a port on the row's north or
+south edge is fed (or drained) by the lane. Only the *link* material must be
+solid, because direct feeding a fluid buys nothing: there are no inserters to
+save, and a pipe already moves a fluid at high throughput and holds a large
+buffer. The lane serves a band machine's port like any other, so neither a
+producer's nor a consumer's fluid need keeps the recipe belted.
 
-**Guardrail.** Keep the two halves in step: a band may contain a fluid-taking
-recipe only because `FluidLaneFeed` can serve its port. Never drop the
-`!logistics.isFluid(material)` test in `FeedLink.ingredients`. A fluid that is
-both an input and an output gets one feed lane and one drain lane (keyed by
-material **and** flow, never merged by material); `FluidFeeder.connectLanes`
-joins the drain to the feed east of the row.
+**Guardrail.** Keep the two halves in step: a band machine may use a fluid only
+because `FluidLaneFeed` can serve its port. Never drop the
+`!logistics.isFluid(material)` test in `FeedLink.ingredients`; a fluid is never a
+link. A fluid that is both an input and an output gets one feed lane and one
+drain lane (keyed by material **and** flow, never merged by material);
+`FluidFeeder.connectLanes` joins the drain to the feed east of the row.
 
 **See.** `architecture.md` §Blueprint layout; `pitfalls.md` §Layout and fluids.
 
@@ -279,9 +283,9 @@ is left without a consumer. Bounds: `GROUP_MAX_MACHINES = 18`, `MAX_BAND_RECIPES
 gets no lane, sink, belt or belted production.
 
 **Guardrail.** Do not group by machine count or give a band's internal material a
-belt. A fluid is never a link material (`FeedLink.ingredients`), and a band's
-producer must have fluid-free ingredients; a fluid-taking consumer may join since
-2026-11-02. Open: line-breaking a too-wide band and mixed-footprint bands.
+belt. A fluid is never a link material (`FeedLink.ingredients`); any band machine
+may take or give one since 2026-11-02. Open: line-breaking a too-wide band and
+mixed-footprint bands.
 
 **See.** `architecture.md` §Blueprint layout; `band/DirectFeed.kt`,
 `band/BandSearch.kt`.

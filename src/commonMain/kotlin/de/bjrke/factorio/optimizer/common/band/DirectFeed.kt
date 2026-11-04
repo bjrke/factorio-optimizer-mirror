@@ -19,13 +19,13 @@ private const val MAX_BAND_LINKS = 3
 /** The rows a plan builds; a plain row repeats one recipe, a band interleaves several. */
 internal data class DirectFeed(val rows: List<PlannedRow>)
 
-// every link that could be direct-fed, in a deterministic order; a consumer that also takes a
-// fluid is left in, because the band row gets the same fluid lane as a plain row
+// every link that could be direct-fed, in a deterministic order; a machine that takes or gives a
+// fluid is left in (the band row gets the same fluid lane as a plain row), but a cyclic link is not
 context(ctx: DirectFeedContext)
 private fun candidates() = sequence {
     FeedLink(ctx).traverse()
 }
-    .filter { cycleRatio(it.ioRatio) != null }
+    .filter { !it.hasCyclicIngredient && cycleRatio(it.ioRatio) != null }
 
 // grow groups greedily: a link joins the group sharing a recipe, and is dropped again
 // when the merged arrangement cannot be built, so it simply stays belted
@@ -99,7 +99,7 @@ private fun DirectFeedContext.countsForBelt(
 ) =
     material in recipe.result.keys &&
         !logistics.isFluid(material) &&
-        producers[material]?.singleOrNull()?.recipe === recipe &&
+        producers[material]?.singleOrNull()?.recipe == recipe &&
         grouped.none {
             it.material == material && it.producer == recipe && it.consumer == consumer.recipe
         }

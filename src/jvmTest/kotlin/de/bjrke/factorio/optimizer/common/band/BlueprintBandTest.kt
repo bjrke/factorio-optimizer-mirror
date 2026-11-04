@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.common.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.smeltRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.plan.PlannedLink
@@ -24,8 +24,8 @@ class BlueprintBandTest {
 
     @Test
     fun aBandFeedsItsConsumerMachineToMachine() {
-        val gearRow = planned(craftRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(smeltRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
+        val gearRow = planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
         val bandPlan =
             BlueprintPlan(
                 target = gear,

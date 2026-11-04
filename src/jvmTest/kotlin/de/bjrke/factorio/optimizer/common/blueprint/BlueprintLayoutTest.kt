@@ -2,15 +2,25 @@ package de.bjrke.factorio.optimizer.common.blueprint
 
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.craftRecipe
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.fixtures.recipe
-import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
+import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.pipe
+import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPole
+import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPoleRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.water
+import de.bjrke.factorio.optimizer.common.fixtures.wood
 import de.bjrke.factorio.optimizer.common.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.layout.entity.MachineEntity
@@ -21,7 +31,6 @@ import de.bjrke.factorio.optimizer.common.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.model.Coordinate
 import de.bjrke.factorio.optimizer.common.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.model.Direction.NORTH
-import de.bjrke.factorio.optimizer.common.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.factorio.optimizer.common.model.north
@@ -109,7 +118,7 @@ class BlueprintLayoutTest {
                         PlannedRow.copies(
                             FactoryProduction(
                                 gear,
-                                craftRecipe,
+                                ironGearWheelRecipe,
                                 Factory.ASSEMBLING_MACHINE_3,
                                 1.0,
                                 0,
@@ -139,7 +148,7 @@ class BlueprintLayoutTest {
                         PlannedRow.copies(
                             FactoryProduction(
                                 gear,
-                                craftRecipe,
+                                ironGearWheelRecipe,
                                 Factory.ASSEMBLING_MACHINE_3,
                                 1.0,
                                 0,
@@ -174,25 +183,27 @@ class BlueprintLayoutTest {
 
     @Test
     fun aRecipeWithTwoInputsUsesALongInserter() {
-        val two =
-            recipe(
-                "two",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 1.0, ironOre to 1.0),
-            )
         val twoPlan =
             BlueprintPlan(
-                target = gear,
+                target = electronicCircuit,
                 rows =
-                    listOf(PlannedRow.copies(planned(two, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
+                    listOf(
+                        PlannedRow.copies(
+                            planned(
+                                electronicCircuitRecipe,
+                                electronicCircuit,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(ironOre, 1.0, fluid = false),
+                        PlannedSource(copperCable, 1.0, fluid = false),
                     ),
                 scale = 1.0,
-                label = "two",
+                label = "electronic-circuit",
             )
 
         // the second input sits on the far lane, which only a long inserter reaches
@@ -203,8 +214,9 @@ class BlueprintLayoutTest {
     @Test
     fun aFluidPortDoesNotCostTheLongInserter() {
         // an assembler with two solid inputs and a fluid port on its top edge: the port takes the
-        // middle column, so the pattern's long inserter has to move to the machine's last column
-        val two =
+        // middle column, so the pattern's long inserter has to move to the machine's last column.
+        // A minimal two-lane recipe, because a real recipe's rates put an input on the other side.
+        val twoRecipe =
             recipe(
                 "two",
                 Category.CRAFTING,
@@ -215,7 +227,12 @@ class BlueprintLayoutTest {
             BlueprintPlan(
                 target = gear,
                 rows =
-                    listOf(PlannedRow.copies(planned(two, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
+                    listOf(
+                        PlannedRow.copies(
+                            planned(twoRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(ironPlate, 1.0, fluid = false),
@@ -247,40 +264,40 @@ class BlueprintLayoutTest {
 
     @Test
     fun aSharedInputIsSplitBetweenItsConsumers() {
-        val alpha = Material("alpha")
-        val beta = Material("beta")
-        val makeCable =
-            recipe(
-                "copper-cable",
-                Category.CRAFTING,
-                mapOf(copperCable to 1.0),
-                mapOf(ironOre to 1.0),
-            )
-        val makeAlpha =
-            recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(copperCable to 1.0))
-        val makeBeta =
-            recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(copperCable to 1.0))
         val shared =
             BlueprintPlan(
-                target = alpha,
+                target = electronicCircuit,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
+                            planned(
+                                electronicCircuitRecipe,
+                                electronicCircuit,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
+                            planned(
+                                smallElectricPoleRecipe,
+                                smallElectricPole,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeCable, copperCable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
+                sources =
+                    listOf(
+                        PlannedSource(copperPlate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, 1.0, fluid = false),
+                        PlannedSource(wood, 1.0, fluid = false),
+                    ),
                 scale = 1.0,
-                label = "alpha",
+                label = "electronic-circuit",
             )
 
         // one producer feeding two recipes needs a splitter on its belt
@@ -290,40 +307,40 @@ class BlueprintLayoutTest {
 
     @Test
     fun aSharedInputSplitsOnItsBeltNotAtTheProducer() {
-        val alpha = Material("alpha")
-        val beta = Material("beta")
-        val makeCable =
-            recipe(
-                "copper-cable",
-                Category.CRAFTING,
-                mapOf(copperCable to 1.0),
-                mapOf(ironOre to 1.0),
-            )
-        val makeAlpha =
-            recipe("alpha", Category.CRAFTING, mapOf(alpha to 1.0), mapOf(copperCable to 1.0))
-        val makeBeta =
-            recipe("beta", Category.CRAFTING, mapOf(beta to 1.0), mapOf(copperCable to 1.0))
         val shared =
             BlueprintPlan(
-                target = alpha,
+                target = electronicCircuit,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(makeAlpha, alpha, Factory.ASSEMBLING_MACHINE_3),
+                            planned(
+                                electronicCircuitRecipe,
+                                electronicCircuit,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeBeta, beta, Factory.ASSEMBLING_MACHINE_3),
+                            planned(
+                                smallElectricPoleRecipe,
+                                smallElectricPole,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(makeCable, copperCable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
+                sources =
+                    listOf(
+                        PlannedSource(copperPlate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, 1.0, fluid = false),
+                        PlannedSource(wood, 1.0, fluid = false),
+                    ),
                 scale = 1.0,
-                label = "alpha",
+                label = "electronic-circuit",
             )
 
         val layout = Layout(shared)
@@ -422,39 +439,34 @@ class BlueprintLayoutTest {
 
     @Test
     fun aRecipeWithThreeInputsUsesASecondBeltBelow() {
-        val three =
-            recipe(
-                "three",
-                Category.CRAFTING,
-                mapOf(gear to 2.0),
-                mapOf(ironOre to 1.0, ironPlate to 1.0, coal to 1.0),
-            )
         val threePlan =
             BlueprintPlan(
-                target = gear,
+                target = engineUnit,
                 rows =
                     listOf(
-                        PlannedRow.copies(planned(three, gear, Factory.ASSEMBLING_MACHINE_3), 1),
+                        PlannedRow.copies(
+                            planned(engineUnitRecipe, engineUnit, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironOre, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(coal, 1.0, fluid = false),
+                        PlannedSource(steelPlate, 1.0, fluid = false),
+                        PlannedSource(gear, 1.0, fluid = false),
+                        PlannedSource(pipe, 1.0, fluid = false),
                     ),
                 scale = 1.0,
-                label = "three",
+                label = "engine-unit",
             )
 
-        // the third input sits on a second belt below the row, reached by a south facing inserter
-        val inserters =
-            Layout(threePlan).blueprint.entities.filter {
-                it.name.endsWith("inserter")
+        // the third input sits on a second belt below the row, reached by a long inserter
+        val layout = Layout(threePlan)
+        val machine = layout.entities.filterIsInstance<MachineEntity>().single()
+        val below =
+            layout.blueprint.entities.filter {
+                it.name.endsWith("inserter") && it.area.topLeft.y > machine.area.bottomRight.y
             }
-        assertTrue(
-            inserters.any { it.name == "long-handed-inserter" && it.direction == SOUTH },
-            inserters.toString(),
-        )
+        assertTrue(below.any { it.name == "long-handed-inserter" }, below.toString())
     }
 
     @Test

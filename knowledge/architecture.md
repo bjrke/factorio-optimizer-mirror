@@ -93,8 +93,10 @@ CLI (JVM) from one shared core.
   `jsBrowserTest`; must stay platform-neutral. Every suite sits in the package it
   tests (`commonTest/…/common/blueprint/…`, `.../production/…`), and shared
   helpers live in a `fixtures` package (`common/fixtures`: `testLogistics`,
-  `calculator`, the optimizer fixtures and the test-only `BlueprintPlan.recipes`
-  view; `blueprint/fixtures`: materials, recipes, plans, layout assertions).
+  `calculator`, the material and named-recipe fixtures (`RecipeFixtures.kt`), the
+  optimizer fixtures and the test-only `BlueprintPlan.recipes` view;
+  `blueprint/fixtures`: plans, layout assertions and the minimal fluid-row
+  helpers).
 - `src/jvmTest` / `src/jsTest` — platform-specific tests; JVM suites that need
   the build output or the source tree (`IconCoverageTest`) and the CLI
   integration tests live there.
@@ -374,10 +376,11 @@ touching machines, while a row with links leaves a gap column after each machine
 that has a `PlannedLink` and touches everywhere else. Only belted productions
 feed belts and sinks, so a band's internal material never gets a belt; the row
 still gets **fluid lanes** for its machines' fluid ports, including a machine
-that takes a fluid while its solid input comes from a neighbor (see
-`decisions.md`, 2026-11-02). See `decisions.md` (2026-10-18) for the band rules
-and the open line-breaking follow-ups, (2026-10-24) for why the row is the
-occurrence, and (2026-11-04) for the recursive link graph.
+that takes or gives a fluid while its solid link comes from a neighbor; only the
+link material must be solid (see `decisions.md`, 2026-11-02). See `decisions.md`
+(2026-10-18) for the band rules and the open line-breaking follow-ups,
+(2026-10-24) for why the row is the occurrence, and (2026-11-04) for the
+recursive link graph and its recipe-path cycle guard.
 
 A solid belt's end is a `BeltEnd` (`layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
@@ -394,9 +397,9 @@ geometry and `pitfalls.md` for the wire and pole traps.
 
 The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintImportTest`, `BlueprintFluidLayoutTest`, `BlueprintBandTest`,
-`BlueprintBeltEndTest`); `BlueprintLayoutSnapshotTest` hashes the canonical
-entity/wire list of representative plans, so any geometry or entity-order change
-is deliberate. The JVM integration suite is split by plan, layout, power, fluid,
+`BlueprintBandFluidTest`, `BlueprintBeltEndTest`); `BlueprintLayoutSnapshotTest`
+hashes the canonical entity/wire list of representative plans, so any geometry or
+entity-order change is deliberate. The JVM integration suite is split by plan, layout, power, fluid,
 belt end and serialization. `./gradlew check` runs Detekt (see `conventions.md`):
 the type-resolved `detektMainJvm`/`detektTestJvm` plus the light
 `detektJsMainSourceSet`/`detektJsTestSourceSet`; there are no committed
