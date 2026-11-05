@@ -1,28 +1,28 @@
 package de.bjrke.factorio.optimizer.common.blueprint
 
-import de.bjrke.factorio.optimizer.common.beltend.BeltEndConnector
-import de.bjrke.factorio.optimizer.common.blueprint.inspection.LayoutDump
-import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.output.chestWires
-import de.bjrke.factorio.optimizer.common.blueprint.output.toBlueprintEntity
-import de.bjrke.factorio.optimizer.common.compaction.CompactionPass
-import de.bjrke.factorio.optimizer.common.compaction.UndergroundStretcher
-import de.bjrke.factorio.optimizer.common.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.layout.LayoutNames
-import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.plan.ImportExtension
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.planning.LayoutStage
-import de.bjrke.factorio.optimizer.common.planning.RowPlacer
-import de.bjrke.factorio.optimizer.common.planning.RowPlanner
-import de.bjrke.factorio.optimizer.common.plumbing.FluidFeeder
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.route.LayoutRouter
-import de.bjrke.factorio.optimizer.common.routing.DeliveryRouter
-import de.bjrke.factorio.optimizer.common.routing.ImportTrimmer
-import de.bjrke.factorio.optimizer.common.special.PowerPlacer
+import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
+import de.bjrke.factorio.optimizer.common.blueprint.placing.compaction.CompactionPass
+import de.bjrke.factorio.optimizer.common.blueprint.placing.compaction.UndergroundStretcher
+import de.bjrke.factorio.optimizer.common.blueprint.placing.plumbing.FluidFeeder
+import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
+import de.bjrke.factorio.optimizer.common.blueprint.placing.routing.DeliveryRouter
+import de.bjrke.factorio.optimizer.common.blueprint.placing.routing.ImportTrimmer
+import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
+import de.bjrke.factorio.optimizer.common.blueprint.placing.special.PowerPlacer
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LayoutStage
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlanner
+import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.LayoutDump
+import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.chestWires
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.toBlueprintEntity
+import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 
 internal class RowLayout(
     val plan: BlueprintPlan,

@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.fixtures
 
-import de.bjrke.factorio.optimizer.common.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.Material
 
 val ironOre = Material("iron-ore")
 val copperOre = Material("copper-ore")

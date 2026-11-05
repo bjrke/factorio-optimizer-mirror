@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.fixtures
 
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.service.FactoryProduction
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 
 /**
  * Every planned production in plan order; a production may appear once per row. A test-only view:

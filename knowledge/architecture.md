@@ -15,87 +15,97 @@ CLI (JVM) from one shared core.
 - `src/commonMain` — shared logic, one package per domain. The dependency direction
   is one-way, from the vocabulary up to the artifact. The exact edges each package
   may use are listed under "Package dependencies" (see `decisions.md`, 2026-10-22):
-  - `model` — the grid vocabulary and nothing else: `Tile.kt` (`Coordinate`,
+  - `core/model` — the grid vocabulary and nothing else: `Tile.kt` (`Coordinate`,
     `Area`, `Dimension`, `Direction`, `Io`), `TileGeometry.kt` (distance and
     compass helpers), `Material.kt`, `IconLayer.kt`. A leaf: it imports no other
     project package.
-  - `prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
+  - `core/util` — `MinHeap`, `connectedComponents`, and `MathUtils` (`countVectors`,
+    `permute`, `greatestCommonDivisor`).
+  - `game/prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (belt/inserter/pump stats and `LogisticsConfig`),
     `Surface.kt` (`Surface`, `SurfaceProperty/Condition`, the surface rules as
     `Surface.accepts*` extensions).
-  - `prototype/selection` — the URL/CLI codecs: `Selection.kt`
+  - `game/selection` — the URL/CLI codecs: `Selection.kt`
     (`Selection`, `SelectionFlag`, `selectionString`, `spaceAgeIn`,
     `fullBeltIn`), `BeltEndSelection.kt` (`beltEndFromSelection/-Identifier`),
     `SurfaceSelection.kt` (`surfaceFromUrl/-Planet`, `forSurface`). Only the
     entry points (UI, CLI) and the tests use it; the layout never sees a URL.
-  - `production` — reads the prototype dump: `recipeParser.kt` orchestrates it,
-    `RecipeLoader` (the cached per-mods parse), `prototypeDump.kt` (the
+  - `game/production` — reads the prototype dump: `recipeParser.kt` orchestrates
+    it, `RecipeLoader` (the cached per-mods parse), `prototypeDump.kt` (the
     `loadPrototypeDump` `expect` declaration), `RecipePrototype.kt`,
     `JsonFields.kt`, `resourceRecipes.kt`, `customRecipes.kt`
     (`ALL_SCIENCE_PACKS`), `spoilageRecipes.kt`, `utils.kt` (normalization) and
     `prototypeStats.kt` (`machineStats`/`logisticsStats`).
-  - `service` — the optimizer: `Optimizer.kt` and `MachineCatalog.kt` (machine
-    choice and rates), `LinearProgram.kt`, and `OptimizationResult.kt`
-    (`OptimizationResult`, `FactoryProduction`). It takes a `ParsedRecipe` in and
-    returns an `OptimizationResult`; it never loads the dump or builds a
-    blueprint.
-  - `util` — `MinHeap`, `connectedComponents`, and `MathUtils` (`countVectors`,
-    `permute`, `greatestCommonDivisor`).
-  - `plan` — the vocabulary the stages share: `BlueprintPlan` and its result,
-    the `Planned*` types, the machine footprint and fluid ports, their budgets
-    (`MAX_COPIES`, `MAX_BLUEPRINT_RECIPES`), `ImportExtension` (the import state
-    the marker, trim, compaction and power stages share), and
-    `LogisticsCalculator` (the layout's belt/inserter rates).
-  - `band` — the direct-feed band: `DirectFeed` (the graph walk and row split),
-    `DirectFeedModel` (the link/context model and rate rules) and `BandSearch`
-    (the arrangement search).
-  - `route` — the weighted A* shared by belts and pipes (`LayoutRouter`,
-    `RouteSearch`, `RouteProfile`); it sits below `routing`, `plumbing` and
-    `planning`, which all drive it.
-  - `layout` — the grid kernel: `LayoutBoard` (tiles, reservations, primitives),
-    `LayoutPlacement` (single-tile entity-kind helpers), `LayoutTunnels` (the
-    surface/end/tunnel placement and the tunnel-link plan), `LayoutUnderground`,
-    `Tunnels`, `LayoutIndex` (the read-only tile index), `BeltEnd` (how a belt is
-    terminated). `layout/entity` holds the entity hierarchy (`LayoutEntity`,
-    `LayoutTransportEntities`, `LayoutEntityStations`, `LayoutSettings`);
-    `layout/validation` holds the invariant checks (`LayoutValidation*.kt`).
-    This tree must never mention the blueprint.
-  - `beltend` — `BeltEndConnector.kt`: the solid belt's end marker (label,
-    infinity chest, chest).
-  - `planning` — the row planner (`RowPlanner`, `RowPlacer`, `Row` and the
-    inserter/interface placers) and the shared `LayoutStage`.
-  - `routing` — implicit delivery (`Delivery*`, `Import*`, `FluidFeedLinker`,
-    `SplitDeliveryRouter`) and `BeltRouteRules`; `plumbing` — the fluid feed
-    (`FluidFeeder`, `FluidLaneFeed`);
-    `special` — the path, power and material-search pass; `compaction` —
-    `LayoutCompaction`, `CompactionPass`, `SeamGrid`, `UndergroundStretcher`.
-  - `blueprint/model` — the wire DTO: `Blueprint`, `BlueprintEntity`,
-    `BlueprintWire`. It imports only `model` and `layout.entity`, so the encoders
-    and the assembly can share it without a cycle.
-  - `blueprint` — the assembly: `RowLayout.kt` (`RowLayout`, the ordered stage
-    pipeline). `blueprint/planning` turns an `OptimizationResult` into a plan
-    (`blueprintPlan`, `includedRecipes`, `plannedSources`); `blueprint/output`
-    encodes it (`BlueprintString.kt`, `FactorioUrl.kt`, `toBlueprintEntity` in
-    `LayoutSerialization.kt`, `chestWires`); `blueprint/inspection` renders the
-    ASCII layout and the dump.
-  - `blueprint/json` — `Blueprint.toJson`: the wire JSON, a leaf nothing else may
-    import, so the encoder stays out of every stage.
+  - `optimize` — the optimizer: `Optimizer.kt` and `MachineCatalog.kt`
+    (machine choice and rates) and `LinearProgram.kt`. It takes a `ParsedRecipe`
+    in and returns an `OptimizationResult` (from `model`); it never loads the
+    dump or builds a blueprint. Its output models now live in `model`, so the
+    blueprint planner can consume an optimizer result without depending on the
+    optimizer itself.
+  - `model` — the shared result models: `OptimizationResult`, `FactoryProduction`
+    (per-machine production) and `factoryProductionComparator`. They sit above
+    the rulebook (`game/prototype`) and are consumed by both the optimizer and
+    the blueprint planner, so `optimize` and the `planning` packages need not
+    couple to each other — both reach the *models* instead. A leaf of its own:
+    it imports only `core/model` and `game/prototype`.
+  - `blueprint` — everything that picks, places and prints a blueprint, split
+    into the `layout`, `planning`, `placing` and `printing` stages below. The
+    optimizer (`optimize`) stays out of it.
+    - `blueprint/layout` — the grid kernel: `LayoutBoard` (tiles, reservations,
+      primitives), `LayoutPlacement` (single-tile entity-kind helpers),
+      `LayoutTunnels` (the surface/end/tunnel placement and the tunnel-link
+      plan), `LayoutUnderground`, `Tunnels`, `LayoutIndex` (the read-only tile
+      index), `BeltEnd` (how a belt is terminated). `entity` holds the entity
+      hierarchy (`LayoutEntity`, `LayoutTransportEntities`,
+      `LayoutEntityStations`, `LayoutSettings`); `validation` holds the invariant
+      checks (`LayoutValidation*.kt`). This tree must never mention the
+      optimizer.
+    - `blueprint/planning` — planning the blueprint. It holds the plan reduction
+      (`blueprintPlan`, `includedRecipes`, `plannedSources`,
+      `BlueprintSelection`) at the stage root and clusters the planner by
+      concern: `plan` — the shared vocabulary (`BlueprintPlan` and its result,
+      the `Planned*` types, the machine footprint and fluid ports, the budgets
+      (`MAX_COPIES`, `MAX_BLUEPRINT_RECIPES`), `ImportExtension` (the import
+      state the marker, trim, compaction and power stages share) and
+      `LogisticsCalculator` (the layout's belt/inserter rates)); `row` — the row
+      planner (`RowPlanner`, `RowPlacer`, `Row` and the inserter/interface
+      placers) with the shared `LayoutStage`; `band` — the direct-feed band
+      (`DirectFeed`, `DirectFeedModel`, `BandSearch`).
+    - `blueprint/placing` — placing the entities and their connections:`route`
+      (the weighted A* shared by belts and pipes — `LayoutRouter`,
+      `RouteSearch`, `RouteProfile`), `routing` (implicit delivery — `Delivery*`,
+      `Import*`, `FluidFeedLinker`, `SplitDeliveryRouter` and `BeltRouteRules`),
+      `plumbing` (the fluid feed — `FluidFeeder`, `FluidLaneFeed`), `beltend`
+      (`BeltEndConnector.kt` — the solid belt's end marker: label, infinity
+      chest, chest), `special` (the path, power and material-search passes) and
+      `compaction` (`LayoutCompaction`, `CompactionPass`, `SeamGrid`,
+      `UndergroundStretcher`).
+    - `blueprint/printing` — emitting the artifact: `model` (the wire DTO:
+      `Blueprint`, `BlueprintEntity`, `BlueprintWire` — imports only
+      `core/model` and `blueprint/layout/entity`, so the encoders and the
+      assembly can share it without a cycle), `json` (`Blueprint.toJson`,
+      `BlueprintEntityJson.kt` — the wire JSON, a leaf nothing else may import),
+      `output` (`BlueprintString.kt`, `FactorioUrl.kt`, `LayoutSerialization.kt`,
+      `ChestWires.kt`) and `inspection` (the ASCII layout and dump —
+      `LayoutAscii*.kt`, `LayoutDump.kt`). The ordered `build()` pipeline lives in
+      `RowLayout.kt` at the `blueprint` root, not in this stage (see
+      "Blueprint layout").
   - plus the dumped `prototypes/` resources.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, the TanStack router
   `tanstack.react.router`, `emotion-react`); entry `js/index.kt`;
-  `common/production/loadRecipe.kt` pulls the dumps via `@JsModule` and the
+  `common/game/production/loadRecipe.kt` pulls the dumps via `@JsModule` and the
   webpack config in `webpack.config.d/`.
 - `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`, argument parsing
-  `jvm/CliArgsParser.kt`; `jvm/common/production/loadRecipe.kt`
+  `jvm/CliArgsParser.kt`; `jvm/common/game/production/loadRecipe.kt`
   loads recipes from a classpath resource.
 - `src/commonTest` — shared kotlin-test suites, run by both `jvmTest` and
   `jsBrowserTest`; must stay platform-neutral. Every suite sits in the package it
-  tests (`commonTest/…/common/blueprint/…`, `.../production/…`), and shared
+  tests (`commonTest/…/common/blueprint/printing/…`, `.../game/production/…`), and shared
   helpers live in a `fixtures` package (`common/fixtures`: `testLogistics`,
   `calculator`, the material and named-recipe fixtures (`RecipeFixtures.kt`), the
   optimizer fixtures and the test-only `BlueprintPlan.recipes` view;
-  `blueprint/fixtures`: plans, layout assertions and the minimal fluid-row
+  `blueprint/printing/fixtures`: plans, layout assertions and the minimal fluid-row
   helpers).
 - `src/jvmTest` / `src/jsTest` — platform-specific tests; JVM suites that need
   the build output or the source tree (`IconCoverageTest`) and the CLI
@@ -114,33 +124,33 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 
 | package | files |
 | --- | --- |
-| band | 3 |
-| beltend | 1 |
+| core.model | 4 |
+| core.util | 3 |
+| game.prototype | 5 |
+| game.production | 10 |
+| game.selection | 3 |
+| model | 1 |
+| optimize | 3 |
 | blueprint | 1 |
-| blueprint/inspection | 3 |
-| blueprint/json | 2 |
-| blueprint/model | 1 |
-| blueprint/output | 4 |
-| blueprint/planning | 2 |
-| compaction | 4 |
-| layout | 9 |
-| layout/entity | 4 |
-| layout/validation | 4 |
-| model | 4 |
-| plan | 4 |
-| planning | 9 |
-| plumbing | 2 |
-| production | 10 |
-| prototype | 5 |
-| prototype/selection | 3 |
-| route | 3 |
-| routing | 7 |
-| service | 4 |
-| special | 3 |
-| util | 3 |
+| blueprint.layout | 9 |
+| blueprint.layout.entity | 4 |
+| blueprint.layout.validation | 4 |
+| blueprint.planning | 2 |
+| blueprint.planning.plan | 4 |
+| blueprint.planning.row | 9 |
+| blueprint.planning.band | 3 |
+| blueprint.placing.route | 3 |
+| blueprint.placing.routing | 7 |
+| blueprint.placing.plumbing | 2 |
+| blueprint.placing.special | 4 |
+| blueprint.placing.compaction | 4 |
+| blueprint.printing.model | 1 |
+| blueprint.printing.json | 2 |
+| blueprint.printing.inspection | 3 |
+| blueprint.printing.output | 4 |
 
-`production` is at 10 files — the warn line itself, so split it before adding a
-file; `planning` (9) is next.
+`game.production` is at 10 files — the warn line itself, so split it before adding a
+file; `blueprint.layout` and `blueprint.planning.row` (9) are next.
 
 ## Package dependencies
 
@@ -152,46 +162,55 @@ checks these edges** — a hand-written guard test does not belong in the app su
 (see `decisions.md`, 2026-10-22). The table below is the intent; keep a change to it
 deliberate and reviewable, never widen a row to make an existing edge legal.
 
-The arrows point one way:
+The arrows point one way from the vocabulary up to the artifact (leaf
+dependencies at the bottom, the assembly root at the top):
 
 ```
-model < prototype < production < service < plan, route, layout <
-beltend, band < planning < routing, plumbing, special, compaction <
-blueprint.model < blueprint.output, blueprint.json < blueprint
-blueprint.planning, blueprint.inspection < blueprint
+core.model < game.prototype < game.production
+core.model, core.util, game.prototype < model < optimize < blueprint
+blueprint.layout < blueprint.placing.route, blueprint.planning.plan
+blueprint.layout, blueprint.planning.plan < blueprint.planning.row,
+  blueprint.placing.compaction
+blueprint.planning.row < blueprint.placing.plumbing, blueprint.placing.routing
+blueprint.layout.entity < blueprint.printing.model <
+  blueprint.printing.{json, output, inspection}
+(pulling all of the above together) < blueprint
 ```
 
-`blueprint.model` is the DTO leaf the encoders share; `blueprint` is the assembly
-root and imports `blueprint.planning`, `blueprint.output` (`toBlueprintEntity`,
-`chestWires`), `blueprint.inspection` (`LayoutDump`) and `blueprint.model`. Only
-the entry points (UI, CLI) and the tests import `blueprint` itself, for `RowLayout`.
+`blueprint.printing.model` is the DTO leaf the encoders share; `blueprint` is the
+assembly root and imports the placing stages, `blueprint.planning.plan` and
+`blueprint.planning.row`, and `blueprint.printing.{model,output,inspection}`. Only
+the entry points (UI, CLI) and the tests import `blueprint` itself, for `RowLayout`
+(which lives at the `blueprint` root). The optimizer's *results* are reached
+through the shared `model` package — planning and `optimize` never import each
+other.
 
 | package | may use | may not reach |
 | --- | --- | --- |
-| `model` | nothing | everything else |
-| `prototype` | `model` | `production`, `service`, … |
-| `prototype.selection` | `model`, `prototype`, `layout` | `production` and above (the URL codecs must not load the dump) |
-| `production` | `model`, `prototype` | `service` and above |
-| `service` | `model`, `prototype` | `production` (the dump loader), `layout`, `blueprint`, the URL codecs |
-| `util` | nothing | every project package |
-| `plan` | `model`, `prototype`, `service` | `layout`, `blueprint`, the stages |
-| `band` | `plan`, `prototype`, `service`, `util` | the layout |
-| `route` | `model`, `prototype`, `util`, `layout` | `beltend`, `routing`, `planning`, `blueprint` |
-| `layout` | `model`, `prototype`, `layout.entity` | `special`, `beltend`, `blueprint` |
-| `layout.entity` | `model`, `prototype` | everything else |
-| `layout.validation` | `model`, `layout`, `layout.entity` | `beltend` and above |
-| `beltend` | `model`, `layout`, `layout.entity` | `blueprint` |
-| `compaction` | `model`, `layout`, `layout.entity`, `layout.validation`, `plan` | `beltend`, `routing`, `blueprint` |
-| `planning` | `model`, `prototype`, `plan`, `layout`, `layout.entity`, `route` | `special`, `routing`, `blueprint` |
-| `special` | `model`, `util`, `layout`, `layout.entity` | `routing`, `beltend`, `blueprint` |
-| `plumbing` | `model`, `prototype`, `plan`, `planning`, `route`, `special`, `layout`, `layout.entity` | `routing`, `beltend`, `blueprint` |
-| `routing` | `model`, `prototype`, `plan`, `planning`, `route`, `special`, `beltend`, `layout`, `layout.entity`, `layout.validation` | `compaction`, `blueprint` |
-| `blueprint` | the stage packages it drives, plus `blueprint.planning`, `blueprint.model`, `blueprint.output`, `blueprint.inspection` (the assembly root) | `blueprint.json` |
-| `blueprint.model` | `model`, `layout.entity` | everything above (the DTO leaf) |
-| `blueprint.planning` | `model`, `prototype`, `production`, `service`, `plan`, `band` | `layout` (it builds a plan, not a grid) |
-| `blueprint.output` | `model`, `production`, `layout.entity`, `blueprint.model` | `blueprint`, `blueprint.json` |
-| `blueprint.inspection` | `model`, `layout.entity` | `blueprint` and above (it only reads a finished layout) |
-| `blueprint.json` | `model`, `layout.entity`, `blueprint.model` | — and **nothing may import it**: it is a leaf writer |
+| `core.model` | nothing | every project package |
+| `core.util` | nothing | every project package |
+| `game.prototype` | `core.model` | `game.production`, `model`, `optimize`, `blueprint` |
+| `game.production` | `core.model`, `game.prototype` | `model`, `optimize`, `blueprint` |
+| `game.selection` | `blueprint.layout`, `game.prototype` | `optimize`, `model`, the dump loader |
+| `model` | `core.model`, `game.prototype` | everything above (the shared result models) |
+| `optimize` | `core.model`, `game.prototype`, `model` | `game.production` (the dump loader), `game.selection`, `blueprint` |
+| `blueprint` | `blueprint.layout(+entity,validation)`, the placing stages, `blueprint.planning.{plan,row}`, `blueprint.printing.{model,output,inspection}`, `core.model`, `game.prototype` | `blueprint.json`, `optimize` (the optimizer stays out) |
+| `blueprint.layout` | `blueprint.layout.entity`, `core.model`, `game.prototype` | `optimize`, `blueprint`, the stages above |
+| `blueprint.layout.entity` | `core.model`, `game.prototype` | everything else |
+| `blueprint.layout.validation` | `blueprint.layout`, `blueprint.layout.entity`, `core.model` | `blueprint` and above |
+| `blueprint.planning` | `blueprint.planning.{band,plan}`, `core.model`, `game.production`, `game.prototype`, `model` | `layout` (it builds a plan, not a grid), the placing/printing stages |
+| `blueprint.planning.plan` | `core.model`, `game.prototype`, `model` | `layout`, `blueprint` |
+| `blueprint.planning.row` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.planning`, `blueprint.planning.plan`, `core.model`, `game.prototype`, `model` | `routing`, `blueprint` |
+| `blueprint.planning.band` | `blueprint.planning.plan`, `core.model`, `core.util`, `game.prototype`, `model` | the layout |
+| `blueprint.placing.route` | `blueprint.layout`, `core.model`, `core.util` | `routing`, `blueprint` |
+| `blueprint.placing.routing` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.layout.validation`, `blueprint.placing.route`, `blueprint.placing.special`, `blueprint.planning.{plan,row}`, `core.model` | `compaction`, `blueprint` |
+| `blueprint.placing.plumbing` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.placing.special`, `blueprint.planning.{plan,row}`, `core.model` | `routing`, `blueprint` |
+| `blueprint.placing.special` | `blueprint.layout`, `blueprint.layout.entity`, `core.model`, `core.util` | `routing`, `blueprint` |
+| `blueprint.placing.compaction` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.layout.validation`, `blueprint.planning.plan`, `core.model` | `routing`, `blueprint` |
+| `blueprint.printing.model` | `blueprint.layout.entity`, `core.model` | everything above (the DTO leaf) |
+| `blueprint.printing.json` | `blueprint.layout.entity`, `blueprint.printing.model`, `core.model` | — and **nothing may import it**: it is a leaf writer |
+| `blueprint.printing.inspection` | `blueprint.layout.entity`, `core.model` | `blueprint` and above (it only reads a finished layout) |
+| `blueprint.printing.output` | `blueprint.layout.entity`, `blueprint.printing.model`, `core.model`, `game.production` | `blueprint`, `blueprint.json` |
 
 A nested package is its own unit: it may use its parent, and the parent may not use
 the child unless its row says so (`layout` cannot see `layout.entity` merely
@@ -210,17 +229,17 @@ edges).
 `blueprint/planning/blueprintPlan` (`BlueprintPlan.kt`) builds the plan from the
 optimizer's `OptimizationResult`; `blueprint/RowLayout.kt` turns a
 `BlueprintPlan` plus a `LogisticsCalculator` into a `Blueprint`
-(`blueprint/model/Blueprint.kt`). `RowLayout(plan, logistics, beltEnd).blueprint()`
+(`blueprint/printing/model/Blueprint.kt`). `RowLayout(plan, logistics, beltEnd).blueprint()`
 runs the ordered passes — recipe rows, target output, import preparation,
 fluid lanes and source markers, solid import deliveries, the routed fluid
 fallback, produced solid deliveries, the drain/feed lane link, the fluid target
 output, trim import prefixes, stretch underground runs, compaction, poles (which
 place their wires) — and returns a `Blueprint` whose `entities` are numbered by
 list position and whose `wires` are the chest-connector wires from
-`blueprint/output/ChestWires.kt`. The order is load-bearing: fluid lanes go
+`blueprint/printing/output/ChestWires.kt`. The order is load-bearing: fluid lanes go
 before solid belts, solid imports go before produced deliveries, the lane link
 after the other routes so it can go around them, the import trim before the
-underground stretch, compaction before the poles. `layout/validation` also
+underground stretch, compaction before the poles. `blueprint/layout/validation` also
 requires every routed underground belt end to connect through a same-material
 belt or the previous run (an output end may feed the next input directly);
 compaction rejects a corridor that would leave an entrance or exit orphaned
@@ -228,14 +247,14 @@ compaction rejects a corridor that would leave an entrance or exit orphaned
 `RowLayout.layoutDump()` is the one read-back of a finished layout
 (`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's `--layout`
 renders it and the `jvmTest` suites assert on it through the `Layout` fixture in
-`jvmTest/…/common/blueprint/fixtures/BlueprintIntegrationFixtures.kt`, so `RowLayout`
+`jvmTest/…/common/blueprint/printing/fixtures/BlueprintIntegrationFixtures.kt`, so `RowLayout`
 is `internal` and keeps its accessors private.
 
 The layout is split into a small mutable kernel plus stages, and every stage takes
-one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
+one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
 `rowPlacer`, `router`) instead of repeating those collaborators:
 
-- `layout/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
+- `blueprint/layout/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
   the reserve/place/remove primitives. Single-tile entity placement lives in
   `LayoutPlacement.kt`; `LayoutTunnels.kt` owns the surface tile, the underground
   end and the tunnel, plus `tunnelPlan(from, to)` — the one calculation of a link's
@@ -252,21 +271,21 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   (`PipeToGroundEntity.mouth`), so a pipe beside a foreign end's closed side does
   not count as a merge. A tile merely *reserved* for another fluid stays the
   caller's check (`FluidFeeder.pipeAllowed` via `edgeFluidAt`).
-- `route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
-  `route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
-  the `RouteRequest`, and `route/RouteSearch.kt` owns the weighted A* frontier and node
+- `blueprint/placing/route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
+  `blueprint/placing/route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
+  the `RouteRequest`, and `blueprint/placing/route/RouteSearch.kt` owns the weighted A* frontier and node
   expansion.
-- `special/PathPlacer.kt` — `placePath` and the tile roles for plain and
+- `blueprint/placing/special/PathPlacer.kt` — `placePath` and the tile roles for plain and
   underground runs; shared by belt and pipe routes. It is the shared
   helper `routing` reaches (the `special` edge in the package dependency table).
-  `directionBetween` is the compass helper on the model (`model/Tile.kt`).
-- `compaction/UndergroundStretcher.kt` — grows underground runs along their own
+  `directionBetween` is the compass helper on the model (`core/model/Tile.kt`).
+- `blueprint/placing/compaction/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
   end sharing.
-- `planning/RowPlanner.kt` — the plan-level row order: the depth of every row
+- `blueprint/planning/row/RowPlanner.kt` — the plan-level row order: the depth of every row
   (a DFS over `BlueprintPlan.rows` with a recipe path as the cycle guard), the
   `RowUnit(row, depth)` order and the pure sizing helpers (`inserterPattern`).
-- `planning/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
+- `blueprint/planning/row/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
   `Area` + `RowLanes` + machines, declared in `Row.kt`) and the bands, and owns
   the ordered `placedRows` list and the lane direction. `RowLanes` holds the fixed
   belt locations as `RowBelt` values (y, material, direction, io and side),
@@ -275,26 +294,26 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
   `BandInterfacePlacer` the gap inserters.
-- `planning/FluidLane.kt` — the board-free lane shape: a plain junction pipe above
+- `blueprint/planning/row/FluidLane.kt` — the board-free lane shape: a plain junction pipe above
   every port, a horizontal pipe-to-ground run across every gap (a pair of adjacent
   ends in the two-tile gap between touching machines) and one vertical shaft per
   port, whose ends sit one row inside the lane and on the port tile.
-  `planning/RowFluidLane.kt` assigns the recipe's fluids to the machine ports in
+  `blueprint/planning/row/RowFluidLane.kt` assigns the recipe's fluids to the machine ports in
   `prototypeFluidPorts` order — inputs before outputs, each in recipe order — and
   decides which side that puts a lane on, the lane row (two rows beyond the
   outermost belt) and its depth: a side places one lane per fluid, each two rows
   further out than the last.
-  `planning/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
+  `blueprint/planning/row/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
   horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds
   no room so only that port falls back to the route. It plans each run once
   (`tunnelPlan`) and checks exactly the tiles that plan claims, so a run longer
   than the pipe reach (a band whose fluid port is far from its lane head) is
   checked and placed from the same list.
-- `plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
+- `blueprint/planning/plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
   pole/compaction west bounds.
-- `plumbing/FluidFeeder.kt` — supplies every fluid. `placeImports()` lets
-  `plumbing/FluidLaneFeed.kt` place a lane for every fluid of every row that gets
+- `blueprint/placing/plumbing/FluidFeeder.kt` — supplies every fluid. `placeImports()` lets
+  `blueprint/placing/plumbing/FluidLaneFeed.kt` place a lane for every fluid of every row that gets
   one (north and south side), records the port tiles those lanes reach and leaves
   them alone, then reserves the remaining machine edges (`fluidEdge`) and places
   every routed source marker, keeping the prepared pipe groups. A lane carries one
@@ -312,17 +331,17 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   same path (`connectTargetOutput`), not left as a stub. The lane/marker pass runs
   after `RowPlacer.placeAll()`, so the belts and inserters a shaft buries itself
   under already stand (see `decisions.md`, 2026-10-26).
-- `routing/ImportTrimmer.kt` — moves every import marker to one common column and
+- `blueprint/placing/routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). A **fluid**
-  lane marker moves into that same column; `routing/FluidFeedLinker.kt` joins its
+  lane marker moves into that same column; `blueprint/placing/routing/FluidFeedLinker.kt` joins its
   lane head with pipe-to-ground runs along the lane row (`FluidFeed` in
-  `plan/ImportExtension.kt`). Without solid imports the column is the westmost
+  `blueprint/planning/plan/ImportExtension.kt`). Without solid imports the column is the westmost
   inline fluid marker, so the stacked lane markers still share one column. The
   marker, link and head are pinned so compaction shifts them as one group. The
   link is not pre-checked for room: the lane row was laid before any route ran, so
   a link that would overlap a placed tile or touch a foreign fluid is placed,
   rejected by `validateLayout` and rolled back, keeping the inline marker.
-- `compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
+- `blueprint/placing/compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
   underground runs after each corridor and shifts the import pins and bounds. A
   candidate that fails only after the stretch is ruled out by its seam path and the
   loop tries the next corridor instead of aborting. The solid and fluid import
@@ -330,32 +349,32 @@ one `planning/LayoutStage.kt` context (`board`, `plan`, `logistics`, `planner`,
   (`ImportExtension.pinnedImportTiles`, passed to `nextCompaction` as `pinned`),
   so compaction moves them as one column; `fluidPorts` stays read-only (the
   stretcher uses it to avoid swallowing a port).
-- `compaction/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
+- `blueprint/placing/compaction/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
   `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program;
   `CorridorShift` (in `LayoutCompaction.kt`) cuts one corridor and moves the far
   side.
-- `special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
+- `blueprint/placing/special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry.
-- `beltend/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
+- `blueprint/placing/special/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
-- `routing/DeliveryRouter.kt` — routes the solid imports first and the produced
+- `blueprint/placing/routing/DeliveryRouter.kt` — routes the solid imports first and the produced
   deliveries afterwards, and places the target's output connector;
   `DeliveryPreparation` reserves the sinks and sources (imports first),
   `SplitDeliveryRouter` inserts the branch splitters, `DeliveryNetworks` remembers
   the produced trunks and `BeltRouteRules` is the belt-tile predicate shared by
-  both routes. `routing/FluidFeedLinker.kt` links a trimmed fluid marker to its
+  both routes. `blueprint/placing/routing/FluidFeedLinker.kt` links a trimmed fluid marker to its
   lane head.
 - `RowLayout` keeps the ordered `build()` pipeline (idempotent, so `blueprint()`
   and `layoutDump()` can share one instance); the `RowPlacer`,
   `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and `CompactionPass` stages own
   the rest.
 
-`common/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the
+`common/core/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the
 layout test fixtures instead of a per-suite breadth-first walk.
-`common/util/MathUtils.kt` holds the generic `countVectors`, `permute` and
+`common/core/util/MathUtils.kt` holds the generic `countVectors`, `permute` and
 `greatestCommonDivisor` the band search uses.
 
-`band/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
+`blueprint/planning/band/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
 a **direct-feed band**: a solid material whose producer and consumer stand in a
 small whole-machine cycle (`cycleRatio`, per-machine rates with productivity) is
 inserted machine to machine, the recipes become one interleaved row, and
@@ -368,7 +387,7 @@ link and the inserted material, and lazily expands its ingredients, skipping
 fluids and any material already on the path so a recipe cycle is entered once.
 `DirectFeedContext` owns the target, the included productions, the scale, the
 logistics and the per-material producer index; a material is direct-fed only
-when the plan has exactly one producer for it. `band/BandSearch` is a set of
+when the plan has exactly one producer for it. `blueprint/planning/band/BandSearch` is a set of
 extensions on that context and finds the shortest window (`FeedWindow` checks
 that every consumer is covered and every producer feeds someone). `RowPlacer`
 places every row through one `placeRow`: a plain row repeats its production with
@@ -382,13 +401,13 @@ link material must be solid (see `decisions.md`, 2026-11-02). See `decisions.md`
 (2026-10-24) for why the row is the occurrence, and (2026-11-04) for the
 recursive link graph and its recipe-path cycle guard.
 
-A solid belt's end is a `BeltEnd` (`layout/BeltEnd.kt`): the constant-combinator
+A solid belt's end is a `BeltEnd` (`blueprint/layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
 (`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it;
 `BeltEndConnector.width`/`left` keep the routing corridors aligned; a fluid belt
-always keeps the combinator/pipe label. `blueprint/json/BlueprintJson.kt` writes the
+always keeps the combinator/pipe label. `blueprint/printing/json/BlueprintJson.kt` writes the
 blueprint envelope (`label`, `icons`, `entities`, top-level `wires`);
-`blueprint/json/BlueprintEntityJson.kt` writes each entity's position and optional
+`blueprint/printing/json/BlueprintEntityJson.kt` writes each entity's position and optional
 `request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
 `infinity_settings` and `neighbours` fields. An infinity pipe writes
 `infinity_settings` only as a source; a sink is unfiltered and writes none, so
@@ -413,7 +432,7 @@ baselines, so every finding fails.
   Regenerate with `./gradlew dumpPrototypes` (needs a Factorio Steam install).
   Because the game resolves the whole data stage, the dump already contains every
   `data-updates.lua`/`data-final-fixes.lua` change; the parser reads only the
-  prototype types it needs. `RecipeLoader` (`production/`) caches parsed results; the UI and
+  prototype types it needs. `RecipeLoader` (`game/production/`) caches parsed results; the UI and
   CLI use the base dump, or the Space Age dump when Space Age is active.
 - `src/jsMain/resources/icons/*.png` are 64x64 icons cropped from the 120x64
   source sheets of a Linux Factorio Steam install. `./gradlew updateImages` copies

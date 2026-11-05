@@ -62,7 +62,7 @@ up.
   functions in the fixtures package of the package they belong to
   (`common/fixtures/LogisticsFixtures.kt` holds `testLogistics`, `BeltCase` and
   `calculator`; `common/fixtures/MaterialFixtures.kt` holds the shared materials;
-  `jvmTest/…/blueprint/fixtures/` holds the recipes, plans and layout assertions),
+  `jvmTest/…/blueprint/printing/fixtures/` holds the recipes, plans and layout assertions),
   or an abstract base
   class for helpers that capture per-test callbacks
   (`OptimizationResultTestBase`). A base class of a public test class must itself be
@@ -71,7 +71,7 @@ up.
   after (`grep -oP 'fun \K[a-zA-Z]+(?=\()' | sort`); keep the suite's original name
   on one part.
   A fixtures file in the **same package** must live in a subpackage (e.g.
-  `jvmTest/…/common/blueprint/fixtures/`): an `internal` top-level fixture with the same
+  `jvmTest/…/common/blueprint/printing/fixtures/`): an `internal` top-level fixture with the same
   name as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
   Kotlin does not allow star-importing an `object`. Import each fixture by name; the
   project's packages no longer use wildcards.
@@ -124,7 +124,7 @@ up.
   hold real game recipes (`smeltRecipe`, `makeCopperCable`,
   `makeElectricEngineUnit`, …) with the `data.raw` amounts and times. A synthetic
   recipe is fine for a contrived rate, a cycle no vanilla recipe has, or a minimal
-  fluid-row geometry; say why in a comment. `blueprint/fixtures/FluidRowFixtures.kt`
+  fluid-row geometry; say why in a comment. `blueprint/printing/fixtures/FluidRowFixtures.kt`
   keeps `water-boil` as that geometry double: a real fluid-to-solid recipe adds
   inputs and rates that move the exact lane tiles the characterization suites pin.
 - Floating-point `assertEquals` uses the shared `TOLERANCE` (`1e-9`) from
@@ -167,9 +167,9 @@ up.
   runs on both JVM and JS, so a suite there costs a Chrome execution in
   `jsBrowserTest` on every pipeline. The heavy layout and blueprint suites
   (`BlueprintLayout*`, `BlueprintFluid*`, `BlueprintImportTest`,
-  `BlueprintBeltEndTest`, `BlueprintLayoutSnapshotTest`, `band/`, the ascii, plan and
+  `BlueprintBeltEndTest`, `BlueprintLayoutSnapshotTest`, `blueprint/planning/band/`, the ascii, plan and
   encoder suites, and the `planning` row/lane suites `FluidLaneTest`,
-  `RowPlacerTest`, `RowPlannerTest` and `routing/DeliveryPreparationTest`) therefore
+  `RowPlacerTest`, `RowPlannerTest` and `blueprint/placing/routing/DeliveryPreparationTest`) therefore
   live in `src/jvmTest`. The light kernel and unit suites still run in `commonTest`
   (`LayoutCompactionTest`, `LayoutPipesTest`, `LayoutEntityTest`,
   `MaterialSearchTest`, plus the model, prototype, production, optimizer and service
@@ -177,7 +177,7 @@ up.
   filtering it out in CI — the Kotlin/JS runner cannot express a multi-suite exclude,
   and a filter hides the same cost from local runs too.
   `common/fixtures` stays in `commonTest` because the `jsTest`
-  `OptimizationResult*` suites read it. `blueprint/fixtures` moved to `jvmTest` with
+  `OptimizationResult*` suites read it. `blueprint/printing/fixtures` moved to `jvmTest` with
   the layout suites that are its only readers; a helper needed by both source sets
   belongs in `common/fixtures`. Moved `jvmTest` suites may still import
   `common/fixtures` (`testLogistics`, `production`, the `MaterialFixtures`

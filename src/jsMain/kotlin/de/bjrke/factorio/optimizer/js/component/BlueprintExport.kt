@@ -4,17 +4,17 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
-import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
-import de.bjrke.factorio.optimizer.common.blueprint.model.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.model.BlueprintEntity
-import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
+import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
-import de.bjrke.factorio.optimizer.common.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.model.Io
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
+import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
+import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder

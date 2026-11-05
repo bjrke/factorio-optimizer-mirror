@@ -1,0 +1,106 @@
+package de.bjrke.factorio.optimizer.common.blueprint.printing.inspection
+
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.test.assertTableOf
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+
+class LayoutAsciiTest {
+
+    private val layout =
+        LayoutDump(
+            entities =
+                listOf(
+                    MachineEntity(
+                        Factory.ASSEMBLING_MACHINE_3,
+                        Coordinate(0, 0).area(2, 2),
+                        "advanced-circuit",
+                    ),
+                    PoleEntity(Coordinate(3, 0).area(), "medium-electric-pole"),
+                    InserterEntity(
+                        Coordinate(2, 1).area(),
+                        "fast-inserter",
+                        ironPlate,
+                        Direction.NORTH,
+                        false,
+                    ),
+                    PipeEntity(Coordinate(3, 1).area(), "pipe", water),
+                    BeltEntity(
+                        Coordinate(0, 2).area(),
+                        "fast-transport-belt",
+                        ironPlate,
+                        Direction.EAST,
+                    ),
+                    MarkerEntity(
+                        Coordinate(3, 2).area(),
+                        "constant-combinator",
+                        Signal(Material("copper-plate")),
+                    ),
+                ),
+            failures = listOf("water to (2, 3) (no route)"),
+        )
+
+    private val ascii = layoutAscii(layout)
+
+    @Test
+    fun machinesAreDigitsAndBeltsShowTheirMaterialCode() =
+        assertTableOf("11 +", "11^-", "b  C") { expected ->
+            assertContains(ascii, expected, message = ascii)
+        }
+
+    @Test
+    fun theLegendDecodesMachinesMaterialsAndMarkers() =
+        assertTableOf(
+            "1 = assembling-machine-3: advanced-circuit",
+            // materials are coded in name order: copper-plate=a, iron-plate=b, water=c
+            "a = copper-plate",
+            "b = iron-plate",
+            "c = water",
+            "C = constant-combinator: copper-plate",
+        ) { expected ->
+            assertContains(ascii, expected, message = ascii)
+        }
+
+    @Test
+    fun theFailedRoutesAreListedBelowTheGrid() =
+        assertTableOf("failures (1)", "water to (2, 3) (no route)") { expected ->
+            assertContains(ascii, expected, message = ascii)
+        }
+
+    @Test
+    fun anEmptyLayoutRendersNothingButAHeader() =
+        assertEquals("layout: empty\n", layoutAscii(LayoutDump(emptyList(), emptyList())))
+
+    @Test
+    fun chestMarkersGetTheirOwnGlyphAndLegend() {
+        val dump =
+            LayoutDump(
+                entities =
+                    listOf(
+                        ChestEntity(Coordinate(0, 0).area(), "buffer-chest"),
+                        ChestEntity(Coordinate(1, 0).area(), "wooden-chest"),
+                    ),
+                failures = emptyList(),
+            )
+        val text = layoutAscii(dump)
+
+        assertTableOf("BW", "B = buffer-chest", "W = wooden-chest") { expected ->
+            assertContains(text, expected, message = text)
+        }
+    }
+}

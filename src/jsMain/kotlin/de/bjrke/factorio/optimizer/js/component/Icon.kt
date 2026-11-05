@@ -3,7 +3,7 @@
 
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.iconLayers
+import de.bjrke.factorio.optimizer.common.core.model.iconLayers
 import emotion.react.css
 import react.ChildrenBuilder
 import react.FC

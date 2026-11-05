@@ -1,15 +1,15 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.fluidRowPlan
-import de.bjrke.factorio.optimizer.common.model.Coordinate
-import de.bjrke.factorio.optimizer.common.model.Direction
-import de.bjrke.factorio.optimizer.common.plan.PortFlow
-import de.bjrke.factorio.optimizer.common.plan.blueprintMachineEdge
-import de.bjrke.factorio.optimizer.common.plan.prototypeFluidPorts
-import de.bjrke.factorio.optimizer.common.planning.PortColumns
-import de.bjrke.factorio.optimizer.common.planning.inserterPortColumns
-import de.bjrke.factorio.optimizer.common.prototype.Factory
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PortFlow
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineEdge
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluidPorts
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PortColumns
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.inserterPortColumns
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
+import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals

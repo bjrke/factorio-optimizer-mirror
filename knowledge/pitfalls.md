@@ -31,7 +31,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `BlueprintFluidLaneLinkTest`, and `heavy-oil --planet=vulcanus` in the CLI.
 - **A pipe-to-ground's blueprint `direction` is the side its surface pipe attaches
   on, not the run's travel direction.** `toBlueprintEntity`
-  (`blueprint/output/LayoutSerialization.kt`) flips **only the input end**
+  (`blueprint/printing/output/LayoutSerialization.kt`) flips **only the input end**
   (`Io.INPUT`) and leaves the output end as stored, so the internal convention is
   "store both ends with the run's travel direction". A shaft that dives from a lane
   above a machine therefore stores its **lane-side end as `INPUT`** and its
@@ -55,7 +55,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
 - **A band stands in one row of up to 18 machines, so a wide band forces belt
-  crossings.** `GROUP_MAX_MACHINES = 18` (`band/DirectFeedModel.kt`) is what a band
+  crossings.** `GROUP_MAX_MACHINES = 18` (`blueprint/planning/band/DirectFeedModel.kt`) is what a band
   may hold; rows above a band then have to reach past it, and a belt that crosses
   another belt can only tunnel. Evidence: the reported `advanced-circuit` URL's
   copper-cable feed tunnels where its cable row joins a band
@@ -86,7 +86,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `foreign side-load into …` while the row still has a free input lane, not by
   compaction rejecting every corridor.
 - **A fluid marker joins the solid import column unless the source block or a run
-  end is taken.** The link (`routing/FluidFeedLinker.kt`) buries under a belt,
+  end is taken.** The link (`blueprint/placing/routing/FluidFeedLinker.kt`) buries under a belt,
   underground belt or inserter that crosses the lane row in the west corridor, so a
   solid route crossing the lane no longer keeps the marker out of the column (the
   `--cheats` electric-engine case: the circuit belt at the lane row is passed
@@ -148,7 +148,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   quadruples; the game draws nothing from proximity. A chest-connector inserter
   needs it: its `circuit_condition` (e.g. `electronic-circuit < 200`) reads the
   chest's contents, which only works with a wire from the inserter to the chest
-  (connector `1` on both ends). `blueprint/output/ChestWires.kt` derives them from
+  (connector `1` on both ends). `blueprint/printing/output/ChestWires.kt` derives them from
   the final placed entities and `Blueprint.toJson()` emits the array; pole copper
   wires are the same idea, stored per pole in `neighbours`. Verified by generating
   and decoding a `buffer-chest` layout: `wires: [[29,1,31,1],[31,1,30,1]]`.
@@ -172,7 +172,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   finding looks wrong; prove a real compile failure with `./gradlew jvmTest`, not
   with this line.
 - **A package move can crash `detektTestJvm` with a stale-analysis-index
-  `FileNotFoundException`.** After moving `Blueprint` to `blueprint/model`, the
+  `FileNotFoundException`.** After moving `Blueprint` to `blueprint/printing/model`, the
   typed task failed resolving a class from
   `build/libs/factorio-optimizer-jvm-1.0.jar` even though the jar already contained
   only the new path; `--rerun-tasks` did not help, `./gradlew --stop` plus a rerun
@@ -304,8 +304,8 @@ An entry belongs here only with evidence, and should say how to recognize it.
   one of its symbols must `import` it by name, even though it compiled before.
   `expect`/`actual` pairs must move together (same package, all source sets).
 - **A moved `expect`/`actual` pair needs its source-set directories created too.**
-  Moving `common/production/loadRecipe.kt` also means
-  `jsMain`/`jvmMain` `common/production/loadRecipe.kt`; the JS one is also the
+  Moving `common/game/production/loadRecipe.kt` also means
+  `jsMain`/`jvmMain` `common/game/production/loadRecipe.kt`; the JS one is also the
   `@JsModule` target the webpack config resolves, so renaming the file without
   updating the `@JsModule` path breaks only the browser bundle, not
   `compileKotlinJvm`.

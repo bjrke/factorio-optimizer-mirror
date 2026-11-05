@@ -1,10 +1,10 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
-import de.bjrke.factorio.optimizer.common.prototype.Surface
+import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder

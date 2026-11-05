@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
-import de.bjrke.factorio.optimizer.common.model.Material
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo

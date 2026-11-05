@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.special.searchMaterials
+import de.bjrke.factorio.optimizer.common.blueprint.placing.special.searchMaterials
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import react.ChildrenBuilder
 import react.FC

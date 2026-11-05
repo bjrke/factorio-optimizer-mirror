@@ -1,20 +1,20 @@
 package de.bjrke.factorio.optimizer.jvm
 
-import de.bjrke.factorio.optimizer.common.blueprint.output.FactorioUrl
-import de.bjrke.factorio.optimizer.common.blueprint.output.parseFactorioUrl
-import de.bjrke.factorio.optimizer.common.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.production.DEFAULT_NORMALIZE_TARGET
-import de.bjrke.factorio.optimizer.common.production.validNormalizeTarget
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.prototype.Surface
-import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromIdentifier
-import de.bjrke.factorio.optimizer.common.prototype.selection.beltEndFromSelection
-import de.bjrke.factorio.optimizer.common.prototype.selection.spaceAgeIn
-import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromPlanet
-import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
+import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.FactorioUrl
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.parseFactorioUrl
+import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARGET
+import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromIdentifier
+import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromSelection
+import de.bjrke.factorio.optimizer.common.game.selection.spaceAgeIn
+import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromPlanet
+import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 
 /**
  * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),

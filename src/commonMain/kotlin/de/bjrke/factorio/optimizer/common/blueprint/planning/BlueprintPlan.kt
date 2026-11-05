@@ -1,13 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.band.directFeed
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.MAX_BLUEPRINT_RECIPES
-import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.service.OptimizationResult
+import de.bjrke.factorio.optimizer.common.blueprint.planning.band.directFeed
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_BLUEPRINT_RECIPES
+import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 

@@ -1,13 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.PlannedSource
-import de.bjrke.factorio.optimizer.common.prototype.Category
-import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.prototype.extractionCategories
-import de.bjrke.factorio.optimizer.common.service.FactoryProduction
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
+import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.game.prototype.extractionCategories
+import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 
 /**
  * Complex or cyclic processes that are usually done elsewhere and therefore left out of a

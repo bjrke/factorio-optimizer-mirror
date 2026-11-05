@@ -1,32 +1,32 @@
 package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
-import de.bjrke.factorio.optimizer.common.blueprint.inspection.layoutAscii
-import de.bjrke.factorio.optimizer.common.blueprint.json.toJson
-import de.bjrke.factorio.optimizer.common.blueprint.output.blueprintString
+import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
-import de.bjrke.factorio.optimizer.common.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.production.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.production.DEFAULT_NORMALIZE_TARGET
-import de.bjrke.factorio.optimizer.common.production.RecipeLoader
-import de.bjrke.factorio.optimizer.common.production.superRound
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.prototype.Factory
-import de.bjrke.factorio.optimizer.common.prototype.FactoryConfig
-import de.bjrke.factorio.optimizer.common.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
-import de.bjrke.factorio.optimizer.common.prototype.Surface
-import de.bjrke.factorio.optimizer.common.prototype.selection.forSurface
-import de.bjrke.factorio.optimizer.common.prototype.selection.fullBeltIn
-import de.bjrke.factorio.optimizer.common.prototype.selection.surfaceFromUrl
-import de.bjrke.factorio.optimizer.common.service.OptimizationResult
-import de.bjrke.factorio.optimizer.common.service.Optimizer
-import de.bjrke.factorio.optimizer.common.service.factoryProductionComparator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.layoutAscii
+import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
+import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARGET
+import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
+import de.bjrke.factorio.optimizer.common.game.production.superRound
+import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.selection.forSurface
+import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
+import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
+import de.bjrke.factorio.optimizer.common.optimize.Optimizer
 
 /**
  * Which artifact(s) the CLI prints. Several may be requested at once; [order] is the order they are

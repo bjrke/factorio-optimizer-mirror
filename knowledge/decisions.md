@@ -7,17 +7,34 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-05 — Result models live outside the optimizer; the pipeline root sits at blueprint
+
+**Decision.** The optimizer's output models `FactoryProduction`, `OptimizationResult`
+and `factoryProductionComparator` move out of `optimize` into a new shared `model`
+package (which imports only `core/model` and `game/prototype`). The
+`Optimizer`, `MachineCatalog` and `LinearProgram` stay in `optimize`. The pipeline
+root (`RowLayout`) moves out of the `blueprint.printing` subpackage up to the
+`blueprint` root.
+
+**Guardrail.** The blueprint planner reaches an optimizer result through `model`,
+never by importing `optimize` — the plan packages and `optimize` must not depend on
+each other (both depend on `model`). Keep `blueprint/RowLayout.kt` as the single
+ordered `build()` at the `blueprint` root; do not bury it under `blueprint.printing`
+again.
+
+**See.** `architecture.md` §Source layout and §Package dependencies.
+
 ## 2026-11-04 — Direct feed is a recursive link graph
 
 **Decision.** The direct-feed search walks the plan from the target instead of
-scanning a flat candidate list. `band/DirectFeedModel.FeedLink` carries its
+scanning a flat candidate list. `blueprint/planning/band/DirectFeedModel.FeedLink` carries its
 producing `FactoryProduction`, its parent link and the inserted material, and
 lazily expands its ingredients; fluids and any material already on the path are
 skipped, so a recipe cycle is entered once. `DirectFeedContext` owns the target,
 the included productions, the scale, the logistics and the per-material producer
-index. `band/BandSearch` is a set of extensions on that context, and the
+index. `blueprint/planning/band/BandSearch` is a set of extensions on that context, and the
 count-vector, permutation and GCD helpers are generic functions in
-`util/MathUtils.kt`. Per-machine rates are `FactoryProduction.inputPerMachine`/
+`core/util/MathUtils.kt`. Per-machine rates are `FactoryProduction.inputPerMachine`/
 `outputPerMachine`; productivity counts for outputs because that is what a
 direct-fed consumer receives.
 
@@ -31,8 +48,8 @@ band would starve that machine. Keep the `countVectors` empty-list guard (it
 used to recurse without end). `special` no longer owns the direct feed;
 `blueprint.planning` imports `band.directFeed` directly.
 
-**See.** `architecture.md` §Blueprint layout; `band/DirectFeed.kt`,
-`band/DirectFeedModel.kt`, `band/BandSearch.kt`, `util/MathUtils.kt`.
+**See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
+`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/BandSearch.kt`, `core/util/MathUtils.kt`.
 
 ## 2026-11-02 — Band machines may take or give a fluid
 
@@ -60,7 +77,7 @@ drain lane (keyed by material **and** flow, never merged by material);
 `blueprint()` and `layoutDump()`. Its build is idempotent, so both read-backs share
 one instance instead of rebuilding the layout. The `jvmTest` `Layout` fixture wraps
 those two calls and exposes the facts the suites assert on (entities, failures,
-machines, plumbing, belt materials, port pipes); `blueprint/fixtures` lives in
+machines, plumbing, belt materials, port pipes); `blueprint/printing/fixtures` lives in
 `jvmTest` with the layout suites that read it, while material values stay in
 `commonTest/common/fixtures` for `jsTest`.
 
@@ -89,7 +106,7 @@ arrives while the other works. The four reported URLs are pinned in
 `BlueprintFluidPortLayoutTest`.
 
 **See.** `architecture.md` §Blueprint layout; `pitfalls.md` "Layout and fluids";
-`plan/BlueprintMachine.kt`.
+`blueprint/planning/plan/BlueprintMachine.kt`.
 
 ## 2026-10-27 — Every fluid port on an edge gets its own lane
 
@@ -103,8 +120,8 @@ a wall. `touchesForeign` and `validateLayout` must read the mouth (`Plumbing.joi
 port pipe looks like a two-fluid merge. A shaft may only bury a pipe-to-ground end that runs on the
 other axis.
 
-**See.** `planning/RowFluidLane.kt`, `planning/FluidLanePlacer.kt`, `plumbing/FluidLaneFeed.kt`,
-`layout/LayoutPipes.kt`, `layout/validation/LayoutValidationTransport.kt`, `routing/ImportTrimmer.kt`.
+**See.** `blueprint/planning/row/RowFluidLane.kt`, `blueprint/planning/row/FluidLanePlacer.kt`, `blueprint/placing/plumbing/FluidLaneFeed.kt`,
+`blueprint/layout/LayoutPipes.kt`, `blueprint/layout/validation/LayoutValidationTransport.kt`, `blueprint/placing/routing/ImportTrimmer.kt`.
 
 ## 2026-10-27 — A routed fluid marker stays on its port's side
 
@@ -117,7 +134,7 @@ is blocked.
 second top corner) used to be marked below the whole row, and its feed then looped around the
 factory; the reported light-oil URL now marks heavy oil above the row, beside the water lane.
 
-**See.** `plumbing/FluidFeeder.kt` (`fluidMarker`, `portEdge`), `BlueprintFluidLayoutTest`,
+**See.** `blueprint/placing/plumbing/FluidFeeder.kt` (`fluidMarker`, `portEdge`), `BlueprintFluidLayoutTest`,
 `BlueprintFluidPortLayoutTest`.
 
 ## 2026-10-26 — Import belts are routed before produced deliveries
@@ -134,8 +151,8 @@ fallback yields to an import. A single turn in an import makes `lastStraightEast
 trimmer cannot move all markers to one column; keep the import's run straight east from its
 connector to the lane. The reported uranium-rounds URL pins the straight uranium-238 import.
 
-**See.** `routing/DeliveryPreparation.kt`, `routing/DeliveryRouter.kt`,
-`routing/ImportTrimmer.kt`, `plumbing/FluidFeeder.kt`, `BlueprintLayoutIntegrationTest`.
+**See.** `blueprint/placing/routing/DeliveryPreparation.kt`, `blueprint/placing/routing/DeliveryRouter.kt`,
+`blueprint/placing/routing/ImportTrimmer.kt`, `blueprint/placing/plumbing/FluidFeeder.kt`, `BlueprintLayoutIntegrationTest`.
 
 ## 2026-10-26 — A routed tunnel end connects through a belt
 
@@ -153,8 +170,8 @@ pass leaves a long straight belt uncollapsed (the `0.3` uranium variant). Do not
 to "the back tile is occupied", and do not exempt a route end merely because some connector is
 adjacent — `(38,17) SOUTH` can sit beside another import's loader.
 
-**See.** `layout/validation/LayoutValidationUnderground.kt`,
-`compaction/CompactionPass.kt`, `BlueprintLayoutAssertions.kt`, `LayoutCompactionTest`.
+**See.** `blueprint/layout/validation/LayoutValidationUnderground.kt`,
+`blueprint/placing/compaction/CompactionPass.kt`, `BlueprintLayoutAssertions.kt`, `LayoutCompactionTest`.
 
 ## 2026-10-26 — Fluid feeding: one lane per row, the route is the fallback
 
@@ -172,9 +189,9 @@ spend an input inserter on a port. A stage places fluid sources only through
 `LayoutBoard.placeFluidSource`, which owns the cheat/marker split; `FluidFeed`
 carries the sink role so the trimmer cannot turn a drain into a supply.
 
-**See.** `architecture.md` §Blueprint layout; `planning/FluidLane.kt`,
-`planning/RowFluidLane.kt`, `planning/FluidLanePlacer.kt`,
-`plumbing/FluidLaneFeed.kt`, `routing/FluidFeedLinker.kt`.
+**See.** `architecture.md` §Blueprint layout; `blueprint/planning/row/FluidLane.kt`,
+`blueprint/planning/row/RowFluidLane.kt`, `blueprint/planning/row/FluidLanePlacer.kt`,
+`blueprint/placing/plumbing/FluidLaneFeed.kt`, `blueprint/placing/routing/FluidFeedLinker.kt`.
 
 ## 2026-10-24 — The row is the occurrence, not the recipe
 
@@ -192,8 +209,8 @@ recipe-keyed map: structurally identical rows must compare equal and stay
 interchangeable. The plan is bounded by `MAX_BLUEPRINT_RECIPES` and a band by
 `GROUP_MAX_MACHINES`, so the scans stay smaller than the hash tables they replace.
 
-**See.** `architecture.md` §Blueprint layout; `plan/BlueprintPlan.kt`,
-`planning/Row.kt`.
+**See.** `architecture.md` §Blueprint layout; `blueprint/planning/plan/BlueprintPlan.kt`,
+`blueprint/planning/row/Row.kt`.
 
 ## 2026-10-22 — The package tree is the domain model
 
@@ -216,7 +233,7 @@ Gradle/build level and must be proven by injecting the violation it rejects.
 
 **Decision.** The layout splits by ownership of state, not by line count: the
 board and its primitives, the router, the stretcher, the compaction and the row
-planner. Every stage takes one `planning/LayoutStage` context; shared mutable
+planner. Every stage takes one `blueprint/planning/row/LayoutStage` context; shared mutable
 state lives in one small holder. There is no stage interface and no DI container,
 and no KMP module split — it would duplicate `expect`/`actual`, resources and test
 targets for ~7k lines of `commonMain`.
@@ -227,7 +244,7 @@ split must prove itself neutral against `BlueprintLayoutSnapshotTest` at the
 pre-change commit.
 
 **See.** `architecture.md` §Blueprint layout;
-`jvmTest/…/blueprint/BlueprintLayoutSnapshotTest.kt`.
+`jvmTest/…/blueprint/printing/BlueprintLayoutSnapshotTest.kt`.
 
 ## 2026-10-20 — Detekt is the quality gate, without baselines
 
@@ -268,11 +285,11 @@ output.
 belt row. `realBlueprintsPutEveryMaterialOnAtMostOneBelt` (in
 `BlueprintLayoutIntegrationTest`) asserts the invariant.
 
-**See.** `band/DirectFeed.kt` (`belted`); `architecture.md` §Blueprint layout.
+**See.** `blueprint/planning/band/DirectFeed.kt` (`belted`); `architecture.md` §Blueprint layout.
 
 ## 2026-10-18 — Direct-feed bands group recipes by rate
 
-**Decision.** `band/DirectFeed.kt` turns a solid material whose producer and
+**Decision.** `blueprint/planning/band/DirectFeed.kt` turns a solid material whose producer and
 consumer stand in a small whole-machine cycle into a belt-free band, judged by
 **per-machine rates** (productivity included), never machine counts: a rate `r` is
 accepted when `r / 1.05 ≤ p / q ≤ r × 1.25` with `p + q ≤ 6`; ties go to the
@@ -287,8 +304,8 @@ belt. A fluid is never a link material (`FeedLink.ingredients`); any band machin
 may take or give one since 2026-11-02. Open: line-breaking a too-wide band and
 mixed-footprint bands.
 
-**See.** `architecture.md` §Blueprint layout; `band/DirectFeed.kt`,
-`band/BandSearch.kt`.
+**See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
+`blueprint/planning/band/BandSearch.kt`.
 
 ## 2026-10-18 — Belt end is a `BeltEnd` selection
 
@@ -304,8 +321,8 @@ clamps every chest code to it.
 are powered, so the pole bound that keeps poles out of the import extension is
 skipped for a chest marker.
 
-**See.** `architecture.md` §Blueprint layout; `layout/BeltEnd.kt`,
-`beltend/BeltEndConnector.kt`.
+**See.** `architecture.md` §Blueprint layout; `blueprint/layout/BeltEnd.kt`,
+`blueprint/placing/special/BeltEndConnector.kt`.
 
 ## 2026-10-18 — Durable knowledge lives in a visible `knowledge/` directory
 

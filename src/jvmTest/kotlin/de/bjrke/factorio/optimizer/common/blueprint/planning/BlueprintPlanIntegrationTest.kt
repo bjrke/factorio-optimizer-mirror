@@ -1,12 +1,12 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.Layout
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.assertOneBeltSourcePerMaterial
-import de.bjrke.factorio.optimizer.common.blueprint.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertOneBeltSourcePerMaterial
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
-import de.bjrke.factorio.optimizer.common.model.Material
-import de.bjrke.factorio.optimizer.common.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import kotlin.test.Test

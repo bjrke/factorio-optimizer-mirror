@@ -1,7 +1,7 @@
 package de.bjrke.factorio.optimizer.common.fixtures
 
-import de.bjrke.factorio.optimizer.common.prototype.Category
-import de.bjrke.factorio.optimizer.common.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 
 // Named game recipes the blueprint and band suites build rows from. The ingredient amounts, results
 // and times follow `data.raw`, so a test reads like the recipe it exercises.

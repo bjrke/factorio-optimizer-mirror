@@ -1,11 +1,11 @@
 package de.bjrke.factorio.optimizer.common.fixtures
 
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.prototype.InserterStats
-import de.bjrke.factorio.optimizer.common.prototype.Logistics
-import de.bjrke.factorio.optimizer.common.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
+import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
+import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
 
 /** The prototype stats the real dump provides, plus the calculator the logistics suites build. */
 internal val testLogistics =
