@@ -120,12 +120,16 @@ class DirectFeedTest {
         )
     }
 
+    private fun included(vararg productions: FactoryProduction) = productions.associateBy {
+        it.recipe
+    }
+
     @Test
     fun aPairInASmallMachineRatioIsBuiltAsOneBand() {
         val feed =
             directFeed(
                 electronicCircuitRecipe,
-                listOf(
+                included(
                     production(electronicCircuitRecipe, electronicCircuit),
                     production(copperCableRecipe, copperCable),
                 ),
@@ -164,7 +168,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 betaUnitRecipe,
-                listOf(
+                included(
                     production(betaUnitRecipe, product),
                     production(alphaRodRecipe, alpha),
                     production(gammaPlateRecipe, gamma),
@@ -194,7 +198,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 ironPlateRecipe,
-                listOf(
+                included(
                     production(ironPlateRecipe, ironPlate),
                     production(ironOreRecipe, ironOre, amount = 0.05),
                 ),
@@ -219,7 +223,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 ironGearWheelRecipe,
-                listOf(
+                included(
                     production(ironGearWheelRecipe, gear),
                     production(firstSmelterRecipe, ironPlate),
                     production(secondSmelterRecipe, ironPlate),
@@ -236,7 +240,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 advancedCircuitRecipe,
-                listOf(
+                included(
                     production(advancedCircuitRecipe, advancedCircuit),
                     production(electronicCircuitRecipe, electronicCircuit),
                     production(copperCableRecipe, copperCable),
@@ -279,7 +283,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 targetRecipe,
-                listOf(
+                included(
                     production(targetRecipe, product),
                     production(inserterRecipe, beta, amount = 0.5),
                     production(gearRecipe, alpha, amount = 0.5),
@@ -314,7 +318,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 betaUnitRecipe,
-                listOf(
+                included(
                     production(betaUnitRecipe, product, amount = 9.0),
                     production(alphaRodRecipe, alpha, amount = 9.0),
                     production(gammaPlateRecipe, gamma, amount = 5.0),
@@ -340,7 +344,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 electricEngineUnitRecipe,
-                listOf(
+                included(
                     production(electricEngineUnitRecipe, electricEngineUnit),
                     production(engineUnitRecipe, engineUnit),
                 ),
@@ -361,7 +365,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 flyingRobotFrameRecipe,
-                listOf(
+                included(
                     production(flyingRobotFrameRecipe, flyingRobotFrame),
                     production(electricEngineUnitRecipe, electricEngineUnit),
                 ),
@@ -403,7 +407,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 thirdRecipe,
-                listOf(
+                included(
                     production(thirdRecipe, product),
                     production(secondRecipe, beta),
                     production(firstRecipe, alpha),
@@ -438,7 +442,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 fourthRecipe,
-                listOf(
+                included(
                     production(fourthRecipe, delta),
                     production(thirdRecipe, product),
                     production(secondRecipe, beta),
@@ -467,7 +471,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 sulfuricAcidRecipe,
-                listOf(
+                included(
                     production(sulfuricAcidRecipe, sulfuricAcid),
                     production(ironPlateRecipe, ironPlate),
                 ),
@@ -494,7 +498,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 batteryRecipe,
-                listOf(
+                included(
                     production(batteryRecipe, battery),
                     production(sulfuricAcidRecipe, sulfuricAcid),
                 ),
@@ -513,7 +517,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 kovarexEnrichmentProcessRecipe,
-                listOf(production(kovarexEnrichmentProcessRecipe, uranium235)),
+                included(production(kovarexEnrichmentProcessRecipe, uranium235)),
                 scale = 1.0,
                 logistics = logistics,
             )
@@ -530,7 +534,7 @@ class DirectFeedTest {
         val feed =
             directFeed(
                 toAlphaRecipe,
-                listOf(production(toAlphaRecipe, alpha), production(toBetaRecipe, beta)),
+                included(production(toAlphaRecipe, alpha), production(toBetaRecipe, beta)),
                 scale = 1.0,
                 logistics = logistics,
             )
@@ -549,7 +553,7 @@ class DirectFeedTest {
         val context =
             DirectFeedContext(
                 alphaProduction,
-                listOf(alphaProduction, betaProduction),
+                included(alphaProduction, betaProduction),
                 1.0,
                 logistics,
             )

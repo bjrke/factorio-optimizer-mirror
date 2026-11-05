@@ -43,17 +43,19 @@ internal fun DirectFeedContext.build(): DirectFeed {
     val bandPlans = groupLinks().filter { it.isNotEmpty() }.mapNotNull(::arrange)
     val bands = buildBands(bandPlans)
     val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
-    val built = bands.flatMap { it.machines }.groupingBy { it.recipe }.eachCount()
+    val built = bands.flatMap { it.machines }.groupingBy { it }.eachCount()
     val onBelt = onBeltOf(bandPlans)
     val belted =
-        included.sortedBy { it.recipe.name }.mapNotNull { belted(it, grouped, onBelt, built) }
+        included.values
+            .sortedBy { it.recipe.name }
+            .mapNotNull { belted(it, grouped, onBelt, built) }
     return DirectFeed(bands + targetRow(built) + belted)
 }
 
 /** Builds one row per arranged band, with its machine sequence and the links between them. */
-private fun DirectFeedContext.buildBands(bandPlans: List<BandPlan>) = bandPlans.map { plan ->
+private fun buildBands(bandPlans: List<BandPlan>) = bandPlans.map { plan ->
     PlannedRow(
-        machines = plan.machines.map { byRecipe.getValue(it) },
+        machines = plan.machines,
         links =
             plan.feeds.map {
                 PlannedLink(it.gap, it.link.material, it.flow, it.producerIsLeft)
@@ -66,7 +68,7 @@ private fun DirectFeedContext.buildBands(bandPlans: List<BandPlan>) = bandPlans.
 // consumers
 private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
     for (plan in bandPlans) {
-        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producerRecipe }
+        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.production }
         for ((recipe, machines) in plan.machines.groupingBy { it }.eachCount()) {
             if (recipe in inserted) continue
             this[recipe] = (this[recipe] ?: 0) + machines
@@ -79,7 +81,7 @@ private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
  * rate the plan was sized for.
  */
 private fun DirectFeedContext.beltedRate(recipe: Recipe, grouped: Set<FeedLink>) =
-    included.sumOf { consumer ->
+    included.values.sumOf { consumer ->
         consumer.recipe.ingredients.keys.sumOf { material ->
             if (countsForBelt(recipe, consumer, material, grouped))
                 consumer.consumption(material) * scale
@@ -99,8 +101,8 @@ private fun DirectFeedContext.countsForBelt(
         producers[material]?.singleOrNull()?.recipe == recipe &&
         grouped.none {
             it.material == material &&
-                it.producerRecipe == recipe &&
-                it.consumerRecipe == consumer.recipe
+                it.production.recipe == recipe &&
+                it.consumer?.production?.recipe == consumer.recipe
         }
 
 /**
@@ -113,16 +115,17 @@ private fun DirectFeedContext.countsForBelt(
 private fun DirectFeedContext.belted(
     production: FactoryProduction,
     grouped: Set<FeedLink>,
-    onBelt: Map<Recipe, Int>,
-    built: Map<Recipe, Int>,
+    onBelt: Map<FactoryProduction, Int>,
+    built: Map<FactoryProduction, Int>,
 ): PlannedRow? {
     val recipe = production.recipe
     val rate = beltedRate(recipe, grouped)
     val perMachine = production.outputPerMachine()
     val demand =
-        if (perMachine > 0.0) ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[recipe] ?: 0)
+        if (perMachine > 0.0)
+            ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[production] ?: 0)
         else 0
-    val leftover = (plannedMachines(production, scale) - (built[recipe] ?: 0)).coerceAtLeast(0)
+    val leftover = (plannedMachines(production, scale) - (built[production] ?: 0)).coerceAtLeast(0)
     val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)
     return if (rate <= 0.0 || machines <= 0) null
     else {
@@ -131,8 +134,8 @@ private fun DirectFeedContext.belted(
 }
 
 /** The target always needs a row of its own when no band built it. */
-private fun DirectFeedContext.targetRow(built: Map<Recipe, Int>) =
-    if ((built[target.recipe] ?: 0) > 0) emptyList()
+private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>) =
+    if ((built[target] ?: 0) > 0) emptyList()
     else listOf(PlannedRow.copies(target, plannedMachines(target, scale)))
 
 /** Whether two links belong to one band: one is the other's consumer, or they share one. */
@@ -150,14 +153,11 @@ private fun sharesRecipe(first: FeedLink, second: FeedLink) =
  */
 internal fun directFeed(
     target: Recipe,
-    included: List<FactoryProduction>,
+    included: Map<Recipe, FactoryProduction>,
     scale: Double,
     logistics: LogisticsCalculator,
 ): DirectFeed {
-    val targetProduction = included.firstOrNull { it.recipe == target }
-    return if (targetProduction == null) {
-        DirectFeed(emptyList())
-    } else {
-        DirectFeedContext(targetProduction, included, scale, logistics).build()
-    }
+    val targetProduction = included[target]
+    return if (targetProduction == null) DirectFeed(emptyList())
+    else DirectFeedContext(targetProduction, included, scale, logistics).build()
 }

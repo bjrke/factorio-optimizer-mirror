@@ -41,7 +41,7 @@ fun blueprintPlan(
                 "no buildable factory for ${result.target.name}",
             )
 
-    val included = includedRecipes(result.factories.values, targetFactory, maxRecipes)
+    val included = includedRecipes(result.factories, targetFactory, maxRecipes)
 
     // split the recipes into rows and direct-feed bands: a recipe feeding another one in a small
     // whole-machine cycle is built interleaved with it, one production per consumer machine

@@ -43,29 +43,27 @@ internal fun planTarget(
  * recipe is never built twice, and the walk stops once [maxRecipes] recipes are included.
  */
 internal fun includedRecipes(
-    factories: Collection<FactoryProduction>,
+    factories: Map<Recipe, FactoryProduction>,
     target: FactoryProduction,
     maxRecipes: Int,
-) =
-    buildList<FactoryProduction> {
-        val singleProducer = singleProducers(factories, target.recipe)
-        val queue = ArrayDeque<FactoryProduction>()
-        var factory: FactoryProduction? = target
+) = buildMap {
+    val singleProducer = singleProducers(factories, target.recipe)
+    val queue = ArrayDeque<FactoryProduction>()
+    var factory: FactoryProduction? = target
 
-        while (factory != null) {
-            if (size >= maxRecipes) break
-            if (none { it.recipe === factory.recipe }) {
-                add(factory)
-                // build every input that has a single producer, until the recipe cap is reached
-                queue.addAll(
-                    factory.recipe.ingredients.keys
-                        .sortedBy { it.name }
-                        .mapNotNull { singleProducer[it] },
-                )
-            }
-            factory = queue.removeFirstOrNull()
+    while (factory != null) {
+        if (size >= maxRecipes) break
+        val recipe = factory.recipe
+        if (!containsKey(recipe)) {
+            put(recipe, factory)
+            // build every input that has a single producer, until the recipe cap is reached
+            queue.addAll(
+                recipe.ingredients.keys.sortedBy { it.name }.mapNotNull { singleProducer[it] },
+            )
         }
+        factory = queue.removeFirstOrNull()
     }
+}
 
 /**
  * Whether a factory can stand in the blueprint. The target's producer is always kept, even when it
@@ -88,10 +86,10 @@ private fun buildable(factory: FactoryProduction, target: Recipe): Boolean {
  * producer when more than one recipe takes it.
  */
 private fun singleProducers(
-    factories: Collection<FactoryProduction>,
+    factories: Map<Recipe, FactoryProduction>,
     target: Recipe,
 ) =
-    factories
+    factories.values
         .filter { buildable(it, target) }
         .flatMap { factory -> factory.recipe.result.keys.map { it to factory } }
         .groupBy({ it.first }, { it.second })
@@ -104,7 +102,7 @@ private fun singleProducers(
  * fluid is asked from the [logistics] the plan was optimized with.
  */
 internal fun plannedSources(
-    included: List<FactoryProduction>,
+    included: Map<Recipe, FactoryProduction>,
     scale: Double,
     logistics: LogisticsCalculator,
 ): List<PlannedSource> {
@@ -127,11 +125,11 @@ internal fun plannedSources(
  * that make (take) it. In recipe order, and first-seen material order within a recipe.
  */
 private fun materialsToFactories(
-    included: List<FactoryProduction>,
+    included: Map<Recipe, FactoryProduction>,
     materials: FactoryProduction.() -> Set<Material>,
 ): Map<Material, List<FactoryProduction>> =
     buildMap<Material, MutableList<FactoryProduction>> {
-        for (factory in included) {
+        for (factory in included.values) {
             factory.materials().forEach { getOrPut(it) { mutableListOf() }.add(factory) }
         }
     }

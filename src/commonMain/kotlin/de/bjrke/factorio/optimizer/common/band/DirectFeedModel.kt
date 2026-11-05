@@ -56,7 +56,7 @@ internal fun cycleRatio(ratio: Double): Pair<Int, Int>? {
 /** A group of recipes that feed each other directly, with the whole machine need of each recipe. */
 internal class FeedGroup(
     val links: List<FeedLink>,
-    val needs: Map<Recipe, Int>,
+    val needs: Map<FactoryProduction, Int>,
 )
 
 /** One machine-to-machine insertion an arrangement realizes. */
@@ -68,7 +68,7 @@ internal class BandFeed(
 )
 
 /** One arrangement of a group: the machine sequence and the insertions between the machines. */
-internal class BandPlan(val machines: List<Recipe>, val feeds: List<BandFeed>)
+internal class BandPlan(val machines: List<FactoryProduction>, val feeds: List<BandFeed>)
 
 /**
  * One link in the direct-feed graph: [production] makes [material], and [consumer] is the link
@@ -80,10 +80,6 @@ internal data class FeedLink(
     val production: FactoryProduction = ctx.target,
     val consumer: FeedLink? = null,
 ) {
-
-    val producerRecipe = production.recipe
-
-    val consumerRecipe = consumer?.production?.recipe
 
     val material = production.material
 
@@ -157,18 +153,20 @@ internal data class FeedLink(
  * The plan the direct-feed search walks: the [target] production, every [included] production, the
  * [scale] the plan is drawn at, the [logistics] that size the inserters, and the per-material
  * producer index.
+ *
+ * The search keys machines and needs by [FactoryProduction], so a recipe must be held by exactly
+ * one production of [included] — [target] included, since it is one of them: two of the same recipe
+ * would be counted as two different machines, splitting their needs and ratios.
  */
 internal data class DirectFeedContext(
     val target: FactoryProduction,
-    val included: List<FactoryProduction>,
+    val included: Map<Recipe, FactoryProduction>,
     val scale: Double,
     val logistics: LogisticsCalculator,
 ) {
-    val byRecipe = included.associateBy { it.recipe }
-
     // the in-plan producers of each material
     val producers =
-        included
-            .flatMap { f -> f.recipe.result.keys.map { it to f } }
+        included.entries
+            .flatMap { (r, f) -> r.result.keys.map { it to f } }
             .groupBy({ it.first }, { it.second })
 }
