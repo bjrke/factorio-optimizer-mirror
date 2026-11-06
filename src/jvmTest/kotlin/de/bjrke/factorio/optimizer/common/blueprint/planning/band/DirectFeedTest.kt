@@ -120,17 +120,18 @@ class DirectFeedTest {
         )
     }
 
-    private fun included(vararg productions: FactoryProduction) = productions.associateBy {
+    private fun factories(vararg productions: FactoryProduction) = productions.associateBy {
         it.recipe
     }
 
     @Test
     fun aPairInASmallMachineRatioIsBuiltAsOneBand() {
+        val ecProduction = production(electronicCircuitRecipe, electronicCircuit)
         val feed =
             directFeed(
-                electronicCircuitRecipe,
-                included(
-                    production(electronicCircuitRecipe, electronicCircuit),
+                ecProduction,
+                factories(
+                    ecProduction,
                     production(copperCableRecipe, copperCable),
                 ),
                 scale = 1.0,
@@ -165,11 +166,12 @@ class DirectFeedTest {
         val gammaPlateRecipe = recipe("gamma-plate", mapOf(gamma to 2.0))
         val betaUnitRecipe =
             recipe("beta-unit", mapOf(product to 1.0), mapOf(alpha to 1.0, gamma to 1.0))
+        val betaUnitProduction = production(betaUnitRecipe, product)
         val feed =
             directFeed(
-                betaUnitRecipe,
-                included(
-                    production(betaUnitRecipe, product),
+                betaUnitProduction,
+                factories(
+                    betaUnitProduction,
                     production(alphaRodRecipe, alpha),
                     production(gammaPlateRecipe, gamma),
                 ),
@@ -195,11 +197,12 @@ class DirectFeedTest {
     fun aRateThatNoSmallCycleFitsKeepsBothRecipesBelted() {
         // a deliberately extreme ore rate: no small machine cycle can stand in for 20:1
         val ironOreRecipe = recipe("iron-ore", mapOf(ironOre to 20.0))
+        val ironPlateProduction = production(ironPlateRecipe, ironPlate)
         val feed =
             directFeed(
-                ironPlateRecipe,
-                included(
-                    production(ironPlateRecipe, ironPlate),
+                ironPlateProduction,
+                factories(
+                    ironPlateProduction,
                     production(ironOreRecipe, ironOre, amount = 0.05),
                 ),
                 scale = 1.0,
@@ -220,11 +223,12 @@ class DirectFeedTest {
             recipe("first-smelter", mapOf(ironPlate to 1.0), mapOf(ironOre to 1.0))
         val secondSmelterRecipe =
             recipe("second-smelter", mapOf(ironPlate to 1.0), mapOf(ironOre to 1.0))
+        val gearProduction = production(ironGearWheelRecipe, gear)
         val feed =
             directFeed(
-                ironGearWheelRecipe,
-                included(
-                    production(ironGearWheelRecipe, gear),
+                gearProduction,
+                factories(
+                    gearProduction,
                     production(firstSmelterRecipe, ironPlate),
                     production(secondSmelterRecipe, ironPlate),
                 ),
@@ -237,11 +241,12 @@ class DirectFeedTest {
 
     @Test
     fun aMaterialWithASecondConsumerGetsOneMoreProduction() {
+        val acProduction = production(advancedCircuitRecipe, advancedCircuit)
         val feed =
             directFeed(
-                advancedCircuitRecipe,
-                included(
-                    production(advancedCircuitRecipe, advancedCircuit),
+                acProduction,
+                factories(
+                    acProduction,
                     production(electronicCircuitRecipe, electronicCircuit),
                     production(copperCableRecipe, copperCable),
                 ),
@@ -280,11 +285,12 @@ class DirectFeedTest {
         val foundryRecipe = recipe("foundry", mapOf(delta to 2.0), mapOf(alpha to 20.0))
         val targetRecipe =
             recipe("target", mapOf(product to 1.0), mapOf(beta to 0.05, delta to 0.05))
+        val targetProduction = production(targetRecipe, product)
         val feed =
             directFeed(
-                targetRecipe,
-                included(
-                    production(targetRecipe, product),
+                targetProduction,
+                factories(
+                    targetProduction,
                     production(inserterRecipe, beta, amount = 0.5),
                     production(gearRecipe, alpha, amount = 0.5),
                     production(foundryRecipe, delta, amount = 0.05),
@@ -315,11 +321,12 @@ class DirectFeedTest {
         val gammaPlateRecipe = recipe("gamma-plate", mapOf(gamma to 2.0))
         val betaUnitRecipe =
             recipe("beta-unit", mapOf(product to 1.0), mapOf(alpha to 1.0, gamma to 1.0))
+        val betaUnitProduction = production(betaUnitRecipe, product, amount = 9.0)
         val feed =
             directFeed(
-                betaUnitRecipe,
-                included(
-                    production(betaUnitRecipe, product, amount = 9.0),
+                betaUnitProduction,
+                factories(
+                    betaUnitProduction,
                     production(alphaRodRecipe, alpha, amount = 9.0),
                     production(gammaPlateRecipe, gamma, amount = 5.0),
                 ),
@@ -341,11 +348,12 @@ class DirectFeedTest {
 
     @Test
     fun aRecipeThatTakesAFluidStillJoinsABand() {
+        val ecProduction = production(electricEngineUnitRecipe, electricEngineUnit)
         val feed =
             directFeed(
-                electricEngineUnitRecipe,
-                included(
-                    production(electricEngineUnitRecipe, electricEngineUnit),
+                ecProduction,
+                factories(
+                    ecProduction,
                     production(engineUnitRecipe, engineUnit),
                 ),
                 scale = 1.0,
@@ -362,11 +370,12 @@ class DirectFeedTest {
 
     @Test
     fun aProducerThatTakesAFluidStillFeedsItsBand() {
+        val flyingRobotFrameProduction = production(flyingRobotFrameRecipe, flyingRobotFrame)
         val feed =
             directFeed(
-                flyingRobotFrameRecipe,
-                included(
-                    production(flyingRobotFrameRecipe, flyingRobotFrame),
+                flyingRobotFrameProduction,
+                factories(
+                    flyingRobotFrameProduction,
                     production(electricEngineUnitRecipe, electricEngineUnit),
                 ),
                 scale = 1.0,
@@ -404,11 +413,12 @@ class DirectFeedTest {
         val firstRecipe = recipe("first", mapOf(alpha to 1.0))
         val secondRecipe = recipe("second", mapOf(beta to 1.0), mapOf(alpha to 1.0))
         val thirdRecipe = recipe("third", mapOf(product to 1.0), mapOf(beta to 1.0))
+        val thirdProduction = production(thirdRecipe, product)
         val feed =
             directFeed(
-                thirdRecipe,
-                included(
-                    production(thirdRecipe, product),
+                thirdProduction,
+                factories(
+                    thirdProduction,
                     production(secondRecipe, beta),
                     production(firstRecipe, alpha),
                 ),
@@ -439,11 +449,12 @@ class DirectFeedTest {
         val secondRecipe = recipe("second", mapOf(beta to 1.0), mapOf(alpha to 1.0))
         val thirdRecipe = recipe("third", mapOf(product to 1.0), mapOf(beta to 1.0))
         val fourthRecipe = recipe("fourth", mapOf(delta to 1.0), mapOf(product to 1.0))
+        val fourthProduction = production(fourthRecipe, delta)
         val feed =
             directFeed(
-                fourthRecipe,
-                included(
-                    production(fourthRecipe, delta),
+                fourthProduction,
+                factories(
+                    fourthProduction,
                     production(thirdRecipe, product),
                     production(secondRecipe, beta),
                     production(firstRecipe, alpha),
@@ -468,11 +479,12 @@ class DirectFeedTest {
 
     @Test
     fun aBandMayOutputAFluidAsItsFinalOutput() {
+        val sulfuricAcidProduction = production(sulfuricAcidRecipe, sulfuricAcid)
         val feed =
             directFeed(
-                sulfuricAcidRecipe,
-                included(
-                    production(sulfuricAcidRecipe, sulfuricAcid),
+                sulfuricAcidProduction,
+                factories(
+                    sulfuricAcidProduction,
                     production(ironPlateRecipe, ironPlate),
                 ),
                 scale = 1.0,
@@ -495,11 +507,12 @@ class DirectFeedTest {
 
     @Test
     fun aFluidMaterialIsNeverDirectFed() {
+        val batteryProduction = production(batteryRecipe, battery)
         val feed =
             directFeed(
-                batteryRecipe,
-                included(
-                    production(batteryRecipe, battery),
+                batteryProduction,
+                factories(
+                    batteryProduction,
                     production(sulfuricAcidRecipe, sulfuricAcid),
                 ),
                 scale = 1.0,
@@ -514,10 +527,11 @@ class DirectFeedTest {
     fun aRecipeThatFeedsItselfStaysBelted() {
         // kovarex consumes and produces both uranium isotopes: a link would enter the same recipe
         // again, so the recipe must stay belted
+        val kovarexProduction = production(kovarexEnrichmentProcessRecipe, uranium235)
         val feed =
             directFeed(
-                kovarexEnrichmentProcessRecipe,
-                included(production(kovarexEnrichmentProcessRecipe, uranium235)),
+                kovarexProduction,
+                factories(kovarexProduction),
                 scale = 1.0,
                 logistics = logistics,
             )
@@ -529,12 +543,13 @@ class DirectFeedTest {
     fun aTwoRecipeCycleStaysBelted() {
         // no simple vanilla two-recipe solid cycle exists; the rate fits, so only the cycle guard
         // can keep this pair belted
-        val toBetaRecipe = recipe("to-beta", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val toAlphaRecipe = recipe("to-alpha", mapOf(alpha to 1.0), mapOf(beta to 1.0))
+        val betaRecipe = recipe("to-beta", mapOf(beta to 1.0), mapOf(alpha to 1.0))
+        val alphaRecipe = recipe("to-alpha", mapOf(alpha to 1.0), mapOf(beta to 1.0))
+        val alphaProduction = production(alphaRecipe, alpha)
         val feed =
             directFeed(
-                toAlphaRecipe,
-                included(production(toAlphaRecipe, alpha), production(toBetaRecipe, beta)),
+                alphaProduction,
+                factories(alphaProduction, production(betaRecipe, beta)),
                 scale = 1.0,
                 logistics = logistics,
             )
@@ -553,7 +568,7 @@ class DirectFeedTest {
         val context =
             DirectFeedContext(
                 alphaProduction,
-                included(alphaProduction, betaProduction),
+                factories(alphaProduction, betaProduction),
                 1.0,
                 logistics,
             )

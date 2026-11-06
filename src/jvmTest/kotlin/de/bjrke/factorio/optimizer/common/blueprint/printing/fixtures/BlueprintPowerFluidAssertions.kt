@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
+import de.bjrke.factorio.optimizer.common.core.util.drain
 import de.bjrke.test.assertAll
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -123,11 +124,10 @@ fun assertPolesWired(entities: List<BlueprintEntity>) {
         val number = index + 1
         if (!seen.add(number)) continue
         components++
-        val queue = ArrayDeque(listOf(number))
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
+
+        ArrayDeque(listOf(number)).drain { current ->
             for (neighbour in entities[current - 1].neighbours) {
-                if (neighbour in numbers && seen.add(neighbour)) queue += neighbour
+                if (neighbour in numbers && seen.add(neighbour)) addLast(neighbour)
             }
         }
     }

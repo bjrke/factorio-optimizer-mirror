@@ -46,6 +46,8 @@ data class FactoryProduction(
     /** Items of [material] one machine of this production takes per second. */
     internal fun inputPerMachine(material: Material) =
         inputPerMachine(recipe.ingredients[material] ?: 0.0)
+
+    override fun toString() = recipe.name
 }
 
 data class OptimizationResult(

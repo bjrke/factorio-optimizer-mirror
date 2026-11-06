@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_BLUEPRINT_RECIPES
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.testBlueprintPlan
 import de.bjrke.factorio.optimizer.common.core.model.Dimension
@@ -14,7 +13,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
-import de.bjrke.factorio.optimizer.common.fixtures.utilitySciencePack
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -186,43 +184,6 @@ class BlueprintPlanTest {
             { assertEquals(listOf(petroleum), ingredientPlan.sources.map { it.material }) },
             { assertEquals(listOf(petroleum), targetPlan.recipes.map { it.material }) },
         )
-    }
-
-    @Test
-    fun atMostTheRecipeLimitIsBuilt() {
-        val materials = (0..12).map { Material("step-$it") }
-        val targetRecipe =
-            recipe(
-                "target",
-                Category.CRAFTING,
-                mapOf(utilitySciencePack to 1.0),
-                mapOf(materials[0] to 1.0),
-            )
-        val chain =
-            (0 until 12).map { index ->
-                production(
-                    recipe(
-                        "step-$index",
-                        Category.CRAFTING,
-                        mapOf(materials[index] to 1.0),
-                        mapOf(materials[index + 1] to 1.0),
-                    ),
-                    materials[index],
-                    Factory.ASSEMBLING_MACHINE_3,
-                    level = 12 - index,
-                )
-            }
-
-        val planned =
-            plan(
-                utilitySciencePack,
-                targetRecipe,
-                chain +
-                    production(targetRecipe, utilitySciencePack, Factory.SCIENCE_LAB, level = 99),
-            )
-
-        // the cap counts every built recipe, not the productions a recipe may be split into
-        assertEquals(MAX_BLUEPRINT_RECIPES, planned.recipes.map { it.recipe }.distinct().size)
     }
 
     @Test

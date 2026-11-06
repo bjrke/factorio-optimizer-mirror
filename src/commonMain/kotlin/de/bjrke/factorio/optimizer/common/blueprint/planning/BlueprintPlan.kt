@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.band.directFeed
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_BLUEPRINT_RECIPES
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -14,19 +13,17 @@ import kotlin.math.roundToInt
 /**
  * Reduces an [OptimizationResult] to a plan a single blueprint can build.
  *
- * Only the production the target needs is built: starting at the target recipe, an input is
- * followed to its single producer (the recipe that makes it) and that producer is built, even when
- * several recipes take it. Every other input — place-dependent recipes (mining/pumping/harvesting),
- * classic smelters, multi-output recipes, the complex/cyclic processes (oil refining, biochambers,
- * cryogenic plants, centrifuging, recycling, ...) — becomes an import. At most [maxRecipes] recipes
- * are built (see [includedRecipes]), each with exactly the machine count the optimizer sized for
- * the requested rate.
+ * Only the production the target needs is built: the target recipe and every other recipe that
+ * alone supplies one of the plan's materials, even when several recipes take that material. Every
+ * other input — place-dependent recipes (mining/pumping/harvesting), classic smelters, multi-output
+ * recipes, the complex/cyclic processes (oil refining, biochambers, cryogenic plants, centrifuging,
+ * recycling, ...) — becomes an import. Each recipe is built with exactly the machine count the
+ * optimizer sized for the requested rate.
  */
 fun blueprintPlan(
     result: OptimizationResult,
     logistics: LogisticsCalculator,
     scale: Double,
-    maxRecipes: Int = MAX_BLUEPRINT_RECIPES,
 ): BlueprintPlanResult {
     if (result.target.name == ALL_SCIENCE_PACKS) {
         return BlueprintPlanResult.Unavailable(
@@ -41,17 +38,15 @@ fun blueprintPlan(
                 "no buildable factory for ${result.target.name}",
             )
 
-    val included = includedRecipes(result.factories, targetFactory, maxRecipes)
-
     // split the recipes into rows and direct-feed bands: a recipe feeding another one in a small
     // whole-machine cycle is built interleaved with it, one production per consumer machine
-    val feed = directFeed(targetFactory.recipe, included, scale, logistics)
+    val feed = directFeed(targetFactory, result.factories, scale, logistics)
 
     return BlueprintPlanResult.Planned(
         BlueprintPlan(
             target = result.target,
             rows = feed.rows,
-            sources = plannedSources(included, scale, logistics),
+            sources = plannedSources(feed.included, scale, logistics),
             scale = scale,
             label = planLabel(result.target, scale / scale),
         ),

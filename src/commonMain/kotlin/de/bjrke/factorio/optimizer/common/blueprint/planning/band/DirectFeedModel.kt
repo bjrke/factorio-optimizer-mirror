@@ -160,13 +160,23 @@ internal data class FeedLink(
  */
 internal data class DirectFeedContext(
     val target: FactoryProduction,
-    val included: Map<Recipe, FactoryProduction>,
+    val factories: Map<Recipe, FactoryProduction>,
     val scale: Double,
     val logistics: LogisticsCalculator,
 ) {
-    // the in-plan producers of each material
     val producers =
-        included.entries
-            .flatMap { (r, f) -> r.result.keys.map { it to f } }
+        factories.values
+            .flatMap { factory ->
+                if (!buildable(factory)) emptyList()
+                else factory.recipe.result.keys.map { it to factory }
+            }
             .groupBy({ it.first }, { it.second })
+
+    /**
+     * The target plus every production that alone supplies a material. The target is seeded even
+     * when the optimizer runs several recipes for its material: it is always built, and its inputs
+     * must still be reported as sources.
+     */
+    val included =
+        producers.values.mapNotNull { it.singleOrNull() }.plus(target).associateBy { it.recipe }
 }

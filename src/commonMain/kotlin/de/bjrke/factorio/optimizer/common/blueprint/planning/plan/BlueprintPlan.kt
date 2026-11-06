@@ -4,9 +4,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
 
-/** How many distinct recipes a single blueprint may build; the rest are imported. */
-const val MAX_BLUEPRINT_RECIPES = 8
-
 /** Upper bound on the machines of one recipe row, so a huge rate cannot explode the blueprint. */
 internal const val MAX_COPIES = 9
 

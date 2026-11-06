@@ -80,6 +80,33 @@ class BlueprintPlanIntegrationTest {
     }
 
     @Test
+    fun aTargetMaterialWithTwoProducersStillImportsItsInputs() {
+        // the optimizer splits solid fuel between the light-oil and petroleum-gas recipes, so the
+        // target has no single producer; the built target recipe must still keep its fluid input
+        val planned = Layout("solid-fuel").plan
+        val target = planned.recipes.first { it.material == planned.target }
+
+        assertContains(
+            planned.sources.map { it.material },
+            Material("light-oil"),
+            "the target recipe ${target.recipe.name} consumes light oil",
+        )
+    }
+
+    @Test
+    fun theKovarexTargetIsBuiltOnce() {
+        // kovarex consumes its own product, so treating the target as an in-plan producer would
+        // add a second, belted kovarex row: 18 machines instead of the MAX_COPIES-capped 9
+        val planned = Layout("uranium-235").plan
+        val rows =
+            planned.rows.filter { row ->
+                row.machines.any { it.recipe.name == "kovarex-enrichment-process" }
+            }
+
+        assertEquals(1, rows.size)
+    }
+
+    @Test
     fun theReportedLogisticSciencePackUrlBuildsNoRedundantFactory() {
         val plan =
             layoutFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1").plan

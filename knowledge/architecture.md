@@ -62,11 +62,11 @@ CLI (JVM) from one shared core.
       checks (`LayoutValidation*.kt`). This tree must never mention the
       optimizer.
     - `blueprint/planning` — planning the blueprint. It holds the plan reduction
-      (`blueprintPlan`, `includedRecipes`, `plannedSources`,
-      `BlueprintSelection`) at the stage root and clusters the planner by
+      (`blueprintPlan`, `plannedSources`, `BlueprintSelection`) at the stage root
+      and clusters the planner by
       concern: `plan` — the shared vocabulary (`BlueprintPlan` and its result,
-      the `Planned*` types, the machine footprint and fluid ports, the budgets
-      (`MAX_COPIES`, `MAX_BLUEPRINT_RECIPES`), `ImportExtension` (the import
+      the `Planned*` types, the machine footprint and fluid ports, the budget
+      (`MAX_COPIES`), `ImportExtension` (the import
       state the marker, trim, compaction and power stages share) and
       `LogisticsCalculator` (the layout's belt/inserter rates)); `row` — the row
       planner (`RowPlanner`, `RowPlacer`, `Row` and the inserter/interface

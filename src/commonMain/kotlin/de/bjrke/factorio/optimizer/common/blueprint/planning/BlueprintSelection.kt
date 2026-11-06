@@ -3,30 +3,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.game.prototype.extractionCategories
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-
-/**
- * Complex or cyclic processes that are usually done elsewhere and therefore left out of a
- * blueprint; their products become imports. Only kept when the target itself comes from one of
- * them. Oil refining and cracking (and their bio/cryo Space Age shortcuts) pull in long fluid
- * chains, so e.g. heavy oil and petroleum gas derivatives like plastic are imported. Simple
- * chemical-plant recipes (lubricant, sulfur, ...) are *not* excluded; only their fluid inputs are.
- */
-private val externallyProcessedCategories =
-    setOf(
-        Category.OIL_PROCESSING,
-        Category.CENTRIFUGING,
-        Category.ORGANIC,
-        Category.CRYOGENICS,
-        Category.RECYCLING,
-        Category.CRUSHING,
-        Category.SMELTING,
-        Category.SPOILING,
-    )
 
 /**
  * The factory a plan starts from: the one producing the target [recipe]. Null means none does. The
@@ -36,65 +14,6 @@ internal fun planTarget(
     factories: Collection<FactoryProduction>,
     recipe: Recipe,
 ): FactoryProduction? = factories.firstOrNull { it.recipe.name == recipe.name }
-
-/**
- * The recipes a plan builds, in the order the target's inputs are followed: the target first, then
- * each input that has exactly one buildable producer, depth first, inputs by material name. A
- * recipe is never built twice, and the walk stops once [maxRecipes] recipes are included.
- */
-internal fun includedRecipes(
-    factories: Map<Recipe, FactoryProduction>,
-    target: FactoryProduction,
-    maxRecipes: Int,
-) = buildMap {
-    val singleProducer = singleProducers(factories, target.recipe)
-    val queue = ArrayDeque<FactoryProduction>()
-    var factory: FactoryProduction? = target
-
-    while (factory != null) {
-        if (size >= maxRecipes) break
-        val recipe = factory.recipe
-        if (!containsKey(recipe)) {
-            put(recipe, factory)
-            // build every input that has a single producer, until the recipe cap is reached
-            queue.addAll(
-                recipe.ingredients.keys.sortedBy { it.name }.mapNotNull { singleProducer[it] },
-            )
-        }
-        factory = queue.removeFirstOrNull()
-    }
-}
-
-/**
- * Whether a factory can stand in the blueprint. The target's producer is always kept, even when it
- * would otherwise be left out; every other place-dependent recipe (mining/pumping/harvesting),
- * classic smelter and complex process is skipped.
- */
-private fun buildable(factory: FactoryProduction, target: Recipe): Boolean {
-    if (factory.factory == Factory.NO_FACTORY) return false
-    if (factory.recipe.name == target.name) return true
-    if (factory.recipe.categories.any { it in extractionCategories }) return false
-    if (factory.recipe.categories.any { it in externallyProcessedCategories }) return false
-    // a recipe yielding several materials would need a mixed output belt, not supported yet
-    if (factory.recipe.result.size > 1) return false
-    return true
-}
-
-/**
- * The one buildable producer of each material among [factories]. A material with exactly one
- * producer can be built and fed on, even to several consumers: the layout shares one belt from the
- * producer when more than one recipe takes it.
- */
-private fun singleProducers(
-    factories: Map<Recipe, FactoryProduction>,
-    target: Recipe,
-) =
-    factories.values
-        .filter { buildable(it, target) }
-        .flatMap { factory -> factory.recipe.result.keys.map { it to factory } }
-        .groupBy({ it.first }, { it.second })
-        .mapNotNull { (material, producers) -> producers.singleOrNull()?.let { material to it } }
-        .toMap()
 
 /**
  * The external inputs the [included] recipes consume but none of them produces, with the rate the

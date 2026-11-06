@@ -206,8 +206,8 @@ compares `row.plannedRow == production` by value.
 
 **Guardrail.** Do not reintroduce an allocation index, reference identity or a
 recipe-keyed map: structurally identical rows must compare equal and stay
-interchangeable. The plan is bounded by `MAX_BLUEPRINT_RECIPES` and a band by
-`GROUP_MAX_MACHINES`, so the scans stay smaller than the hash tables they replace.
+interchangeable. A band is bounded by `GROUP_MAX_MACHINES` and a row by
+`MAX_COPIES`, so the scans stay smaller than the hash tables they replace.
 
 **See.** `architecture.md` §Blueprint layout; `blueprint/planning/plan/BlueprintPlan.kt`,
 `blueprint/planning/row/Row.kt`.

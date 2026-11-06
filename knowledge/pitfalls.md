@@ -153,6 +153,28 @@ An entry belongs here only with evidence, and should say how to recognize it.
   wires are the same idea, stored per pole in `neighbours`. Verified by generating
   and decoding a `buffer-chest` layout: `wires: [[29,1,31,1],[31,1,30,1]]`.
 
+## Blueprint planning
+
+- **The target production must be seeded into `DirectFeedContext.included`.** Deriving
+  `included` only from the materials with a single buildable producer (`producers.values`)
+  drops the target when the optimizer splits the target material across two recipes, as it does
+  for `solid-fuel` (`solid-fuel-from-light-oil` ≈ 0.73 and `solid-fuel-from-petroleum-gas` ≈
+  0.27 machines). `plannedSources` then sees no consumer for the target and returns no sources,
+  so e.g. the solid-fuel blueprint builds the chemical plant without its light oil. Evidence:
+  `aTargetMaterialWithTwoProducersStillImportsItsInputs` in `BlueprintPlanIntegrationTest`.
+  Keep the seed separate from `buildable`: indexing the target in `producers` again makes a
+  self-consuming target (`kovarex-enrichment-process`) plan a second, belted row (18 machines
+  instead of the capped 9). Evidence: `theKovarexTargetIsBuiltOnce`.
+- **A recipe pair reachable through several paths produces one direct-feed band per path.**
+  The walk yields a fresh `FeedLink` for every path to a consumer, so with a long chain several
+  bands can build and export the same material (one belt source each). `utility-science-pack`
+  currently gets three `copper-cable`/`electronic-circuit` bands, each exporting
+  electronic-circuit, so `assertOneBeltSourcePerMaterial` fails; that target is therefore left
+  out of `realBlueprintsPutEveryMaterialOnAtMostOneBelt` for now. Do not "fix" this by dropping
+  the assertion: consolidate the bands (or dedupe the candidate links) first. Evidence:
+  the probe prints three identical rows and
+  `{electronic-circuit=[electronic-circuit, electronic-circuit, electronic-circuit]}`.
+
 ## Build, Detekt and environment
 
 - **`gradlew` tests run with the project root as the working directory.** Tests

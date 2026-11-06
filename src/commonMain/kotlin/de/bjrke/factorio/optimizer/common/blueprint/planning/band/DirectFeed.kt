@@ -14,7 +14,10 @@ import kotlin.math.ceil
 private const val MAX_BAND_LINKS = 3
 
 /** The rows a plan builds; a plain row repeats one recipe, a band interleaves several. */
-internal data class DirectFeed(val rows: List<PlannedRow>)
+internal data class DirectFeed(
+    val rows: List<PlannedRow>,
+    val included: Map<Recipe, FactoryProduction>,
+)
 
 // every link that could be direct-fed, in a deterministic order; a machine that takes or gives a
 // fluid is left in (the band row gets the same fluid lane as a plain row), but a cyclic link is not
@@ -49,7 +52,7 @@ internal fun DirectFeedContext.build(): DirectFeed {
         included.values
             .sortedBy { it.recipe.name }
             .mapNotNull { belted(it, grouped, onBelt, built) }
-    return DirectFeed(bands + targetRow(built) + belted)
+    return DirectFeed(bands + targetRow(built) + belted, included)
 }
 
 /** Builds one row per arranged band, with its machine sequence and the links between them. */
@@ -152,12 +155,15 @@ private fun sharesRecipe(first: FeedLink, second: FeedLink) =
  * was drawn for. Anything that does not fit a band keeps its plan machine count and stays belted.
  */
 internal fun directFeed(
-    target: Recipe,
-    included: Map<Recipe, FactoryProduction>,
+    targetProduction: FactoryProduction,
+    factories: Map<Recipe, FactoryProduction>,
     scale: Double,
     logistics: LogisticsCalculator,
-): DirectFeed {
-    val targetProduction = included[target]
-    return if (targetProduction == null) DirectFeed(emptyList())
-    else DirectFeedContext(targetProduction, included, scale, logistics).build()
-}
+) =
+    DirectFeedContext(
+            targetProduction,
+            factories,
+            scale,
+            logistics,
+        )
+        .build()
