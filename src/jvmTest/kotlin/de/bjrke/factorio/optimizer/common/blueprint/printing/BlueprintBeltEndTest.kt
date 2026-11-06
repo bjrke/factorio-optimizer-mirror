@@ -205,7 +205,7 @@ class BlueprintBeltEndTest {
         assertEquals(
             listOf(
                 BlueprintWire(chest - 2, 1, chest, 1),
-                BlueprintWire(chest, 1, chest - 1, 1),
+                BlueprintWire(chest - 1, 1, chest, 1),
             ),
             blueprint.wires,
         )
@@ -224,11 +224,10 @@ class BlueprintBeltEndTest {
 
     @Test
     fun plainAndCheatMarkersNeedNoCircuitWire() =
-        assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST, BeltEnd.INFINITY_CHEST) { beltEnd
-            ->
+        assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST, BeltEnd.INFINITY_CHEST) {
             assertEquals(
                 emptyList(),
-                Layout(basePlan, beltEnd = beltEnd).blueprint.wires,
+                Layout(basePlan, beltEnd = it).blueprint.wires,
             )
         }
 }

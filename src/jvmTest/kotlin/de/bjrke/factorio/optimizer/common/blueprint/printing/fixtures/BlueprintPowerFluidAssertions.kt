@@ -85,8 +85,7 @@ private fun plainPipeLinks(tile: Coordinate, plumbing: Map<Coordinate, Plumbing>
 private fun groundPipeLinks(
     pipe: PipeToGroundEntity,
     plumbing: Map<Coordinate, Plumbing>,
-): Set<Coordinate> {
-    val result = mutableSetOf<Coordinate>()
+) = buildSet {
     val mouth = mouthOf(pipe)
     val front = pipe.area.topLeft + mouth.step
     val neighbour = plumbing[front]
@@ -94,7 +93,7 @@ private fun groundPipeLinks(
         neighbour is PipeEntity ||
             neighbour is InfinityPipeEntity ||
             (neighbour is PipeToGroundEntity && mouthOf(neighbour) == mouth.opposite())
-    if (connects) result += front
+    if (connects) add(front)
     // a pipe-to-ground may surface in the next tile; the buried tile is the walkway
     for (distance in 1..PIPE_REACH) {
         val toward = if (pipe.io == Io.INPUT) pipe.direction.step else pipe.direction.step * -1
@@ -104,11 +103,11 @@ private fun groundPipeLinks(
             other.material == pipe.material &&
                 other.direction == pipe.direction &&
                 other.io != pipe.io
-        if (!opposite) continue
-        result += other.area.topLeft
-        break
+        if (opposite) {
+            add(other.area.topLeft)
+            break
+        }
     }
-    return result
 }
 
 private fun mouthOf(pipe: PipeToGroundEntity) =

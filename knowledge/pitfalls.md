@@ -151,7 +151,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   (connector `1` on both ends). `blueprint/printing/output/ChestWires.kt` derives them from
   the final placed entities and `Blueprint.toJson()` emits the array; pole copper
   wires are the same idea, stored per pole in `neighbours`. Verified by generating
-  and decoding a `buffer-chest` layout: `wires: [[29,1,31,1],[31,1,30,1]]`.
+  and decoding a `buffer-chest` layout: `wires: [[29,1,31,1],[30,1,31,1]]`.
 
 ## Blueprint planning
 

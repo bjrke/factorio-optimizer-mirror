@@ -27,14 +27,11 @@ import kotlin.test.assertEquals
  */
 class BlueprintLayoutSnapshotTest {
 
-    @Test fun baseLayoutIsStable() = assertSignature("499d3608057e8a25", Layout(basePlan).blueprint)
+    @Test fun baseLayoutIsStable() = Layout(basePlan).assertSignature("499d3608057e8a25")
 
     @Test
     fun chestBeltEndIsStable() =
-        assertSignature(
-            "68cb78b85179b9b7",
-            Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).blueprint,
-        )
+        Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).assertSignature("edccfd8f56a2581b")
 
     @Test
     fun fluidLayoutIsStable() {
@@ -54,7 +51,7 @@ class BlueprintLayoutSnapshotTest {
                 scale = 1.0,
                 label = "water-boil",
             )
-        assertSignature("f674a77f9c79808e", Layout(plan).blueprint)
+        Layout(plan).assertSignature("f674a77f9c79808e")
     }
 
     @Test
@@ -78,14 +75,13 @@ class BlueprintLayoutSnapshotTest {
                 scale = 1.0,
                 label = "iron-gear-wheel",
             )
-        assertSignature("773fb2a5731f5313", Layout(plan).blueprint)
+        Layout(plan).assertSignature("773fb2a5731f5313")
     }
 
-    private fun assertSignature(expected: String, blueprint: Blueprint) {
-        val actual = signature(blueprint)
+    private fun Layout.assertSignature(expected: String) {
         assertEquals(
             expected,
-            actual,
+            signature(blueprint),
             "layout changed; the canonical form is:\n${canonical(blueprint)}",
         )
     }

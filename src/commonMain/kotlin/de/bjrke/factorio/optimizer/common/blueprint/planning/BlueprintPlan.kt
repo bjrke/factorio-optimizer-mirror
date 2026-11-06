@@ -33,7 +33,7 @@ fun blueprintPlan(
     }
 
     val targetFactory =
-        planTarget(result.factories.values, result.recipe)
+        result.factories[result.recipe]
             ?: return BlueprintPlanResult.Unavailable(
                 "no buildable factory for ${result.target.name}",
             )
