@@ -72,6 +72,7 @@ internal class DeliveryPreparation(
     private val beltEnd: BeltEnd,
 ) {
     private val board = stage.board
+    private val plan = stage.plan
     private val rowPlacer = stage.rowPlacer
 
     /**
@@ -106,8 +107,9 @@ internal class DeliveryPreparation(
      */
     private fun prepareSolidDeliveries(sinks: List<Triple<Material, Row, Sink>>): SolidDeliveries {
         val grouped = sinks.groupBy { it.first }.entries.sortedBy { it.key.name }
-        val imports = grouped.filter { rowPlacer.producerRow(it.key) == null }
-        val produced = grouped.filter { rowPlacer.producerRow(it.key) != null }
+        // use the plan's own source list, so the layout and the reported plan cannot disagree
+        val imports = grouped.filter { it.key in plan.sourceMaterials }
+        val produced = grouped.filter { it.key !in plan.sourceMaterials }
         return SolidDeliveries(importDeliveries(imports), producedDeliveries(produced))
     }
 

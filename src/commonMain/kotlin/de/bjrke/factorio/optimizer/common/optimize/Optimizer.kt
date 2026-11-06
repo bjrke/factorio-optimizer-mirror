@@ -295,7 +295,11 @@ class Optimizer(
     operator fun get(target: Material) = cache.getOrPut(target) { compute(target) }
 }
 
-/** A pseudo recipe representing an imported material (the old "chest" source). */
+/**
+ * A pseudo recipe representing an imported material (the old "chest" source). Its [Category.IMPORT]
+ * category keeps it out of the blueprint's buildable rows, so the blueprint imports the material
+ * instead of trying to place a machine for it.
+ */
 private fun freeSource(material: Material) =
     Recipe(
         name = material.name,
@@ -303,7 +307,7 @@ private fun freeSource(material: Material) =
         result = mapOf(material to 1.0),
         time = 1.0,
         subgroup = Subgroup(),
-        categories = setOf(Category.NO_CATEGORY),
+        categories = setOf(Category.IMPORT),
     )
 
 /** Memoized display depth in the byproduct-aware production graph, safe on cycles. */

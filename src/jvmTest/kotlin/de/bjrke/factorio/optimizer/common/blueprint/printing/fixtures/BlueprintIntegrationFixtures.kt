@@ -41,9 +41,9 @@ val chestMarkers =
         BeltEnd.STEEL_CHEST,
     )
 
-fun optimize(target: String) =
+fun optimize(target: String, surface: Surface = Surface.NAUVIS) =
     Optimizer(
-        RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS),
+        RecipeLoader.forActiveMods().forSurface(surface),
         FactoryConfig().defaults,
     )[Material(target)]
 
@@ -120,7 +120,8 @@ data class Layout(
         target: String,
         scale: Double = 1.0,
         beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-    ) : this(result = optimize(target), scale = scale, beltEnd = beltEnd)
+        surface: Surface = Surface.NAUVIS,
+    ) : this(result = optimize(target, surface), scale = scale, beltEnd = beltEnd)
 
     private val rowLayout by lazy { RowLayout(plan, logistics, beltEnd) }
 

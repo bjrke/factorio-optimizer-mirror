@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
@@ -104,6 +105,38 @@ class BlueprintPlanIntegrationTest {
             }
 
         assertEquals(1, rows.size)
+    }
+
+    @Test
+    fun vulcanusStoneUsesTheLavaFoundryRecipe() {
+        // one solid plus one fluid result passes `buildable`, so stone is now planned from
+        // molten-copper-from-lava instead of being imported; pin that change so it stays visible
+        val planned = Layout("stone", surface = Surface.VULCANUS).plan
+
+        assertAll(
+            { assertContains(planned.recipes.map { it.recipe.name }, "molten-copper-from-lava") },
+            { assertContains(planned.sources.map { it.material }, Material("lava")) },
+        )
+    }
+
+    @Test
+    fun anUnbuiltMultiOutputRecipeStillReportsItsFluidAsASource() {
+        // molten-iron-from-lava yields stone as well; this plan does not consume the stone, so no
+        // row is built for it, but the layout still imports its molten iron. The reported sources
+        // must follow the rows that are actually built, not the optimizer's producer index.
+        val layout = Layout("iron-plate", surface = Surface.VULCANUS)
+        val moltenIron = Material("molten-iron")
+
+        assertAll(
+            { assertContains(layout.plan.sources.map { it.material }, moltenIron) },
+            {
+                assertContains(
+                    layout.inputPipes.values,
+                    moltenIron,
+                    "the layout imports molten iron",
+                )
+            },
+        )
     }
 
     @Test

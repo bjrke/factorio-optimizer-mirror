@@ -37,10 +37,21 @@ internal fun plannedMachines(production: FactoryProduction, scale: Double): Int 
 data class BlueprintPlan(
     val target: Material,
     val rows: List<PlannedRow>,
+    /**
+     * The external inputs the [rows] consume but none of them produces, derived from [rows] by
+     * `plannedSources`. The layout places a source for exactly these materials, so the list cannot
+     * drift from what the blueprint imports.
+     */
     val sources: List<PlannedSource>,
     val scale: Double,
     val label: String,
 ) {
+
+    /**
+     * The materials that enter the blueprint from outside, for the layout's import classification.
+     */
+    val sourceMaterials: Set<Material>
+        get() = sources.map { it.material }.toSet()
 
     /**
      * The first row that puts [material] on a belt, or null when the plan imports it. A band

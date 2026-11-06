@@ -113,6 +113,12 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 - `commonMain` holds shared logic; `jsMain` the React UI; `jvmMain` the CLI;
   `commonTest`/`jsTest`/`jvmTest` the tests. `commonMain` must stay
   platform-neutral. Full map: `knowledge/architecture.md`.
+- Prefer read-only collection construction: `map`/`flatMap` plus
+  `toList`/`toSet`/`toMap` for transformations, and
+  `buildMap`/`buildSet`/`buildList` for incremental construction. Avoid
+  `mutableMapOf`/`mutableSetOf`/`mutableListOf`/`HashMap` unless the collection is
+  mutated after construction. Start with `asSequence()` when the intermediate
+  collection would be expensive.
 
 ## Git workflow
 

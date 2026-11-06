@@ -165,11 +165,9 @@ internal data class DirectFeedContext(
     val logistics: LogisticsCalculator,
 ) {
     val producers =
-        factories.values
-            .flatMap { factory ->
-                if (!buildable(factory)) emptyList()
-                else factory.recipe.result.keys.map { it to factory }
-            }
+        factories
+            .filterKeys { buildable(logistics, it) }
+            .flatMap { (recipe, factory) -> recipe.result.keys.map { it to factory } }
             .groupBy({ it.first }, { it.second })
 
     /**

@@ -159,12 +159,21 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `included` only from the materials with a single buildable producer (`producers.values`)
   drops the target when the optimizer splits the target material across two recipes, as it does
   for `solid-fuel` (`solid-fuel-from-light-oil` ≈ 0.73 and `solid-fuel-from-petroleum-gas` ≈
-  0.27 machines). `plannedSources` then sees no consumer for the target and returns no sources,
-  so e.g. the solid-fuel blueprint builds the chemical plant without its light oil. Evidence:
+  0.27 machines). The plan then has no target row, so `plannedSources` sees none of its
+  consumers and the blueprint builds the chemical plant without its light oil. Evidence:
   `aTargetMaterialWithTwoProducersStillImportsItsInputs` in `BlueprintPlanIntegrationTest`.
   Keep the seed separate from `buildable`: indexing the target in `producers` again makes a
   self-consuming target (`kovarex-enrichment-process`) plan a second, belted row (18 machines
   instead of the capped 9). Evidence: `theKovarexTargetIsBuiltOnce`.
+- **A multi-output recipe drains only through its machine's horizontal fluid ports.**
+  `buildable` now accepts one solid result plus any number of fluid results, so
+  `quantum-processor` (one item plus `fluoroketone-hot`) is built for targets such as
+  `railgun`. The electromagnetic plant's only fluid outputs are on side edges, and
+  `RowFluidLane` creates lanes only on north/south edges, so no drain is placed for the hot
+  fluoroketone and the machines stall. This is a known limitation; the intended fix is to flip
+  every second electromagnetic plant so adjacent output ports meet and act as a pipe, then drain
+  the hot fluid. Keep the Vulcanus `molten-*-from-lava` planning pinned too: those recipes use the
+  foundry's south output and drain correctly; `vulcanusStoneUsesTheLavaFoundryRecipe` covers it.
 - **A recipe pair reachable through several paths produces one direct-feed band per path.**
   The walk yields a fresh `FeedLink` for every path to a consumer, so with a long chain several
   bands can build and export the same material (one belt source each). `utility-science-pack`

@@ -145,7 +145,7 @@ enum class Factory(
     SCIENCE_LAB(null, "lab", setOf(Category.SCIENCE_LAB)),
     // spoilage only exists in Space Age
     SPOILING(null, "spoilage", setOf(Category.SPOILING), FactorySpec(spaceAgeOnly = true)),
-    NO_FACTORY(null, "infinity-chest", setOf());
+    NO_FACTORY(null, "infinity-chest", setOf(Category.IMPORT));
 
     val speed: Double
         get() = spec.speed

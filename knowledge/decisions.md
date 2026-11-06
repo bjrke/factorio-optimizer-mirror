@@ -7,6 +7,29 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-06 — Imports are a recipe category, and sources follow the placed rows
+
+**Decision.** Synthetic import recipes (`Optimizer.freeSource`) carry `Category.IMPORT`;
+`buildable` decides from the recipe, not the machine, and treats `IMPORT` like an
+extraction category. A recipe may produce one solid result plus any number of fluid
+results, because fluids leave a row through their own lanes; two solids still need a
+mixed output belt and stay unbuildable. `BlueprintPlan.sources` is derived from the
+rows that were actually placed (`plannedSources(rows, scale, logistics)`), and the
+layout's solid-import classification reads `BlueprintPlan.sourceMaterials` instead of
+recomputing producers. Vulcanus `stone`/`stone-brick` consequently use the
+`molten-*-from-lava` recipes; that side effect is accepted and pinned by
+`vulcanusStoneUsesTheLavaFoundryRecipe`.
+
+**Guardrail.** Never derive sources from `DirectFeedContext.included`: it contains
+productions the planner drops (a fluid maker whose solid byproduct is not consumed),
+so the reported imports would disagree with the layout. Keep one source definition:
+`plannedSources` for the plan and `sourceMaterials` for `DeliveryPreparation`.
+
+**See.** `blueprint/planning/BlueprintSelection.kt`,
+`blueprint/planning/plan/BlueprintPlan.kt`,
+`blueprint/placing/routing/DeliveryPreparation.kt`,
+`blueprint/planning/band/RecipeFilter.kt`, `pitfalls.md` §Blueprint planning.
+
 ## 2026-11-05 — Result models live outside the optimizer; the pipeline root sits at blueprint
 
 **Decision.** The optimizer's output models `FactoryProduction`, `OptimizationResult`

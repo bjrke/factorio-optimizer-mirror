@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 
@@ -16,39 +16,37 @@ internal fun planTarget(
 ): FactoryProduction? = factories.firstOrNull { it.recipe.name == recipe.name }
 
 /**
- * The external inputs the [included] recipes consume but none of them produces, with the rate the
- * imports have to supply at [scale]: one lane per material, by name. Whether a material moves as a
- * fluid is asked from the [logistics] the plan was optimized with.
+ * The external inputs the plan [rows] consume but none of them produces, with the rate the imports
+ * have to supply at [scale]. Derived from the rows that are actually built, not from the
+ * optimizer's `included` map: a production the planner drops (for example a fluid maker whose solid
+ * byproduct is not consumed) must still report its fluid as an import.
+ *
+ * A fluid produced by the same row is fed by that row's joined fluid lanes, so it is not external.
+ * A fluid produced by another row is still imported, because rows never pipe fluids to each other.
  */
 internal fun plannedSources(
-    included: Map<Recipe, FactoryProduction>,
+    rows: List<PlannedRow>,
     scale: Double,
     logistics: LogisticsCalculator,
 ): List<PlannedSource> {
-    val producers = materialsToFactories(included) { recipe.result.keys }
-    val consumers = materialsToFactories(included) { recipe.ingredients.keys }
-    return consumers
-        .filterKeys { it !in producers }
-        .map { (material, factories) ->
-            PlannedSource(
-                material = material,
-                rate = factories.sumOf { it.consumption(material) } * scale,
-                fluid = logistics.isFluid(material),
-            )
+    val produced = rows.flatMap { row -> row.productions.flatMap { it.recipe.result.keys } }.toSet()
+    val consumption = buildMap {
+        for (row in rows) {
+            val rowProducts = row.productions.flatMap { it.recipe.result.keys }.toSet()
+            for (machine in row.machines) {
+                for ((material, amount) in machine.recipe.ingredients) {
+                    val suppliedByPlan =
+                        if (logistics.isFluid(material)) material in rowProducts
+                        else material in produced
+                    if (suppliedByPlan) continue
+                    put(material, (this[material] ?: 0.0) + machine.inputPerMachine(amount))
+                }
+            }
+        }
+    }
+    return consumption
+        .map { (material, rate) ->
+            PlannedSource(material, rate * scale, logistics.isFluid(material))
         }
         .sortedBy { it.material.name }
 }
-
-/**
- * Every material the [included] recipes make (or take, as [materials] selects), with the recipes
- * that make (take) it. In recipe order, and first-seen material order within a recipe.
- */
-private fun materialsToFactories(
-    included: Map<Recipe, FactoryProduction>,
-    materials: FactoryProduction.() -> Set<Material>,
-): Map<Material, List<FactoryProduction>> =
-    buildMap<Material, MutableList<FactoryProduction>> {
-        for (factory in included.values) {
-            factory.materials().forEach { getOrPut(it) { mutableListOf() }.add(factory) }
-        }
-    }
