@@ -128,3 +128,23 @@ val kovarexEnrichmentProcessRecipe =
         time = 60.0,
         categories = setOf(Category.CENTRIFUGING),
     )
+
+// A real two-recipe solid cycle: fish-breeding consumes nutrients, and nutrients-from-fish
+// consumes fish. Both are organic, so `buildable` keeps them out of the direct-feed producers.
+val fishBreedingRecipe =
+    Recipe(
+        name = "fish-breeding",
+        ingredients = mapOf(rawFish to 2.0, nutrients to 100.0, water to 100.0),
+        result = mapOf(rawFish to 3.0),
+        time = 6.0,
+        categories = setOf(Category.ORGANIC, Category.CHEMISTRY),
+    )
+
+val nutrientsFromFishRecipe =
+    Recipe(
+        name = "nutrients-from-fish",
+        ingredients = mapOf(rawFish to 1.0),
+        result = mapOf(nutrients to 20.0),
+        time = 2.0,
+        categories = setOf(Category.ORGANIC, Category.CRAFTING),
+    )

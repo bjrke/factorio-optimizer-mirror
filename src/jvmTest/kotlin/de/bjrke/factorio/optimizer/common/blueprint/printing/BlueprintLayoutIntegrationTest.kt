@@ -80,9 +80,6 @@ class BlueprintLayoutIntegrationTest {
             assertNoDanglingInserter(Layout(it).blueprint.entities)
         }
 
-    // utility-science-pack is left out: its longer chain builds three cable/EC bands that each put
-    // electronic-circuit on a belt, which the band grouping still has to consolidate
-    // (see knowledge/pitfalls.md)
     @Test
     fun realBlueprintsPutEveryMaterialOnAtMostOneBelt() =
         assertTableOf(
@@ -91,6 +88,7 @@ class BlueprintLayoutIntegrationTest {
             "logistic-science-pack",
             "processing-unit",
             "lubricant",
+            "utility-science-pack",
         ) {
             assertOneBeltSourcePerMaterial(Layout(it).plan)
         }

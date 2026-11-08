@@ -17,10 +17,11 @@ private const val MAX_CYCLE = 8
  * no producer left unused, at most [GROUP_MAX_MACHINES] machines long.
  */
 internal fun DirectFeedContext.arrange(links: List<FeedLink>): BandPlan? {
-    val recipes = links.flatMap { listOfNotNull(it, it.consumer) }.map { it.production }.distinct()
+    val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
+    val recipes = nodes.map { it.production }
 
     // all members share the row, so they must share the footprint
-    if (footPrintsHaveDifferentSize(links)) return null
+    if (footPrintsHaveDifferentSize(nodes)) return null
 
     val needs = groupNeeds(links) ?: return null
     val group = FeedGroup(links, needs)
@@ -45,13 +46,10 @@ private fun arrangeSequence(
     }
 }
 
-private fun footPrintsHaveDifferentSize(links: List<FeedLink>) =
-    links
+private fun footPrintsHaveDifferentSize(nodes: List<FeedNode>) =
+    nodes
         .asSequence()
-        .flatMap { listOfNotNull(it, it.consumer) }
-        .map {
-            blueprintMachineFootprint(it.production.factory)
-        }
+        .map { blueprintMachineFootprint(it.production.factory) }
         .zipWithNext()
         .any { (a, b) -> a != b }
 
@@ -69,25 +67,24 @@ private fun DirectFeedContext.bandPlanComparator(): Comparator<BandPlan> =
  * other recipe from its consumers inside the group.
  */
 private fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryProduction, Int>? {
+    val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
     // the root is the recipe whose product leaves the group again: the final consumer
-    val root =
-        links.mapNotNull { it.consumer }.firstOrNull { link -> links.none { it == link } }
-            ?: return null
-    val need = plannedMachines(root.production, scale)
-    val needs = mutableMapOf(root.production to need)
+    val root = nodes.singleOrNull { node -> links.none { it.producer == node } } ?: return null
+    val needs = mutableMapOf(root.production to plannedMachines(root.production, scale))
     var progress = true
     while (progress) {
         progress = false
         for (link in links) {
-            if (link.production in needs) continue
-            val consumer = link.consumer?.let { needs[it.production] } ?: continue
-            val ratio = link.ioRatio
-            needs[link.production] =
-                maxOf(needs[link.production] ?: 0, ceil(consumer * ratio).toInt())
-            progress = true
+            val consumer = needs[link.consumer.production] ?: continue
+            val required = ceil(consumer * link.ioRatio).toInt()
+            val known = needs[link.producer.production]
+            if (known == null || required > known) {
+                needs[link.producer.production] = required
+                progress = true
+            }
         }
     }
-    return if (needs.size == links.size + 1) needs else null
+    return if (needs.size == nodes.size) needs else null
 }
 
 /**
@@ -99,9 +96,8 @@ private fun ratiosFit(
     counts: Map<FactoryProduction, Int>,
 ) =
     group.links.all { link ->
-        val producerCount = counts.getValue(link.production)
-        val consumer = link.consumer?.production ?: return@all false
-        val consumerCount = counts.getValue(consumer)
+        val producerCount = counts.getValue(link.producer.production)
+        val consumerCount = counts.getValue(link.consumer.production)
         val shared =
             greatestCommonDivisor(
                 producerCount,
@@ -166,7 +162,7 @@ private class FeedWindow(
         seedSupply()
         for (position in machines.indices) {
             for ((index, link) in links.withIndex()) {
-                if (machines[position] != link.consumer?.production) continue
+                if (machines[position] != link.consumer.production) continue
                 if (!consume(position, link, index)) return null
             }
         }
@@ -176,7 +172,7 @@ private class FeedWindow(
     private fun seedSupply() {
         for (position in machines.indices) {
             for ((index, link) in links.withIndex()) {
-                if (machines[position] != link.production) continue
+                if (machines[position] != link.producer.production) continue
                 supply[position * links.size + index] = link.outputPerMachine
             }
         }
@@ -186,7 +182,7 @@ private class FeedWindow(
         var demand = link.inputPerMachine
         for (side in listOf(position - 1, position + 1)) {
             if (side !in machines.indices) continue
-            if (machines[side] != link.production) continue
+            if (machines[side] != link.producer.production) continue
             val slot = side * links.size + index
             val taken = minOf(supply[slot], demand)
             if (taken <= FEED_EPSILON) continue
@@ -204,7 +200,7 @@ private class FeedWindow(
     private fun everythingUsed() =
         machines.indices.all { position ->
             links.indices.all { index ->
-                machines[position] != links[index].production ||
+                machines[position] != links[index].producer.production ||
                     position * links.size + index in used
             }
         }
@@ -215,7 +211,7 @@ private fun adjacent(group: FeedGroup, cycle: List<FactoryProduction>) =
     group.links.all { link ->
         cycle.withIndex().any { (index, current) ->
             val next = cycle[(index + 1) % cycle.size]
-            (current == link.production && next == link.consumer?.production) ||
-                (current == link.consumer?.production && next == link.production)
+            (current == link.producer.production && next == link.consumer.production) ||
+                (current == link.consumer.production && next == link.producer.production)
         }
     }

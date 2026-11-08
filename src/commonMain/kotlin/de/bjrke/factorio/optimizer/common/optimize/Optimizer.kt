@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
+import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 
@@ -32,9 +33,38 @@ class Optimizer(
     private val cache = mutableMapOf<Material, OptimizationResult>()
     private val machine = MachineCatalog(parsedRecipe, factories)
 
+    /**
+     * One solid-fuel recipe per surface: light oil elsewhere, heavy oil on Fulgora and ammonia on
+     * Aquilo. Planning the alternatives lets the LP split solid fuel across producers, which leaves
+     * the blueprint with more than one belt source for the same material.
+     */
+    private val unplannedRecipes =
+        when (parsedRecipe.surface) {
+            Surface.AQUILO ->
+                setOf(
+                    "solid-fuel-from-light-oil",
+                    "solid-fuel-from-heavy-oil",
+                    "solid-fuel-from-petroleum-gas",
+                )
+            Surface.FULGORA ->
+                setOf(
+                    "solid-fuel-from-light-oil",
+                    "solid-fuel-from-petroleum-gas",
+                    "solid-fuel-from-ammonia",
+                )
+            else ->
+                setOf(
+                    "solid-fuel-from-heavy-oil",
+                    "solid-fuel-from-petroleum-gas",
+                    "solid-fuel-from-ammonia",
+                )
+        }
+
     /** Recipes that run on this surface with one of the selected machines. */
     private val enabledRecipes: List<Recipe> =
-        parsedRecipe.recipes.filter { machine.findFactory(it) != null }
+        parsedRecipe.recipes.filter {
+            it.name !in unplannedRecipes && machine.findFactory(it) != null
+        }
 
     /**
      * Materials a recycling recipe yields. Crafting them would model production that does not

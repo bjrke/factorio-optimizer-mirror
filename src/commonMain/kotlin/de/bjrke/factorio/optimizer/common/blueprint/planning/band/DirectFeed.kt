@@ -20,12 +20,10 @@ internal data class DirectFeed(
 )
 
 // every link that could be direct-fed, in a deterministic order; a machine that takes or gives a
-// fluid is left in (the band row gets the same fluid lane as a plain row), but a cyclic link is not
-context(ctx: DirectFeedContext)
-private fun candidates() = sequence {
-    FeedLink(ctx).traverse()
-}
-    .filter { !it.hasCyclicIngredient && cycleRatio(it.ioRatio) != null }
+// fluid is left in (the band row gets the same fluid lane as a plain row). Cyclic links are not
+// filtered here; `buildable` keeps real solid cycles out of the plan.
+private fun DirectFeedContext.candidates() =
+    target.traverse().filter { cycleRatio(it.ioRatio) != null }
 
 // grow groups greedily: a link joins the group sharing a recipe, and is dropped again
 // when the merged arrangement cannot be built, so it simply stays belted
@@ -71,7 +69,7 @@ private fun buildBands(bandPlans: List<BandPlan>) = bandPlans.map { plan ->
 // consumers
 private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
     for (plan in bandPlans) {
-        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.production }
+        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer.production }
         for ((recipe, machines) in plan.machines.groupingBy { it }.eachCount()) {
             if (recipe in inserted) continue
             this[recipe] = (this[recipe] ?: 0) + machines
@@ -104,8 +102,8 @@ private fun DirectFeedContext.countsForBelt(
         producers[material]?.singleOrNull()?.recipe == recipe &&
         grouped.none {
             it.material == material &&
-                it.production.recipe == recipe &&
-                it.consumer?.production?.recipe == consumer.recipe
+                it.producer.production.recipe == recipe &&
+                it.consumer.production.recipe == consumer.recipe
         }
 
 /**
@@ -137,13 +135,17 @@ private fun DirectFeedContext.belted(
 }
 
 /** The target always needs a row of its own when no band built it. */
-private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>) =
-    if ((built[target] ?: 0) > 0) emptyList()
-    else listOf(PlannedRow.copies(target, plannedMachines(target, scale)))
+private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>): List<PlannedRow> {
+    val targetProduction = target.production
+    return if ((built[targetProduction] ?: 0) > 0) emptyList()
+    else listOf(PlannedRow.copies(targetProduction, plannedMachines(targetProduction, scale)))
+}
 
-/** Whether two links belong to one band: one is the other's consumer, or they share one. */
+/** Whether two links belong to one band: one feeds the other, or they share a consumer. */
 private fun sharesRecipe(first: FeedLink, second: FeedLink) =
-    first.consumer == second || second.consumer == first || first.consumer == second.consumer
+    first.consumer == second.producer ||
+        second.consumer == first.producer ||
+        first.consumer == second.consumer
 
 /**
  * Splits a plan's recipes into belted productions and direct-feed bands.

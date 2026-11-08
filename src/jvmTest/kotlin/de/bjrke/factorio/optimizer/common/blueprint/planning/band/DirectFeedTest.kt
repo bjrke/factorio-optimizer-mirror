@@ -15,15 +15,17 @@ import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.fishBreedingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrame
 import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrameRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.gear
-import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.kovarexEnrichmentProcessRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.nutrients
+import de.bjrke.factorio.optimizer.common.fixtures.nutrientsFromFishRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.rawFish
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcidRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
@@ -35,10 +37,10 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 private val alpha = Material("alpha")
 private val beta = Material("beta")
@@ -213,30 +215,6 @@ class DirectFeedTest {
             { assertEquals(emptyList(), feed.bands) },
             { assertEquals(setOf(ironOreRecipe, ironPlateRecipe), feed.recipes.toSet()) },
         )
-    }
-
-    @Test
-    fun aMaterialWithTwoProducersIsNotDirectFed() {
-        // two recipes make the same plate: direct feeding would have to pick one, so it stays
-        // belted
-        val firstSmelterRecipe =
-            recipe("first-smelter", mapOf(ironPlate to 1.0), mapOf(ironOre to 1.0))
-        val secondSmelterRecipe =
-            recipe("second-smelter", mapOf(ironPlate to 1.0), mapOf(ironOre to 1.0))
-        val gearProduction = production(ironGearWheelRecipe, gear)
-        val feed =
-            directFeed(
-                gearProduction,
-                factories(
-                    gearProduction,
-                    production(firstSmelterRecipe, ironPlate),
-                    production(secondSmelterRecipe, ironPlate),
-                ),
-                scale = 1.0,
-                logistics = logistics,
-            )
-
-        assertEquals(emptyList(), feed.bands)
     }
 
     @Test
@@ -541,45 +519,113 @@ class DirectFeedTest {
 
     @Test
     fun aTwoRecipeCycleStaysBelted() {
-        // no simple vanilla two-recipe solid cycle exists; the rate fits, so only the cycle guard
-        // can keep this pair belted
-        val betaRecipe = recipe("to-beta", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val alphaRecipe = recipe("to-alpha", mapOf(alpha to 1.0), mapOf(beta to 1.0))
-        val alphaProduction = production(alphaRecipe, alpha)
+        // fish-breeding consumes nutrients and nutrients-from-fish consumes fish: a real
+        // two-recipe solid cycle. Both recipes are organic, so they are not buildable and no feed
+        // link can enter the cycle.
+        val fishProduction = production(fishBreedingRecipe, rawFish)
         val feed =
             directFeed(
-                alphaProduction,
-                factories(alphaProduction, production(betaRecipe, beta)),
+                fishProduction,
+                factories(
+                    fishProduction,
+                    production(nutrientsFromFishRecipe, nutrients),
+                ),
                 scale = 1.0,
-                logistics = logistics,
+                logistics = fluids(water),
             )
 
         assertEquals(emptyList(), feed.bands)
     }
 
     @Test
-    fun aCyclicIngredientIsPrunedAndMarksTheLink() {
-        // to-beta needs alpha, and alpha is the material of its consumer link: the walk must not
-        // enter the cycle again, and the link must be dropped from the band candidates
-        val toBetaRecipe = recipe("to-beta", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val toAlphaRecipe = recipe("to-alpha", mapOf(alpha to 1.0), mapOf(beta to 1.0))
-        val alphaProduction = production(toAlphaRecipe, alpha)
-        val betaProduction = production(toBetaRecipe, beta)
+    fun nodeOfCreatesANodeEvenWhenTheProductionIsNotIncluded() {
+        // two recipes make alpha, so neither is part of the plan's producer index; nodeOf still
+        // resolves them lazily and returns the same node for repeated lookups
+        val firstRecipe = recipe("first-alpha", mapOf(alpha to 1.0))
+        val secondRecipe = recipe("second-alpha", mapOf(alpha to 1.0))
+        val first = production(firstRecipe, alpha)
+        val second = production(secondRecipe, alpha)
+        val targetRecipe = recipe("target", mapOf(product to 1.0), mapOf(alpha to 1.0))
+        val targetProduction = production(targetRecipe, product)
         val context =
             DirectFeedContext(
-                alphaProduction,
-                factories(alphaProduction, betaProduction),
+                targetProduction,
+                factories(targetProduction, first, second),
                 1.0,
                 logistics,
             )
-        val root = FeedLink(context)
-        val betaLink = FeedLink(context, betaProduction, root)
+        val node = context.nodeOf(first)
 
         assertAll(
-            // the ingredient is pruned instead of entering the cycle again
-            { assertEquals(emptyList(), betaLink.ingredients.toList()) },
-            // the link is marked so it cannot be banded with an input it can never receive
-            { assertTrue(betaLink.hasCyclicIngredient) },
+            { assertContainsNot(context.included, firstRecipe) },
+            { assertEquals(node, context.nodeOf(first)) },
+            // the target node is the cached one, not a second node for the same production
+            { assertEquals(context.target, context.nodeOf(context.targetProduction)) },
+        )
+    }
+
+    @Test
+    fun theTargetStaysIncludedWhenItsMaterialHasTwoProducers() {
+        // the multi-producer alpha cannot be included, but the target row must still be planned
+        // instead of disappearing from included
+        val firstRecipe = recipe("first-alpha", mapOf(alpha to 1.0))
+        val secondRecipe = recipe("second-alpha", mapOf(alpha to 1.0))
+        val targetRecipe = recipe("target", mapOf(product to 1.0), mapOf(alpha to 1.0))
+        val targetProduction = production(targetRecipe, product)
+        val context =
+            DirectFeedContext(
+                targetProduction,
+                factories(
+                    targetProduction,
+                    production(firstRecipe, alpha),
+                    production(secondRecipe, alpha),
+                ),
+                1.0,
+                logistics,
+            )
+
+        assertEquals(mapOf(targetRecipe to targetProduction), context.included)
+    }
+
+    @Test
+    fun aProductionWithTwoConsumersIsOneNodeAndIsTraversedOnce() {
+        // beta feeds both gamma and the target, so beta has two parents. The walk must expand its
+        // upstream chain once and still yield both outgoing links.
+        val alphaRodRecipe = recipe("alpha-rod", mapOf(alpha to 1.0))
+        val betaUnitRecipe = recipe("beta-unit", mapOf(beta to 1.0), mapOf(alpha to 1.0))
+        val gammaPackRecipe = recipe("gamma-pack", mapOf(gamma to 1.0), mapOf(beta to 1.0))
+        val productRecipe =
+            recipe("product", mapOf(product to 1.0), mapOf(beta to 1.0, gamma to 1.0))
+        val productProduction = production(productRecipe, product)
+        val context =
+            DirectFeedContext(
+                productProduction,
+                factories(
+                    productProduction,
+                    production(gammaPackRecipe, gamma),
+                    production(betaUnitRecipe, beta),
+                    production(alphaRodRecipe, alpha),
+                ),
+                1.0,
+                logistics,
+            )
+        val alphaNode = context.nodeOf(production(alphaRodRecipe, alpha))
+        val betaNode = context.nodeOf(production(betaUnitRecipe, beta))
+        val links = context.nodeOf(productProduction).traverse().toList()
+
+        assertAll(
+            // both parents resolve to the same node, not to two path-local copies
+            { assertEquals(betaNode, context.nodeOf(production(betaUnitRecipe, beta))) },
+            {
+                assertEquals(
+                    setOf(gamma, product),
+                    betaNode.consumers.map { it.consumer.production.material }.toSet(),
+                )
+            },
+            // the shared producer's upstream chain is expanded only once
+            { assertEquals(1, links.count { it.producer == alphaNode }) },
+            // but each consumer link is still yielded
+            { assertEquals(2, links.count { it.producer == betaNode }) },
         )
     }
 }

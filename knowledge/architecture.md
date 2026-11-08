@@ -382,12 +382,19 @@ inserted machine to machine, the recipes become one interleaved row, and
 for it. A band is a `PlannedRow` whose `links` are non-empty and whose `machines`
 hold one `FactoryProduction` per machine; a plain row repeats its one production
 once per machine and has no links. The search is a graph walk from the target:
-`DirectFeedModel.FeedLink` carries its producing `FactoryProduction`, its parent
-link and the inserted material, and lazily expands its ingredients, skipping
-fluids and any material already on the path so a recipe cycle is entered once.
-`DirectFeedContext` owns the target, the included productions, the scale, the
-logistics and the per-material producer index; a material is direct-fed only
-when the plan has exactly one producer for it. `blueprint/planning/band/BandSearch` is a set of
+`DirectFeedModel.FeedNode` is one production; its lazy `ingredients` are the
+links to the producers of its inputs and its lazy `consumers` are the links that
+take its product, so a production may have several consumers. `FeedLink` is the
+edge (producer node, consumer node, material), and `FeedNode.traverse()` walks
+the ingredients once, keeping a visited node set, so a shared production is not
+expanded twice. Real solid recipe cycles are filtered out by `buildable`, so the
+walk keeps no cycle-specific state. `DirectFeedContext` owns the target, the
+included productions, the scale, the logistics, the per-material producer index
+(with `stone` always excluded) and the lazy node lookup (`nodeOf`); a material
+with several in-plan producers must be kept out by an explicit recipe policy, not
+by picking one link. `Optimizer` keeps one solid-fuel recipe per surface (light
+oil elsewhere, heavy oil on Fulgora, ammonia on Aquilo).
+`blueprint/planning/band/BandSearch` is a set of
 extensions on that context and finds the shortest window (`FeedWindow` checks
 that every consumer is covered and every producer feeds someone). `RowPlacer`
 places every row through one `placeRow`: a plain row repeats its production with
@@ -398,8 +405,9 @@ still gets **fluid lanes** for its machines' fluid ports, including a machine
 that takes or gives a fluid while its solid link comes from a neighbor; only the
 link material must be solid (see `decisions.md`, 2026-11-02). See `decisions.md`
 (2026-10-18) for the band rules and the open line-breaking follow-ups,
-(2026-10-24) for why the row is the occurrence, and (2026-11-04) for the
-recursive link graph and its recipe-path cycle guard.
+(2026-10-24) for why the row is the occurrence, and (2026-11-07) for the
+production-node/feed-link split, the global stone exclusion and the surface-specific
+solid-fuel policy.
 
 A solid belt's end is a `BeltEnd` (`blueprint/layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed

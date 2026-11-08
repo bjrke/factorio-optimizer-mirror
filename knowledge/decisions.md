@@ -7,6 +7,56 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-07 — Stone is always an import, and solid-fuel recipes are surface-specific
+
+**Decision.** `DirectFeedContext.producers` excludes `stone` on every surface, so it is always
+reported as a planned source instead of being direct-fed from one of Vulcanus' lava byproducts.
+`ParsedRecipe.surface` selects one solid-fuel recipe per surface: `solid-fuel-from-light-oil`
+elsewhere, `solid-fuel-from-heavy-oil` on Fulgora (its local oil resource) and
+`solid-fuel-from-ammonia` on Aquilo. The other solid-fuel recipes are excluded.
+
+**Guardrail.** Keep both policies explicit. `FeedNode.ingredients` links every in-plan producer of
+a solid, so a material with two producers is direct-fed from whichever link the walk sees first
+(the others are dropped by `groupLinks`); a new multi-producer solid therefore needs an explicit
+recipe or import policy, not a single-producer link filter. Keep one solid-fuel recipe per surface
+so a blueprint never needs two producers of the same material. Evidence:
+`vulcanusStoneIsImported`, `rocketFuelUsesTheLightOilSolidFuelRecipe`,
+`solidFuelUsesTheSurfaceRecipe` and `aquiloSolidFuelUsesAmmonia`.
+
+**See.** `game/selection/SurfaceSelection.kt`,
+`blueprint/planning/band/DirectFeedModel.kt`, `optimize/Optimizer.kt`,
+`pitfalls.md` §Blueprint planning.
+
+## 2026-11-06 — Direct feed is a production-node graph with feed links
+
+**Decision.** The direct-feed search walks the plan from the target.
+`blueprint/planning/band/DirectFeedModel.FeedNode` is one production and owns the
+lazy `ingredients` (links to the producers of its inputs) and `consumers` (links
+that take its product); a production may have several consumers. `FeedLink` is the
+edge `(producer, consumer, material)` with the per-machine rates, so a production
+and an edge exist once no matter how many paths reach them.
+`DirectFeedContext` owns the target, the included productions, the scale, the
+logistics, the per-material producer index and the lazy `nodeOf` lookup.
+`FeedNode.traverse()` keeps a visited-node set, so a shared producer is expanded only
+once; there is no cycle-specific state because `buildable` keeps every real solid
+cycle (organic, centrifuging, ...) out of the plan. `BandSearch` is a set of extensions on the
+context, and the count-vector, permutation and GCD helpers are generic functions
+in `core/util/MathUtils.kt`. Per-machine rates are
+`FactoryProduction.inputPerMachine`/`outputPerMachine`; productivity counts for
+outputs because that is what a direct-fed consumer receives.
+
+**Guardrail.** Keep one node per production and one edge per
+`(producer, consumer, material)`; never reintroduce a `consumer: FeedLink?` parent
+or path-local copies. A material with several in-plan producers must be kept out of the
+direct feed by an explicit recipe or import policy (stone, solid fuel), never by
+arbitrarily picking one link. Fluids are never links. Keep the `visited` set in
+`traverse()`. Band grouping still does not enforce one band per production; consolidating
+distinct bands is a separate change. Keep the `countVectors` empty-list guard.
+
+**See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
+`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/BandSearch.kt`,
+`core/util/MathUtils.kt`, `pitfalls.md` §Blueprint planning.
+
 ## 2026-11-06 — Imports are a recipe category, and sources follow the placed rows
 
 **Decision.** Synthetic import recipes (`Optimizer.freeSource`) carry `Category.IMPORT`;
@@ -16,9 +66,8 @@ results, because fluids leave a row through their own lanes; two solids still ne
 mixed output belt and stay unbuildable. `BlueprintPlan.sources` is derived from the
 rows that were actually placed (`plannedSources(rows, scale, logistics)`), and the
 layout's solid-import classification reads `BlueprintPlan.sourceMaterials` instead of
-recomputing producers. Vulcanus `stone`/`stone-brick` consequently use the
-`molten-*-from-lava` recipes; that side effect is accepted and pinned by
-`vulcanusStoneUsesTheLavaFoundryRecipe`.
+recomputing producers. Surface-specific imports are a separate explicit policy; stone
+on Vulcanus is covered by the 2026-11-07 entry.
 
 **Guardrail.** Never derive sources from `DirectFeedContext.included`: it contains
 productions the planner drops (a fluid maker whose solid byproduct is not consumed),
@@ -47,33 +96,6 @@ again.
 
 **See.** `architecture.md` §Source layout and §Package dependencies.
 
-## 2026-11-04 — Direct feed is a recursive link graph
-
-**Decision.** The direct-feed search walks the plan from the target instead of
-scanning a flat candidate list. `blueprint/planning/band/DirectFeedModel.FeedLink` carries its
-producing `FactoryProduction`, its parent link and the inserted material, and
-lazily expands its ingredients; fluids and any material already on the path are
-skipped, so a recipe cycle is entered once. `DirectFeedContext` owns the target,
-the included productions, the scale, the logistics and the per-material producer
-index. `blueprint/planning/band/BandSearch` is a set of extensions on that context, and the
-count-vector, permutation and GCD helpers are generic functions in
-`core/util/MathUtils.kt`. Per-machine rates are `FactoryProduction.inputPerMachine`/
-`outputPerMachine`; productivity counts for outputs because that is what a
-direct-fed consumer receives.
-
-**Guardrail.** A material is direct-fed only when the plan has exactly one
-producer for it, matching the single-producer assumption in `countsForBelt`.
-Never expand a fluid, and never create a link whose producer recipe is already
-on the path: the recipe check is what stops a recipe that consumes its own
-product (`kovarex-enrichment-process`) from recursing. A link with any cyclic
-ingredient (`FeedLink.hasCycle`) is dropped from the candidates, because the
-band would starve that machine. Keep the `countVectors` empty-list guard (it
-used to recurse without end). `special` no longer owns the direct feed;
-`blueprint.planning` imports `band.directFeed` directly.
-
-**See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
-`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/BandSearch.kt`, `core/util/MathUtils.kt`.
-
 ## 2026-11-02 — Band machines may take or give a fluid
 
 **Decision.** Any machine in a direct-feed band may take a fluid ingredient or
@@ -87,7 +109,7 @@ producer's nor a consumer's fluid need keeps the recipe belted.
 
 **Guardrail.** Keep the two halves in step: a band machine may use a fluid only
 because `FluidLaneFeed` can serve its port. Never drop the
-`!logistics.isFluid(material)` test in `FeedLink.ingredients`; a fluid is never a
+`!logistics.isFluid(material)` test in `FeedNode.ingredients`; a fluid is never a
 link. A fluid that is both an input and an output gets one feed lane and one
 drain lane (keyed by material **and** flow, never merged by material);
 `FluidFeeder.connectLanes` joins the drain to the feed east of the row.
@@ -323,7 +345,7 @@ Every machine is built complete; a band's internal material
 gets no lane, sink, belt or belted production.
 
 **Guardrail.** Do not group by machine count or give a band's internal material a
-belt. A fluid is never a link material (`FeedLink.ingredients`); any band machine
+belt. A fluid is never a link material (`FeedNode.ingredients`); any band machine
 may take or give one since 2026-11-02. Open: line-breaking a too-wide band and
 mixed-footprint bands.
 

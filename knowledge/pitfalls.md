@@ -68,14 +68,14 @@ An entry belongs here only with evidence, and should say how to recognize it.
   tile), and the belt tunnel entry costs 16 (four surface tiles), so a short detour wins
   over an unnecessary tunnel. Line breaking a band too wide is a deferred follow-up, not
   a bug in the router.
-- **A material-only cycle guard misses a recipe that consumes its own product.**
-  `kovarex-enrichment-process` takes and gives uranium-235/uranium-238; a guard
-  that only checks "has this material been seen on the path" recurses forever
-  because the parent link's material is the other isotope. `FeedLink.pathRecipes`
-  must reject a producer whose *recipe* is already on the path, and `hasCycle`
-  must drop a link with any cyclic ingredient (the band would starve it).
-  Evidence: `aRecipeThatFeedsItselfStaysBelted` and `aTwoRecipeCycleStaysBelted`
-  in `DirectFeedTest`.
+- **Real recipe cycles are kept out by `buildable`, not by a cycle guard.** `kovarex-enrichment-process`
+  is `CENTRIFUGING`, and `fish-breeding`/`nutrients-from-fish` are `ORGANIC`, so they never enter
+  the per-material producer index. `FeedNode.traverse()` keeps a visited-node set so a shared
+  producer is expanded once; it does **not** filter the closing edge of a cycle (the edge is
+  yielded before the visited check), so a buildable cycle would still reach `groupLinks`.
+  Evidence: `aRecipeThatFeedsItselfStaysBelted` and `aTwoRecipeCycleStaysBelted`. Do not
+  reintroduce path-local cycle state; if a future mod adds a buildable solid cycle, it needs an
+  explicit policy.
 - **A row has four solid belt locations, so a recipe needing a fifth solid lane is
   out of scope.** `RowPlacer.rowShape` ranks inputs and outputs together and zips
   them onto two top and two bottom locations (near/far each); every input belt is
@@ -157,33 +157,26 @@ An entry belongs here only with evidence, and should say how to recognize it.
 
 - **The target production must be seeded into `DirectFeedContext.included`.** Deriving
   `included` only from the materials with a single buildable producer (`producers.values`)
-  drops the target when the optimizer splits the target material across two recipes, as it does
-  for `solid-fuel` (`solid-fuel-from-light-oil` ≈ 0.73 and `solid-fuel-from-petroleum-gas` ≈
-  0.27 machines). The plan then has no target row, so `plannedSources` sees none of its
-  consumers and the blueprint builds the chemical plant without its light oil. Evidence:
-  `aTargetMaterialWithTwoProducersStillImportsItsInputs` in `BlueprintPlanIntegrationTest`.
-  Keep the seed separate from `buildable`: indexing the target in `producers` again makes a
-  self-consuming target (`kovarex-enrichment-process`) plan a second, belted row (18 machines
-  instead of the capped 9). Evidence: `theKovarexTargetIsBuiltOnce`.
+  drops a target that is not in the per-material producer index, so the plan has no target row
+  and `plannedSources` sees none of its consumers. Keep the seed separate from `buildable`:
+  indexing the target in `producers` again makes a self-consuming target
+  (`kovarex-enrichment-process`) plan a second, belted row (18 machines instead of the capped 9).
+  Evidence: `theKovarexTargetIsBuiltOnce`.
+- **Stone and solid fuel must stay out of the multi-producer direct feed.** `FeedNode.ingredients`
+  links every in-plan producer, so a solid with two producers is direct-fed from whichever link
+  the walk sees first; `groupLinks` drops the others. `DirectFeedContext.producers` excludes
+  `stone` on every surface, and `Optimizer` plans one solid-fuel recipe per surface: light oil
+  elsewhere, heavy oil on Fulgora and ammonia on Aquilo. Keep these policies explicit; do not infer
+  them from recipe result order or reintroduce a single-producer link filter. Evidence:
+  `vulcanusStoneIsImported`, `rocketFuelUsesTheLightOilSolidFuelRecipe`,
+  `solidFuelUsesTheSurfaceRecipe` and `aquiloSolidFuelUsesAmmonia`.
 - **A multi-output recipe drains only through its machine's horizontal fluid ports.**
-  `buildable` now accepts one solid result plus any number of fluid results, so
-  `quantum-processor` (one item plus `fluoroketone-hot`) is built for targets such as
-  `railgun`. The electromagnetic plant's only fluid outputs are on side edges, and
-  `RowFluidLane` creates lanes only on north/south edges, so no drain is placed for the hot
-  fluoroketone and the machines stall. This is a known limitation; the intended fix is to flip
-  every second electromagnetic plant so adjacent output ports meet and act as a pipe, then drain
-  the hot fluid. Keep the Vulcanus `molten-*-from-lava` planning pinned too: those recipes use the
-  foundry's south output and drain correctly; `vulcanusStoneUsesTheLavaFoundryRecipe` covers it.
-- **A recipe pair reachable through several paths produces one direct-feed band per path.**
-  The walk yields a fresh `FeedLink` for every path to a consumer, so with a long chain several
-  bands can build and export the same material (one belt source each). `utility-science-pack`
-  currently gets three `copper-cable`/`electronic-circuit` bands, each exporting
-  electronic-circuit, so `assertOneBeltSourcePerMaterial` fails; that target is therefore left
-  out of `realBlueprintsPutEveryMaterialOnAtMostOneBelt` for now. Do not "fix" this by dropping
-  the assertion: consolidate the bands (or dedupe the candidate links) first. Evidence:
-  the probe prints three identical rows and
-  `{electronic-circuit=[electronic-circuit, electronic-circuit, electronic-circuit]}`.
-
+  `buildable` accepts one solid result plus any number of fluid results, so `quantum-processor`
+  (one item plus `fluoroketone-hot`) is built for targets such as `railgun`. The electromagnetic
+  plant's only fluid outputs are on side edges, and `RowFluidLane` creates lanes only on
+  north/south edges, so no drain is placed for the hot fluoroketone and the machines stall. This
+  is a known limitation; the intended fix is to flip every second electromagnetic plant so
+  adjacent output ports meet and act as a pipe, then drain the hot fluid.
 ## Build, Detekt and environment
 
 - **`gradlew` tests run with the project root as the working directory.** Tests

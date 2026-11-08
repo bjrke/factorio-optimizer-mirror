@@ -81,16 +81,13 @@ class BlueprintPlanIntegrationTest {
     }
 
     @Test
-    fun aTargetMaterialWithTwoProducersStillImportsItsInputs() {
-        // the optimizer splits solid fuel between the light-oil and petroleum-gas recipes, so the
-        // target has no single producer; the built target recipe must still keep its fluid input
+    fun aSolidFuelTargetStillImportsItsLightOil() {
+        // only the light-oil solid-fuel recipe is planned, and its fluid input stays an import
         val planned = Layout("solid-fuel").plan
-        val target = planned.recipes.first { it.material == planned.target }
 
         assertContains(
             planned.sources.map { it.material },
             Material("light-oil"),
-            "the target recipe ${target.recipe.name} consumes light oil",
         )
     }
 
@@ -108,14 +105,80 @@ class BlueprintPlanIntegrationTest {
     }
 
     @Test
-    fun vulcanusStoneUsesTheLavaFoundryRecipe() {
-        // one solid plus one fluid result passes `buildable`, so stone is now planned from
-        // molten-copper-from-lava instead of being imported; pin that change so it stays visible
-        val planned = Layout("stone", surface = Surface.VULCANUS).plan
+    fun vulcanusStoneIsImported() {
+        // stone is a byproduct of the molten-metal recipes, so it is not a buildable row: a
+        // stone-brick plan imports it instead of running a lava foundry
+        val planned = Layout("stone-brick", surface = Surface.VULCANUS).plan
 
         assertAll(
-            { assertContains(planned.recipes.map { it.recipe.name }, "molten-copper-from-lava") },
-            { assertContains(planned.sources.map { it.material }, Material("lava")) },
+            {
+                assertContainsNot(
+                    planned.recipes.map { it.recipe.name },
+                    "molten-copper-from-lava",
+                )
+            },
+            { assertContains(planned.sources.map { it.material }, Material("stone")) },
+        )
+    }
+
+    @Test
+    fun rocketFuelUsesTheLightOilSolidFuelRecipe() {
+        // only the light-oil recipe is planned, so solid fuel is built and light oil is the single
+        // source instead of solid fuel being direct-fed from one of several producers
+        val planned = Layout("rocket-fuel").plan
+
+        assertAll(
+            {
+                assertContains(
+                    planned.recipes.map { it.recipe.name },
+                    "solid-fuel-from-light-oil",
+                )
+            },
+            {
+                assertContainsNot(
+                    planned.recipes.map { it.recipe.name },
+                    "solid-fuel-from-heavy-oil",
+                )
+            },
+            {
+                assertContainsNot(
+                    planned.recipes.map { it.recipe.name },
+                    "solid-fuel-from-petroleum-gas",
+                )
+            },
+            {
+                assertEquals(
+                    listOf(Material("light-oil")),
+                    planned.sources.map { it.material },
+                )
+            },
+        )
+    }
+
+    @Test
+    fun aquiloSolidFuelUsesAmmonia() {
+        // Aquilo is the one surface where the ammonia recipe replaces the oil-based source
+        val planned = Layout("solid-fuel", surface = Surface.AQUILO).plan
+
+        assertAll(
+            {
+                assertContains(
+                    planned.recipes.map { it.recipe.name },
+                    "solid-fuel-from-ammonia",
+                )
+            },
+            {
+                assertContainsNot(
+                    planned.recipes.map { it.recipe.name },
+                    "solid-fuel-from-light-oil",
+                )
+            },
+            {
+                assertContainsNot(
+                    planned.recipes.map { it.recipe.name },
+                    "solid-fuel-from-petroleum-gas",
+                )
+            },
         )
     }
 

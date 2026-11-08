@@ -71,80 +71,78 @@ internal class BandFeed(
 internal class BandPlan(val machines: List<FactoryProduction>, val feeds: List<BandFeed>)
 
 /**
- * One link in the direct-feed graph: [production] makes [material], and [consumer] is the link
- * whose production consumes it. The root link (the target) has no consumer, so its material leaves
- * the plan.
+ * One production in the direct-feed graph. A production may feed several consumers, so it is a
+ * node, not a link: [ingredients] are the links to the producers of its inputs, and [consumers] are
+ * the links that take its product.
  */
-internal data class FeedLink(
+internal class FeedNode(
     val ctx: DirectFeedContext,
-    val production: FactoryProduction = ctx.target,
-    val consumer: FeedLink? = null,
+    val production: FactoryProduction,
 ) {
 
     val material = production.material
 
-    val inputPerMachine by lazy {
-        consumer?.production?.inputPerMachine(material) ?: 0.0
-    }
-
-    val outputPerMachine by lazy { production.outputPerMachine() }
-
-    val ioRatio by lazy { inputPerMachine / outputPerMachine }
-
-    /** The links from this one up to the root, nearest first. */
-    fun pathReverse(): Sequence<FeedLink> = sequence {
-        var current = consumer
-        while (current != null) {
-            yield(current)
-            current = current.consumer
-        }
-    }
-
-    /** Yields this link (unless it is the root) and then every link reachable through it. */
-    context(seq: SequenceScope<FeedLink>)
-    suspend fun traverse() {
-        if (consumer != null) seq.yield(this)
-
-        ingredients.forEach { it.traverse() }
-    }
-
-    private val pathRecipes by lazy {
-        buildSet {
-            add(production.recipe)
-            for (link in pathReverse()) add(link.production.recipe)
-        }
-    }
-
-    private fun producerOf(material: Material) = ctx.producers[material]?.singleOrNull()
+    val recipe = production.recipe
 
     /**
-     * Whether [material] closes a recipe cycle: an ancestor already supplies it, or its single
-     * in-plan producer (this recipe included) is already on the path.
-     */
-    private fun closesCycle(material: Material) =
-        !ctx.logistics.isFluid(material) &&
-            (pathReverse().any { it.material == material } ||
-                (producerOf(material)?.recipe?.let(pathRecipes::contains) ?: false))
-
-    /**
-     * Whether an ingredient can only come from a cycle. The walk prunes such an ingredient so it
-     * terminates, and the link itself is dropped so a band cannot be built with a machine it can
-     * never feed (`aTwoRecipeCycleStaysBelted`).
-     */
-    val hasCyclicIngredient by lazy { production.recipe.ingredients.keys.any(::closesCycle) }
-
-    /**
-     * The links that feed this production: one per solid ingredient with exactly one in-plan
-     * producer, skipping fluids and cyclic materials so a recipe cycle is never entered twice.
+     * The links that feed this production: one per in-plan producer of a solid ingredient. Fluids
+     * are never links. Multi-producer materials are not filtered here; the explicit stone and
+     * solid-fuel policies keep them out of the direct-feed graph.
      */
     val ingredients by lazy {
-        production.recipe.ingredients.keys.flatMap { material ->
-            // fluids and cycles
-            if (ctx.logistics.isFluid(material) || closesCycle(material)) return@flatMap emptyList()
-            // exactly one producer
-            producerOf(material)?.let { listOf(FeedLink(ctx, it, this)) }.orEmpty()
-        }
+        recipe.ingredients.keys
+            .filterNot { ctx.logistics.isFluid(it) }
+            .flatMap { ctx.producers[it].orEmpty() }
+            .map { ctx.feedLink(it, production) }
     }
+
+    /** Every plan consumer that takes this production's material. */
+    val consumers: List<FeedLink> by lazy {
+        recipe.result.keys
+            .filterNot { ctx.logistics.isFluid(it) }
+            .flatMap { ctx.consumers[it].orEmpty() }
+            .map { ctx.feedLink(production, it) }
+    }
+
+    /**
+     * Every ingredient link reachable from this node, once each. A production shared by several
+     * consumers is expanded only the first time, so the walk terminates. Cyclic edges are not
+     * filtered here; real solid cycles are kept out by `buildable`, so the visited set is only a
+     * safety net. A future buildable cycle needs an explicit policy (see `pitfalls.md`).
+     */
+    fun traverse() = sequence {
+        val visited = mutableSetOf<FeedNode>()
+
+        context(seq: SequenceScope<FeedLink>)
+        suspend fun FeedNode.walk() {
+            if (!visited.add(this)) return
+            for (link in ingredients) {
+                seq.yield(link)
+                link.producer.walk()
+            }
+        }
+
+        this@FeedNode.walk()
+    }
+
+    override fun toString() = material.name
+}
+
+/**
+ * One feed link: [producer] makes [material] and [consumer] takes it. A producer may have several
+ * consumer links, and a consumer several producer links.
+ */
+internal data class FeedLink(
+    val producer: FeedNode,
+    val consumer: FeedNode,
+    val material: Material,
+) {
+
+    val outputPerMachine by lazy { producer.production.outputPerMachine(material) }
+
+    val inputPerMachine by lazy { consumer.production.inputPerMachine(material) }
+
+    val ioRatio by lazy { inputPerMachine / outputPerMachine }
 
     override fun toString() = material.name
 }
@@ -159,22 +157,53 @@ internal data class FeedLink(
  * would be counted as two different machines, splitting their needs and ratios.
  */
 internal data class DirectFeedContext(
-    val target: FactoryProduction,
+    val targetProduction: FactoryProduction,
     val factories: Map<Recipe, FactoryProduction>,
     val scale: Double,
     val logistics: LogisticsCalculator,
 ) {
+    private val nodeCache = mutableMapOf<FactoryProduction, FeedNode>()
+
+    val target = nodeOf(targetProduction)
+
     val producers =
         factories
-            .filterKeys { buildable(logistics, it) }
             .flatMap { (recipe, factory) -> recipe.result.keys.map { it to factory } }
-            .groupBy({ it.first }, { it.second })
+            // stone is a byproduct of Vulcanus' lava recipes, so it is always imported instead of
+            // being fed from one of several producers.
+            .filter { (m, p) -> m.name != "stone" && buildable(logistics, p.recipe) }
+            .groupBy({ (m, _) -> m }, { (_, p) -> p })
+            .filterKeys { !logistics.isFluid(it) }
+
+    val consumers =
+        factories
+            .flatMap { (recipe, factory) -> recipe.ingredients.keys.map { it to factory } }
+            .filter { (_, p) -> buildable(logistics, p.recipe) }
+            .groupBy({ (m, _) -> m }, { (_, p) -> p })
+            .filterKeys { !logistics.isFluid(it) }
 
     /**
      * The target plus every production that alone supplies a material. The target is seeded even
      * when the optimizer runs several recipes for its material: it is always built, and its inputs
      * must still be reported as sources.
      */
-    val included =
-        producers.values.mapNotNull { it.singleOrNull() }.plus(target).associateBy { it.recipe }
+    val included = buildMap {
+        putAll(producers.values.mapNotNull { it.singleOrNull() }.associateBy { it.recipe })
+        put(target.production.recipe, target.production)
+    }
+
+    /** The one node for [production], created on first use. */
+    internal fun nodeOf(production: FactoryProduction) =
+        nodeCache.getOrPut(production) { FeedNode(this, production) }
+
+    private val feedLinks = mutableMapOf<Pair<FactoryProduction, FactoryProduction>, FeedLink>()
+
+    fun feedLink(p: FactoryProduction, c: FactoryProduction) =
+        feedLinks.getOrPut(p to c) {
+            FeedLink(
+                nodeOf(p),
+                nodeOf(c),
+                c.recipe.ingredients.keys.intersect(p.recipe.result.keys).single(),
+            )
+        }
 }

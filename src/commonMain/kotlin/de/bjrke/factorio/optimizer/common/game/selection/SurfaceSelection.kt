@@ -45,5 +45,6 @@ fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
                 Category.SPOILING !in recipe.categories ||
                     produced.containsAll(recipe.ingredients.keys)
             },
+        surface = surface,
     )
 }

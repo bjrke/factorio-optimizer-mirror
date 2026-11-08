@@ -14,6 +14,8 @@ data class ParsedRecipe(
     val machineStats: Map<String, MachineStats> = emptyMap(),
     /** Belt/inserter/pump throughput and the set of fluid materials, derived from the dump. */
     val logistics: Logistics = Logistics(),
+    /** The surface these recipes were filtered for; selects surface-specific recipes. */
+    val surface: Surface = Surface.NAUVIS,
 )
 
 /** The crafting-relevant stats of a machine prototype. */

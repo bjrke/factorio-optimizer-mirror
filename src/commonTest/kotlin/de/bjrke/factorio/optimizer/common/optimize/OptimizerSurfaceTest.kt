@@ -317,6 +317,35 @@ class OptimizerSurfaceTest {
     }
 
     @Test
+    fun fulgoraSolidFuelComesFromScrapRecyclingWhenItCan() {
+        // scrap recycling yields solid fuel as a byproduct; the LP prefers it over the heavy-oil
+        // fallback, which stays available for plans that need more than the byproduct.
+        val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
+        val solidFuel = Material("solid-fuel")
+        val result = optimizer[solidFuel]
+
+        assertEquals("scrap-recycling", result.production(solidFuel).recipe.name)
+    }
+
+    @Test
+    fun solidFuelUsesTheSurfaceRecipe() =
+        assertTable(
+            listOf(
+                Surface.NAUVIS to "solid-fuel-from-light-oil",
+                Surface.FULGORA to "solid-fuel-from-heavy-oil",
+                Surface.AQUILO to "solid-fuel-from-ammonia",
+            ),
+        ) { (surface, expected) ->
+            // Fulgora's local resource is heavy oil; the other oil recipes only exist to keep the
+            // LP from splitting solid fuel between producers.
+            val parsed = RecipeLoader.forActiveMods().forSurface(surface)
+            val solidFuelRecipes = parsed.recipes.filter { it.name.startsWith("solid-fuel-from-") }
+            val result = Optimizer(parsed.copy(recipes = solidFuelRecipes))[Material("solid-fuel")]
+
+            assertEquals(expected, result.recipe.name, "surface $surface")
+        }
+
+    @Test
     fun biterEggsAreBredOnNauvis() {
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS))
 

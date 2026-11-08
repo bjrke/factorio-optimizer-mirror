@@ -40,7 +40,13 @@ fun blueprintPlan(
 
     // split the recipes into rows and direct-feed bands: a recipe feeding another one in a small
     // whole-machine cycle is built interleaved with it, one production per consumer machine
-    val feed = directFeed(targetFactory, result.factories, scale, logistics)
+    val feed =
+        directFeed(
+            targetFactory,
+            result.factories,
+            scale,
+            logistics,
+        )
 
     return BlueprintPlanResult.Planned(
         BlueprintPlan(
