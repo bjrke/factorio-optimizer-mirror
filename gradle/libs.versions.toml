@@ -1,6 +1,6 @@
 [plugins]
-#https://plugins.gradle.org/plugin/com.diffplug.gradle.spotless
-spotless = { id = "com.diffplug.spotless", version = "8.10.4" }
+#https://plugins.gradle.org/plugin/com.diffplug.spotless
+spotless = { id = "com.diffplug.spotless", version = "8.11.0" }
 #https://plugins.gradle.org/plugin/dev.detekt
 detekt = { id = "dev.detekt", version = "2.0.0-alpha.6" }
 
@@ -10,6 +10,6 @@ kotlin = "2.4.21"
 
 [libraries]
 #https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-wrappers-bom
-kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "2026.10.0" }
+kotlin-wrappers-bom = { module = "org.jetbrains.kotlin-wrappers:kotlin-wrappers-bom", version = "2026.11.0" }
 #https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-serialization-json
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.11.0" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.12.0" }
