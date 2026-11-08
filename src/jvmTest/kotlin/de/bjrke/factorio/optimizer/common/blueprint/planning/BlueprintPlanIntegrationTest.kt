@@ -19,7 +19,9 @@ import kotlin.test.assertTrue
 class BlueprintPlanIntegrationTest {
 
     @Test
-    fun advancedCircuitsImportPlasticButBuildTheCopperCable() {
+    fun advancedCircuitsBuildTheirPlasticAndCopperCable() {
+        // plastic is a simple chemistry recipe, so it is built; its oil chain stays imported as
+        // petroleum gas instead of planning an oil refinery
         val planned = Layout("advanced-circuit").plan
         val categories = planned.recipes.flatMap { it.recipe.categories }.toSet()
         val sourceMaterials = planned.sources.map { it.material }
@@ -28,9 +30,9 @@ class BlueprintPlanIntegrationTest {
         assertAll(
             {
                 assertContains(
-                    sourceMaterials,
-                    Material("plastic-bar"),
-                    "plastic should be imported",
+                    recipeNames,
+                    "plastic-bar",
+                    "plastic should be built from the imported petroleum gas",
                 )
             },
             {
@@ -55,10 +57,15 @@ class BlueprintPlanIntegrationTest {
                 )
             },
             {
+                assertContains(
+                    sourceMaterials,
+                    Material("petroleum-gas"),
+                    "plastic's fluid input is imported",
+                )
+            },
+            {
                 assertTrue(
-                    categories.none {
-                        it in setOf(Category.OIL_PROCESSING, Category.ORGANIC, Category.CRYOGENICS)
-                    },
+                    categories.none { it == Category.OIL_PROCESSING },
                     "the oil chain should be cut off, categories: $categories",
                 )
             },
@@ -92,16 +99,27 @@ class BlueprintPlanIntegrationTest {
     }
 
     @Test
-    fun theKovarexTargetIsBuiltOnce() {
-        // kovarex consumes its own product, so treating the target as an in-plan producer would
-        // add a second, belted kovarex row: 18 machines instead of the MAX_COPIES-capped 9
+    fun uranium235IsBuiltByProcessingNotKovarex() {
+        // kovarex is discarded even as the target's producer; uranium-processing is the allowed way
         val planned = Layout("uranium-235").plan
-        val rows =
-            planned.rows.filter { row ->
-                row.machines.any { it.recipe.name == "kovarex-enrichment-process" }
-            }
+        val recipes = planned.recipes.map { it.recipe.name }
 
-        assertEquals(1, rows.size)
+        assertAll(
+            { assertContains(recipes, "uranium-processing") },
+            { assertContainsNot(recipes, "kovarex-enrichment-process") },
+        )
+    }
+
+    @Test
+    fun nutrientsAreNotBredFromFish() {
+        // both fish recipes are banned in the optimizer, so the real plan must not contain the
+        // cycle
+        val recipes = Layout("nutrients").plan.recipes.map { it.recipe.name }
+
+        assertAll(
+            { assertContainsNot(recipes, "fish-breeding") },
+            { assertContainsNot(recipes, "nutrients-from-fish") },
+        )
     }
 
     @Test

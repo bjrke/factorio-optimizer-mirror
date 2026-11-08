@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
-import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.prototype.unplannedRecipes
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 
@@ -36,29 +36,10 @@ class Optimizer(
     /**
      * One solid-fuel recipe per surface: light oil elsewhere, heavy oil on Fulgora and ammonia on
      * Aquilo. Planning the alternatives lets the LP split solid fuel across producers, which leaves
-     * the blueprint with more than one belt source for the same material.
+     * the blueprint with more than one belt source for the same material. The cycle recipes are
+     * excluded here too, so they are never selected, not even for their own target.
      */
-    private val unplannedRecipes =
-        when (parsedRecipe.surface) {
-            Surface.AQUILO ->
-                setOf(
-                    "solid-fuel-from-light-oil",
-                    "solid-fuel-from-heavy-oil",
-                    "solid-fuel-from-petroleum-gas",
-                )
-            Surface.FULGORA ->
-                setOf(
-                    "solid-fuel-from-light-oil",
-                    "solid-fuel-from-petroleum-gas",
-                    "solid-fuel-from-ammonia",
-                )
-            else ->
-                setOf(
-                    "solid-fuel-from-heavy-oil",
-                    "solid-fuel-from-petroleum-gas",
-                    "solid-fuel-from-ammonia",
-                )
-        }
+    private val unplannedRecipes = unplannedRecipes(parsedRecipe.surface)
 
     /** Recipes that run on this surface with one of the selected machines. */
     private val enabledRecipes: List<Recipe> =
@@ -82,8 +63,9 @@ class Optimizer(
     }
 
     /**
-     * Every material reachable from [target] by following recipes through to their inputs. Only
-     * [allowedRecipes] are considered, so forbidden forward recipes do not pull in their inputs.
+     * Every material reachable from [target] by following the allowed recipes through to their
+     * inputs. Only [allowedRecipes] are considered, so forbidden forward recipes do not pull in
+     * their inputs.
      */
     private fun reachableMaterials(target: Material): List<Material> {
         val materials = mutableSetOf(target)
@@ -102,9 +84,9 @@ class Optimizer(
 
     /**
      * The materials that may be imported: those no recipe produces, plus any material caught in a
-     * production cycle (e.g. Fulgora's `coal-synthesis` <-> `carbon` loop) which would otherwise
-     * make the program infeasible. Materials downstream of a cycle stay producible once a cycle
-     * member may be imported.
+     * production cycle (a filled/empty barrel pair, for example) which would otherwise make the
+     * program infeasible. Materials downstream of a cycle stay producible once a cycle member may
+     * be imported.
      */
     private fun importableMaterials(
         materials: List<Material>,

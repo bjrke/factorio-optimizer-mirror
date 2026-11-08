@@ -22,8 +22,36 @@ class RecipeFilterTest {
             LogisticsCalculatorSelection(),
         )
 
-    private fun canBuild(result: Map<Material, Double>, categories: Set<Category>) =
-        buildable(logistics, Recipe("test", emptyMap(), result, 1.0, categories))
+    private fun canBuild(
+        result: Map<Material, Double>,
+        categories: Set<Category>,
+        name: String = "test",
+    ) = buildable(logistics, Recipe(name, emptyMap(), result, 1.0, categories))
+
+    @Test
+    fun centrifugingAndSimpleChemistryAreBuildable() =
+        assertAll(
+            {
+                assertTrue(
+                    canBuild(
+                        mapOf(solid to 1.0),
+                        setOf(Category.CENTRIFUGING),
+                        "uranium-processing",
+                    ),
+                    "centrifuging is planned",
+                )
+            },
+            {
+                assertTrue(
+                    canBuild(
+                        mapOf(solid to 1.0),
+                        setOf(Category.CHEMISTRY, Category.CRYOGENICS),
+                        "plastic-bar",
+                    ),
+                    "simple chemistry is planned",
+                )
+            },
+        )
 
     @Test
     fun aFluidByproductDoesNotNeedASecondOutputBelt() =

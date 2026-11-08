@@ -59,23 +59,33 @@ An entry belongs here only with evidence, and should say how to recognize it.
   may hold; rows above a band then have to reach past it, and a belt that crosses
   another belt can only tunnel. Evidence: the reported `advanced-circuit` URL's
   copper-cable feed tunnels where its cable row joins a band
-  (`advancedCircuitUrlOnlyTunnelsForItsCableFeed` locks that in). Its
-  electronic-circuit feed does **not** need to: the lane tail beside the machines
-  blocks the straight column, so the router turns east one column and comes back on the
-  surface.
+  (`advancedCircuitUrlOnlyTunnelsForItsBandedFeeds` locks that in). Since plastic is
+  planned, its extra row also forces the electronic-circuit feed to tunnel; on a plan
+  without that row the lane tail beside the machines blocks the straight column and
+  the router turns east one column and comes back on the surface.
   Two things make that work: the tile beside the goal must be judged by the direction
   **into** the goal, not by the direction it arrived from (a corner belt faces its next
   tile), and the belt tunnel entry costs 16 (four surface tiles), so a short detour wins
   over an unnecessary tunnel. Line breaking a band too wide is a deferred follow-up, not
   a bug in the router.
-- **Real recipe cycles are kept out by `buildable`, not by a cycle guard.** `kovarex-enrichment-process`
-  is `CENTRIFUGING`, and `fish-breeding`/`nutrients-from-fish` are `ORGANIC`, so they never enter
-  the per-material producer index. `FeedNode.traverse()` keeps a visited-node set so a shared
-  producer is expanded once; it does **not** filter the closing edge of a cycle (the edge is
-  yielded before the visited check), so a buildable cycle would still reach `groupLinks`.
-  Evidence: `aRecipeThatFeedsItselfStaysBelted` and `aTwoRecipeCycleStaysBelted`. Do not
-  reintroduce path-local cycle state; if a future mod adds a buildable solid cycle, it needs an
-  explicit policy.
+- **Recipe cycles are excluded by the optimizer, not by `buildable`.**
+  `game/prototype/RecipePolicy.kt` lists `fish-breeding`, `nutrients-from-fish` and
+  `kovarex-enrichment-process` in `unplannedRecipes` and discards them even when one produces the
+  target, so a plan can never contain a cycle. `buildable` deliberately does not re-check the set;
+  uranium-235 is built by `uranium-processing`, and centrifuging and the simple chemistry recipes
+  (plastic, sulfur, battery, ...) are otherwise planned. `FeedNode.traverse()` keeps a
+  visited-node set so a shared producer is expanded once; it does **not** filter the
+  closing edge of a cycle (the edge is yielded before the visited check), so an unforeseen
+  cycle would still reach `groupLinks`.
+  Evidence: `bannedRecipesAreNeverPlanned`, `nutrientsAreNotBredFromFish` and
+  `uranium235IsBuiltByProcessingNotKovarex`. Do not
+  reintroduce path-local cycle state; a future cycle needs a name in `unplannedRecipes`.
+- **One imported fluid can span more than one pipe network.** `FluidLaneFeed` lays a lane
+  per row and each lane gets its own inline source, so a plan that feeds the same fluid to
+  two distant rows (the `utility-science-pack` plan's battery row and its processing-unit
+  band both take sulfuric acid) has two disconnected networks. Both are fed; do not assert
+  that one fluid is one network. `fluidNetworkProblems` instead requires every network to
+  reach a source. Evidence: `realFluidNetworksAreConnected` (`utility-science-pack`).
 - **A row has four solid belt locations, so a recipe needing a fifth solid lane is
   out of scope.** `RowPlacer.rowShape` ranks inputs and outputs together and zips
   them onto two top and two bottom locations (near/far each); every input belt is
@@ -159,9 +169,8 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `included` only from the materials with a single buildable producer (`producers.values`)
   drops a target that is not in the per-material producer index, so the plan has no target row
   and `plannedSources` sees none of its consumers. Keep the seed separate from `buildable`:
-  indexing the target in `producers` again makes a self-consuming target
-  (`kovarex-enrichment-process`) plan a second, belted row (18 machines instead of the capped 9).
-  Evidence: `theKovarexTargetIsBuiltOnce`.
+  indexing the target in `producers` again can make a self-consuming target plan a second,
+  belted row. Evidence: `theTargetStaysIncludedWhenItsMaterialHasTwoProducers`.
 - **Stone and solid fuel must stay out of the multi-producer direct feed.** `FeedNode.ingredients`
   links every in-plan producer, so a solid with two producers is direct-fed from whichever link
   the walk sees first; `groupLinks` drops the others. `DirectFeedContext.producers` excludes

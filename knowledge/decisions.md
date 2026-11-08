@@ -7,6 +7,26 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-08 — Recipe exclusions are explicit names, not whole categories
+
+**Decision.** `buildable` keeps only the category rules (extraction, oil processing, recycling,
+crushing, smelting, spoiling); it no longer excludes `ORGANIC`, `CRYOGENICS` or `CENTRIFUGING`.
+The optimizer's `unplannedRecipes(surface)` discards the cycle names
+(`game/prototype/RecipePolicy.kt`: `fish-breeding`, `nutrients-from-fish`,
+`kovarex-enrichment-process`), the surface's solid-fuel alternatives and its coal/carbon recipe,
+including when the target is one of their products: kovarex is never selected, so uranium-235 is
+built by `uranium-processing`. Centrifuging and the simple chemistry recipes (plastic, sulfur,
+battery, ...) are planned.
+
+**Guardrail.** One owner: `unplannedRecipes` is the only cycle gate, and `buildable` does not
+re-check it because a plan can never contain one of those recipes. A new real solid cycle gets a
+name there, never a category ban or a path-local guard; do not add a target exemption for it.
+Evidence: `RecipePolicyTest`, `bannedRecipesAreNeverPlanned`, `nutrientsAreNotBredFromFish`,
+`uranium235IsBuiltByProcessingNotKovarex`, `advancedCircuitsBuildTheirPlasticAndCopperCable`.
+
+**See.** `game/prototype/RecipePolicy.kt`, `blueprint/planning/band/RecipeFilter.kt`,
+`optimize/Optimizer.kt`, `pitfalls.md` §Blueprint planning.
+
 ## 2026-11-07 — Stone is always an import, and solid-fuel recipes are surface-specific
 
 **Decision.** `DirectFeedContext.producers` excludes `stone` on every surface, so it is always
@@ -38,8 +58,8 @@ and an edge exist once no matter how many paths reach them.
 `DirectFeedContext` owns the target, the included productions, the scale, the
 logistics, the per-material producer index and the lazy `nodeOf` lookup.
 `FeedNode.traverse()` keeps a visited-node set, so a shared producer is expanded only
-once; there is no cycle-specific state because `buildable` keeps every real solid
-cycle (organic, centrifuging, ...) out of the plan. `BandSearch` is a set of extensions on the
+once; there is no cycle-specific state because the optimizer's `unplannedRecipes` keeps
+every real solid cycle out of the plan. `BandSearch` is a set of extensions on the
 context, and the count-vector, permutation and GCD helpers are generic functions
 in `core/util/MathUtils.kt`. Per-machine rates are
 `FactoryProduction.inputPerMachine`/`outputPerMachine`; productivity counts for

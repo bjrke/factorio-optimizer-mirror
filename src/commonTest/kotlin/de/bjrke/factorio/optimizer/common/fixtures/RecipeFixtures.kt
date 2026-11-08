@@ -119,32 +119,3 @@ val sulfuricAcidRecipe =
         time = 1.0,
         categories = setOf(Category.CHEMISTRY),
     )
-
-val kovarexEnrichmentProcessRecipe =
-    Recipe(
-        name = "kovarex-enrichment-process",
-        ingredients = mapOf(uranium235 to 40.0, uranium238 to 5.0),
-        result = mapOf(uranium235 to 41.0, uranium238 to 2.0),
-        time = 60.0,
-        categories = setOf(Category.CENTRIFUGING),
-    )
-
-// A real two-recipe solid cycle: fish-breeding consumes nutrients, and nutrients-from-fish
-// consumes fish. Both are organic, so `buildable` keeps them out of the direct-feed producers.
-val fishBreedingRecipe =
-    Recipe(
-        name = "fish-breeding",
-        ingredients = mapOf(rawFish to 2.0, nutrients to 100.0, water to 100.0),
-        result = mapOf(rawFish to 3.0),
-        time = 6.0,
-        categories = setOf(Category.ORGANIC, Category.CHEMISTRY),
-    )
-
-val nutrientsFromFishRecipe =
-    Recipe(
-        name = "nutrients-from-fish",
-        ingredients = mapOf(rawFish to 1.0),
-        result = mapOf(nutrients to 20.0),
-        time = 2.0,
-        categories = setOf(Category.ORGANIC, Category.CRAFTING),
-    )

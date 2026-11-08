@@ -15,21 +15,15 @@ import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.fishBreedingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrame
 import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrameRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.kovarexEnrichmentProcessRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
-import de.bjrke.factorio.optimizer.common.fixtures.nutrients
-import de.bjrke.factorio.optimizer.common.fixtures.nutrientsFromFishRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.rawFish
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcidRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.fixtures.uranium235
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -498,42 +492,6 @@ class DirectFeedTest {
             )
 
         // a fluid link would need a pipe, so the acid stays a fluid source and never a link
-        assertEquals(emptyList(), feed.bands)
-    }
-
-    @Test
-    fun aRecipeThatFeedsItselfStaysBelted() {
-        // kovarex consumes and produces both uranium isotopes: a link would enter the same recipe
-        // again, so the recipe must stay belted
-        val kovarexProduction = production(kovarexEnrichmentProcessRecipe, uranium235)
-        val feed =
-            directFeed(
-                kovarexProduction,
-                factories(kovarexProduction),
-                scale = 1.0,
-                logistics = logistics,
-            )
-
-        assertEquals(emptyList(), feed.bands)
-    }
-
-    @Test
-    fun aTwoRecipeCycleStaysBelted() {
-        // fish-breeding consumes nutrients and nutrients-from-fish consumes fish: a real
-        // two-recipe solid cycle. Both recipes are organic, so they are not buildable and no feed
-        // link can enter the cycle.
-        val fishProduction = production(fishBreedingRecipe, rawFish)
-        val feed =
-            directFeed(
-                fishProduction,
-                factories(
-                    fishProduction,
-                    production(nutrientsFromFishRecipe, nutrients),
-                ),
-                scale = 1.0,
-                logistics = fluids(water),
-            )
-
         assertEquals(emptyList(), feed.bands)
     }
 

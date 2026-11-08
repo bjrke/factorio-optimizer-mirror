@@ -107,8 +107,9 @@ internal class FeedNode(
     /**
      * Every ingredient link reachable from this node, once each. A production shared by several
      * consumers is expanded only the first time, so the walk terminates. Cyclic edges are not
-     * filtered here; real solid cycles are kept out by `buildable`, so the visited set is only a
-     * safety net. A future buildable cycle needs an explicit policy (see `pitfalls.md`).
+     * filtered here; the optimizer's `unplannedRecipes` keeps real solid cycles out of the plan, so
+     * the visited set is only a safety net. A future planned cycle needs an explicit policy (see
+     * `pitfalls.md`).
      */
     fun traverse() = sequence {
         val visited = mutableSetOf<FeedNode>()

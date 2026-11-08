@@ -25,7 +25,8 @@ CLI (JVM) from one shared core.
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (belt/inserter/pump stats and `LogisticsConfig`),
     `Surface.kt` (`Surface`, `SurfaceProperty/Condition`, the surface rules as
-    `Surface.accepts*` extensions).
+    `Surface.accepts*` extensions) and `RecipePolicy.kt` (the optimizer's explicit
+    recipe exclusions, `unplannedRecipes`).
   - `game/selection` — the URL/CLI codecs: `Selection.kt`
     (`Selection`, `SelectionFlag`, `selectionString`, `spaceAgeIn`,
     `fullBeltIn`), `BeltEndSelection.kt` (`beltEndFromSelection/-Identifier`),
@@ -126,7 +127,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | --- | --- |
 | core.model | 4 |
 | core.util | 3 |
-| game.prototype | 5 |
+| game.prototype | 6 |
 | game.production | 10 |
 | game.selection | 3 |
 | model | 1 |

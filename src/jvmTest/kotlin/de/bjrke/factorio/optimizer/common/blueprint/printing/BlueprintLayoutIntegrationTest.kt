@@ -25,7 +25,6 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Layout invariants on the real prototype dump: overlap, belts, tunnels and compaction. */
@@ -57,11 +56,13 @@ class BlueprintLayoutIntegrationTest {
 
     @Test
     fun theCheatFluidImportIsAnInfinityPipeAtTheFluidsDefaultTemperature() {
+        // plastic is built from petroleum gas now, so the plan imports two fluids; pin the acid one
         val entities =
             Layout("processing-unit", beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
-        val pipe = entities.singleOrNull { it.name == "infinity-pipe" }
+        val pipe = entities.single {
+            it.name == "infinity-pipe" && it.infinityPipe?.fluid == Material("sulfuric-acid")
+        }
 
-        assertNotNull(pipe) { "no infinity pipe for the imported sulfuric acid" }
         assertAll(
             { assertEquals(Material("sulfuric-acid"), pipe.infinityPipe?.fluid) },
             { assertEquals(25, pipe.infinityPipe?.temperature) },
@@ -186,11 +187,11 @@ class BlueprintLayoutIntegrationTest {
     /**
      * The reported advanced-circuit URL must still replay without a single failed feed. It is built
      * as a direct-feed band now, which puts the two cable rows in the feed corridor west of the
-     * machines; only the band's own copper-cable feed needs to tunnel there, every other material
-     * still reaches its lane on the surface.
+     * machines. The plastic row added by the widened planning forces the electronic-circuit feed to
+     * tunnel as well; every other material still reaches its lane on the surface.
      */
     @Test
-    fun advancedCircuitUrlOnlyTunnelsForItsCableFeed() {
+    fun advancedCircuitUrlOnlyTunnelsForItsBandedFeeds() {
         val layout = layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
 
         // the import connectors are fixed marker pairs; only route tunnels are checked here
@@ -205,28 +206,29 @@ class BlueprintLayoutIntegrationTest {
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
-                    listOf(Material("copper-cable")),
-                    routeTunnels.map { it.material }.distinct(),
-                    "only the band's cable feed may need an underground belt",
+                    setOf(Material("copper-cable"), Material("electronic-circuit")),
+                    routeTunnels.map { it.material }.toSet(),
+                    "only the band's feeds may need an underground belt",
                 )
             },
         )
     }
 
     /**
-     * The imported uranium-238 must reach its lane directly: no turn and no tunnel. Routing imports
-     * before the produced deliveries makes this the default, and the trimmer can then move all
-     * markers to one column close to the factory edge.
+     * The imported copper plate must reach its lane directly: no turn and no tunnel. Routing
+     * imports before the produced deliveries makes this the default, and the trimmer can then move
+     * all markers to one column close to the factory edge. (Uranium-238 is produced by the planned
+     * centrifuging row now, so it is no longer an import.)
      */
     @Test
-    fun reportedUraniumRoundsUrlKeepsItsImportedInputStraight() {
+    fun reportedUraniumRoundsUrlKeepsItsCopperImportStraight() {
         val layout =
             layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
-        val uranium = Material("uranium-238")
-        val belts = layout.entities.filterIsInstance<BeltEntity>().filter { it.material == uranium }
+        val copper = Material("copper-plate")
+        val belts = layout.entities.filterIsInstance<BeltEntity>().filter { it.material == copper }
         val tunnels =
             layout.entities.filterIsInstance<UndergroundBeltEntity>().filter {
-                it.material == uranium
+                it.material == copper
             }
         val inputChests =
             layout.entities.filterIsInstance<InfinityChestEntity>().filter {
@@ -236,20 +238,20 @@ class BlueprintLayoutIntegrationTest {
             layout.entities.filterIsInstance<MachineEntity>().minOf {
                 it.area.topLeft.x
             }
-        val uraniumChest = inputChests.single { it.settings.item == uranium }
+        val copperChest = inputChests.single { it.settings.item == copper }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), tunnels, "the uranium-238 import tunnels") },
-            { assertTrue(belts.isNotEmpty(), "no uranium-238 belt was placed") },
+            { assertEquals(emptyList(), tunnels, "the copper plate import tunnels") },
+            { assertTrue(belts.isNotEmpty(), "no copper plate belt was placed") },
             {
                 assertEquals(
                     1,
                     belts.map { it.area.topLeft.y }.distinct().size,
-                    "the uranium-238 import is not one straight row",
+                    "the copper plate import is not one straight row",
                 )
             },
-            { assertTrue(belts.all { it.direction == EAST }, "the uranium-238 import turns") },
+            { assertTrue(belts.all { it.direction == EAST }, "the copper plate import turns") },
             {
                 assertEquals(
                     1,
@@ -259,7 +261,7 @@ class BlueprintLayoutIntegrationTest {
             },
             {
                 assertTrue(
-                    machineLeft - uraniumChest.area.topLeft.x <= 6,
+                    machineLeft - copperChest.area.topLeft.x <= 6,
                     "the import prefix was not trimmed",
                 )
             },
@@ -268,7 +270,8 @@ class BlueprintLayoutIntegrationTest {
 
     /**
      * The long straight piercing-rounds run must not survive compaction: a corridor that only fails
-     * after stretching is ruled out by its seam and the pass continues with the next one.
+     * after stretching is ruled out by its seam and the pass continues with the next one. The plan
+     * now includes a uranium-reprocessing centrifuge row, so the bounds are that plan's size.
      */
     @Test
     fun reportedUraniumRoundsUrlIsFullyCompactedAndFed() {
@@ -285,10 +288,10 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertTrue(width <= 20, "layout is still $width tiles wide") },
+            { assertTrue(width <= 23, "layout is still $width tiles wide") },
             {
                 assertTrue(
-                    height <= 32,
+                    height <= 40,
                     "the long piercing-rounds belt was not collapsed: layout is $height rows tall",
                 )
             },

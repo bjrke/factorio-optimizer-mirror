@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
@@ -367,4 +368,43 @@ class OptimizerSurfaceTest {
         val chunk = Material("metallic-asteroid-chunk")
         assertEquals(Factory.NO_FACTORY, optimizer[chunk].production(chunk).factory)
     }
+
+    @Test
+    fun bannedRecipesAreNeverPlanned() =
+        assertTable(
+            listOf(
+                Triple(Surface.NAUVIS, "coal", "coal-synthesis"),
+                Triple(Surface.FULGORA, "carbon", "carbon"),
+                Triple(Surface.NAUVIS, "raw-fish", "fish-breeding"),
+                Triple(Surface.NAUVIS, "nutrients", "nutrients-from-fish"),
+                Triple(Surface.NAUVIS, "uranium-235", "kovarex-enrichment-process"),
+            ),
+        ) { (surface, target, banned) ->
+            val result =
+                Optimizer(RecipeLoader.forActiveMods().forSurface(surface))[Material(target)]
+            // the import pseudo recipe is named after its material, so filter it out by category
+            val planned =
+                result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
+            assertContainsNot(planned, banned)
+        }
+
+    @Test
+    fun plasticPlansStayCycleFreeOnEverySurface() =
+        assertTable(Surface.entries) { surface ->
+            // plastic is made from coal on the coal surfaces, so this exercises the coal/carbon
+            // policy (Gleba uses bioplastic and Fulgora recycles it instead)
+            val plastic = Material("plastic-bar")
+            val result = Optimizer(RecipeLoader.forActiveMods().forSurface(surface))[plastic]
+            val planned =
+                result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
+            assertAll(
+                { assertTrue(plastic in result.production(plastic).recipe.result, "$surface") },
+                {
+                    assertTrue(
+                        "carbon" !in planned || "coal-synthesis" !in planned,
+                        "$surface plans the coal/carbon cycle: $planned",
+                    )
+                },
+            )
+        }
 }

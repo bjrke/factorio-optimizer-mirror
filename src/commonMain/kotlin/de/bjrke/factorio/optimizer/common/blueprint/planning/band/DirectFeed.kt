@@ -21,7 +21,7 @@ internal data class DirectFeed(
 
 // every link that could be direct-fed, in a deterministic order; a machine that takes or gives a
 // fluid is left in (the band row gets the same fluid lane as a plain row). Cyclic links are not
-// filtered here; `buildable` keeps real solid cycles out of the plan.
+// filtered here; the optimizer's `unplannedRecipes` keeps the known solid cycles out of the plan.
 private fun DirectFeedContext.candidates() =
     target.traverse().filter { cycleRatio(it.ioRatio) != null }
 

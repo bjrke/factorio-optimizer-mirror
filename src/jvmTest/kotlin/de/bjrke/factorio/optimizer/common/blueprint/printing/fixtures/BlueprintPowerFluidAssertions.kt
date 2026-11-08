@@ -2,15 +2,18 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
+import de.bjrke.factorio.optimizer.common.core.model.west
 import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.core.util.drain
 import de.bjrke.test.assertAll
@@ -45,9 +48,10 @@ fun assertPolesCoverAndConnect(entities: List<BlueprintEntity>) {
 }
 
 /**
- * Every fluid's pipe tiles must form one network. A pipe-to-ground only joins on the side its
- * surface pipe attaches on (plus its buried partner), so a run that turned on an end would leave
- * part of the fluid unreachable.
+ * Every fluid's pipe tiles must be reachable from one of its sources. A pipe-to-ground only joins
+ * on the side its surface pipe attaches on (plus its buried partner), so a run that turned on an
+ * end would leave part of the fluid unreachable. A fluid may span more than one network — a plan
+ * that feeds it to two distant rows lays a lane per row — but every network needs its own source.
  */
 fun fluidNetworkProblems(entities: List<LayoutEntity>): List<String> {
     val plumbing = entities.filterIsInstance<Plumbing>().associateBy { it.area.topLeft }
@@ -60,13 +64,48 @@ fun fluidNetworkProblems(entities: List<LayoutEntity>): List<String> {
     val components = connectedComponents(plumbing.keys) { adjacency.getValue(it) }
     val componentOf =
         components.withIndex().flatMap { (index, tiles) -> tiles.map { it to index } }.toMap()
+    val sources = fluidSources(entities)
 
     return plumbing.values
         .groupBy { it.material }
         .flatMap { (material, pipes) ->
             val parts = pipes.map { componentOf.getValue(it.area.topLeft) }.distinct()
-            if (parts.size <= 1) emptyList()
-            else listOf("${material.name} is split over ${parts.size} networks")
+            val supplied = parts.count { part ->
+                components[part].any { tile -> (tile to material) in sources }
+            }
+            if (supplied == parts.size) emptyList()
+            else
+                listOf(
+                    "${material.name} has ${parts.size - supplied} network(s) without a source",
+                )
+        }
+}
+
+/**
+ * The tiles that supply a fluid: a cheat infinity pipe with settings, or the input end of the
+ * source tunnel next to a fluid signal marker. A marker stands one tile west of its buried input
+ * run; only that run's [Io.INPUT] end is a source, because the far end joins the lane.
+ */
+private fun fluidSources(entities: List<LayoutEntity>): Set<Pair<Coordinate, Material>> = buildSet {
+    entities
+        .filterIsInstance<InfinityPipeEntity>()
+        .filter { it.settings != null }
+        .forEach {
+            add(it.area.topLeft to it.material)
+        }
+    val inputEnds =
+        entities
+            .filterIsInstance<PipeToGroundEntity>()
+            .filter { it.io == Io.INPUT }
+            .associateBy { it.area.topLeft }
+    entities
+        .filterIsInstance<MarkerEntity>()
+        .filter { it.signal.fluid }
+        .forEach { marker ->
+            val source = inputEnds[marker.area.topLeft.west()] ?: return@forEach
+            if (source.material == marker.signal.material) {
+                add(source.area.topLeft to source.material)
+            }
         }
 }
 
