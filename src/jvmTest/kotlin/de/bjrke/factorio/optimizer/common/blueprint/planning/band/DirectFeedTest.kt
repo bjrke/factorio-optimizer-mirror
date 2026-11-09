@@ -48,7 +48,9 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Every recipe in row order; a recipe may appear once per row. */
@@ -178,7 +180,7 @@ class DirectFeedTest {
                     band.machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
-            { assertTrue(band.links.any { it.material == gear }) },
+            { assertNotNull(band.links.firstOrNull { it.material == gear }) },
         )
     }
 
@@ -257,11 +259,11 @@ class DirectFeedTest {
 
         val band = feed.bands.single()
         assertAll(
-            { assertTrue(band.machines.any { it.recipe == electronicCircuitRecipe }) },
-            { assertTrue(band.machines.any { it.recipe == processingUnitRecipe }) },
+            { assertNotNull(band.machines.firstOrNull { it.recipe == electronicCircuitRecipe }) },
+            { assertNotNull(band.machines.firstOrNull { it.recipe == processingUnitRecipe }) },
             // the advanced circuit and cable are built as belt rows of their own
-            { assertTrue(feed.recipes.contains(advancedCircuitRecipe)) },
-            { assertTrue(feed.recipes.contains(copperCableRecipe)) },
+            { assertContains(feed.recipes, advancedCircuitRecipe) },
+            { assertContains(feed.recipes, copperCableRecipe) },
             // the target row is built exactly once
             { assertEquals(1, feed.recipes.count { it == processingUnitRecipe }) },
         )
@@ -382,7 +384,7 @@ class DirectFeedTest {
                     band.machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
-            { assertTrue(band.links.any { it.material == gear }) },
+            { assertNotNull(band.links.firstOrNull { it.material == gear }) },
         )
     }
 
@@ -404,10 +406,10 @@ class DirectFeedTest {
 
         val band = feed.bands.single()
         assertAll(
-            { assertTrue(band.machines.any { it.recipe == transportBeltRecipe }) },
-            { assertTrue(band.machines.any { it.recipe == splitterRecipe }) },
-            { assertTrue(band.links.any { it.material == transportBelt }) },
-            { assertTrue(feed.recipes.contains(ironGearWheelRecipe)) },
+            { assertNotNull(band.machines.firstOrNull { it.recipe == transportBeltRecipe }) },
+            { assertNotNull(band.machines.firstOrNull { it.recipe == splitterRecipe }) },
+            { assertNotNull(band.links.firstOrNull { it.material == transportBelt }) },
+            { assertContains(feed.recipes, ironGearWheelRecipe) },
             { assertTrue(feed.rows.isNotEmpty()) },
         )
     }

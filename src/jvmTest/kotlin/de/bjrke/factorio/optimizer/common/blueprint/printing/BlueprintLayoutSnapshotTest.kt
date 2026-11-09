@@ -41,11 +41,7 @@ class BlueprintLayoutSnapshotTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
-                                Factory.CHEMICAL_PLANT,
-                            ),
+                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -58,8 +54,8 @@ class BlueprintLayoutSnapshotTest {
 
     @Test
     fun bandLayoutIsStable() {
-        val gearRow = planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
+        val gearRow = planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,

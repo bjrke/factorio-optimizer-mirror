@@ -18,7 +18,7 @@ import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 /** Which recipes a real optimization result reduces to, and which materials it imports. */
 class BlueprintPlanIntegrationTest {
@@ -63,8 +63,9 @@ class BlueprintPlanIntegrationTest {
             },
             { assertContains(sourceMaterials, petroleum, "plastic's fluid input is imported") },
             {
-                assertTrue(
-                    categories.none { it == Category.OIL_PROCESSING },
+                assertEquals(
+                    emptyList(),
+                    categories.filter { it == Category.OIL_PROCESSING },
                     "the oil chain should be cut off, categories: $categories",
                 )
             },
@@ -78,8 +79,8 @@ class BlueprintPlanIntegrationTest {
         assertAll(
             { assertContains(planned.recipes.map { it.recipe.name }, "lubricant") },
             {
-                assertTrue(
-                    planned.sources.any { it.material == heavyOil && it.fluid },
+                assertNotNull(
+                    planned.sources.firstOrNull { it.material == heavyOil && it.fluid },
                     "sources: ${planned.sources.map { it.material }}",
                 )
             },

@@ -90,7 +90,7 @@ class FactoryTest {
                 Factory.ELECTRIC_MINING_DRILL,
                 Factory.BIG_MINING_DRILL,
             )
-        assertTrue(removed.none { it in miners })
+        assertEquals(emptyList(), removed.filter { it in miners })
     }
 
     @Test
@@ -236,13 +236,14 @@ class FactoryTest {
     @Test
     fun groupMembersAreNotSingles() =
         assertTable(listOf(base, spaceAge)) { config ->
-            assertTrue(config.groups.flatten().none { it in config.singles }, "$config")
+            assertEquals(emptyList(), config.groups.flatten().filter { it in config.singles })
         }
 
     @Test
     fun singlesAreNotGroupMembers() =
         assertTable(listOf(base, spaceAge)) { config ->
-            assertTrue(config.singles.none { config.groups.flatten().contains(it) }, "$config")
+            val groups = config.groups.flatten()
+            assertEquals(emptyList(), config.singles.filter { it in groups }, "$config")
         }
 
     @Test

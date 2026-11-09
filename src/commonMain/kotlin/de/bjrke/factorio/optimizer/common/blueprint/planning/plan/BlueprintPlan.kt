@@ -119,7 +119,7 @@ data class PlannedRow(
 
     companion object {
         /** A plain row: [machines] copies of the same production. */
-        fun copies(production: FactoryProduction, machines: Int): PlannedRow =
+        fun copies(production: FactoryProduction, machines: Int) =
             PlannedRow(List(machines) { production })
     }
 }

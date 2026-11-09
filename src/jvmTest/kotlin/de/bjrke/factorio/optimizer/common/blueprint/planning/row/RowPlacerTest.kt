@@ -41,7 +41,7 @@ class RowPlacerTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
+                            planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3),
                             3,
                         ),
                     ),
@@ -61,8 +61,8 @@ class RowPlacerTest {
 
     @Test
     fun onlyALinkedGapGetsASeparatingColumn() {
-        val gearMachine = planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateMachine = planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
+        val gearMachine = planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
+        val plateMachine = planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3)
         val plan =
             BlueprintPlan(
                 target = gear,
@@ -100,7 +100,6 @@ class RowPlacerTest {
                         PlannedRow.copies(
                             planned(
                                 electronicCircuitRecipe,
-                                electronicCircuit,
                                 Factory.ASSEMBLING_MACHINE_3,
                             ),
                             1,
@@ -152,11 +151,10 @@ class RowPlacerTest {
                                 listOf(
                                     planned(
                                             transportBeltRecipe,
-                                            transportBelt,
                                             Factory.ASSEMBLING_MACHINE_3,
                                         )
                                         .copy(productivity = 1.0),
-                                    planned(splitterRecipe, splitter, Factory.ASSEMBLING_MACHINE_3),
+                                    planned(splitterRecipe, Factory.ASSEMBLING_MACHINE_3),
                                 ),
                             links =
                                 listOf(
@@ -200,16 +198,8 @@ class RowPlacerTest {
                         PlannedRow(
                             machines =
                                 listOf(
-                                    planned(
-                                        ironGearWheelRecipe,
-                                        gear,
-                                        Factory.ASSEMBLING_MACHINE_3,
-                                    ),
-                                    planned(
-                                        engineUnitRecipe,
-                                        engineUnit,
-                                        Factory.ASSEMBLING_MACHINE_3,
-                                    ),
+                                    planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3),
+                                    planned(engineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
                                 ),
                             links =
                                 listOf(

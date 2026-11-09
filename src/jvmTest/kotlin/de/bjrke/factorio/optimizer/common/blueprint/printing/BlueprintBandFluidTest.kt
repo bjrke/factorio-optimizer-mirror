@@ -58,8 +58,8 @@ class BlueprintBandFluidTest {
         // also takes lubricant; the fluid lane has to reach the consumer's own top port
         val machines =
             listOf(
-                planned(engineUnitRecipe, engineUnit, Factory.ASSEMBLING_MACHINE_3),
-                planned(electricEngineUnitRecipe, electricEngineUnit, Factory.ASSEMBLING_MACHINE_3),
+                planned(engineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
+                planned(electricEngineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
             )
         val links = listOf(PlannedLink(0, engineUnit, 0.1, producerIsLeft = true))
         val sources =
@@ -86,9 +86,9 @@ class BlueprintBandFluidTest {
         // port still has to reach the lane
         val machines =
             listOf(
-                planned(flyingRobotFrameRecipe, flyingRobotFrame, Factory.ASSEMBLING_MACHINE_3),
-                planned(electricEngineUnitRecipe, electricEngineUnit, Factory.ASSEMBLING_MACHINE_3),
-                planned(flyingRobotFrameRecipe, flyingRobotFrame, Factory.ASSEMBLING_MACHINE_3),
+                planned(flyingRobotFrameRecipe, Factory.ASSEMBLING_MACHINE_3),
+                planned(electricEngineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
+                planned(flyingRobotFrameRecipe, Factory.ASSEMBLING_MACHINE_3),
             )
         val links =
             listOf(
@@ -121,8 +121,8 @@ class BlueprintBandFluidTest {
         // a fluid that leaves through the pipe network instead of a belt
         val machines =
             listOf(
-                planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3),
-                planned(sulfuricAcidRecipe, sulfuricAcid, Factory.CHEMICAL_PLANT),
+                planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3),
+                planned(sulfuricAcidRecipe, Factory.CHEMICAL_PLANT),
             )
         val links = listOf(PlannedLink(0, ironPlate, 1.0, producerIsLeft = true))
         val sources =

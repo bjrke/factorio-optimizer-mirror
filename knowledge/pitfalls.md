@@ -285,6 +285,16 @@ An entry belongs here only with evidence, and should say how to recognize it.
   if one is added.
 - **`spotlessApply` after staging leaves the reformat unstaged.** It reorders the
   project imports, so run it before `git add`, or amend after it.
+- **A one-line collection assertion becomes a multi-line block and can push a
+  test method over `LongMethod` (60).** Converting `assertTrue(x.any { ... })` to
+  `assertNotNull(x.firstOrNull { ... })`, or `assertTrue(x.none { ... })` to
+  `assertEquals(emptyList(), x.filter { ... })`, adds lines. The assertion cleanup
+  grew `aSharedInputSplitsOnItsBeltNotAtTheProducer` from 59 to 65 source lines,
+  and `detektTestJvm` failed with `[LongMethod]` although the method passed on
+  `main`. Recognize it by a test file touched only by assertion rewrites suddenly
+  failing `check`. Build repeated rows up front (`val row1 = ...; rows =
+  listOf(row1, row2)`) or move plan construction into a fixture before adding the
+  assertion blocks — do not suppress the rule.
 
 ## Moving files and architecture tooling
 

@@ -92,8 +92,9 @@ class OptimizerSurfaceTest {
             { assertEquals(Factory.RECYCLER, production.factory) },
             { assertEquals("concrete-recycling", production.recipe.name) },
             {
-                assertTrue(
-                    result.factories.values.none {
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter {
                         it.factory == Factory.SPOILING || it.factory == Factory.NO_FACTORY
                     },
                 )
@@ -119,8 +120,18 @@ class OptimizerSurfaceTest {
 
         val result = optimizer[Material(ALL_SCIENCE_PACKS)]
         assertAll(
-            { assertTrue(result.factories.values.none { it.factory == Factory.SPOILING }) },
-            { assertTrue(result.factories.values.none { it.recipe.name.endsWith("-spoiling") }) },
+            {
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter { it.factory == Factory.SPOILING },
+                )
+            },
+            {
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter { it.recipe.name.endsWith("-spoiling") },
+                )
+            },
         )
     }
 
@@ -175,8 +186,9 @@ class OptimizerSurfaceTest {
             { assertEquals("iron-bacteria", production.recipe.name) },
             { assertEquals(Factory.BIOCHAMBER, production.factory) },
             {
-                assertTrue(
-                    result.factories.values.none {
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter {
                         it.recipe.name == "agricultural-science-pack-spoiling"
                     },
                 )
@@ -397,8 +409,9 @@ class OptimizerSurfaceTest {
                 result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
             assertAll(
                 {
-                    assertTrue(
-                        plasticBar in result.production(plasticBar).recipe.result,
+                    assertContains(
+                        result.production(plasticBar).recipe.result,
+                        plasticBar,
                         "$surface",
                     )
                 },

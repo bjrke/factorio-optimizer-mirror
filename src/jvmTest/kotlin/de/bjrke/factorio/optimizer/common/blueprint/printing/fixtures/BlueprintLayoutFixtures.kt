@@ -14,7 +14,6 @@ import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
-import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
@@ -25,6 +24,11 @@ import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+
+fun planned(
+    recipe: Recipe,
+    factory: Factory,
+) = FactoryProduction(recipe.result.keys.single(), recipe, factory, 1.0, 0)
 
 fun planned(
     recipe: Recipe,
@@ -44,12 +48,8 @@ val basePlan =
         target = gear,
         rows =
             listOf(
-                PlannedRow(
-                    listOf(planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)),
-                ),
-                PlannedRow(
-                    listOf(planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_1)),
-                ),
+                PlannedRow(listOf(planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3))),
+                PlannedRow(listOf(planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_1))),
             ),
         sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
         scale = 1.0,

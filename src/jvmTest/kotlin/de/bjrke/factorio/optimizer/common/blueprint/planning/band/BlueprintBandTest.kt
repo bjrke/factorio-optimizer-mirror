@@ -17,15 +17,14 @@ import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /** Direct-feed bands, where a producer inserts straight into its consumer. */
 class BlueprintBandTest {
 
     @Test
     fun aBandFeedsItsConsumerMachineToMachine() {
-        val gearRow = planned(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(ironPlateRecipe, ironPlate, Factory.ASSEMBLING_MACHINE_3)
+        val gearRow = planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
+        val plateRow = planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3)
         val bandPlan =
             BlueprintPlan(
                 target = gear,
@@ -66,7 +65,7 @@ class BlueprintBandTest {
                     interfaces.mapNotNull { layout.beltMaterials[it.area.topLeft] }.toSet(),
                 )
             },
-            { assertTrue(interfaces.all { it.direction == EAST }) },
+            { assertEquals(emptyList(), interfaces.filterNot { it.direction == EAST }) },
             // the plate never reaches a belt: it is inserted straight into the consumer
             {
                 assertEquals(

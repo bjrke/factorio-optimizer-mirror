@@ -7,7 +7,6 @@ import de.bjrke.test.assertTableOf
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * The board-free shape of one row's fluid lane: a plain junction over every port, a pipe-to-ground
@@ -74,8 +73,9 @@ class FluidLaneTest {
                 { assertEquals(listOf(40, 43), shafts.map { (a, _) -> a.x }) },
                 { assertEquals(shafts.map { (a, _) -> a.x }, shafts.map { (_, b) -> b.x }) },
                 {
-                    assertTrue(
-                        shafts.all { (a, b) ->
+                    assertEquals(
+                        emptyList(),
+                        shafts.filterNot { (a, b) ->
                             minOf(abs(a.y - laneRow), abs(b.y - laneRow)) == 1
                         },
                     )

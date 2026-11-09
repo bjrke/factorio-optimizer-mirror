@@ -74,10 +74,7 @@ fun fluidNetworkProblems(entities: List<LayoutEntity>): List<String> {
                 components[part].any { tile -> (tile to material) in sources }
             }
             if (supplied == parts.size) emptyList()
-            else
-                listOf(
-                    "${material.name} has ${parts.size - supplied} network(s) without a source",
-                )
+            else listOf("${material.name} has ${parts.size - supplied} network(s) without a source")
         }
 }
 
@@ -171,10 +168,13 @@ fun assertPolesWired(entities: List<BlueprintEntity>) {
     }
     assertAll(
         {
-            assertTrue(
-                poles.size < 2 || poles.all { it.value.neighbours.isNotEmpty() },
-                "unwired poles",
-            )
+            if (poles.size >= 2) {
+                assertEquals(
+                    emptyList(),
+                    poles.filter { it.value.neighbours.isEmpty() },
+                    "unwired poles",
+                )
+            }
         },
         { assertTrue(components <= 1, "$components pole wire networks") },
     )

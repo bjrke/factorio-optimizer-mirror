@@ -52,6 +52,7 @@ import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -68,7 +69,6 @@ class BlueprintFluidLayoutTest {
                         PlannedRow.copies(
                             planned(
                                 solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
                                 Factory.CHEMICAL_PLANT,
                             ),
                             1,
@@ -106,11 +106,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
-                                Factory.CHEMICAL_PLANT,
-                            ),
+                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -143,11 +139,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                processingUnitRecipe,
-                                processingUnit,
-                                Factory.ELECTROMAGNETIC_PLANT,
-                            ),
+                            planned(processingUnitRecipe, Factory.ELECTROMAGNETIC_PLANT),
                             1,
                         ),
                     ),
@@ -170,8 +162,8 @@ class BlueprintFluidLayoutTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             {
-                assertTrue(
-                    layout.entities.any { it is Plumbing && it.area.topLeft == port },
+                assertNotNull(
+                    layout.entities.firstOrNull { it is Plumbing && it.area.topLeft == port },
                     "no pipe at the machine's top port $port",
                 )
             },
@@ -186,7 +178,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(plasticBarRecipe, plasticBar, Factory.ASSEMBLING_MACHINE_3),
+                            planned(plasticBarRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -210,8 +202,8 @@ class BlueprintFluidLayoutTest {
             { assertEquals(solidImport.area.topLeft.x, fluidMarker.area.topLeft.x) },
             // the marker's output is joined to the lane head along its own row, underground
             {
-                assertTrue(
-                    layout.entities.any {
+                assertNotNull(
+                    layout.entities.firstOrNull {
                         it is PipeToGroundEntity &&
                             it.area.topLeft.y == laneRow &&
                             it.area.topLeft.x > fluidMarker.area.topLeft.x &&
@@ -235,7 +227,6 @@ class BlueprintFluidLayoutTest {
                         PlannedRow.copies(
                             planned(
                                 solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
                                 Factory.CHEMICAL_PLANT,
                             ),
                             1,
@@ -258,8 +249,9 @@ class BlueprintFluidLayoutTest {
         assertAll(
             { assertEquals(1, entities.count { it.name == "infinity-pipe" }) },
             {
-                assertTrue(
-                    entities.none { it.name == "constant-combinator" && it.markerFluid },
+                assertEquals(
+                    emptyList(),
+                    entities.filter { it.name == "constant-combinator" && it.markerFluid },
                     "the fluid label should be replaced",
                 )
             },
@@ -283,7 +275,6 @@ class BlueprintFluidLayoutTest {
                         PlannedRow.copies(
                             planned(
                                 solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
                                 Factory.CHEMICAL_PLANT,
                             ),
                             1,
@@ -306,7 +297,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(steamCondensationRecipe, water, Factory.CHEMICAL_PLANT),
+                            planned(steamCondensationRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -331,7 +322,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(steamCondensationRecipe, water, Factory.CHEMICAL_PLANT),
+                            planned(steamCondensationRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -361,7 +352,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(sulfuricAcidRecipe, sulfuricAcid, Factory.CHEMICAL_PLANT),
+                            planned(sulfuricAcidRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -399,13 +390,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
@@ -423,8 +408,9 @@ class BlueprintFluidLayoutTest {
         assertAll(
             { assertEquals(setOf(water, petroleum), layout.plumbing.values.toSet()) },
             {
-                assertTrue(
-                    components.all { component ->
+                assertEquals(
+                    emptyList(),
+                    components.filterNot { component ->
                         component.mapNotNull { layout.plumbing[it] }.distinct().size <= 1
                     },
                     "two different fluids share one pipe network",
@@ -438,13 +424,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
@@ -482,8 +462,8 @@ class BlueprintFluidLayoutTest {
                 )
             },
             {
-                assertTrue(
-                    secondPipes.any {
+                assertNotNull(
+                    secondPipes.firstOrNull {
                         it is PipeToGroundEntity &&
                             it.area.topLeft == Coordinate(machineLeft + 2, machineTop - 1)
                     },
@@ -501,11 +481,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
-                                Factory.CHEMICAL_PLANT,
-                            ),
+                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -526,7 +502,10 @@ class BlueprintFluidLayoutTest {
         assertAll(
             { assertEquals(1, components.size, "the fluid lane is split") },
             {
-                assertTrue(components.single().any(::touchesMachine), "no pipe reaches the machine")
+                assertNotNull(
+                    components.single().firstOrNull(::touchesMachine),
+                    "no pipe reaches the machine",
+                )
             },
         )
     }
@@ -536,13 +515,7 @@ class BlueprintFluidLayoutTest {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
@@ -570,7 +543,7 @@ class BlueprintFluidLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
+                            planned(sulfurRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),

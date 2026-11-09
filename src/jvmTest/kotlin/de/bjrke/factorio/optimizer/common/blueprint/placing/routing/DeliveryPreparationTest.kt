@@ -19,7 +19,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.uranium235
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCell
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCellRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.uraniumRoundsMagazine
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumRoundsMagazineRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
@@ -71,19 +70,11 @@ class DeliveryPreparationTest {
                         1,
                     ),
                     PlannedRow.copies(
-                        planned(
-                            uraniumFuelCellRecipe,
-                            uraniumFuelCell,
-                            Factory.ASSEMBLING_MACHINE_3,
-                        ),
+                        planned(uraniumFuelCellRecipe, Factory.ASSEMBLING_MACHINE_3),
                         1,
                     ),
                     PlannedRow.copies(
-                        planned(
-                            uraniumRoundsMagazineRecipe,
-                            uraniumRoundsMagazine,
-                            Factory.ASSEMBLING_MACHINE_3,
-                        ),
+                        planned(uraniumRoundsMagazineRecipe, Factory.ASSEMBLING_MACHINE_3),
                         1,
                     ),
                 ),

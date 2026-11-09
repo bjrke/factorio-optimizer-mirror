@@ -24,7 +24,6 @@ import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class OptimizerMachineTest {
 
@@ -120,8 +119,9 @@ class OptimizerMachineTest {
         assertAll(
             { assertEquals(Factory.NO_FACTORY, result.production(concrete).factory) },
             {
-                assertTrue(
-                    result.factories.values.none { it.factory == Factory.ASSEMBLING_MACHINE_1 },
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter { it.factory == Factory.ASSEMBLING_MACHINE_1 },
                 )
             },
         )

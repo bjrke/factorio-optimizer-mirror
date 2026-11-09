@@ -33,7 +33,7 @@ import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 /** The belt-end markers: labels, infinity chests and chests the inserters feed. */
 class BlueprintBeltEndTest {
@@ -44,14 +44,27 @@ class BlueprintBeltEndTest {
         val with = Layout(basePlan, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
 
         assertAll(
-            { assertTrue(without.none { it.name == "infinity-chest" }, "chests by default") },
             {
-                assertTrue(
-                    with.any { it.name == "infinity-chest" && it.infinity?.item == ironOre },
+                assertEquals(
+                    emptyList(),
+                    without.filter { it.name == "infinity-chest" },
+                    "chests by default",
+                )
+            },
+            {
+                assertNotNull(
+                    with.firstOrNull {
+                        it.name == "infinity-chest" && it.infinity?.item == ironOre
+                    },
                     "no input chest for the imported ore",
                 )
             },
-            { assertTrue(with.any { it.name.endsWith("-loader") }, "no loader") },
+            {
+                assertNotNull(
+                    with.firstOrNull { it.name.endsWith("-loader") },
+                    "no loader",
+                )
+            },
         )
     }
 
@@ -157,8 +170,14 @@ class BlueprintBeltEndTest {
                 }
             assertAll(
                 { assertEquals(2, chests.size, "one input and one output chest") },
-                { assertTrue(chests.all { it.bar == 4 }, chests.toString()) },
-                { assertTrue(chests.all { it.requestFilter == null }, chests.toString()) },
+                { assertEquals(emptyList(), chests.filterNot { it.bar == 4 }, chests.toString()) },
+                {
+                    assertEquals(
+                        emptyList(),
+                        chests.filterNot { it.requestFilter == null },
+                        chests.toString(),
+                    )
+                },
             )
         }
 
@@ -170,11 +189,7 @@ class BlueprintBeltEndTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
-                                Factory.CHEMICAL_PLANT,
-                            ),
+                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -191,8 +206,8 @@ class BlueprintBeltEndTest {
             { assertEquals(petroleum, marker.signal.material) },
             { assertEquals(emptyList(), layout.failures) },
             {
-                assertTrue(
-                    layout.entities.any { it is Plumbing && it.area.topLeft == lane },
+                assertNotNull(
+                    layout.entities.firstOrNull { it is Plumbing && it.area.topLeft == lane },
                     "the label's buried run does not reach the lane at $lane",
                 )
             },

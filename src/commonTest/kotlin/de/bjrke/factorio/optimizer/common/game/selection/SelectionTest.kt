@@ -81,8 +81,12 @@ class SelectionTest {
         assertAll(
             { assertTrue(SelectionFlag.SPACE_AGE.enabledIn(selection)) },
             {
-                assertTrue(
-                    FactoryConfig(true).singles.mapNotNull { it.code }.all { it in selection },
+                assertEquals(
+                    emptyList(),
+                    FactoryConfig(true)
+                        .singles
+                        .mapNotNull { it.code }
+                        .filterNot { it in selection },
                     "the default-on machines keep their code: $selection",
                 )
             },

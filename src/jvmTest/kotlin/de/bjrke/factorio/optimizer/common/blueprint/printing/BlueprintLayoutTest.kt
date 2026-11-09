@@ -34,7 +34,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.pipe
-import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPole
 import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPoleRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.stoneBrick
@@ -86,12 +85,21 @@ class BlueprintLayoutTest {
             // every inserter takes from the tile it faces, which is always north here: the lane
             // above for an input, the machine above for an output
             { assertTrue(inserters.isNotEmpty()) },
-            { assertTrue(inserters.all { it.direction == NORTH }, inserters.toString()) },
             {
-                val dangling = inserters.filter {
-                    it.area.topLeft.north(if (it.long) 2 else 1) !in occupied
-                }
-                assertEquals(emptyList(), dangling, "inserter takes from nothing")
+                assertEquals(
+                    emptyList(),
+                    inserters.filterNot { it.direction == NORTH },
+                    inserters.toString(),
+                )
+            },
+            {
+                assertEquals(
+                    emptyList(),
+                    inserters.filter {
+                        it.area.topLeft.north(if (it.long) 2 else 1) !in occupied
+                    },
+                    "inserter takes from nothing",
+                )
             },
             {
                 // the tile it draws from (or the belt it drops onto) must carry its own material,
@@ -172,8 +180,9 @@ class BlueprintLayoutTest {
             { assertEquals(3, machines.size) },
             {
                 // the factories touch, so their centres are one footprint apart (assembler width 3)
-                assertTrue(
-                    machines.zipWithNext().all { (a, b) ->
+                assertEquals(
+                    emptyList(),
+                    machines.zipWithNext().filterNot { (a, b) ->
                         b.area.topLeft.x - a.area.topLeft.x == 3
                     },
                     machines.toString(),
@@ -192,7 +201,6 @@ class BlueprintLayoutTest {
                         PlannedRow.copies(
                             planned(
                                 electronicCircuitRecipe,
-                                electronicCircuit,
                                 Factory.ASSEMBLING_MACHINE_3,
                             ),
                             1,
@@ -221,10 +229,7 @@ class BlueprintLayoutTest {
                 target = concrete,
                 rows =
                     listOf(
-                        PlannedRow.copies(
-                            planned(concreteRecipe, concrete, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
+                        PlannedRow.copies(planned(concreteRecipe, Factory.ASSEMBLING_MACHINE_3), 1),
                     ),
                 sources =
                     listOf(
@@ -245,7 +250,7 @@ class BlueprintLayoutTest {
 
         assertAll(
             { assertEquals(2, inputs.size, inputs.toString()) },
-            { assertTrue(inputs.any { it.long }, inputs.toString()) },
+            { assertNotNull(inputs.firstOrNull { it.long }, inputs.toString()) },
             {
                 assertEquals(
                     setOf(0, 2),
@@ -263,23 +268,15 @@ class BlueprintLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                electronicCircuitRecipe,
-                                electronicCircuit,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
+                            planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(
-                                smallElectricPoleRecipe,
-                                smallElectricPole,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
+                            planned(smallElectricPoleRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -295,37 +292,20 @@ class BlueprintLayoutTest {
 
         // one producer feeding two recipes needs a splitter on its belt
         val names = Layout(shared).blueprint.entities.map { it.name }
-        assertTrue(names.any { it.endsWith("-splitter") }, names.toString())
+        assertNotNull(names.firstOrNull { it.endsWith("-splitter") }, names.toString())
     }
 
     @Test
     fun aSharedInputSplitsOnItsBeltNotAtTheProducer() {
+        val row1 =
+            PlannedRow.copies(planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val row2 =
+            PlannedRow.copies(planned(smallElectricPoleRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val row3 = PlannedRow.copies(planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
         val shared =
             BlueprintPlan(
                 target = electronicCircuit,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(
-                                electronicCircuitRecipe,
-                                electronicCircuit,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
-                            1,
-                        ),
-                        PlannedRow.copies(
-                            planned(
-                                smallElectricPoleRecipe,
-                                smallElectricPole,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
-                            1,
-                        ),
-                        PlannedRow.copies(
-                            planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                    ),
+                rows = listOf(row1, row2, row3),
                 sources =
                     listOf(
                         PlannedSource(copperPlate, 1.0, fluid = false),
@@ -337,8 +317,7 @@ class BlueprintLayoutTest {
             )
 
         val layout = Layout(shared)
-        val producer =
-            layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "copper-cable" }
+        val producer = layout.machineEntities.single { it.recipe == "copper-cable" }
         // compaction may move the outlet into the lane, so take the eastmost belt of the output
         // lane
         val outletRow = producer.area.bottomRight.y + 2
@@ -346,17 +325,22 @@ class BlueprintLayoutTest {
             layout.entities
                 .filterIsInstance<BeltEntity>()
                 .filter { it.material == copperCable && it.area.topLeft.y == outletRow }
-                .maxByOrNull { it.area.topLeft.x }
-                ?.area
-                ?.topLeft
+                .map { it.area.topLeft }
+                .maxByOrNull { it.x }
 
         assertAll(
-            { assertTrue(layout.entities.any { it is SplitterEntity }, "no split at all") },
             {
-                // the producer outlet is a plain belt; the split happens further down the trunk
-                assertNotNull(outlet, "no trunk belt at the producer outlet")
-                assertTrue(
-                    layout.entities.none { it is SplitterEntity && it.area.topLeft == outlet },
+                assertNotNull(
+                    layout.entities.firstOrNull { it is SplitterEntity },
+                    "no split at all",
+                )
+            },
+            // the producer outlet is a plain belt; the split happens further down the trunk
+            { assertNotNull(outlet, "no trunk belt at the producer outlet") },
+            {
+                assertEquals(
+                    emptyList(),
+                    layout.entities.filter { it is SplitterEntity && it.area.topLeft == outlet },
                     "a splitter sits directly at the producer",
                 )
             },
@@ -438,7 +422,7 @@ class BlueprintLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(engineUnitRecipe, engineUnit, Factory.ASSEMBLING_MACHINE_3),
+                            planned(engineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -459,7 +443,7 @@ class BlueprintLayoutTest {
             layout.blueprint.entities.filter {
                 it.name.endsWith("inserter") && it.area.topLeft.y > machine.area.bottomRight.y
             }
-        assertTrue(below.any { it.name == "long-handed-inserter" }, below.toString())
+        assertNotNull(below.firstOrNull { it.name == "long-handed-inserter" }, below.toString())
     }
 
     @Test

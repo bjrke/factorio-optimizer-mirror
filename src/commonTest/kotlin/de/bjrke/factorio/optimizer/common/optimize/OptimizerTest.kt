@@ -27,7 +27,7 @@ import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 class OptimizerTest {
 
@@ -141,10 +141,17 @@ class OptimizerTest {
 
         assertAll(
             { assertEquals("casting-steel", result.recipe.name) },
-            { assertTrue(result.factories.values.none { it.factory == Factory.NO_FACTORY }) },
             {
-                assertTrue(
-                    result.factories.values.any { it.recipe.name == "molten-iron-from-lava" },
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter { it.factory == Factory.NO_FACTORY },
+                )
+            },
+            {
+                assertNotNull(
+                    result.factories.values.firstOrNull {
+                        it.recipe.name == "molten-iron-from-lava"
+                    },
                 )
             },
         )

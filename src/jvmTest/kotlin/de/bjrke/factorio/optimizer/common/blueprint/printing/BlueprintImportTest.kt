@@ -105,8 +105,9 @@ class BlueprintImportTest {
         assertAll(
             { assertTrue(poles.isNotEmpty(), "no poles were placed") },
             {
-                assertTrue(
-                    poles.all { it.area.topLeft.x >= marker.area.topLeft.x + 2 },
+                assertEquals(
+                    emptyList(),
+                    poles.filterNot { it.area.topLeft.x >= marker.area.topLeft.x + 2 },
                     "a pole sits in the import extension: $poles",
                 )
             },
@@ -121,7 +122,7 @@ class BlueprintImportTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(explosivesRecipe, explosives, Factory.ASSEMBLING_MACHINE_3),
+                            planned(explosivesRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
@@ -152,7 +153,12 @@ class BlueprintImportTest {
                     "import markers share one column",
                 )
             },
-            { assertTrue(markers.all { it.area.topLeft.x < machine.area.topLeft.x }) },
+            {
+                assertEquals(
+                    emptyList(),
+                    markers.filterNot { it.area.topLeft.x < machine.area.topLeft.x },
+                )
+            },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
@@ -174,7 +180,6 @@ class BlueprintImportTest {
                         PlannedRow.copies(
                             planned(
                                 advancedCircuitRecipe,
-                                advancedCircuit,
                                 Factory.ASSEMBLING_MACHINE_3,
                             ),
                             1,
@@ -235,15 +240,11 @@ class BlueprintImportTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                electronicCircuitRecipe,
-                                electronicCircuit,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
+                            planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                         PlannedRow.copies(
-                            planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
+                            planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),

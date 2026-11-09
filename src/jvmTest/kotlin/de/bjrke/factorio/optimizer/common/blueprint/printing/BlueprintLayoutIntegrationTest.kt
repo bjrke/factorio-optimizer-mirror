@@ -254,7 +254,13 @@ class BlueprintLayoutIntegrationTest {
                     "the copper plate import is not one straight row",
                 )
             },
-            { assertTrue(belts.all { it.direction == EAST }, "the copper plate import turns") },
+            {
+                assertEquals(
+                    emptyList(),
+                    belts.filterNot { it.direction == EAST },
+                    "the copper plate import turns",
+                )
+            },
             {
                 assertEquals(
                     1,

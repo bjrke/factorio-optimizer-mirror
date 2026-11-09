@@ -21,6 +21,7 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -121,16 +122,16 @@ class BlueprintFluidPortLayoutTest {
             { assertTrue(markerRow < waterMarker.area.topLeft.y) },
             // a junction pipe above the second top corner and a shaft down onto the port
             {
-                assertTrue(
-                    pipes.any {
+                assertNotNull(
+                    pipes.firstOrNull {
                         it is PipeEntity && it.area.topLeft == Coordinate(left + 2, markerRow)
                     },
                     "no heavy-oil junction above the second top corner",
                 )
             },
             {
-                assertTrue(
-                    pipes.any {
+                assertNotNull(
+                    pipes.firstOrNull {
                         it is PipeToGroundEntity && it.area.topLeft == Coordinate(left + 2, top - 1)
                     },
                     "no heavy-oil shaft on the second top corner",
@@ -159,8 +160,9 @@ class BlueprintFluidPortLayoutTest {
             { assertTrue(heavyMarker.area.topLeft.y < waterMarker.area.topLeft.y) },
             // every machine's second top corner is reached by the lane, not by a routed pipe
             {
-                assertTrue(
-                    secondPorts.all { port -> heavy.any { it.area.topLeft == port } },
+                assertEquals(
+                    emptyList(),
+                    secondPorts.filterNot { port -> heavy.any { it.area.topLeft == port } },
                     "a second top corner has no heavy-oil pipe",
                 )
             },

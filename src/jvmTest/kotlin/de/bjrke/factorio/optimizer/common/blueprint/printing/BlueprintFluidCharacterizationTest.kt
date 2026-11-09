@@ -48,14 +48,9 @@ class BlueprintFluidCharacterizationTest {
             target = solidFuel,
             rows =
                 listOf(
-                    PlannedRow(
-                        List(3) {
-                            planned(
-                                solidFuelFromPetroleumGasRecipe,
-                                solidFuel,
-                                Factory.CHEMICAL_PLANT,
-                            )
-                        },
+                    PlannedRow.copies(
+                        planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                        3,
                     ),
                 ),
             sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),

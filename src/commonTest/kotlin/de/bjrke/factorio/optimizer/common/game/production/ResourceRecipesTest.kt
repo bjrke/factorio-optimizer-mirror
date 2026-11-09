@@ -18,7 +18,6 @@ import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
@@ -156,7 +155,7 @@ class ResourceRecipesTest {
     fun woodIsOnlyHarvestedWithTreeSeeding() {
         val baseDump = Json.parseToJsonElement("{}") as JsonObject
         assertAll(
-            { assertTrue(resourceRecipes(baseDump).none { it.name == "wood" }) },
+            { assertEquals(emptyList(), resourceRecipes(baseDump).filter { it.name == "wood" }) },
             { assertContains(recipes, "wood") },
         )
     }

@@ -145,8 +145,16 @@ up.
   - emptiness → `assertEquals(emptyList(), actual)`, `emptySet()`/`emptyMap()`,
     `assertEquals("", string)`, `assertContentEquals(emptyArray(), array)`, or
     `assertEquals(emptyList(), sequence.toList())`. Never `assertTrue(actual.isEmpty())`.
+  - existence → `assertNotNull(collection.firstOrNull { predicate }, message)`.
+  - `none` → `assertEquals(emptyList(), collection.filter { predicate }, message)`.
+  - `all` → `assertEquals(emptyList(), collection.filterNot { predicate }, message)`.
+    The equality form prints the elements that broke the rule, while `assertTrue`
+    printed only `false`. `assertNotNull` prints no collection, so keep the
+    collection in the message where it identifies the case (`inserters.toString()`,
+    `names.toString()`).
 - `assertTrue`/`assertFalse` are only for genuine predicates (comparisons, flags,
-  `any`/`none` domain rules); use `assertIs`, `assertNotNull`, `assertNull`,
+  scalar domain rules such as `components <= 1`); a search over a collection
+  (`any`/`none`/`all`) is not one. Use `assertIs`, `assertNotNull`, `assertNull`,
   `assertEquals` when they express the check.
 - `assertAll` is only for independent assertions about one subject. Repeated
   assertions over cases MUST use `assertTable`/`assertTableOf` with the case as the
