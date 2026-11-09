@@ -6,7 +6,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPl
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.west
-import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.sulfurRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
@@ -39,7 +40,7 @@ class BlueprintFluidFeederTest {
             },
             {
                 assertEquals(
-                    mapOf(Coordinate(machine.x, machine.y - 1) to water),
+                    mapOf(Coordinate(machine.x, machine.y - 1) to petroleum),
                     layout.inputPipes,
                 )
             },
@@ -57,7 +58,7 @@ class BlueprintFluidFeederTest {
     fun aSecondFluidTakesTheOtherTopCornerAndStillOnePortEach() {
         val row =
             Layout(
-                fluidRowPlan(Factory.CHEMICAL_PLANT, fluidInputs = mapOf(lubricant to 1.0)),
+                fluidRowPlan(Factory.CHEMICAL_PLANT, sulfurRecipe),
             )
         val machine = row.machineEntities.single().area
         val feed = row.portPipes
@@ -65,7 +66,7 @@ class BlueprintFluidFeederTest {
         assertAll(
             // one port per fluid, both on the input edge the row reaches: the two top corners
             { assertEquals(2, feed.size, "each fluid needs exactly one port") },
-            { assertEquals(setOf(water, lubricant), feed.values.toSet()) },
+            { assertEquals(setOf(water, petroleum), feed.values.toSet()) },
             { assertEquals(feed.keys.toSet(), row.inputPipes.keys) },
             {
                 assertEquals(

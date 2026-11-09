@@ -13,11 +13,14 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlanner
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.uranium235
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCell
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCellRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumRoundsMagazine
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumRoundsMagazineRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import kotlin.test.Test
@@ -55,36 +58,32 @@ class DeliveryPreparationTest {
     }
 
     private fun twoProductPlan(): BlueprintPlan {
-        val first = Material("first-product")
-        val second = Material("second-product")
-        val firstResult = Material("first-result")
-        val secondResult = Material("second-result")
-        val split = recipe("split", Category.CRAFTING, mapOf(first to 1.0, second to 1.0))
-        val consumeFirst =
-            recipe(
-                "consume-first",
-                Category.CRAFTING,
-                mapOf(firstResult to 1.0),
-                mapOf(first to 1.0),
-            )
-        val consumeSecond =
-            recipe(
-                "consume-second",
-                Category.CRAFTING,
-                mapOf(secondResult to 1.0),
-                mapOf(second to 1.0),
-            )
         return BlueprintPlan(
-            target = firstResult,
+            target = uraniumFuelCell,
             rows =
                 listOf(
-                    PlannedRow.copies(planned(split, first, Factory.ASSEMBLING_MACHINE_3), 1),
                     PlannedRow.copies(
-                        planned(consumeFirst, firstResult, Factory.ASSEMBLING_MACHINE_3),
+                        planned(
+                            uraniumProcessingRecipe,
+                            uranium235,
+                            Factory.ASSEMBLING_MACHINE_3,
+                        ),
                         1,
                     ),
                     PlannedRow.copies(
-                        planned(consumeSecond, secondResult, Factory.ASSEMBLING_MACHINE_3),
+                        planned(
+                            uraniumFuelCellRecipe,
+                            uraniumFuelCell,
+                            Factory.ASSEMBLING_MACHINE_3,
+                        ),
+                        1,
+                    ),
+                    PlannedRow.copies(
+                        planned(
+                            uraniumRoundsMagazineRecipe,
+                            uraniumRoundsMagazine,
+                            Factory.ASSEMBLING_MACHINE_3,
+                        ),
                         1,
                     ),
                 ),

@@ -12,23 +12,26 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.west
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.explosives
+import de.bjrke.factorio.optimizer.common.fixtures.explosivesRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
+import de.bjrke.factorio.optimizer.common.fixtures.sulfur
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -112,38 +115,33 @@ class BlueprintImportTest {
 
     @Test
     fun importMarkersShareOneColumnAfterThePrefixIsTrimmed() {
-        val twoImports =
-            recipe(
-                "gear",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironOre to 1.0, coal to 1.0),
-            )
         val mixedPlan =
             BlueprintPlan(
-                target = gear,
+                target = explosives,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(twoImports, gear, Factory.ASSEMBLING_MACHINE_3),
+                            planned(explosivesRecipe, explosives, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironOre, 1.0, fluid = false),
+                        PlannedSource(sulfur, 1.0, fluid = false),
                         PlannedSource(coal, 1.0, fluid = false),
                     ),
                 scale = 1.0,
-                label = "gear",
+                label = "explosives",
             )
         val layout = Layout(mixedPlan)
         val markers =
             layout.entities.filterIsInstance<MarkerEntity>().filter {
-                it.signal.material == ironOre || it.signal.material == coal
+                it.signal.material == sulfur || it.signal.material == coal
             }
         val machine =
-            layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
+            layout.entities.filterIsInstance<MachineEntity>().single {
+                it.recipe == "explosives"
+            }
 
         assertAll(
             { assertEquals(2, markers.size, "one marker per imported input") },
@@ -161,48 +159,49 @@ class BlueprintImportTest {
     }
 
     /**
-     * The rare-input row feeds its third solid input through the lane below the machine (`sinkOf`'s
-     * `NORTH` sink). The connector, its feed tile and the first lane tile must stay adjacent, so a
-     * vertical corridor cannot slip between them and leave the material on a different lane tile
-     * than the route filled.
+     * The advanced-circuit row feeds its third solid input through the lane below the machine
+     * (`sinkOf`'s `NORTH` sink). The connector, its feed tile and the first lane tile must stay
+     * adjacent, so a vertical corridor cannot slip between them and leave the material on a
+     * different lane tile than the route filled.
      */
     @Test
     fun theImportConnectorKeepsTheLaneTileItFeeds() {
-        val rare = Material("rare")
-        val makeGear =
-            recipe(
-                "gear",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironOre to 1.0, coal to 1.0, rare to 1.0),
-            )
         val plan =
             BlueprintPlan(
-                target = gear,
+                target = advancedCircuit,
                 rows =
                     listOf(
-                        PlannedRow.copies(planned(makeGear, gear, Factory.ASSEMBLING_MACHINE_3), 1),
+                        PlannedRow.copies(
+                            planned(
+                                advancedCircuitRecipe,
+                                advancedCircuit,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
+                            1,
+                        ),
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironOre, 1.0, fluid = false),
-                        PlannedSource(coal, 1.0, fluid = false),
-                        PlannedSource(rare, 1.0, fluid = false),
+                        PlannedSource(copperCable, 1.0, fluid = false),
+                        PlannedSource(electronicCircuit, 1.0, fluid = false),
+                        PlannedSource(plasticBar, 1.0, fluid = false),
                     ),
                 scale = 1.0,
-                label = "gear",
+                label = "advanced-circuit",
             )
         val layout = Layout(plan)
         val machine =
-            layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "gear" }
+            layout.entities.filterIsInstance<MachineEntity>().single {
+                it.recipe == "advanced-circuit"
+            }
         val laneRow = machine.area.topLeft.y - 3
         val lane =
             layout.entities.filterIsInstance<BeltEntity>().filter {
-                it.material == rare && it.area.topLeft.y == laneRow
+                it.material == plasticBar && it.area.topLeft.y == laneRow
             }
         val marker =
             layout.entities.filterIsInstance<MarkerEntity>().single {
-                it.signal.material == rare
+                it.signal.material == plasticBar
             }
         // the connector's own tiles sit between the label column and the feed, so the lane must run
         // unbroken from the feed tile on: a hole would mean compaction cut a belt out of it

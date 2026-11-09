@@ -3,10 +3,6 @@ package de.bjrke.factorio.optimizer.js.component.fixtures
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.fixtures.gear
-import de.bjrke.factorio.optimizer.common.fixtures.ironOre
-import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -18,25 +14,6 @@ import de.bjrke.test.screen
 import react.create
 import web.dom.Element
 import web.html.HTMLInputElement
-
-/** The recipes, result fixtures and render helpers the `OptimizationResult*` suites share. */
-internal val miningRecipe =
-    Recipe(
-        name = "iron-ore",
-        ingredients = emptyMap(),
-        result = mapOf(ironOre to 1.0),
-        time = 1.0,
-        categories = setOf(Category.MINING_BASIC_SOLID),
-    )
-
-internal val craftingRecipe =
-    Recipe(
-        name = "iron-gear-wheel",
-        ingredients = mapOf(ironPlate to 2.0),
-        result = mapOf(gear to 1.0),
-        time = 0.5,
-        categories = setOf(Category.CRAFTING),
-    )
 
 internal fun optimizationResult(recipe: Recipe, target: Material, factory: Factory) =
     OptimizationResult(

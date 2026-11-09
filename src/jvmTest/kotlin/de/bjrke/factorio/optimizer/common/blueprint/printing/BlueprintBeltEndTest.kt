@@ -15,7 +15,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -24,8 +23,9 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
-import de.bjrke.factorio.optimizer.common.fixtures.water
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -164,21 +164,23 @@ class BlueprintBeltEndTest {
 
     @Test
     fun fluidImportsKeepTheCombinatorLabelEvenWithAChestMarker() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(fluidPlan, beltEnd = BeltEnd.BUFFER_CHEST)
         val marker = layout.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
@@ -186,7 +188,7 @@ class BlueprintBeltEndTest {
         val lane = marker.area.topLeft.east().east()
 
         assertAll(
-            { assertEquals(water, marker.signal.material) },
+            { assertEquals(petroleum, marker.signal.material) },
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertTrue(

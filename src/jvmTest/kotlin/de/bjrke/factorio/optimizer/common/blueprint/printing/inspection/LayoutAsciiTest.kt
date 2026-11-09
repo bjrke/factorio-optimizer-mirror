@@ -10,8 +10,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -49,7 +49,7 @@ class LayoutAsciiTest {
                     MarkerEntity(
                         Coordinate(3, 2).area(),
                         "constant-combinator",
-                        Signal(Material("copper-plate")),
+                        Signal(copperPlate),
                     ),
                 ),
             failures = listOf("water to (2, 3) (no route)"),

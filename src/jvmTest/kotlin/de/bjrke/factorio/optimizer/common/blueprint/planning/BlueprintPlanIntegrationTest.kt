@@ -3,9 +3,14 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
+import de.bjrke.factorio.optimizer.common.fixtures.lightOil
+import de.bjrke.factorio.optimizer.common.fixtures.moltenIron
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
+import de.bjrke.factorio.optimizer.common.fixtures.stone
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.test.assertAll
@@ -52,17 +57,11 @@ class BlueprintPlanIntegrationTest {
             {
                 assertContains(
                     sourceMaterials,
-                    Material("copper-plate"),
+                    copperPlate,
                     "copper plate should be imported instead",
                 )
             },
-            {
-                assertContains(
-                    sourceMaterials,
-                    Material("petroleum-gas"),
-                    "plastic's fluid input is imported",
-                )
-            },
+            { assertContains(sourceMaterials, petroleum, "plastic's fluid input is imported") },
             {
                 assertTrue(
                     categories.none { it == Category.OIL_PROCESSING },
@@ -80,7 +79,7 @@ class BlueprintPlanIntegrationTest {
             { assertContains(planned.recipes.map { it.recipe.name }, "lubricant") },
             {
                 assertTrue(
-                    planned.sources.any { it.material == Material("heavy-oil") && it.fluid },
+                    planned.sources.any { it.material == heavyOil && it.fluid },
                     "sources: ${planned.sources.map { it.material }}",
                 )
             },
@@ -94,7 +93,7 @@ class BlueprintPlanIntegrationTest {
 
         assertContains(
             planned.sources.map { it.material },
-            Material("light-oil"),
+            lightOil,
         )
     }
 
@@ -135,7 +134,7 @@ class BlueprintPlanIntegrationTest {
                     "molten-copper-from-lava",
                 )
             },
-            { assertContains(planned.sources.map { it.material }, Material("stone")) },
+            { assertContains(planned.sources.map { it.material }, stone) },
         )
     }
 
@@ -166,7 +165,7 @@ class BlueprintPlanIntegrationTest {
             },
             {
                 assertEquals(
-                    listOf(Material("light-oil")),
+                    listOf(lightOil),
                     planned.sources.map { it.material },
                 )
             },
@@ -206,7 +205,6 @@ class BlueprintPlanIntegrationTest {
         // row is built for it, but the layout still imports its molten iron. The reported sources
         // must follow the rows that are actually built, not the optimizer's producer index.
         val layout = Layout("iron-plate", surface = Surface.VULCANUS)
-        val moltenIron = Material("molten-iron")
 
         assertAll(
             { assertContains(layout.plan.sources.map { it.material }, moltenIron) },

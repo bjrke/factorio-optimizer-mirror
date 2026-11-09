@@ -1,8 +1,11 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.copperBacteria
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.spoilage
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.yumakoMash
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
@@ -55,16 +58,7 @@ class RecipeParserTest {
     @Test
     fun parseCopperPlate() =
         assertEquals(
-            listOf(
-                Recipe(
-                    name = "copper-plate",
-                    ingredients = mapOf(copperOre to 1.0),
-                    result = mapOf(Material("copper-plate") to 1.0),
-                    time = 3.2,
-                    categories = setOf(Category.SMELTING),
-                    subgroup = Subgroup(),
-                ),
-            ),
+            listOf(copperPlateSmeltingRecipe),
             parse(
                 """
                 {"recipe":{"copper-plate":{
@@ -80,36 +74,27 @@ class RecipeParserTest {
         )
 
     @Test
-    fun parseUraniumProcessing() =
+    fun parseUraniumProcessing() {
         assertEquals(
-            listOf(
-                Recipe(
-                    name = "uranium-processing",
-                    ingredients = mapOf(Material("uranium-ore") to 10.0),
-                    result =
-                        mapOf(Material("uranium-235") to 0.007, Material("uranium-238") to 0.993),
-                    time = 12.0,
-                    categories = setOf(Category.CENTRIFUGING),
-                    subgroup = Subgroup("uranium-processing"),
-                ),
-            ),
+            listOf(uraniumProcessingRecipe),
             parse(
                 """
-                {"recipe":{"uranium-processing":{
-                  "type":"recipe",
-                  "name":"uranium-processing",
-                  "energy_required":12,
-                  "categories":["centrifuging"],
-                  "ingredients":[{"type":"item","name":"uranium-ore","amount":10}],
-                  "subgroup":"uranium-processing",
-                  "results":[
-                    {"type":"item","name":"uranium-235","shared_probability":{"min":0,"max":0.007},"amount":1},
-                    {"type":"item","name":"uranium-238","shared_probability":{"min":0.007,"max":1},"amount":1}
-                  ]
-                }}}
-                """,
+                    {"recipe":{"uranium-processing":{
+                      "type":"recipe",
+                      "name":"uranium-processing",
+                      "energy_required":12,
+                      "categories":["centrifuging"],
+                      "ingredients":[{"type":"item","name":"uranium-ore","amount":10}],
+                      "subgroup":"uranium-processing",
+                      "results":[
+                        {"type":"item","name":"uranium-235","shared_probability":{"min":0,"max":0.007},"amount":1},
+                        {"type":"item","name":"uranium-238","shared_probability":{"min":0.007,"max":1},"amount":1}
+                      ]
+                    }}}
+                    """,
             ),
         )
+    }
 
     @Test
     fun parseParameterRecipeIsSkipped() =
@@ -241,8 +226,8 @@ class RecipeParserTest {
             listOf(
                 Recipe(
                     name = "copper-bacteria",
-                    ingredients = mapOf(Material("yumako-mash") to 3.0),
-                    result = mapOf(Material("copper-bacteria") to 0.1, Material("spoilage") to 1.0),
+                    ingredients = mapOf(yumakoMash to 3.0),
+                    result = mapOf(copperBacteria to 0.1, spoilage to 1.0),
                     time = 1.0,
                     categories = setOf(Category.CRAFTING, Category.ORGANIC),
                     subgroup = Subgroup("agriculture-processes"),

@@ -13,7 +13,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
@@ -21,6 +20,8 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.north
 import de.bjrke.factorio.optimizer.common.core.model.south
+import de.bjrke.factorio.optimizer.common.fixtures.concrete
+import de.bjrke.factorio.optimizer.common.fixtures.concreteRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -36,10 +37,10 @@ import de.bjrke.factorio.optimizer.common.fixtures.pipe
 import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPole
 import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPoleRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
+import de.bjrke.factorio.optimizer.common.fixtures.stoneBrick
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.fixtures.wood
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -215,32 +216,24 @@ class BlueprintLayoutTest {
     fun aFluidPortDoesNotCostTheLongInserter() {
         // an assembler with two solid inputs and a fluid port on its top edge: the port takes the
         // middle column, so the pattern's long inserter has to move to the machine's last column.
-        // A minimal two-lane recipe, because a real recipe's rates put an input on the other side.
-        val twoRecipe =
-            recipe(
-                "two",
-                Category.CRAFTING,
-                mapOf(gear to 2.0),
-                mapOf(ironPlate to 1.0, ironOre to 1.0, water to 1.0),
-            )
         val twoPlan =
             BlueprintPlan(
-                target = gear,
+                target = concrete,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(twoRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
+                            planned(concreteRecipe, concrete, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironPlate, 1.0, fluid = false),
+                        PlannedSource(stoneBrick, 1.0, fluid = false),
                         PlannedSource(ironOre, 1.0, fluid = false),
                         PlannedSource(water, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "two",
+                label = "concrete",
             )
         val layout = Layout(twoPlan)
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()

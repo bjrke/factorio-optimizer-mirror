@@ -18,9 +18,12 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunn
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
+import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -60,11 +63,11 @@ class BlueprintLayoutIntegrationTest {
         val entities =
             Layout("processing-unit", beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
         val pipe = entities.single {
-            it.name == "infinity-pipe" && it.infinityPipe?.fluid == Material("sulfuric-acid")
+            it.name == "infinity-pipe" && it.infinityPipe?.fluid == sulfuricAcid
         }
 
         assertAll(
-            { assertEquals(Material("sulfuric-acid"), pipe.infinityPipe?.fluid) },
+            { assertEquals(sulfuricAcid, pipe.infinityPipe?.fluid) },
             { assertEquals(25, pipe.infinityPipe?.temperature) },
         )
     }
@@ -206,7 +209,7 @@ class BlueprintLayoutIntegrationTest {
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
-                    setOf(Material("copper-cable"), Material("electronic-circuit")),
+                    setOf(copperCable, electronicCircuit),
                     routeTunnels.map { it.material }.toSet(),
                     "only the band's feeds may need an underground belt",
                 )
@@ -224,11 +227,11 @@ class BlueprintLayoutIntegrationTest {
     fun reportedUraniumRoundsUrlKeepsItsCopperImportStraight() {
         val layout =
             layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
-        val copper = Material("copper-plate")
-        val belts = layout.entities.filterIsInstance<BeltEntity>().filter { it.material == copper }
+        val belts =
+            layout.entities.filterIsInstance<BeltEntity>().filter { it.material == copperPlate }
         val tunnels =
             layout.entities.filterIsInstance<UndergroundBeltEntity>().filter {
-                it.material == copper
+                it.material == copperPlate
             }
         val inputChests =
             layout.entities.filterIsInstance<InfinityChestEntity>().filter {
@@ -238,7 +241,7 @@ class BlueprintLayoutIntegrationTest {
             layout.entities.filterIsInstance<MachineEntity>().minOf {
                 it.area.topLeft.x
             }
-        val copperChest = inputChests.single { it.settings.item == copper }
+        val copperChest = inputChests.single { it.settings.item == copperPlate }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },

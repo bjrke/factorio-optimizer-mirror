@@ -22,17 +22,9 @@ import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-
-fun recipe(
-    name: String,
-    category: Category,
-    result: Map<Material, Double>,
-    ingredients: Map<Material, Double> = emptyMap(),
-) = Recipe(name, ingredients, result, 1.0, setOf(category))
 
 fun planned(
     recipe: Recipe,

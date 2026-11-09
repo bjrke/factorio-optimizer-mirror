@@ -1,8 +1,15 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.carbonicAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
+import de.bjrke.factorio.optimizer.common.fixtures.flourine
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.metallicAsteroidChunk
+import de.bjrke.factorio.optimizer.common.fixtures.oxideAsteroidChunk
+import de.bjrke.factorio.optimizer.common.fixtures.promethiumAsteroidChunk
+import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
+import de.bjrke.factorio.optimizer.common.fixtures.wood
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
@@ -80,7 +87,7 @@ class ResourceRecipesTest {
     fun resourceCanRequireFluid() {
         val uranium = recipes.getValue("uranium-ore")
         assertAll(
-            { assertEquals(mapOf(Material("sulfuric-acid") to 10.0), uranium.ingredients) },
+            { assertEquals(mapOf(sulfuricAcid to 10.0), uranium.ingredients) },
             { assertEquals(2.0, uranium.time) },
         )
     }
@@ -90,13 +97,13 @@ class ResourceRecipesTest {
         assertAll(
             {
                 assertEquals(
-                    mapOf(Material("sulfuric-acid") to 10.0),
+                    mapOf(sulfuricAcid to 10.0),
                     recipes.getValue("sulfuric-acid-geyser").result,
                 )
             },
             {
                 assertEquals(
-                    mapOf(Material("fluorine") to 1.0),
+                    mapOf(flourine to 1.0),
                     recipes.getValue("fluorine-vent").result,
                 )
             },
@@ -134,13 +141,13 @@ class ResourceRecipesTest {
 
     @Test
     fun harvestedWoodIsAHarvestingRecipe() {
-        val wood = recipes.getValue("wood")
+        val woodRecipe = recipes.getValue("wood")
         assertAll(
-            { assertEquals(setOf(Category.HARVESTING), wood.categories) },
+            { assertEquals(setOf(Category.HARVESTING), woodRecipe.categories) },
             // a tree yields the 4 wood a hand-mined tree gives
-            { assertEquals(mapOf(Material("wood") to 4.0), wood.result) },
-            { assertEquals(600.0, wood.time) },
-            { assertEquals(emptyMap(), wood.ingredients) },
+            { assertEquals(mapOf(wood to 4.0), woodRecipe.result) },
+            { assertEquals(600.0, woodRecipe.time) },
+            { assertEquals(emptyMap(), woodRecipe.ingredients) },
         )
     }
 
@@ -164,10 +171,10 @@ class ResourceRecipesTest {
             {
                 assertEquals(
                     setOf(
-                        Material("metallic-asteroid-chunk"),
-                        Material("carbonic-asteroid-chunk"),
-                        Material("oxide-asteroid-chunk"),
-                        Material("promethium-asteroid-chunk"),
+                        metallicAsteroidChunk,
+                        carbonicAsteroidChunk,
+                        oxideAsteroidChunk,
+                        promethiumAsteroidChunk,
                     ),
                     recipe.result.keys,
                 )

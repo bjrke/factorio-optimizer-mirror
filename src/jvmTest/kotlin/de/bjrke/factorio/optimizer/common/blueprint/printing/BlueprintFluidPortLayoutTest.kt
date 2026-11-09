@@ -10,9 +10,12 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.electrolyte
+import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
+import de.bjrke.factorio.optimizer.common.fixtures.holmiumSolution
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.sulfur
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -68,9 +71,9 @@ class BlueprintFluidPortLayoutTest {
             {
                 assertEquals(
                     mapOf(
-                        Coordinate(41, 3) to Material("sulfur"),
-                        Coordinate(41, 8) to Material("sulfur"),
-                        Coordinate(42, 8) to Material("sulfur"),
+                        Coordinate(41, 3) to sulfur,
+                        Coordinate(41, 8) to sulfur,
+                        Coordinate(42, 8) to sulfur,
                         Coordinate(41, 12) to ironPlate,
                     ),
                     inserters.associateBy({ it.area.topLeft }, { it.material }),
@@ -88,7 +91,7 @@ class BlueprintFluidPortLayoutTest {
 
         assertAll(
             { assertEquals(water, layout.plumbing[left]) },
-            { assertEquals(Material("heavy-oil"), layout.plumbing[right]) },
+            { assertEquals(heavyOil, layout.plumbing[right]) },
         )
     }
 
@@ -103,7 +106,6 @@ class BlueprintFluidPortLayoutTest {
         val machine = layout.machine("chemical-plant")
         val left = machine.area.topLeft.x
         val top = machine.area.topLeft.y
-        val heavyOil = Material("heavy-oil")
         val marker =
             layout.entities.filterIsInstance<InfinityPipeEntity>().single {
                 it.material == heavyOil
@@ -141,7 +143,6 @@ class BlueprintFluidPortLayoutTest {
     @Test
     fun theLightOilLaneReachesEverySecondTopCorner() {
         val layout = layoutFromUrl("http://localhost:8080/#/60/light-oil/FSXmor/1/1")
-        val heavyOil = Material("heavy-oil")
         val markers = layout.entities.filterIsInstance<InfinityPipeEntity>()
         val heavyMarker = markers.single { it.material == heavyOil }
         val waterMarker = markers.single { it.material == water }
@@ -175,19 +176,9 @@ class BlueprintFluidPortLayoutTest {
 
         assertAll(
             { assertEquals(Direction.EAST, layout.direction(machine)) },
-            { assertEquals(Material("heavy-oil"), layout.plumbing[topLeft + Coordinate(1, -1)]) },
-            {
-                assertEquals(
-                    Material("holmium-solution"),
-                    layout.plumbing[topLeft + Coordinate(2, 4)],
-                )
-            },
-            {
-                assertEquals(
-                    Material("electrolyte"),
-                    layout.plumbing[topLeft + Coordinate(-1, 2)],
-                )
-            },
+            { assertEquals(heavyOil, layout.plumbing[topLeft + Coordinate(1, -1)]) },
+            { assertEquals(holmiumSolution, layout.plumbing[topLeft + Coordinate(2, 4)]) },
+            { assertEquals(electrolyte, layout.plumbing[topLeft + Coordinate(-1, 2)]) },
             { assertNull(layout.plumbing[topLeft + Coordinate(4, 1)]) },
         )
     }
@@ -199,7 +190,7 @@ class BlueprintFluidPortLayoutTest {
         val outputRow = machine.area.topLeft.y + 2
         val sources =
             layout.entities.filterIsInstance<InfinityPipeEntity>().filter {
-                it.material == Material("electrolyte") &&
+                it.material == electrolyte &&
                     it.area.topLeft.y == outputRow &&
                     it.area.topLeft.x < machine.area.topLeft.x
             }

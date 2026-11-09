@@ -1,9 +1,23 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.fixtures.copperOre
-import de.bjrke.factorio.optimizer.common.fixtures.gear
-import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ammoniacalSolutionPumpingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.coalMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlateSmeltingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.foundryRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.heavyOilPumpingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironBacteriaRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironBacteriaSpoilingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecyclingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.jellynutHarvestingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.lavaPumpingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.moltenIronFromLavaRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessorRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.stoneMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.tungstenOreMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.woodHarvestingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.yumakoHarvestingRecipe
 import de.bjrke.factorio.optimizer.common.game.selection.forSurface
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromPlanet
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
@@ -101,30 +115,15 @@ class SurfaceTest {
 
     @Test
     fun forSurfaceFiltersRecipes() {
-        val global =
-            Recipe(
-                name = "copper-plate",
-                ingredients = mapOf(copperOre to 1.0),
-                result = mapOf(Material("copper-plate") to 1.0),
-                time = 1.0,
-                categories = setOf(Category.SMELTING),
-            )
-        val conditioned =
-            global.copy(
-                name = "foundry",
-                result = mapOf(Material("foundry") to 1.0),
-                surfaceConditions = listOf(pressure(4000, 4000)),
-            )
-        val subgroupOnly =
-            global.copy(
-                name = "molten-iron-from-lava",
-                result = mapOf(Material("molten-iron") to 1.0),
-                subgroup = Subgroup("vulcanus-processes"),
-            )
         val parsed =
             ParsedRecipe(
                 materials = emptyList(),
-                recipes = listOf(global, conditioned, subgroupOnly),
+                recipes =
+                    listOf(
+                        copperPlateSmeltingRecipe,
+                        foundryRecipe,
+                        moltenIronFromLavaRecipe,
+                    ),
             )
 
         assertTableOf(
@@ -138,18 +137,7 @@ class SurfaceTest {
     @Test
     fun explicitConditionsOverridePlanetSubgroup() {
         // quantum-processor is in the Aquilo subgroup but its pressure condition also allows space
-        val quantumProcessor =
-            Recipe(
-                name = "quantum-processor",
-                ingredients = emptyMap(),
-                result = mapOf(Material("quantum-processor") to 1.0),
-                time = 1.0,
-                categories = setOf(Category.ELECTROMAGNETICS),
-                subgroup = Subgroup("aquilo-processes"),
-                surfaceConditions =
-                    listOf(SurfaceCondition(SurfaceProperty.PRESSURE, Int.MIN_VALUE..600)),
-            )
-        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(quantumProcessor))
+        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(quantumProcessorRecipe))
 
         assertTableOf(
             Surface.AQUILO to listOf("quantum-processor"),
@@ -161,15 +149,6 @@ class SurfaceTest {
         }
     }
 
-    private fun extraction(name: String, category: Category) =
-        Recipe(
-            name = name,
-            ingredients = emptyMap(),
-            result = mapOf(Material(name) to 1.0),
-            time = 1.0,
-            categories = setOf(category),
-        )
-
     @Test
     fun miningResourceIsGatedBySurface() {
         val parsed =
@@ -177,10 +156,10 @@ class SurfaceTest {
                 materials = emptyList(),
                 recipes =
                     listOf(
-                        extraction("iron-ore", Category.MINING_BASIC_SOLID),
-                        extraction("tungsten-ore", Category.MINING_HARD_SOLID),
-                        extraction("coal", Category.MINING_BASIC_SOLID),
-                        extraction("stone", Category.MINING_BASIC_SOLID),
+                        ironOreMiningRecipe,
+                        tungstenOreMiningRecipe,
+                        coalMiningRecipe,
+                        stoneMiningRecipe,
                     ),
             )
 
@@ -201,10 +180,10 @@ class SurfaceTest {
                 materials = emptyList(),
                 recipes =
                     listOf(
-                        extraction("water", Category.OFFSHORE_PUMPING),
-                        extraction("heavy-oil", Category.OFFSHORE_PUMPING),
-                        extraction("lava", Category.OFFSHORE_PUMPING),
-                        extraction("ammoniacal-solution", Category.OFFSHORE_PUMPING),
+                        waterPumpingRecipe,
+                        heavyOilPumpingRecipe,
+                        lavaPumpingRecipe,
+                        ammoniacalSolutionPumpingRecipe,
                     ),
             )
 
@@ -224,11 +203,7 @@ class SurfaceTest {
         val parsed =
             ParsedRecipe(
                 materials = emptyList(),
-                recipes =
-                    listOf(
-                        extraction("yumako", Category.HARVESTING),
-                        extraction("jellynut", Category.HARVESTING),
-                    ),
+                recipes = listOf(yumakoHarvestingRecipe, jellynutHarvestingRecipe),
             )
 
         assertTableOf(
@@ -241,11 +216,7 @@ class SurfaceTest {
 
     @Test
     fun harvestedWoodIsGatedToNauvis() {
-        val parsed =
-            ParsedRecipe(
-                materials = emptyList(),
-                recipes = listOf(extraction("wood", Category.HARVESTING)),
-            )
+        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(woodHarvestingRecipe))
 
         assertTableOf(
             Surface.NAUVIS to setOf("wood"),
@@ -257,46 +228,26 @@ class SurfaceTest {
 
     @Test
     fun recyclingRecipesOnlySurviveOnFulgora() {
-        val recycling =
-            Recipe(
-                name = "scrap-recycling",
-                ingredients = mapOf(Material("scrap") to 1.0),
-                result = mapOf(gear to 1.0),
-                time = 1.0,
-                categories = setOf(Category.RECYCLING),
-            )
-        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(recycling))
+        val parsed =
+            ParsedRecipe(materials = emptyList(), recipes = listOf(ironGearWheelRecyclingRecipe))
 
         assertContains(
             parsed.forSurface(Surface.FULGORA).recipes.map(Recipe::name),
-            "scrap-recycling",
+            "iron-gear-wheel-recycling",
         )
         assertContainsNot(
             parsed.forSurface(Surface.NAUVIS).recipes.map(Recipe::name),
-            "scrap-recycling",
+            "iron-gear-wheel-recycling",
         )
     }
 
     @Test
     fun spoilingRecipesNeedTheirSourceToBeProduced() {
-        val bacteria =
-            Recipe(
-                name = "iron-bacteria",
-                ingredients = mapOf(Material("yumako-mash") to 1.0),
-                result = mapOf(Material("iron-bacteria") to 1.0),
-                time = 1.0,
-                categories = setOf(Category.CRAFTING),
-                surfaceConditions = listOf(pressure(2000, 2000)),
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes = listOf(ironBacteriaRecipe, ironBacteriaSpoilingRecipe),
             )
-        val spoiling =
-            Recipe(
-                name = "iron-bacteria-spoiling",
-                ingredients = mapOf(Material("iron-bacteria") to 1.0),
-                result = mapOf(ironOre to 1.0),
-                time = 1.0,
-                categories = setOf(Category.SPOILING),
-            )
-        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(bacteria, spoiling))
 
         assertTableOf(
             Surface.GLEBA to setOf("iron-bacteria", "iron-bacteria-spoiling"),

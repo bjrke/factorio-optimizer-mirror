@@ -1,6 +1,9 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.copperBacteriaSpoilingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironBacteriaSpoilingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.spoilage
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
@@ -53,18 +56,11 @@ class SpoilageRecipesTest {
 
     @Test
     fun bacteriaSpoilIntoOre() =
-        assertTableOf("iron-bacteria" to "iron-ore", "copper-bacteria" to "copper-ore") {
-            (bacteria, ore) ->
-            assertEquals(
-                Recipe(
-                    name = "$bacteria-spoiling",
-                    ingredients = mapOf(Material(bacteria) to 1.0),
-                    result = mapOf(Material(ore) to 1.0),
-                    time = 60.0,
-                    categories = setOf(Category.SPOILING),
-                ),
-                recipes.getValue("$bacteria-spoiling"),
-            )
+        assertTableOf(
+            "iron-bacteria-spoiling" to ironBacteriaSpoilingRecipe,
+            "copper-bacteria-spoiling" to copperBacteriaSpoilingRecipe,
+        ) { (name, expected) ->
+            assertEquals(expected, recipes.getValue(name))
         }
 
     @Test
@@ -89,7 +85,7 @@ class SpoilageRecipesTest {
     @Test
     fun otherItemsSpoilIntoSpoilage() =
         assertTable(spoilTimes.keys) { name ->
-            assertEquals(mapOf(Material("spoilage") to 1.0), recipes.getValue(name).result, name)
+            assertEquals(mapOf(spoilage to 1.0), recipes.getValue(name).result, name)
         }
 
     @Test

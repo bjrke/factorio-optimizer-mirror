@@ -1,13 +1,13 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
-import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
-import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo
@@ -20,7 +20,7 @@ import kotlin.test.assertEquals
 class OptimizationResultInteractionTest : OptimizationResultTestBase() {
     @Test
     fun clickingTheFactoryIconNormalizesToTheFactoryAmount() {
-        val result = optimizationResult(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
         renderResult(result)
 
         fireEvent.click(screen.getByTitle(Factory.ELECTRIC_MINING_DRILL.identifier))
@@ -30,7 +30,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun middleClickingAnIngredientIconSelectsThatMaterial() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         fireEvent.mouseDown(screen.getByTitle(ironPlate.name), middleButton())
 
@@ -39,7 +39,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun middleClickingTheRecipeIconSelectsTheProducedMaterial() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         // the recipe icon comes before the output icon, which shares its title
         fireEvent.mouseDown(screen.getAllByTitle(gear.name)[0], middleButton())
@@ -49,7 +49,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun middleClickingTheFactoryIconSelectsNothing() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         fireEvent.mouseDown(
             screen.getByTitle(Factory.ASSEMBLING_MACHINE_1.identifier),
@@ -61,7 +61,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun leftClickingAMaterialIconOnlyNormalizesTheAmount() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         fireEvent.click(screen.getByTitle(ironPlate.name))
 
@@ -74,7 +74,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun logisticsCountsScaleWithTheNormalizeTarget() {
-        val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
 
         val rendered = renderResult(result, normalizeTarget = 1.0)
         val atOne = firstBeltInput().value.toDouble()
@@ -87,7 +87,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun editingTheBeltCountPinsIt() {
-        val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
         renderResult(result)
 
         val count = firstBeltInput().value.toDouble()
@@ -99,7 +99,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
 
     @Test
     fun clickingTheBeltIconPinsItToOne() {
-        val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
         renderResult(result)
 
         fireEvent.click(screen.getAllByTitle(BeltTier.FAST_TRANSPORT_BELT.identifier).first())

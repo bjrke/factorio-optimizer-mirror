@@ -13,7 +13,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.layoutAscii
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
@@ -24,9 +23,9 @@ import de.bjrke.factorio.optimizer.common.core.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.core.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
-import de.bjrke.factorio.optimizer.common.fixtures.gear
-import de.bjrke.factorio.optimizer.common.fixtures.water
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -37,26 +36,31 @@ import kotlin.test.assertEquals
  * Characterization of the fluid lane one row of three chemical plants produces today, so a later
  * fluid change can show exactly which tile, direction or glyph moved on purpose.
  *
- * The three machines touch, so their water ports sit at x = 40, 43 and 46. The lane runs two rows
- * above them: a plain junction pipe over every port, and a pipe-to-ground pair across each two-tile
- * gap, which the player can walk across. Every port is reached by a vertical shaft whose top end
- * stands one row inside the lane and whose bottom end sits on the port tile.
+ * The three machines touch, so their petroleum ports sit at x = 40, 43 and 46. The lane runs two
+ * rows above them: a plain junction pipe over every port, and a pipe-to-ground pair across each
+ * two-tile gap, which the player can walk across. Every port is reached by a vertical shaft whose
+ * top end stands one row inside the lane and whose bottom end sits on the port tile.
  */
 class BlueprintFluidCharacterizationTest {
 
-    private val waterBoilRecipe =
-        recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
-
     private val fluidPlan =
         BlueprintPlan(
-            target = gear,
+            target = solidFuel,
             rows =
                 listOf(
-                    PlannedRow(List(3) { planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT) }),
+                    PlannedRow(
+                        List(3) {
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            )
+                        },
+                    ),
                 ),
-            sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+            sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
             scale = 1.0,
-            label = "water-boil",
+            label = "solid-fuel-from-petroleum-gas",
         )
 
     private val layout = Layout(fluidPlan)
@@ -69,9 +73,21 @@ class BlueprintFluidCharacterizationTest {
     @Test
     fun theMachinesTouchInOneRow() =
         assertTableOf(
-            MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(40, 0).area(3, 3), "water-boil"),
-            MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(43, 0).area(3, 3), "water-boil"),
-            MachineEntity(Factory.CHEMICAL_PLANT, Coordinate(46, 0).area(3, 3), "water-boil"),
+            MachineEntity(
+                Factory.CHEMICAL_PLANT,
+                Coordinate(40, 0).area(3, 3),
+                "solid-fuel-from-petroleum-gas",
+            ),
+            MachineEntity(
+                Factory.CHEMICAL_PLANT,
+                Coordinate(43, 0).area(3, 3),
+                "solid-fuel-from-petroleum-gas",
+            ),
+            MachineEntity(
+                Factory.CHEMICAL_PLANT,
+                Coordinate(46, 0).area(3, 3),
+                "solid-fuel-from-petroleum-gas",
+            ),
         ) { expected ->
             assertEquals(expected, layout.entities.single { it.area == expected.area })
         }
@@ -100,7 +116,7 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(44, -3) to INPUT,
             Coordinate(45, -3) to OUTPUT,
         ) { (tile, io) ->
-            assertEquals(end(tile, water, EAST, io), plumbingAt(tile))
+            assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile))
         }
 
     @Test
@@ -111,8 +127,8 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(46, -2) to Coordinate(46, -1),
         ) { (top, port) ->
             assertAll(
-                { assertEquals(end(top, water, SOUTH, INPUT), plumbingAt(top)) },
-                { assertEquals(end(port, water, SOUTH, OUTPUT), plumbingAt(port)) },
+                { assertEquals(end(top, petroleum, SOUTH, INPUT), plumbingAt(top)) },
+                { assertEquals(end(port, petroleum, SOUTH, OUTPUT), plumbingAt(port)) },
             )
         }
 
@@ -134,7 +150,7 @@ class BlueprintFluidCharacterizationTest {
                     fluidMarker,
                 )
             },
-            { assertEquals(water, fluidMarker.signal.material) },
+            { assertEquals(petroleum, fluidMarker.signal.material) },
         )
     }
 
@@ -144,7 +160,7 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(37, -3) to INPUT,
             Coordinate(39, -3) to OUTPUT,
         ) { (tile, io) ->
-            assertEquals(end(tile, water, EAST, io), plumbingAt(tile))
+            assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile))
         }
 
     @Test
@@ -162,7 +178,7 @@ class BlueprintFluidCharacterizationTest {
                     pipes,
                 )
             },
-            { assertEquals(setOf(water), plumbing.map { it.material }.toSet()) },
+            { assertEquals(setOf(petroleum), plumbing.map { it.material }.toSet()) },
         )
     }
 
@@ -177,8 +193,9 @@ class BlueprintFluidCharacterizationTest {
     @Test
     fun theFluidRowDrawingIsStable() {
         // The board starts at x = 37, so the ruler prints "4" at x = 40 and "5" at x = 50. Codes:
-        // 1 = the chemical plant, a = gear on the output belt, o = a pipe-to-ground end,
-        // - = a plain pipe, C = a constant combinator, ^ = a product inserter, + = a pole.
+        // 1 = the chemical plant, a = petroleum on the input lane, b = solid fuel on the output
+        // belt, o = a pipe-to-ground end, - = a plain pipe, C = a constant combinator,
+        // ^ = a product inserter, + = a pole.
         val expected =
             """
             layout 14x8
@@ -190,14 +207,14 @@ class BlueprintFluidCharacterizationTest {
             1    111111111
             2    111111111
             3     ^ +^  ^
-            4    aaaaaaa(C)
+            4    bbbbbbb(C)
 
             legend
-              1 = chemical-plant: water-boil
-              a = iron-gear-wheel
-              b = water
-              C = constant-combinator: iron-gear-wheel
-              C = constant-combinator: water
+              1 = chemical-plant: solid-fuel-from-petroleum-gas
+              a = petroleum-gas
+              b = solid-fuel
+              C = constant-combinator: petroleum-gas
+              C = constant-combinator: solid-fuel
             """
                 .trimIndent()
         assertEquals(normalized(expected), normalized(layoutAscii(layout.dump)))
@@ -232,7 +249,7 @@ class BlueprintFluidCharacterizationTest {
                 { assertEquals(listOf(machine), layout.machineEntities.map { it.area.topLeft }) },
                 {
                     assertEquals(
-                        mapOf(port to water),
+                        mapOf(port to petroleum),
                         layout.inputPipes,
                         "$factory is not fed from above",
                     )

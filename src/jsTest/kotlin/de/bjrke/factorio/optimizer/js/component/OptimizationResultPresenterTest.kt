@@ -2,16 +2,16 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.lightOil
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.fixtures.water
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
-import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
-import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
 import de.bjrke.test.assertAll
 import de.bjrke.test.screen
@@ -26,7 +26,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun recipeWithoutIngredientsRendersTheFactoryOutputAndLogisticsInputs() {
-        val result = optimizationResult(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
 
         val rendered = renderResult(result)
 
@@ -36,7 +36,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun recipeWithIngredientsRendersIngredientAndOutputInputs() {
-        val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
 
         val rendered = renderResult(result)
 
@@ -46,7 +46,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun solidIngredientAndOutputShowBeltAndInserterCounts() {
-        val result = optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
 
         renderResult(result)
 
@@ -58,7 +58,9 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
     @Test
     fun eachMaterialIsGroupedInABorderedBox() {
         val rendered =
-            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+            renderResult(
+                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            )
 
         val groups = materialGroups(rendered.container)
         // one box for the ingredient and one for the output
@@ -75,7 +77,9 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
     @Test
     fun themedFactoryBlocksAndGroupBoxesKeepTheirBackgroundAndBorder() {
         val rendered =
-            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+            renderResult(
+                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            )
 
         val block = rendered.container.querySelector(":scope > div")!!
         val group = materialGroups(rendered.container).item(0)!!
@@ -90,7 +94,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun theFactoryAndRecipeAreBoxedTogetherInTheRow() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         // the factory icon hangs in an <a> inside the factory group box
         val box =
@@ -108,7 +112,9 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
     @Test
     fun ingredientsComeBeforeTheFactoryAndOutputsAfterIt() {
         val rendered =
-            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+            renderResult(
+                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            )
 
         val titles = imageTitles(rendered.container)
         val ingredient = titles.indexOf(ironPlate.name)
@@ -132,25 +138,19 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
     @Test
     fun theMaterialPickerIsReplacedByMiddleClicks() {
         val rendered =
-            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+            renderResult(
+                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            )
 
         assertEquals(0, rendered.container.querySelectorAll("button").length)
     }
 
     @Test
     fun fluidIngredientsShowAPumpAndAPipeMarker() {
-        val fluidRecipe =
-            Recipe(
-                name = "sulfuric-acid",
-                ingredients = mapOf(water to 10.0),
-                result = mapOf(gear to 1.0),
-                time = 1.0,
-                categories = setOf(Category.CHEMISTRY),
-            )
-        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(water)))
+        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(lightOil)))
 
         renderResult(
-            optimizationResult(fluidRecipe, gear, Factory.CHEMICAL_PLANT),
+            optimizationResult(solidFuelFromLightOilRecipe, solidFuel, Factory.CHEMICAL_PLANT),
             calculator,
         )
 

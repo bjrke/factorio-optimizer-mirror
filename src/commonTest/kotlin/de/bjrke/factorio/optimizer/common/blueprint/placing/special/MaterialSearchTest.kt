@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.special
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.test.assertTableOf
@@ -42,7 +43,7 @@ class MaterialSearchTest {
     @Test
     fun matchesPrefixAcrossWords() {
         assertEquals(
-            listOf(copperOre, Material("copper-plate")),
+            listOf(copperOre, copperPlate),
             searchMaterials(materials, "copp"),
         )
     }

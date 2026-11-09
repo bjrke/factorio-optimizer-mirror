@@ -10,8 +10,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -105,7 +105,6 @@ class LayoutPlacementTest {
     @Test
     fun aPipeOnlyMergesWithAForeignEndOnItsMouthSide() {
         val board = newBoard()
-        val oil = Material("heavy-oil")
         // a water shaft end whose mouth faces south into a machine
         board.placeEnd(water, Coordinate(4, 0), Direction.SOUTH, Io.OUTPUT)
         // a plain water pipe joins on every side
@@ -113,11 +112,11 @@ class LayoutPlacementTest {
 
         assertAll(
             // beside the closed side the heavy oil may stand
-            { assertTrue(board.canPlacePipes(Coordinate(3, 0), oil)) },
+            { assertTrue(board.canPlacePipes(Coordinate(3, 0), heavyOil)) },
             // on the mouth side it would join the water network
-            { assertFalse(board.canPlacePipes(Coordinate(4, 1), oil)) },
+            { assertFalse(board.canPlacePipes(Coordinate(4, 1), heavyOil)) },
             // a plain pipe has no closed side
-            { assertFalse(board.canPlacePipes(Coordinate(7, 0), oil)) },
+            { assertFalse(board.canPlacePipes(Coordinate(7, 0), heavyOil)) },
         )
     }
 

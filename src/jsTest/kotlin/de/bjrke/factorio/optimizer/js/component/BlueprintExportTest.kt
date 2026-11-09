@@ -13,10 +13,9 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
@@ -34,15 +33,6 @@ import web.dom.Element
 import web.html.HTMLButtonElement
 import web.html.HTMLTextAreaElement
 
-private val craft =
-    Recipe(
-        "iron-gear-wheel",
-        mapOf(ironPlate to 2.0),
-        mapOf(gear to 1.0),
-        1.0,
-        setOf(Category.CRAFTING),
-    )
-
 private val plan =
     BlueprintPlan(
         target = gear,
@@ -52,7 +42,7 @@ private val plan =
                     listOf(
                         FactoryProduction(
                             gear,
-                            craft,
+                            ironGearWheelRecipe,
                             Factory.ASSEMBLING_MACHINE_3,
                             1.0,
                             0,

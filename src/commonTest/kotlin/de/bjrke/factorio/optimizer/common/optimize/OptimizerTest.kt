@@ -1,12 +1,26 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.calciteMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.castingSteelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
+import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.factoryOf
-import de.bjrke.factorio.optimizer.common.fixtures.ice
+import de.bjrke.factorio.optimizer.common.fixtures.iceMeltingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
-import de.bjrke.factorio.optimizer.common.fixtures.testRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMeltingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.lavaPumpingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.moltenIron
+import de.bjrke.factorio.optimizer.common.fixtures.moltenIronFromLavaRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.pipeRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCell
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCellRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.water
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.test.TOLERANCE
@@ -17,16 +31,9 @@ import kotlin.test.assertTrue
 
 class OptimizerTest {
 
-    private val miningIron =
-        testRecipe("iron-ore", Category.MINING_BASIC_SOLID, mapOf(ironOre to 1.0))
-    private val pumpWater = testRecipe("water", Category.OFFSHORE_PUMPING, mapOf(water to 1.0))
-    private val meltIce =
-        testRecipe(
-            "ice-melting",
-            Category.CHEMISTRY,
-            mapOf(water to 20.0),
-            ingredients = mapOf(ice to 1.0),
-        )
+    private val miningIron = ironOreMiningRecipe
+    private val pumpWater = waterPumpingRecipe
+    private val meltIce = iceMeltingRecipe
 
     @Test
     fun miningDrillIsUsedForResource() =
@@ -82,35 +89,8 @@ class OptimizerTest {
             ),
         )
 
-    private val moltenIron = Material("molten-iron")
-    private val steelPlate = Material("steel-plate")
-    private val lava = Material("lava")
-    private val calcite = Material("calcite")
-
-    private val pumpLava = testRecipe("lava", Category.OFFSHORE_PUMPING, mapOf(lava to 1.0))
-    private val mineCalcite =
-        testRecipe("calcite", Category.MINING_BASIC_SOLID, mapOf(calcite to 1.0))
-    private val fromLava =
-        testRecipe(
-            "molten-iron-from-lava",
-            Category.METALLURGY,
-            mapOf(moltenIron to 1.0),
-            ingredients = mapOf(lava to 500.0, calcite to 1.0),
-        )
-    private val fromOre =
-        testRecipe(
-            "iron-ore-melting",
-            Category.METALLURGY,
-            mapOf(moltenIron to 1.0),
-            ingredients = mapOf(ironOre to 50.0, calcite to 1.0),
-        )
-    private val castingSteel =
-        testRecipe(
-            "casting-steel",
-            Category.METALLURGY,
-            mapOf(steelPlate to 1.0),
-            ingredients = mapOf(moltenIron to 100.0),
-        )
+    private val pumpLava = lavaPumpingRecipe
+    private val mineCalcite = calciteMiningRecipe
 
     private val vulcanusFactories =
         setOf(
@@ -127,7 +107,15 @@ class OptimizerTest {
         // lava & calcite are extractable, so the lava recipe should win
         val result =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(fromOre, fromLava, pumpLava, mineCalcite)),
+                ParsedRecipe(
+                    emptyList(),
+                    listOf(
+                        ironOreMeltingRecipe,
+                        moltenIronFromLavaRecipe,
+                        pumpLava,
+                        mineCalcite,
+                    ),
+                ),
                 vulcanusFactories,
             )[moltenIron]
 
@@ -140,7 +128,13 @@ class OptimizerTest {
             Optimizer(
                 ParsedRecipe(
                     emptyList(),
-                    listOf(castingSteel, fromOre, fromLava, pumpLava, mineCalcite),
+                    listOf(
+                        castingSteelRecipe,
+                        ironOreMeltingRecipe,
+                        moltenIronFromLavaRecipe,
+                        pumpLava,
+                        mineCalcite,
+                    ),
                 ),
                 vulcanusFactories,
             )[steelPlate]
@@ -161,7 +155,10 @@ class OptimizerTest {
         // on Nauvis-like surface: iron-ore is mined, lava is not available (free source)
         val result =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(fromOre, fromLava, mineCalcite, miningIron)),
+                ParsedRecipe(
+                    emptyList(),
+                    listOf(ironOreMeltingRecipe, moltenIronFromLavaRecipe, mineCalcite, miningIron),
+                ),
                 vulcanusFactories,
             )[moltenIron]
 
@@ -170,72 +167,43 @@ class OptimizerTest {
 
     @Test
     fun byproductRecipeRunsOnceForAllItsOutputs() {
-        val a = Material("synthetic-a")
-        val b = Material("synthetic-b")
-        val product = Material("synthetic-product")
-        val byproduct = testRecipe("byproduct", Category.CRAFTING, mapOf(a to 2.0, b to 1.0))
-        val consumer =
-            testRecipe(
-                "consumer",
-                Category.CRAFTING,
-                mapOf(product to 1.0),
-                ingredients = mapOf(a to 2.0, b to 1.0),
-            )
         val optimizer =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(byproduct, consumer)),
-                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY, Factory.SCIENCE_LAB),
+                ParsedRecipe(emptyList(), listOf(uraniumProcessingRecipe, uraniumFuelCellRecipe)),
+                setOf(
+                    Factory.CENTRIFUGE,
+                    Factory.ASSEMBLING_MACHINE_3,
+                    Factory.NO_FACTORY,
+                    Factory.SCIENCE_LAB,
+                ),
             )
 
-        val result = optimizer[product]
+        val result = optimizer[uraniumFuelCell]
 
-        val byproducts = result.factories.values.filter { it.recipe.name == "byproduct" }
+        val processing = result.factories.values.single { it.recipe.name == "uranium-processing" }
         assertAll(
-            { assertEquals(1, byproducts.size) },
-            // one machine covers both outputs: max, not sum
-            { assertEquals(0.8, byproducts.single().amount, TOLERANCE) },
+            // 1 fuel cell/s needs 0.1 U-235/s, and one centrifuge yields 0.007/12 U-235/s, so the
+            // U-235 demand alone sets the count. The same run also yields the U-238, so the
+            // machines are not summed per output.
+            { assertEquals(0.1 * 12.0 / 0.007, processing.amount, TOLERANCE) },
         )
     }
 
     @Test
     fun sharedIntermediateMachinesAreSummed() {
-        val ore = Material("synthetic-ore")
-        val plate = Material("synthetic-plate")
-        val x = Material("synthetic-x")
-        val y = Material("synthetic-y")
-        val product = Material("synthetic-shared-product")
-        val mine = testRecipe("mine", Category.MINING_BASIC_SOLID, mapOf(ore to 1.0))
-        val smelt =
-            testRecipe(
-                "smelt",
-                Category.SMELTING,
-                mapOf(plate to 1.0),
-                ingredients = mapOf(ore to 2.0),
-            )
-        val makeX =
-            testRecipe(
-                "make-x",
-                Category.CRAFTING,
-                mapOf(x to 1.0),
-                ingredients = mapOf(plate to 2.0),
-            )
-        val makeY =
-            testRecipe(
-                "make-y",
-                Category.CRAFTING,
-                mapOf(y to 1.0),
-                ingredients = mapOf(plate to 3.0),
-            )
-        val assemble =
-            testRecipe(
-                "assemble",
-                Category.CRAFTING,
-                mapOf(product to 1.0),
-                ingredients = mapOf(x to 1.0, y to 1.0),
-            )
+        val mine = ironOreMiningRecipe
         val optimizer =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(mine, smelt, makeX, makeY, assemble)),
+                ParsedRecipe(
+                    emptyList(),
+                    listOf(
+                        mine,
+                        ironPlateSmeltingRecipe,
+                        ironGearWheelRecipe,
+                        pipeRecipe,
+                        engineUnitRecipe,
+                    ),
+                ),
                 setOf(
                     Factory.ASSEMBLING_MACHINE_3,
                     Factory.ELECTRIC_FURNACE,
@@ -245,10 +213,10 @@ class OptimizerTest {
                 ),
             )
 
-        val result = optimizer[product]
+        val result = optimizer[engineUnit]
 
-        val smelting = result.factories.values.single { it.recipe.name == "smelt" }
-        // demand(plate) = 2 * make-x + 3 * make-y, not the max of the two consumers
-        assertEquals(2.5, smelting.amount, TOLERANCE)
+        val smelting = result.factories.values.single { it.recipe.name == "iron-plate" }
+        // gear (2 plates) and pipe (1 plate each, 2 per engine) consume 4 plates/s in total
+        assertEquals(6.4, smelting.amount, TOLERANCE)
     }
 }

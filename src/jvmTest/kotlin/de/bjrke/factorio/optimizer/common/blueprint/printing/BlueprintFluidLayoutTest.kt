@@ -18,7 +18,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.plumbingComponents
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
@@ -27,13 +26,26 @@ import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.north
 import de.bjrke.factorio.optimizer.common.core.model.south
 import de.bjrke.factorio.optimizer.common.core.model.west
-import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
-import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.steam
+import de.bjrke.factorio.optimizer.common.fixtures.steamCondensationRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.sulfur
+import de.bjrke.factorio.optimizer.common.fixtures.sulfurRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
+import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcidRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -48,21 +60,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun fluidImportMarkersHideTheirPipeUnderTheLabel() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(fluidPlan)
         val marker = layout.entities.filterIsInstance<MarkerEntity>().single { it.signal.fluid }
@@ -86,21 +100,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun fluidImportMarkerEntranceFacesAwayFromTheLabel() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
         // the pipe-to-ground carries no input/output type, so its direction is the side the
         // surface pipe attaches on: the entrance faces west (away from the label), the exit east
@@ -121,18 +137,28 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun anElectromagneticPlantIsFedOnItsTopPort() {
-        val wire =
-            recipe("electro", Category.ELECTROMAGNETICS, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = processingUnit,
                 rows =
                     listOf(
-                        PlannedRow.copies(planned(wire, gear, Factory.ELECTROMAGNETIC_PLANT), 1),
+                        PlannedRow.copies(
+                            planned(
+                                processingUnitRecipe,
+                                processingUnit,
+                                Factory.ELECTROMAGNETIC_PLANT,
+                            ),
+                            1,
+                        ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources =
+                    listOf(
+                        PlannedSource(electronicCircuit, 1.0, fluid = false),
+                        PlannedSource(advancedCircuit, 1.0, fluid = false),
+                        PlannedSource(sulfuricAcid, 1.0, fluid = true),
+                    ),
                 scale = 1.0,
-                label = "electro",
+                label = "processing-unit",
             )
         val layout = Layout(fluidPlan)
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()
@@ -154,29 +180,27 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun theFluidMarkerJoinsTheColumnOfTheSolidImportMarker() {
-        val wet =
-            recipe(
-                "wet-gear",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 1.0, water to 1.0),
-            )
         val plan =
             BlueprintPlan(
-                target = gear,
+                target = plasticBar,
                 rows =
-                    listOf(PlannedRow.copies(planned(wet, gear, Factory.ASSEMBLING_MACHINE_3), 1)),
+                    listOf(
+                        PlannedRow.copies(
+                            planned(plasticBarRecipe, plasticBar, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(water, 1.0, fluid = true),
+                        PlannedSource(coal, 1.0, fluid = false),
+                        PlannedSource(petroleum, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "wet-gear",
+                label = "plastic-bar",
             )
         val layout = Layout(plan)
         val markers = layout.entities.filterIsInstance<MarkerEntity>()
-        val solidImport = markers.single { it.signal.material == ironPlate }
+        val solidImport = markers.single { it.signal.material == coal }
         val fluidMarker = markers.single { it.signal.fluid }
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()
         val laneRow = fluidMarker.area.topLeft.y
@@ -203,25 +227,30 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun theCheatFluidSourceIsASingleInfinityPipe() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
         val cheatLogistics =
             LogisticsCalculator(
-                testLogistics.copy(fluids = setOf(water), fluidTemperatures = mapOf(water to 15)),
+                testLogistics.copy(
+                    fluids = setOf(petroleum),
+                    fluidTemperatures = mapOf(petroleum to 15),
+                ),
             )
         val entities =
             Layout(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
@@ -236,28 +265,33 @@ class BlueprintFluidLayoutTest {
             },
             {
                 val pipe = entities.single { it.name == "infinity-pipe" }
-                assertEquals(InfinityPipeSettings(water, temperature = 15), pipe.infinityPipe)
+                assertEquals(
+                    InfinityPipeSettings(petroleum, temperature = 15),
+                    pipe.infinityPipe,
+                )
             },
         )
     }
 
     @Test
     fun aFluidSourceBecomesAPipeLane() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
 
         val names = Layout(fluidPlan).blueprint.entities.map { it.name }
@@ -266,29 +300,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun aFluidTargetGetsAPipeOutputInsteadOfABelt() {
-        val lubricantRecipe =
-            recipe(
-                "lubricant",
-                Category.CHEMISTRY,
-                mapOf(lubricant to 1.0),
-                mapOf(water to 1.0),
-            )
         val fluidPlan =
             BlueprintPlan(
-                target = lubricant,
+                target = water,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(lubricantRecipe, lubricant, Factory.CHEMICAL_PLANT),
+                            planned(steamCondensationRecipe, water, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(steam, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "lubricant",
+                label = "steam-condensation",
             )
 
-        val names = Layout(fluidPlan).blueprint.entities.map { it.name }
+        val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(steam, water)))
+        val names = Layout(fluidPlan, fluids).blueprint.entities.map { it.name }
         assertAll(
             { assertContains(names, "pipe") },
             { assertContainsNot(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
@@ -297,66 +325,59 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun theCheatFluidOutputIsAnUnfilteredInfinityPipe() {
-        val lubricantRecipe =
-            recipe(
-                "lubricant",
-                Category.CHEMISTRY,
-                mapOf(lubricant to 1.0),
-                mapOf(water to 1.0),
-            )
         val fluidPlan =
             BlueprintPlan(
-                target = lubricant,
+                target = water,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(lubricantRecipe, lubricant, Factory.CHEMICAL_PLANT),
+                            planned(steamCondensationRecipe, water, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(steam, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "lubricant",
+                label = "steam-condensation",
             )
+        val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(steam, water)))
         val pipes =
-            Layout(fluidPlan, beltEnd = BeltEnd.INFINITY_CHEST)
+            Layout(fluidPlan, fluids, beltEnd = BeltEnd.INFINITY_CHEST)
                 .entities
                 .filterIsInstance<InfinityPipeEntity>()
 
         assertAll(
-            // the water import is a filtered source, the lubricant output an unfiltered sink
+            // the steam import is a filtered source, the water output an unfiltered sink
             { assertEquals(2, pipes.size) },
-            { assertEquals(setOf(water), pipes.mapNotNull { it.settings?.fluid }.toSet()) },
-            { assertEquals(lubricant, pipes.single { it.settings == null }.material) },
+            { assertEquals(setOf(steam), pipes.mapNotNull { it.settings?.fluid }.toSet()) },
+            { assertEquals(water, pipes.single { it.settings == null }.material) },
         )
     }
 
     @Test
     fun aSinkMarkerStaysUnfilteredWhenTheTrimmerMovesIt() {
-        val drain =
-            recipe(
-                "drain",
-                Category.CHEMISTRY,
-                mapOf(lubricant to 1.0),
-                mapOf(ironPlate to 1.0, water to 1.0),
-            )
         val plan =
             BlueprintPlan(
-                target = lubricant,
+                target = sulfuricAcid,
                 rows =
-                    listOf(PlannedRow.copies(planned(drain, lubricant, Factory.CHEMICAL_PLANT), 1)),
+                    listOf(
+                        PlannedRow.copies(
+                            planned(sulfuricAcidRecipe, sulfuricAcid, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
+                        PlannedSource(sulfur, 1.0, fluid = false),
                         PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(water, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "drain",
+                label = "sulfuric-acid",
             )
         val layout = Layout(plan, beltEnd = BeltEnd.INFINITY_CHEST)
         val sink =
             layout.entities.filterIsInstance<InfinityPipeEntity>().single {
-                it.material == lubricant
+                it.material == sulfuricAcid
             }
         val solidImport =
             layout.entities.filterIsInstance<InfinityChestEntity>().single {
@@ -375,24 +396,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun differentFluidLanesDoNotTouch() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
-                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
+                target = sulfur,
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
+                        PlannedSource(petroleum, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "coolant",
+                label = "sulfur",
             )
 
         val layout = Layout(fluidPlan)
@@ -401,7 +421,7 @@ class BlueprintFluidLayoutTest {
 
         // each connected pipe network must carry exactly one fluid, so two fluids never merge
         assertAll(
-            { assertEquals(setOf(water, lubricant), layout.plumbing.values.toSet()) },
+            { assertEquals(setOf(water, petroleum), layout.plumbing.values.toSet()) },
             {
                 assertTrue(
                     components.all { component ->
@@ -415,24 +435,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun aSecondFluidOnTheNorthEdgeGetsItsOwnLaneBesideTheFirst() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
-                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
+                target = sulfur,
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
+                        PlannedSource(petroleum, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "coolant",
+                label = "sulfur",
             )
         val layout = Layout(fluidPlan)
         val machines = layout.entities.filterIsInstance<MachineEntity>()
@@ -441,9 +460,9 @@ class BlueprintFluidLayoutTest {
         val fluidMarkers =
             layout.entities.filterIsInstance<MarkerEntity>().filter { it.signal.fluid }
         val waterMarker = fluidMarkers.single { it.signal.material == water }
-        val secondMarker = fluidMarkers.single { it.signal.material == lubricant }
+        val secondMarker = fluidMarkers.single { it.signal.material == petroleum }
         val secondPipes =
-            layout.entities.filterIsInstance<Plumbing>().filter { it.material == lubricant }
+            layout.entities.filterIsInstance<Plumbing>().filter { it.material == petroleum }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -476,21 +495,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun aFluidLaneConnectsToItsMachine() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
         val entities = Layout(fluidPlan).blueprint.entities
         val machineTiles =
@@ -512,24 +533,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun fluidRunsUseUndergroundPipes() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
-                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
+                target = sulfur,
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
+                        PlannedSource(petroleum, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "coolant",
+                label = "sulfur",
             )
         val entities = Layout(fluidPlan).blueprint.entities
         val grounds = entities.count { it.name == "pipe-to-ground" }
@@ -544,24 +564,23 @@ class BlueprintFluidLayoutTest {
 
     @Test
     fun pipeRunsAreStretched() {
-        val coolant =
-            recipe(
-                "coolant",
-                Category.CHEMISTRY,
-                mapOf(gear to 1.0),
-                mapOf(water to 1.0, lubricant to 1.0),
-            )
         val fluidPlan =
             BlueprintPlan(
-                target = gear,
-                rows = listOf(PlannedRow.copies(planned(coolant, gear, Factory.CHEMICAL_PLANT), 1)),
+                target = sulfur,
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(sulfurRecipe, sulfur, Factory.CHEMICAL_PLANT),
+                            1,
+                        ),
+                    ),
                 sources =
                     listOf(
                         PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(lubricant, 1.0, fluid = true),
+                        PlannedSource(petroleum, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "coolant",
+                label = "sulfur",
             )
         assertUndergroundRunsAreStretched(Layout(fluidPlan).entities)
     }

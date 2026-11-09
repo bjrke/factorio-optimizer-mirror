@@ -2,18 +2,18 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.lightOil
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
-import de.bjrke.factorio.optimizer.js.component.fixtures.craftingRecipe
-import de.bjrke.factorio.optimizer.js.component.fixtures.miningRecipe
 import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.js.component.fixtures.twoProductions
 import de.bjrke.test.assertAll
@@ -27,7 +27,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
 
     @Test
     fun ingredientAndOutputBeltsAreRotatedOppositely() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         val belts = screen.getAllByTitle(BeltTier.FAST_TRANSPORT_BELT.identifier)
 
@@ -39,7 +39,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
 
     @Test
     fun onlyTheOutputInserterIsMirroredHorizontally() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         val inserters = screen.getAllByTitle(InserterTier.FAST_INSERTER.identifier)
 
@@ -51,7 +51,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
 
     @Test
     fun beltAndInserterIconsAreAsLargeAsTheMaterialIcons() {
-        renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
 
         val materialSize = computedStyle(screen.getByTitle(ironPlate.name), "width")
 
@@ -80,7 +80,9 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
     @Test
     fun everyNumberInputHasTheSameWidth() {
         val rendered =
-            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+            renderResult(
+                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            )
 
         val inputs = rendered.container.querySelectorAll("input[type=number]")
         val widths = (0 until inputs.length).map { computedStyle(inputs.item(it)!!, "width") }
@@ -93,7 +95,9 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
     @Test
     fun materialRowsDoNotOverflowTheirColumn() {
         val rendered =
-            renderResult(optimizationResult(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+            renderResult(
+                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            )
 
         val columns = rendered.container.querySelectorAll(":scope > div > div")
         assertTrue(columns.length >= 2)
@@ -111,8 +115,8 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
         val rendered =
             renderResult(
                 twoProductions(
-                    Triple(miningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
-                    Triple(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                    Triple(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
+                    Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
                 ),
             )
 
@@ -123,21 +127,13 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
 
     @Test
     fun solidAndFluidRowsHaveTheSameWidth() {
-        val fluidRecipe =
-            Recipe(
-                name = "heavy-oil",
-                ingredients = mapOf(water to 10.0),
-                result = mapOf(gear to 1.0),
-                time = 1.0,
-                categories = setOf(Category.CHEMISTRY),
-            )
-        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(water)))
+        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(lightOil)))
 
         val rendered =
             renderResult(
                 twoProductions(
-                    Triple(craftingRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
-                    Triple(fluidRecipe, gear, Factory.CHEMICAL_PLANT),
+                    Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                    Triple(solidFuelFromLightOilRecipe, solidFuel, Factory.CHEMICAL_PLANT),
                 ),
                 calculator,
             )

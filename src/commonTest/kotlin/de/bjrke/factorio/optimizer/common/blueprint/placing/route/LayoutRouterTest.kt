@@ -9,14 +9,12 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class LayoutRouterTest {
-
-    private val material = Material("route")
-    private val foreign = Material("foreign")
 
     /**
      * The belt beside the goal faces the goal, not the direction it arrived from. A foreign belt
@@ -32,7 +30,7 @@ class LayoutRouterTest {
                 fluidPredicate = { false },
                 temperatureOf = { 0 },
             )
-        board.placeBelt(Coordinate(3, 3), foreign, EAST)
+        board.placeBelt(Coordinate(3, 3), copperPlate, EAST)
         val sink = Sink(Coordinate(1, 2), Coordinate(2, 2), WEST)
 
         val route =
@@ -41,7 +39,7 @@ class LayoutRouterTest {
                     Coordinate(3, 0),
                     SOUTH,
                     sink.feed,
-                    BeltRouteRules(board).allowed(material, sink),
+                    BeltRouteRules(board).allowed(ironPlate, sink),
                 )
 
         assertEquals(

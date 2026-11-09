@@ -1,7 +1,14 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.biterEgg
+import de.bjrke.factorio.optimizer.common.fixtures.carbonicAsteroidChunk
+import de.bjrke.factorio.optimizer.common.fixtures.metallicAsteroidChunk
+import de.bjrke.factorio.optimizer.common.fixtures.oxideAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.production
+import de.bjrke.factorio.optimizer.common.fixtures.promethiumAsteroidChunk
+import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessor
+import de.bjrke.factorio.optimizer.common.fixtures.solarPanel
+import de.bjrke.factorio.optimizer.common.fixtures.spaceScience
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
@@ -15,10 +22,10 @@ class OptimizerSpaceTest {
 
     private val asteroidChunks =
         listOf(
-            "metallic-asteroid-chunk",
-            "carbonic-asteroid-chunk",
-            "oxide-asteroid-chunk",
-            "promethium-asteroid-chunk",
+            metallicAsteroidChunk,
+            carbonicAsteroidChunk,
+            oxideAsteroidChunk,
+            promethiumAsteroidChunk,
         )
 
     @Test
@@ -29,11 +36,10 @@ class OptimizerSpaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val space = Material("space-science-pack")
         // space science is a plain crafting recipe, so it uses the assembling machine
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
-            optimizer[space].production(space).factory,
+            optimizer[spaceScience].production(spaceScience).factory,
         )
     }
 
@@ -47,10 +53,9 @@ class OptimizerSpaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val quantum = Material("quantum-processor")
         assertEquals(
             Factory.ELECTROMAGNETIC_PLANT,
-            optimizer[quantum].production(quantum).factory,
+            optimizer[quantumProcessor].production(quantumProcessor).factory,
         )
     }
 
@@ -60,8 +65,7 @@ class OptimizerSpaceTest {
         // promethium science must be imported on space platforms
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.SPACE))
 
-        val eggs = Material("biter-egg")
-        assertEquals(Factory.NO_FACTORY, optimizer[eggs].production(eggs).factory)
+        assertEquals(Factory.NO_FACTORY, optimizer[biterEgg].production(biterEgg).factory)
     }
 
     @Test
@@ -73,11 +77,9 @@ class OptimizerSpaceTest {
             )
 
         assertTable(asteroidChunks) { chunk ->
-            val material = Material(chunk)
             assertEquals(
                 Factory.ASTEROID_COLLECTOR,
-                optimizer[material].production(material).factory,
-                chunk,
+                optimizer[chunk].production(chunk).factory,
             )
         }
     }
@@ -91,11 +93,9 @@ class OptimizerSpaceTest {
             )
 
         assertTable(asteroidChunks) { chunk ->
-            val material = Material(chunk)
             assertEquals(
                 "asteroid-collection",
-                optimizer[material].production(material).recipe.name,
-                chunk,
+                optimizer[chunk].production(chunk).recipe.name,
             )
         }
     }
@@ -110,7 +110,7 @@ class OptimizerSpaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val result = optimizer[Material("space-science-pack")]
+        val result = optimizer[spaceScience]
 
         assertEquals(1, result.factories.values.count { it.recipe.name == "asteroid-collection" })
     }
@@ -125,11 +125,9 @@ class OptimizerSpaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val result = optimizer[Material("solar-panel")]
-
         assertEquals(
             1,
-            result.factories.values.count {
+            optimizer[solarPanel].factories.values.count {
                 it.recipe.name == "advanced-metallic-asteroid-crushing"
             },
         )

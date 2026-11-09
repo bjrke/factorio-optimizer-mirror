@@ -1,13 +1,25 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.concrete
+import de.bjrke.factorio.optimizer.common.fixtures.concreteRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.factoryOf
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.nutrients
+import de.bjrke.factorio.optimizer.common.fixtures.nutrientsFromBiterEggRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.oilRefinery
+import de.bjrke.factorio.optimizer.common.fixtures.oilRefineryRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.production
-import de.bjrke.factorio.optimizer.common.fixtures.testRecipe
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -16,36 +28,13 @@ import kotlin.test.assertTrue
 
 class OptimizerMachineTest {
 
-    private fun multiCategoryRecipe(
-        name: String,
-        categories: Set<Category>,
-        result: Material,
-    ) =
-        Recipe(
-            name = name,
-            ingredients = emptyMap(),
-            result = mapOf(result to 1.0),
-            time = 1.0,
-            categories = categories,
-        )
-
     @Test
     fun biochamberIsPreferredOverAssembler() {
-        val product = Material("synthetic-organic-product")
         assertEquals(
             Factory.BIOCHAMBER,
             factoryOf(
-                product,
-                listOf(
-                    multiCategoryRecipe(
-                        "organic-recipe",
-                        setOf(
-                            Category.ORGANIC,
-                            Category.CRAFTING,
-                        ),
-                        product,
-                    ),
-                ),
+                nutrients,
+                listOf(nutrientsFromBiterEggRecipe),
                 setOf(
                     Factory.BIOCHAMBER,
                     Factory.ASSEMBLING_MACHINE_3,
@@ -58,21 +47,11 @@ class OptimizerMachineTest {
 
     @Test
     fun cryogenicPlantIsPreferredOverChemicalPlant() {
-        val product = Material("synthetic-cold-product")
         assertEquals(
             Factory.CRYOGENIC_PLANT,
             factoryOf(
-                product,
-                listOf(
-                    multiCategoryRecipe(
-                        "cold-recipe",
-                        setOf(
-                            Category.CHEMISTRY,
-                            Category.CRYOGENICS,
-                        ),
-                        product,
-                    ),
-                ),
+                plasticBar,
+                listOf(plasticBarRecipe),
                 setOf(
                     Factory.CRYOGENIC_PLANT,
                     Factory.CHEMICAL_PLANT,
@@ -86,12 +65,11 @@ class OptimizerMachineTest {
     @Test
     fun electromagneticPlantIsNotUsedForCrafting() {
         // the electromagnetic plant only runs electromagnetics recipes, not plain crafting ones
-        val product = Material("synthetic-circuit")
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
             factoryOf(
-                product,
-                listOf(testRecipe("circuit", Category.CRAFTING, mapOf(product to 1.0))),
+                gear,
+                listOf(ironGearWheelRecipe),
                 setOf(
                     Factory.ELECTROMAGNETIC_PLANT,
                     Factory.ASSEMBLING_MACHINE_3,
@@ -104,13 +82,13 @@ class OptimizerMachineTest {
 
     @Test
     fun cryogenicPlantIsNotUsedForChemistry() {
-        // the cryogenic plant only runs cryogenics recipes, not plain chemistry ones (e.g. plastic)
-        val product = Material("synthetic-plastic")
+        // the cryogenic plant only runs cryogenics recipes, not plain chemistry ones (e.g. solid
+        // fuel from light oil)
         assertEquals(
             Factory.CHEMICAL_PLANT,
             factoryOf(
-                product,
-                listOf(testRecipe("plastic", Category.CHEMISTRY, mapOf(product to 1.0))),
+                solidFuel,
+                listOf(solidFuelFromLightOilRecipe),
                 setOf(
                     Factory.CRYOGENIC_PLANT,
                     Factory.CHEMICAL_PLANT,
@@ -126,20 +104,11 @@ class OptimizerMachineTest {
         // AM1 lacks the crafting-with-fluid category, so a fluid recipe cannot run on it and its
         // product is imported instead. Fluid handling is AM1's only restriction; ingredient slots
         // are unlimited on every assembling machine since Factorio 0.17.
-        val concrete = Material("synthetic-concrete")
-        val water = Material("synthetic-water")
-        val fluidRecipe =
-            testRecipe(
-                "concrete",
-                Category.CRAFTING_WITH_FLUID,
-                mapOf(concrete to 1.0),
-                ingredients = mapOf(water to 5.0),
-            )
-        val pumpWater = testRecipe("water", Category.OFFSHORE_PUMPING, mapOf(water to 1.0))
+        val pumpWater = waterPumpingRecipe
 
         val result =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(fluidRecipe, pumpWater)),
+                ParsedRecipe(emptyList(), listOf(concreteRecipe, pumpWater)),
                 setOf(
                     Factory.ASSEMBLING_MACHINE_1,
                     Factory.OFFSHORE_PUMP,
@@ -161,23 +130,13 @@ class OptimizerMachineTest {
     @Test
     fun assemblingMachine1HasNoIngredientLimit() {
         // Regression: the pre-0.17 caps (AM1 = 2, AM2 = 4 ingredients) were removed, so all
-        // assemblers accept any number of ingredients; a six-ingredient crafting recipe runs on
+        // assemblers accept any number of ingredients; a five-ingredient crafting recipe runs on
         // AM1.
-        val product = Material("synthetic-composite")
-        val ingredients = (1..6).associate { Material("synthetic-part-$it") to 1.0 }
-        val manyIngredients =
-            testRecipe(
-                "composite",
-                Category.CRAFTING,
-                mapOf(product to 1.0),
-                ingredients = ingredients,
-            )
-
         assertEquals(
             Factory.ASSEMBLING_MACHINE_1,
             factoryOf(
-                product,
-                listOf(manyIngredients),
+                oilRefinery,
+                listOf(oilRefineryRecipe),
                 setOf(Factory.ASSEMBLING_MACHINE_1, Factory.NO_FACTORY, Factory.SCIENCE_LAB),
             ),
         )
@@ -185,19 +144,9 @@ class OptimizerMachineTest {
 
     @Test
     fun builtInProductivityBoostsOutputWithoutExtraInput() {
-        val ore = Material("synthetic-em-ore")
-        val plate = Material("synthetic-em-plate")
-        val emRecipe =
-            Recipe(
-                name = "em-recipe",
-                ingredients = mapOf(ore to 1.0),
-                result = mapOf(plate to 1.0),
-                time = 1.0,
-                categories = setOf(Category.ELECTROMAGNETICS),
-            )
         val optimizer =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(emRecipe)),
+                ParsedRecipe(emptyList(), listOf(copperCableRecipe)),
                 setOf(
                     Factory.ELECTROMAGNETIC_PLANT,
                     Factory.NO_FACTORY,
@@ -205,14 +154,14 @@ class OptimizerMachineTest {
                 ),
             )
 
-        val production = optimizer[plate].production(plate)
+        val production = optimizer[copperCable].production(copperCable)
         assertAll(
             { assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory) },
-            // one machine produces 2 * 1.5 = 3/s, so 1/s needs 1/3 of a machine
-            { assertEquals(1.0 / 3.0, production.amount, TOLERANCE) },
-            { assertEquals(1.0, production.production(plate), TOLERANCE) },
-            // the bonus does not change the input consumption
-            { assertEquals(2.0 / 3.0, production.consumption(ore), TOLERANCE) },
+            // one machine makes 2 * 1.5 outputs per 0.5 s at speed 2 = 12/s, so 1/s needs 1/12
+            { assertEquals(1.0 / 12.0, production.amount, TOLERANCE) },
+            { assertEquals(1.0, production.production(copperCable), TOLERANCE) },
+            // the bonus does not change the input consumption: 2 / 0.5 = 4 plates/s per machine
+            { assertEquals(1.0 / 3.0, production.consumption(copperPlate), TOLERANCE) },
         )
     }
 }

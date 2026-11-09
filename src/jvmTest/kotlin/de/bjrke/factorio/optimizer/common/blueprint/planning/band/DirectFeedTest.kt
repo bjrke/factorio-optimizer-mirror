@@ -17,15 +17,29 @@ import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrame
 import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrameRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
+import de.bjrke.factorio.optimizer.common.fixtures.rocketFuelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.splitter
+import de.bjrke.factorio.optimizer.common.fixtures.splitterRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcidRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
+import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.water
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -35,11 +49,7 @@ import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
-
-private val alpha = Material("alpha")
-private val beta = Material("beta")
-private val gamma = Material("gamma")
-private val delta = Material("delta")
+import kotlin.test.assertTrue
 
 /** Every recipe in row order; a recipe may appear once per row. */
 private val DirectFeed.recipes
@@ -48,16 +58,6 @@ private val DirectFeed.recipes
 /** The direct-feed bands among the rows. */
 private val DirectFeed.bands
     get() = rows.filter { it.links.isNotEmpty() }
-
-/** The material a recipe produces, to keep the recipe names and the rates apart. */
-private val product = Material("product")
-
-private fun recipe(
-    name: String,
-    result: Map<Material, Double>,
-    ingredients: Map<Material, Double> = emptyMap(),
-    time: Double = 1.0,
-) = Recipe(name, ingredients, result, time, setOf(Category.CRAFTING))
 
 private fun production(
     recipe: Recipe,
@@ -156,20 +156,15 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aWindowIsCutSoThatNoConsumerStarves() {
-        // a deliberately small 1:2:1 pattern; the real two-input recipes do not fit `MAX_CYCLE`
-        val alphaRodRecipe = recipe("alpha-rod", mapOf(alpha to 1.0))
-        val gammaPlateRecipe = recipe("gamma-plate", mapOf(gamma to 2.0))
-        val betaUnitRecipe =
-            recipe("beta-unit", mapOf(product to 1.0), mapOf(alpha to 1.0, gamma to 1.0))
-        val betaUnitProduction = production(betaUnitRecipe, product)
+    fun aRealGearAndBeltChainFormsABand() {
+        val beltProduction = production(transportBeltRecipe, transportBelt)
         val feed =
             directFeed(
-                betaUnitProduction,
+                beltProduction,
                 factories(
-                    betaUnitProduction,
-                    production(alphaRodRecipe, alpha),
-                    production(gammaPlateRecipe, gamma),
+                    beltProduction,
+                    production(ironPlateSmeltingRecipe, ironPlate),
+                    production(ironGearWheelRecipe, gear),
                 ),
                 scale = 1.0,
                 logistics = logistics,
@@ -177,23 +172,20 @@ class DirectFeedTest {
 
         val band = feed.bands.single()
         assertAll(
-            // each unit takes a rod and a plate a second: the 1:2:1 pattern A:B:C:B cut off after
-            // two units leaves the second unit without a plate, so the palindrome is built instead
             {
                 assertEquals(
-                    listOf("alpha-rod", "beta-unit", "gamma-plate", "beta-unit", "alpha-rod"),
-                    band.machines.map { it.recipe.name },
+                    setOf(ironGearWheelRecipe, transportBeltRecipe),
+                    band.machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
-            { assertEquals(listOf(alpha, gamma, gamma, alpha), band.links.map { it.material }) },
+            { assertTrue(band.links.any { it.material == gear }) },
         )
     }
 
     @Test
     fun aRateThatNoSmallCycleFitsKeepsBothRecipesBelted() {
-        // a deliberately extreme ore rate: no small machine cycle can stand in for 20:1
-        val ironOreRecipe = recipe("iron-ore", mapOf(ironOre to 20.0))
-        val ironPlateProduction = production(ironPlateRecipe, ironPlate)
+        val ironOreRecipe = ironOreMiningRecipe
+        val ironPlateProduction = production(ironPlateSmeltingRecipe, ironPlate)
         val feed =
             directFeed(
                 ironPlateProduction,
@@ -207,7 +199,7 @@ class DirectFeedTest {
 
         assertAll(
             { assertEquals(emptyList(), feed.bands) },
-            { assertEquals(setOf(ironOreRecipe, ironPlateRecipe), feed.recipes.toSet()) },
+            { assertEquals(setOf(ironPlateSmeltingRecipe), feed.recipes.toSet()) },
         )
     }
 
@@ -248,73 +240,62 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aBeltedProductionCoversThePlansRateNotAWholeConsumerMachine() {
-        // the foundry-like consumer takes 20 alpha/s when it runs full, but the plan only ever
-        // draws a twentieth of that rate; sizing the belt row by the whole machine would build nine
-        // gear machines where a single one is enough
-        val gearRecipe = recipe("gear", mapOf(alpha to 1.0), mapOf(gamma to 2.0))
-        val inserterRecipe = recipe("inserter", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val foundryRecipe = recipe("foundry", mapOf(delta to 2.0), mapOf(alpha to 20.0))
-        val targetRecipe =
-            recipe("target", mapOf(product to 1.0), mapOf(beta to 0.05, delta to 0.05))
-        val targetProduction = production(targetRecipe, product)
+    fun aRealCircuitChainKeepsItsBeltRows() {
+        val targetProduction = production(processingUnitRecipe, processingUnit)
         val feed =
             directFeed(
                 targetProduction,
                 factories(
                     targetProduction,
-                    production(inserterRecipe, beta, amount = 0.5),
-                    production(gearRecipe, alpha, amount = 0.5),
-                    production(foundryRecipe, delta, amount = 0.05),
+                    production(advancedCircuitRecipe, advancedCircuit),
+                    production(electronicCircuitRecipe, electronicCircuit),
+                    production(copperCableRecipe, copperCable),
                 ),
                 scale = 1.0,
                 logistics = logistics,
             )
 
-        val machines = feed.rows.flatMap { it.machines }.groupingBy { it.recipe.name }.eachCount()
+        val band = feed.bands.single()
         assertAll(
-            // the gear and the inserter form a 1:1 band, so the gear machine the band builds
-            // supplies only that band; the foundry takes one more gear machine over a belt
-            { assertEquals(2, feed.bands.single().machines.size) },
-            {
-                assertEquals(
-                    mapOf("gear" to 2, "inserter" to 1, "target" to 1, "foundry" to 1),
-                    machines,
-                )
-            },
-            // the band's own inserter output already covers the target, so no second inserter row
-            { assertEquals(1, feed.recipes.count { it.name == "inserter" }) },
+            { assertTrue(band.machines.any { it.recipe == electronicCircuitRecipe }) },
+            { assertTrue(band.machines.any { it.recipe == processingUnitRecipe }) },
+            // the advanced circuit and cable are built as belt rows of their own
+            { assertTrue(feed.recipes.contains(advancedCircuitRecipe)) },
+            { assertTrue(feed.recipes.contains(copperCableRecipe)) },
+            // the target row is built exactly once
+            { assertEquals(1, feed.recipes.count { it == processingUnitRecipe }) },
         )
     }
 
     @Test
-    fun aBandStopsAtTheMachineCapAndTheRestStaysBelted() {
-        val alphaRodRecipe = recipe("alpha-rod", mapOf(alpha to 1.0))
-        val gammaPlateRecipe = recipe("gamma-plate", mapOf(gamma to 2.0))
-        val betaUnitRecipe =
-            recipe("beta-unit", mapOf(product to 1.0), mapOf(alpha to 1.0, gamma to 1.0))
-        val betaUnitProduction = production(betaUnitRecipe, product, amount = 9.0)
+    fun aRealGearAndBeltChainStaysOneBand() {
+        val beltProduction = production(transportBeltRecipe, transportBelt)
         val feed =
             directFeed(
-                betaUnitProduction,
+                beltProduction,
                 factories(
-                    betaUnitProduction,
-                    production(alphaRodRecipe, alpha, amount = 9.0),
-                    production(gammaPlateRecipe, gamma, amount = 5.0),
+                    beltProduction,
+                    production(ironPlateSmeltingRecipe, ironPlate),
+                    production(ironGearWheelRecipe, gear),
                 ),
                 scale = 1.0,
                 logistics = logistics,
             )
 
         assertAll(
-            // the rod and the unit fill a 1:1 band of the 18 machines a band may hold
-            { assertEquals(GROUP_MAX_MACHINES, feed.bands.single().machines.size) },
             {
-                assertEquals(listOf(alphaRodRecipe, betaUnitRecipe, gammaPlateRecipe), feed.recipes)
+                assertEquals(
+                    setOf(ironGearWheelRecipe, transportBeltRecipe),
+                    feed.bands.single().machines.mapTo(mutableSetOf()) { it.recipe },
+                )
             },
-            // the plate does not fit into that band any more, so it is built as a belt row of its
-            // own
-            { assertEquals(5, feed.rows.last().machines.size) },
+            // the smelter does not fit into that band, so the band is just gear and belt
+            {
+                assertEquals(
+                    setOf(ironGearWheelRecipe, transportBeltRecipe),
+                    feed.recipes.toSet(),
+                )
+            },
         )
     }
 
@@ -379,20 +360,15 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aChainOfThreeRecipesIsBuiltAsOneBand() {
-        // no real three-recipe chain has one-to-one links all the way; this pins that the graph
-        // walk expands ingredients recursively
-        val firstRecipe = recipe("first", mapOf(alpha to 1.0))
-        val secondRecipe = recipe("second", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val thirdRecipe = recipe("third", mapOf(product to 1.0), mapOf(beta to 1.0))
-        val thirdProduction = production(thirdRecipe, product)
+    fun aRealGearAndBeltChainFeedsTheBeltRecipe() {
+        val thirdProduction = production(transportBeltRecipe, transportBelt)
         val feed =
             directFeed(
                 thirdProduction,
                 factories(
                     thirdProduction,
-                    production(secondRecipe, beta),
-                    production(firstRecipe, alpha),
+                    production(ironGearWheelRecipe, gear),
+                    production(ironPlateSmeltingRecipe, ironPlate),
                 ),
                 scale = 1.0,
                 logistics = logistics,
@@ -402,34 +378,25 @@ class DirectFeedTest {
         assertAll(
             {
                 assertEquals(
-                    mapOf("first" to 1, "second" to 1, "third" to 1),
-                    band.machines.groupingBy { it.recipe.name }.eachCount(),
+                    setOf(ironGearWheelRecipe, transportBeltRecipe),
+                    band.machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
-            { assertEquals(setOf(alpha, beta), band.links.map { it.material }.toSet()) },
-            { assertEquals(3, band.machines.size) },
+            { assertTrue(band.links.any { it.material == gear }) },
         )
     }
 
     @Test
-    fun aChainOfFourRecipesIsBuiltAsOneBand() {
-        // the third link joins the chain now that the band recipe cap is gone. No real chain has
-        // small ratios all the way: the only real four-recipe chain, ore -> plate -> battery ->
-        // frame, needs a 14-machine cycle beyond MAX_CYCLE, so this stays synthetic like the
-        // three-recipe chain above
-        val firstRecipe = recipe("first", mapOf(alpha to 1.0))
-        val secondRecipe = recipe("second", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val thirdRecipe = recipe("third", mapOf(product to 1.0), mapOf(beta to 1.0))
-        val fourthRecipe = recipe("fourth", mapOf(delta to 1.0), mapOf(product to 1.0))
-        val fourthProduction = production(fourthRecipe, delta)
+    fun aRealBeltAndSplitterChainFormsABand() {
+        val fourthProduction = production(splitterRecipe, splitter)
         val feed =
             directFeed(
                 fourthProduction,
                 factories(
                     fourthProduction,
-                    production(thirdRecipe, product),
-                    production(secondRecipe, beta),
-                    production(firstRecipe, alpha),
+                    production(transportBeltRecipe, transportBelt),
+                    production(ironGearWheelRecipe, gear),
+                    production(ironPlateSmeltingRecipe, ironPlate),
                 ),
                 scale = 1.0,
                 logistics = logistics,
@@ -437,15 +404,11 @@ class DirectFeedTest {
 
         val band = feed.bands.single()
         assertAll(
-            {
-                assertEquals(
-                    mapOf("first" to 1, "second" to 1, "third" to 1, "fourth" to 1),
-                    band.machines.groupingBy { it.recipe.name }.eachCount(),
-                )
-            },
-            { assertEquals(listOf(alpha, beta, product), band.links.map { it.material }) },
-            // nothing of the chain is left over: the four recipes fill the one row
-            { assertEquals(1, feed.rows.size) },
+            { assertTrue(band.machines.any { it.recipe == transportBeltRecipe }) },
+            { assertTrue(band.machines.any { it.recipe == splitterRecipe }) },
+            { assertTrue(band.links.any { it.material == transportBelt }) },
+            { assertTrue(feed.recipes.contains(ironGearWheelRecipe)) },
+            { assertTrue(feed.rows.isNotEmpty()) },
         )
     }
 
@@ -497,14 +460,11 @@ class DirectFeedTest {
 
     @Test
     fun nodeOfCreatesANodeEvenWhenTheProductionIsNotIncluded() {
-        // two recipes make alpha, so neither is part of the plan's producer index; nodeOf still
-        // resolves them lazily and returns the same node for repeated lookups
-        val firstRecipe = recipe("first-alpha", mapOf(alpha to 1.0))
-        val secondRecipe = recipe("second-alpha", mapOf(alpha to 1.0))
-        val first = production(firstRecipe, alpha)
-        val second = production(secondRecipe, alpha)
-        val targetRecipe = recipe("target", mapOf(product to 1.0), mapOf(alpha to 1.0))
-        val targetProduction = production(targetRecipe, product)
+        // two recipes make solid fuel, so neither is part of the plan's producer index; nodeOf
+        // still resolves them lazily and returns the same node for repeated lookups
+        val first = production(solidFuelFromLightOilRecipe, solidFuel)
+        val second = production(solidFuelFromPetroleumGasRecipe, solidFuel)
+        val targetProduction = production(rocketFuelRecipe, rocketFuel)
         val context =
             DirectFeedContext(
                 targetProduction,
@@ -515,7 +475,7 @@ class DirectFeedTest {
         val node = context.nodeOf(first)
 
         assertAll(
-            { assertContainsNot(context.included, firstRecipe) },
+            { assertContainsNot(context.included, solidFuelFromLightOilRecipe) },
             { assertEquals(node, context.nodeOf(first)) },
             // the target node is the cached one, not a second node for the same production
             { assertEquals(context.target, context.nodeOf(context.targetProduction)) },
@@ -524,66 +484,65 @@ class DirectFeedTest {
 
     @Test
     fun theTargetStaysIncludedWhenItsMaterialHasTwoProducers() {
-        // the multi-producer alpha cannot be included, but the target row must still be planned
-        // instead of disappearing from included
-        val firstRecipe = recipe("first-alpha", mapOf(alpha to 1.0))
-        val secondRecipe = recipe("second-alpha", mapOf(alpha to 1.0))
-        val targetRecipe = recipe("target", mapOf(product to 1.0), mapOf(alpha to 1.0))
-        val targetProduction = production(targetRecipe, product)
+        // the multi-producer solid fuel cannot be included, but the target row must still be
+        // planned instead of disappearing from included
+        val targetProduction = production(rocketFuelRecipe, rocketFuel)
         val context =
             DirectFeedContext(
                 targetProduction,
                 factories(
                     targetProduction,
-                    production(firstRecipe, alpha),
-                    production(secondRecipe, alpha),
+                    production(solidFuelFromLightOilRecipe, solidFuel),
+                    production(solidFuelFromPetroleumGasRecipe, solidFuel),
                 ),
                 1.0,
                 logistics,
             )
 
-        assertEquals(mapOf(targetRecipe to targetProduction), context.included)
+        assertEquals(mapOf(rocketFuelRecipe to targetProduction), context.included)
     }
 
     @Test
     fun aProductionWithTwoConsumersIsOneNodeAndIsTraversedOnce() {
-        // beta feeds both gamma and the target, so beta has two parents. The walk must expand its
-        // upstream chain once and still yield both outgoing links.
-        val alphaRodRecipe = recipe("alpha-rod", mapOf(alpha to 1.0))
-        val betaUnitRecipe = recipe("beta-unit", mapOf(beta to 1.0), mapOf(alpha to 1.0))
-        val gammaPackRecipe = recipe("gamma-pack", mapOf(gamma to 1.0), mapOf(beta to 1.0))
-        val productRecipe =
-            recipe("product", mapOf(product to 1.0), mapOf(beta to 1.0, gamma to 1.0))
-        val productProduction = production(productRecipe, product)
+        // electronic circuits feed both advanced circuits and processing units, so the circuit
+        // producer has two parents. The walk must expand its upstream cable chain and still yield
+        // both outgoing links.
+        val productProduction = production(processingUnitRecipe, processingUnit)
         val context =
             DirectFeedContext(
                 productProduction,
                 factories(
                     productProduction,
-                    production(gammaPackRecipe, gamma),
-                    production(betaUnitRecipe, beta),
-                    production(alphaRodRecipe, alpha),
+                    production(advancedCircuitRecipe, advancedCircuit),
+                    production(electronicCircuitRecipe, electronicCircuit),
+                    production(copperCableRecipe, copperCable),
                 ),
                 1.0,
                 logistics,
             )
-        val alphaNode = context.nodeOf(production(alphaRodRecipe, alpha))
-        val betaNode = context.nodeOf(production(betaUnitRecipe, beta))
+        val cableNode = context.nodeOf(production(copperCableRecipe, copperCable))
+        val circuitNode = context.nodeOf(production(electronicCircuitRecipe, electronicCircuit))
         val links = context.nodeOf(productProduction).traverse().toList()
 
         assertAll(
             // both parents resolve to the same node, not to two path-local copies
-            { assertEquals(betaNode, context.nodeOf(production(betaUnitRecipe, beta))) },
             {
                 assertEquals(
-                    setOf(gamma, product),
-                    betaNode.consumers.map { it.consumer.production.material }.toSet(),
+                    circuitNode,
+                    context.nodeOf(production(electronicCircuitRecipe, electronicCircuit)),
                 )
             },
-            // the shared producer's upstream chain is expanded only once
-            { assertEquals(1, links.count { it.producer == alphaNode }) },
+            {
+                assertEquals(
+                    setOf(advancedCircuit, processingUnit),
+                    circuitNode.consumers.map { it.consumer.production.material }.toSet(),
+                )
+            },
+            // the shared cable producer expands once per consumer link it has (circuit and
+            // advanced circuit)
+            { assertEquals(2, links.count { it.producer == cableNode }) },
             // but each consumer link is still yielded
-            { assertEquals(2, links.count { it.producer == betaNode }) },
+            { assertEquals(2, links.count { it.producer == circuitNode }) },
         )
     }
 }

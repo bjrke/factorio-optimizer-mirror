@@ -8,15 +8,15 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.water
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,31 +27,33 @@ import kotlin.test.assertEquals
  */
 class BlueprintLayoutSnapshotTest {
 
-    @Test fun baseLayoutIsStable() = Layout(basePlan).assertSignature("499d3608057e8a25")
+    @Test fun baseLayoutIsStable() = Layout(basePlan).assertSignature("577596b91c039b08")
 
     @Test
     fun chestBeltEndIsStable() =
-        Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).assertSignature("edccfd8f56a2581b")
+        Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).assertSignature("3c6ccdc7d3988898")
 
     @Test
     fun fluidLayoutIsStable() {
-        val waterBoilRecipe =
-            recipe("water-boil", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(water to 1.0))
         val plan =
             BlueprintPlan(
-                target = gear,
+                target = solidFuel,
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(waterBoilRecipe, gear, Factory.CHEMICAL_PLANT),
+                            planned(
+                                solidFuelFromPetroleumGasRecipe,
+                                solidFuel,
+                                Factory.CHEMICAL_PLANT,
+                            ),
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(water, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 scale = 1.0,
-                label = "water-boil",
+                label = "solid-fuel-from-petroleum-gas",
             )
-        Layout(plan).assertSignature("f674a77f9c79808e")
+        Layout(plan).assertSignature("749bb1b2462f902c")
     }
 
     @Test
@@ -75,7 +77,7 @@ class BlueprintLayoutSnapshotTest {
                 scale = 1.0,
                 label = "iron-gear-wheel",
             )
-        Layout(plan).assertSignature("773fb2a5731f5313")
+        Layout(plan).assertSignature("94533f5e06df28d2")
     }
 
     private fun Layout.assertSignature(expected: String) {

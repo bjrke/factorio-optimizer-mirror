@@ -8,12 +8,13 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.recipe
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.coalLiquefactionRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
+import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.steam
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -25,22 +26,15 @@ class BlueprintFluidLaneLinkTest {
     @Test
     fun aFluidThatIsBothInputAndOutputJoinsItsTwoLanes() {
         // coal liquefaction takes and gives heavy oil: the drain lane has to feed the input lane
-        val heavyOil = Material("heavy-oil")
-        val lightOil = Material("light-oil")
-        val steam = Material("steam")
-        val liquefy =
-            recipe(
-                "liquefy",
-                Category.OIL_PROCESSING,
-                mapOf(heavyOil to 90.0, lightOil to 20.0, petroleum to 10.0),
-                mapOf(coal to 10.0, heavyOil to 25.0, steam to 50.0),
-            )
         val plan =
             BlueprintPlan(
                 target = heavyOil,
                 rows =
                     listOf(
-                        PlannedRow.copies(planned(liquefy, heavyOil, Factory.OIL_REFINERY), 1),
+                        PlannedRow.copies(
+                            planned(coalLiquefactionRecipe, heavyOil, Factory.OIL_REFINERY),
+                            1,
+                        ),
                     ),
                 sources =
                     listOf(
@@ -49,7 +43,7 @@ class BlueprintFluidLaneLinkTest {
                         PlannedSource(steam, 1.0, fluid = true),
                     ),
                 scale = 1.0,
-                label = "liquefy",
+                label = "coal-liquefaction",
             )
         val fluids =
             LogisticsCalculator(

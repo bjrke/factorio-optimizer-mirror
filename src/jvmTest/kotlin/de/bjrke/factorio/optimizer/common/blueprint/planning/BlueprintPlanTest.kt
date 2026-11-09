@@ -5,16 +5,25 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachi
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.testBlueprintPlan
 import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.advancedOilProcessingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.castingIronRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
+import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
+import de.bjrke.factorio.optimizer.common.fixtures.rocketSilo
+import de.bjrke.factorio.optimizer.common.fixtures.rocketSiloRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
+import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
-import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -25,14 +34,6 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-
-private fun recipe(
-    name: String,
-    category: Category,
-    result: Map<Material, Double>,
-    ingredients: Map<Material, Double> = emptyMap(),
-    time: Double = 1.0,
-) = Recipe(name, ingredients, result, time, setOf(category))
 
 private fun production(
     recipe: Recipe,
@@ -59,7 +60,7 @@ class BlueprintPlanTest {
 
     @Test
     fun theAllSciencePacksTargetIsUnavailable() {
-        val smelt = recipe("iron-plate", Category.SMELTING, mapOf(ironPlate to 1.0))
+        val smelt = ironPlateSmeltingRecipe
         val outcome =
             blueprintPlan(
                 result(
@@ -78,16 +79,9 @@ class BlueprintPlanTest {
 
     @Test
     fun aMiningRecipeBecomesASourceInsteadOfABuilding() {
-        val mining = recipe("iron-ore", Category.MINING_BASIC_SOLID, mapOf(ironOre to 1.0))
-        val smelt =
-            recipe("iron-plate", Category.SMELTING, mapOf(ironPlate to 1.2), mapOf(ironOre to 1.0))
-        val craft =
-            recipe(
-                "iron-gear-wheel",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 2.0),
-            )
+        val mining = ironOreMiningRecipe
+        val smelt = ironPlateSmeltingRecipe
+        val craft = ironGearWheelRecipe
 
         val planned =
             plan(
@@ -109,21 +103,9 @@ class BlueprintPlanTest {
 
     @Test
     fun aFoundryRecipeIsKeptWhileAFurnaceRecipeIsNot() {
-        val foundry =
-            recipe(
-                "molten-iron",
-                Category.METALLURGY,
-                mapOf(ironPlate to 1.0),
-                mapOf(ironOre to 1.0),
-            )
-        val furnace = recipe("iron-plate", Category.SMELTING, mapOf(ironPlate to 1.0))
-        val craft =
-            recipe(
-                "iron-gear-wheel",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 2.0),
-            )
+        val foundry = castingIronRecipe
+        val furnace = ironPlateSmeltingRecipe
+        val craft = ironGearWheelRecipe
 
         val keptPlan =
             testBlueprintPlan(
@@ -156,17 +138,15 @@ class BlueprintPlanTest {
 
     @Test
     fun oilProcessingIsLeftOutUnlessItIsTheTarget() {
-        val refine =
-            recipe("advanced-oil-processing", Category.OIL_PROCESSING, mapOf(petroleum to 1.0))
-        val plastic =
-            recipe("plastic-bar", Category.CHEMISTRY, mapOf(gear to 1.0), mapOf(petroleum to 2.0))
+        val refine = advancedOilProcessingRecipe
+        val makeSolidFuel = solidFuelFromPetroleumGasRecipe
 
         val ingredientPlan =
             plan(
-                gear,
-                plastic,
+                solidFuel,
+                makeSolidFuel,
                 listOf(
-                    production(plastic, gear, Factory.CHEMICAL_PLANT),
+                    production(makeSolidFuel, solidFuel, Factory.CHEMICAL_PLANT),
                     production(refine, petroleum, Factory.OIL_REFINERY),
                 ),
             )
@@ -188,20 +168,8 @@ class BlueprintPlanTest {
 
     @Test
     fun aMaterialMadeAndTakenByOneRecipeIsDirectInserted() {
-        val belt =
-            recipe(
-                "transport-belt",
-                Category.CRAFTING,
-                mapOf(transportBelt to 1.0),
-                mapOf(gear to 1.0, ironPlate to 1.0),
-            )
-        val craft =
-            recipe(
-                "iron-gear-wheel",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 2.0),
-            )
+        val belt = transportBeltRecipe
+        val craft = ironGearWheelRecipe
 
         val planned =
             plan(
@@ -228,13 +196,7 @@ class BlueprintPlanTest {
 
     @Test
     fun productionsOfTheSameRecipeCompareByValue() {
-        val craft =
-            recipe(
-                "iron-gear-wheel",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 2.0),
-            )
+        val craft = ironGearWheelRecipe
         val first = production(craft, gear, Factory.ASSEMBLING_MACHINE_3)
         val second = production(craft, gear, Factory.ASSEMBLING_MACHINE_3)
 
@@ -243,22 +205,16 @@ class BlueprintPlanTest {
 
     @Test
     fun thePlanBuildsTheRequestedMachineCount() {
-        val craft =
-            recipe(
-                "iron-gear-wheel",
-                Category.CRAFTING,
-                mapOf(gear to 1.0),
-                mapOf(ironPlate to 100.0),
-            )
+        val craft = rocketSiloRecipe
 
         val planned =
             plan(
-                gear,
+                rocketSilo,
                 craft,
                 listOf(
                     production(
                         craft,
-                        gear,
+                        rocketSilo,
                         Factory.ASSEMBLING_MACHINE_3,
                         amount = 3.0,
                     ),
@@ -268,7 +224,7 @@ class BlueprintPlanTest {
         assertAll(
             // even though the import would need more than two belts, the plan builds all three
             { assertEquals(3, planned.rows.single().machines.size) },
-            { assertEquals("iron-gear-wheel", planned.label) },
+            { assertEquals("rocket-silo", planned.label) },
         )
     }
 
