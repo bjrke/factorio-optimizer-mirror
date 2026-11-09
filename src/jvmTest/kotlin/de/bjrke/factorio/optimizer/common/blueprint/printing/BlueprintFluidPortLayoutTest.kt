@@ -56,30 +56,24 @@ class BlueprintFluidPortLayoutTest {
     }
 
     @Test
-    fun theSulfuricChemicalPlantGetsInsertersOnBothSides() {
-        // sulfur is a simple chemistry recipe now, so the layout builds it in its own row: the
-        // acid machine at y=8 takes sulfur on both top corners and iron plate from the row above
+    fun theSulfuricChemicalPlantFeedsItsSolidInputs() {
+        // sulfur is direct-fed in the band; the acid machine still takes iron plate from the row
+        // above, and neither solid inserter blocks the chemical plant's fluid ports
         val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/sulfuric-acid/FSXmr/1/1")
         val inserters = layout.entities.filterIsInstance<InserterEntity>()
 
         assertAll(
-            {
-                assertEquals(
-                    setOf("fast-inserter"),
-                    inserters.map { it.name }.toSet(),
-                )
-            },
+            { assertEquals(setOf("fast-inserter"), inserters.map { it.name }.toSet()) },
             {
                 assertEquals(
                     mapOf(
-                        Coordinate(41, 3) to sulfur,
-                        Coordinate(41, 8) to sulfur,
-                        Coordinate(42, 8) to sulfur,
-                        Coordinate(41, 12) to ironPlate,
+                        Coordinate(43, 2) to sulfur,
+                        Coordinate(45, 1) to ironPlate,
                     ),
                     inserters.associateBy({ it.area.topLeft }, { it.material }),
                 )
             },
+            { assertEquals(emptyList(), layout.failures) },
         )
     }
 

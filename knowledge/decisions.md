@@ -7,6 +7,29 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-09 — Direct feed is sized by plan rates and grown maximally
+
+**Decision.** A band is no longer accepted by a per-machine cycle bound. `groupNeeds` starts
+from each terminal recipe's fractional `amount * scale` and propagates needs upstream;
+`FeedWindow` distributes each link's plan demand over the built consumers. Overfeed is allowed,
+underfeed is not, and repeating a pattern may build extra copies to compensate for a worse ratio.
+`cycleFit`/`cyclePenalty` rank patterns but never reject a link. `FeedRanking` sorts links by belt
+volume, bulk gain, solid-ingredient count, partly-used machines, the pair's remaining belt lanes and
+cycle quality; `FeedCandidates` grows each group maximally, retries links, swaps once, merges groups
+and only accepts a finished group whose solid inputs/results fit `MAX_ROW_BELTS = 4`. Growth may pass
+through an over-belt group so an added producer can internalize an ingredient; a seed that never
+fits is retried from another link. Every production belongs to at most one band. Bounds are
+`GROUP_MAX_MACHINES = 10` (9 for a multi-link band) and `MAX_BAND_RECIPES = 8`.
+
+**Guardrail.** Do not reintroduce a hard `ioRatio` gate or a whole-machine `ceil` before the
+window; the window's plan-rate flow is the only feasibility check. Keep one band per production,
+keep each band's internal material off every belt, and never build a band needing more than
+`MAX_ROW_BELTS` solid lanes. The 6:4 cable/circuit case must stay the repeated 3:2 window
+`C E C E C C E C E C`, not two independent bands.
+
+**See.** `blueprint/planning/band/{DirectFeed,FeedRanking,FeedCandidates,BandSearch}.kt`;
+`FractionalDirectFeedTest`, `DirectFeedTest`; `architecture.md` §Blueprint layout.
+
 ## 2026-11-08 — Recipe exclusions are explicit names, not whole categories
 
 **Decision.** `buildable` keeps only the category rules (extraction, oil processing, recycling,
@@ -37,7 +60,7 @@ elsewhere, `solid-fuel-from-heavy-oil` on Fulgora (its local oil resource) and
 
 **Guardrail.** Keep both policies explicit. `FeedNode.ingredients` links every in-plan producer of
 a solid, so a material with two producers is direct-fed from whichever link the walk sees first
-(the others are dropped by `groupLinks`); a new multi-producer solid therefore needs an explicit
+(the others are dropped by `maximalGroups`); a new multi-producer solid therefore needs an explicit
 recipe or import policy, not a single-producer link filter. Keep one solid-fuel recipe per surface
 so a blueprint never needs two producers of the same material. Evidence:
 `vulcanusStoneIsImported`, `rocketFuelUsesTheLightOilSolidFuelRecipe`,
@@ -70,11 +93,12 @@ outputs because that is what a direct-fed consumer receives.
 or path-local copies. A material with several in-plan producers must be kept out of the
 direct feed by an explicit recipe or import policy (stone, solid fuel), never by
 arbitrarily picking one link. Fluids are never links. Keep the `visited` set in
-`traverse()`. Band grouping still does not enforce one band per production; consolidating
-distinct bands is a separate change. Keep the `countVectors` empty-list guard.
+`traverse()`. `FeedCandidates` assigns every production to at most one band. Keep the
+`countVectors` empty-list guard.
 
 **See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
-`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/BandSearch.kt`,
+`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/FeedRanking.kt`,
+`blueprint/planning/band/FeedCandidates.kt`, `blueprint/planning/band/BandSearch.kt`,
 `core/util/MathUtils.kt`, `pitfalls.md` §Blueprint planning.
 
 ## 2026-11-06 — Imports are a recipe category, and sources follow the placed rows
@@ -351,26 +375,6 @@ belt row. `realBlueprintsPutEveryMaterialOnAtMostOneBelt` (in
 `BlueprintLayoutIntegrationTest`) asserts the invariant.
 
 **See.** `blueprint/planning/band/DirectFeed.kt` (`belted`); `architecture.md` §Blueprint layout.
-
-## 2026-10-18 — Direct-feed bands group recipes by rate
-
-**Decision.** `blueprint/planning/band/DirectFeed.kt` turns a solid material whose producer and
-consumer stand in a small whole-machine cycle into a belt-free band, judged by
-**per-machine rates** (productivity included), never machine counts: a rate `r` is
-accepted when `r / 1.05 ≤ p / q ≤ r × 1.25` with `p + q ≤ 6`; ties go to the
-smallest sum, then the closest rate. The band is a window of a periodic
-arrangement cut to the shortest length where no consumer starves and no producer
-is left without a consumer. Bounds: `GROUP_MAX_MACHINES = 18`, `MAX_BAND_LINKS = 3`.
-Every machine is built complete; a band's internal material
-gets no lane, sink, belt or belted production.
-
-**Guardrail.** Do not group by machine count or give a band's internal material a
-belt. A fluid is never a link material (`FeedNode.ingredients`); any band machine
-may take or give one since 2026-11-02. Open: line-breaking a too-wide band and
-mixed-footprint bands.
-
-**See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
-`blueprint/planning/band/BandSearch.kt`.
 
 ## 2026-10-18 — Belt end is a `BeltEnd` selection
 

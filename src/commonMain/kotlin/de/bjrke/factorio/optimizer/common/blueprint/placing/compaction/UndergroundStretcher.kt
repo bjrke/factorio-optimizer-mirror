@@ -32,11 +32,26 @@ internal class UndergroundStretcher(
 ) {
 
     fun stretchAll() {
+        val protected = fluidPorts + inserterTiles()
         for (input in
             board.placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
             // the import connector is a fixed marker or chest, not a route to stretch
             if (isConnectorTunnel(input)) continue
-            stretchRun(input)
+            stretchRun(input, protected)
+        }
+    }
+
+    /**
+     * The tiles an inserter takes from or drops onto, so a run never swallows the belt under one. A
+     * short inserter reaches one tile either side, a long inserter two.
+     */
+    private fun inserterTiles() = buildSet {
+        for (inserter in board.placed.filterIsInstance<InserterEntity>()) {
+            val reach = if (inserter.long) 2 else 1
+            for (distance in 1..reach) {
+                add(inserter.area.topLeft + inserter.direction.step * distance)
+                add(inserter.area.topLeft - inserter.direction.step * distance)
+            }
         }
     }
 
@@ -49,7 +64,7 @@ internal class UndergroundStretcher(
         return after is MarkerEntity || after is InserterEntity
     }
 
-    private fun stretchRun(input: UndergroundEntity) {
+    private fun stretchRun(input: UndergroundEntity, protected: Set<Coordinate>) {
         if (input !in board.placed) return
         val output = board.undergroundOutputOf(input) ?: return
         RunGrowth(
@@ -58,7 +73,7 @@ internal class UndergroundStretcher(
                 output.area.topLeft,
                 input.direction,
                 input.material,
-                fluidPorts,
+                protected,
             )
             .stretch()
     }
@@ -76,7 +91,8 @@ private class RunGrowth(
     private val outputTile: Coordinate,
     private val direction: Direction,
     private val material: Material,
-    private val fluidPorts: Set<Coordinate>,
+    /** Tiles the run must leave on the surface: fluid ports and inserter pickup/drop tiles. */
+    private val protected: Set<Coordinate>,
 ) {
     private val step = direction.step
     private val backward = step * -1
@@ -121,11 +137,15 @@ private class RunGrowth(
 
     private fun swallowable(tile: Coordinate) =
         when (val entity = board.entityAt(tile)) {
-            is BeltEntity -> !fluid && entity.material == material && entity.direction == direction
+            is BeltEntity ->
+                !fluid &&
+                    tile !in protected &&
+                    entity.material == material &&
+                    entity.direction == direction
             // a pipe is only swallowable when it is a straight pass-through of the same fluid;
             // a machine port or a corner must stay a surface tile, or the run would end on it
             is PipeEntity ->
-                fluid && entity.material == material && tile !in fluidPorts && isStraight(tile)
+                fluid && entity.material == material && tile !in protected && isStraight(tile)
             else -> false
         }
 

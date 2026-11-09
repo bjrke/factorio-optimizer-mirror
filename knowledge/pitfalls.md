@@ -54,9 +54,11 @@ An entry belongs here only with evidence, and should say how to recognize it.
   outermost belt lands **on the far belt row**, `board.isFree` fails on the belt
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
-- **A band stands in one row of up to 18 machines, so a wide band forces belt
-  crossings.** `GROUP_MAX_MACHINES = 18` (`blueprint/planning/band/DirectFeedModel.kt`) is what a band
-  may hold; rows above a band then have to reach past it, and a belt that crosses
+- **A wide band forces belt crossings, and a multi-link band longer than nine machines can leave
+  inserters outside pole coverage.** `GROUP_MAX_MACHINES = 10`
+  (`blueprint/planning/band/DirectFeedModel.kt`) is a pair's ceiling; a band with more than one link
+  stays at `MULTI_LINK_MAX_MACHINES = 9` so its row remains powerable. Rows above a band then have
+  to reach past it, and a belt that crosses
   another belt can only tunnel. Evidence: the reported `advanced-circuit` URL's
   copper-cable feed tunnels where its cable row joins a band
   (`advancedCircuitUrlOnlyTunnelsForItsBandedFeeds` locks that in). Since plastic is
@@ -76,7 +78,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   (plastic, sulfur, battery, ...) are otherwise planned. `FeedNode.traverse()` keeps a
   visited-node set so a shared producer is expanded once; it does **not** filter the
   closing edge of a cycle (the edge is yielded before the visited check), so an unforeseen
-  cycle would still reach `groupLinks`.
+  cycle would still reach `maximalGroups`.
   Evidence: `bannedRecipesAreNeverPlanned`, `nutrientsAreNotBredFromFish` and
   `uranium235IsBuiltByProcessingNotKovarex`. Do not
   reintroduce path-local cycle state; a future cycle needs a name in `unplannedRecipes`.
@@ -88,13 +90,22 @@ An entry belongs here only with evidence, and should say how to recognize it.
   reach a source. Evidence: `realFluidNetworksAreConnected` (`utility-science-pack`).
 - **A row has four solid belt locations, so a recipe needing a fifth solid lane is
   out of scope.** `RowPlacer.rowShape` ranks inputs and outputs together and zips
-  them onto two top and two bottom locations (near/far each); every input belt is
-  end-fed by `DeliveryPreparation.sinkOf`, so the old below-row side-load into the
-  row's product columns is gone. Recipes such as `flying-robot-frame` (four solid
-  inputs plus a product) still need a **mixed belt** in a single-material layout;
-  that is out of scope and not a router bug. Recognize a genuine routing failure by
-  `foreign side-load into …` while the row still has a free input lane, not by
-  compaction rejecting every corridor.
+  them onto two top and two bottom locations (near/far each), at most
+  `MAX_ROW_BELTS`; every input belt is end-fed by `DeliveryPreparation.sinkOf`, so
+  the old below-row
+  side-load into the row's product columns is gone. A **band** that would need more
+  is now filtered out (`bandBeltMaterials`, `bandBeltFits`), because its product or
+  an input would silently lose its lane; a plain recipe such as `flying-robot-frame`
+  (four solid inputs plus a product) still needs a **mixed belt** in a
+  single-material layout, which is out of scope and not a router bug. Recognize a
+  genuine routing failure by `foreign side-load into …` while the row still has a
+  free input lane, not by compaction rejecting every corridor.
+- **The underground stretcher must not swallow a belt an inserter takes from or drops
+  onto.** Only fluid ports were protected, so a run could grow under the last lane
+  tiles of a row and leave an inserter facing nothing; `inserterTiles` now protects
+  the one- or two-tile pickup/drop positions. Evidence: `utility-science-pack`'s
+  low-density-structure row after the electric-engine band split
+  (`UndergroundStretcherTest`, `realBlueprintsHaveNoDanglingInserter`).
 - **A fluid marker joins the solid import column unless the source block or a run
   end is taken.** The link (`blueprint/placing/routing/FluidFeedLinker.kt`) buries under a belt,
   underground belt or inserter that crosses the lane row in the west corridor, so a
@@ -173,7 +184,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   belted row. Evidence: `theTargetStaysIncludedWhenItsMaterialHasTwoProducers`.
 - **Stone and solid fuel must stay out of the multi-producer direct feed.** `FeedNode.ingredients`
   links every in-plan producer, so a solid with two producers is direct-fed from whichever link
-  the walk sees first; `groupLinks` drops the others. `DirectFeedContext.producers` excludes
+  the walk sees first; `maximalGroups` drops the others. `DirectFeedContext.producers` excludes
   `stone` on every surface, and `Optimizer` plans one solid-fuel recipe per surface: light oil
   elsewhere, heavy oil on Fulgora and ammonia on Aquilo. Keep these policies explicit; do not infer
   them from recipe result order or reintroduce a single-producer link filter. Evidence:

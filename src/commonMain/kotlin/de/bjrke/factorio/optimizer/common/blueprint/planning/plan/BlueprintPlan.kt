@@ -7,6 +7,13 @@ import kotlin.math.ceil
 /** Upper bound on the machines of one recipe row, so a huge rate cannot explode the blueprint. */
 internal const val MAX_COPIES = 9
 
+/**
+ * The solid belts one row can place: two above and two below its machines. A band that would need
+ * more is not grouped; the row can place fewer, so the product would silently lose its lane. Must
+ * match the belt locations `RowPlacer.FixedBeltLocation` offers.
+ */
+internal const val MAX_ROW_BELTS = 4
+
 /** Slack for a machine count that should be whole but carries floating-point noise. */
 internal const val MACHINE_COUNT_EPSILON = 1e-6
 

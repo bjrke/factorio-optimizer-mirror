@@ -1,63 +1,100 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import kotlin.math.abs
+import kotlin.math.max
 
-// The machine-rate arithmetic that decides whether two recipes can be direct-fed, and the band
-// model the search builds on. A link fits when a small whole-machine cycle stands in for the rate
-// ratio; see cycleRatio.
+// The machine-rate arithmetic that decides how attractive a feed link is, and the band model the
+// search builds on. Actual feasibility is decided by the window's plan-rate flow, not by a fixed
+// per-machine ratio: overfeed is allowed, underfeed is not, and a worse ratio may still work when a
+// repeated window builds more copies.
 
 /** Upper bound on the machines of one direct-feed band, so a band cannot run away. */
-const val GROUP_MAX_MACHINES = 18
+const val GROUP_MAX_MACHINES = 10
 
-/** Under-supply accepted when no cycle matches the needed machine rate exactly. */
-internal const val UNDER_SUPPLY = 1.05
+/** A band with more than one link stays one machine shorter, keeping wide rows powerable. */
+internal const val MULTI_LINK_MAX_MACHINES = 9
 
-/** Over-supply accepted; a shorter cycle wins over an exact but longer one. */
-internal const val OVER_SUPPLY = 1.25
+/** The longest window a group with [links] links may build. */
+internal fun maxBandMachines(links: Int) =
+    if (links > 1) MULTI_LINK_MAX_MACHINES else GROUP_MAX_MACHINES
 
-/** The longest cycle ratio `p + q` one link may be simplified to. */
+/** The most recipes one band cycle may hold; the arrangement search is bounded by this. */
+internal const val MAX_BAND_RECIPES = 8
+
+/** The longest cycle ratio `p + q` one link may be simplified to for scoring. */
 internal const val MAX_RATIO_MACHINES = 6
 
 /** Slack for the floating point rate and supply comparisons. */
 internal const val FEED_EPSILON = 1e-9
 
+/** How much an underfed pattern costs against an exact ratio. */
+internal const val UNDERFEED_PENALTY = 3.0
+
+/** How much an overfed pattern costs against an exact ratio; overfeed is allowed. */
+internal const val OVERFEED_PENALTY = 0.5
+
 /**
- * The smallest whole-machine cycle `p:q` (producer machines per consumer machine) that can stand in
- * for [ratio]: `ratio / 1.05 <= p / q <= ratio * 1.25`, with `p + q` at most 6. Ties go to the
- * closest ratio. Null when no small cycle fits, i.e. the link cannot be direct-fed.
+ * The preferred small cycle `p:q` (producer machines per consumer machine) for [ratio], and the
+ * cost of using it. A ratio below the pattern is underfed and costs more than an overfed one, but
+ * neither is a hard rejection: the window's plan-rate flow decides whether it can be built.
  */
-internal fun cycleRatio(ratio: Double): Pair<Int, Int>? {
-    if (ratio <= 0.0) return null
+internal fun cycleFit(ratio: Double): Pair<Pair<Int, Int>?, Double> {
+    if (ratio <= 0.0) return null to Double.MAX_VALUE
+    var best: Pair<Int, Int>? = null
+    var bestPenalty = Double.MAX_VALUE
     for (sum in 2..MAX_RATIO_MACHINES) {
-        var best: Pair<Int, Int>? = null
-        var bestError = Double.MAX_VALUE
         for (p in 1 until sum) {
             val q = sum - p
             val value = p.toDouble() / q
-            if (value < ratio / UNDER_SUPPLY - FEED_EPSILON) continue
-            if (value > ratio * OVER_SUPPLY + FEED_EPSILON) continue
-            val error = abs(value - ratio) / ratio
-            if (error < bestError) {
+            val under = max(0.0, ratio - value) / ratio
+            val over = max(0.0, value - ratio) / ratio
+            val penalty = under * UNDERFEED_PENALTY + over * OVERFEED_PENALTY
+            if (penalty < bestPenalty - FEED_EPSILON) {
                 best = p to q
-                bestError = error
+                bestPenalty = penalty
             }
         }
-        best?.let {
-            return it
-        }
     }
-    return null
+    return best to bestPenalty
 }
 
-/** A group of recipes that feed each other directly, with the whole machine need of each recipe. */
+/** The preferred small cycle for [ratio], or null when the ratio is not positive. */
+internal fun cycleRatio(ratio: Double) = cycleFit(ratio).first
+
+/** The cost of the preferred small cycle for [ratio]. */
+internal fun cyclePenalty(ratio: Double) = cycleFit(ratio).second
+
+/** A group of recipes that feed each other directly, with the plan machine need of each recipe. */
 internal class FeedGroup(
     val links: List<FeedLink>,
-    val needs: Map<FactoryProduction, Int>,
+    val needs: Map<FactoryProduction, Double>,
 )
+
+/**
+ * The solid materials a band row moves on belts: every machine input and result except the
+ * materials inserted machine to machine. Mirrors `RowPlacer.rowShape`, which places at most
+ * [MAX_ROW_BELTS] lanes; anything beyond that would silently lose its lane.
+ */
+internal fun DirectFeedContext.bandBeltMaterials(links: List<FeedLink>): Set<Material> {
+    val internal = links.mapTo(mutableSetOf()) { it.material }
+    return links
+        .flatMap { listOf(it.producer.production, it.consumer.production) }
+        .distinct()
+        .flatMap { production ->
+            production.recipe.ingredients.keys + production.recipe.result.keys
+        }
+        .filterNot { logistics.isFluid(it) }
+        .filterNot { it in internal }
+        .toSet()
+}
+
+/** Whether a band built from [links] fits the solid belt locations one row has. */
+internal fun DirectFeedContext.bandBeltFits(links: List<FeedLink>) =
+    bandBeltMaterials(links).size <= MAX_ROW_BELTS
 
 /** One machine-to-machine insertion an arrangement realizes. */
 internal class BandFeed(

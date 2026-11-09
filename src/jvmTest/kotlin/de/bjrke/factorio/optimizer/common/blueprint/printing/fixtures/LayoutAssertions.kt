@@ -52,21 +52,40 @@ private fun LayoutEntity.runTile() =
  */
 private fun assertRunsStretched(tiles: List<RunTile>) {
     val byTile = tiles.associateBy { it.area.topLeft }
+    val protected = tiles.inserterTiles()
     val inputs = tiles.filter { it.type == Io.INPUT && it.name.endsWith("underground-belt") }
     val problems =
-        inputs.filterNot { tiles.isImportConnector(it) }.flatMap { runProblems(it, byTile) }
+        inputs
+            .filterNot { tiles.isImportConnector(it) }
+            .flatMap { runProblems(it, byTile, protected) }
     assertEquals(emptyList(), problems.take(5))
 }
 
-private fun runProblems(input: RunTile, byTile: Map<Coordinate, RunTile>): List<String> {
+/** The tiles an inserter takes from or drops onto; a run may not swallow them. */
+private fun List<RunTile>.inserterTiles() = buildSet {
+    for (inserter in this@inserterTiles.filter { it.name.endsWith("inserter") }) {
+        val direction = inserter.direction ?: continue
+        val reach = if (inserter.name == "long-handed-inserter") 2 else 1
+        for (distance in 1..reach) {
+            add(inserter.area.topLeft + direction.step * distance)
+            add(inserter.area.topLeft - direction.step * distance)
+        }
+    }
+}
+
+private fun runProblems(
+    input: RunTile,
+    byTile: Map<Coordinate, RunTile>,
+    protected: Set<Coordinate>,
+): List<String> {
     val direction = input.direction
     val limit = undergroundRange(input.name)
     val output = if (direction == null) null else partner(input, byTile, direction.step, limit)
     return if (direction == null || output == null || output.first >= limit) emptyList()
     else
         listOfNotNull(
-            backProblem(input, byTile, direction),
-            forwardProblem(output.second, byTile, direction),
+            backProblem(input, byTile, direction, protected),
+            forwardProblem(output.second, byTile, direction, protected),
         )
 }
 
@@ -96,8 +115,10 @@ private fun backProblem(
     input: RunTile,
     byTile: Map<Coordinate, RunTile>,
     direction: Direction,
+    protected: Set<Coordinate>,
 ): String? {
     val back = input.area.topLeft - direction.step
+    if (back in protected) return null
     val beyond = byTile[back - direction.step]
     // the new end must still join a surface belt, not the next run's underground end
     val grows =
@@ -111,8 +132,10 @@ private fun forwardProblem(
     output: RunTile,
     byTile: Map<Coordinate, RunTile>,
     direction: Direction,
+    protected: Set<Coordinate>,
 ): String? {
     val forward = output.area.topLeft + direction.step
+    if (forward in protected) return null
     val beyond = byTile[forward + direction.step]
     val grows =
         byTile[forward]?.plainBelt(direction, output.material) == true &&

@@ -15,8 +15,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrame
-import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrameRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -25,6 +23,9 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
@@ -51,6 +52,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Every recipe in row order; a recipe may appear once per row. */
@@ -86,25 +88,32 @@ class DirectFeedTest {
     private val logistics = calculator()
 
     @Test
-    fun aCycleIsOnlyAcceptedWithinTheRateTolerance() =
+    fun aPreferredCycleAllowsOverfeedAndPenalizesUnderfeed() =
         assertTable(
             listOf<Pair<Double, Pair<Int, Int>?>>(
-                // a rate below the pattern is fine: the consumer takes what it needs. A rate too
-                // far above it is not: the machines would pile up material the consumer cannot
-                // take.
+                // overfeed is allowed; an underfed pattern loses to an exact or overfed one but is
+                // not rejected here. Actual feasibility is decided by the plan-rate window.
                 0.8 to (1 to 1),
                 1.0 to (1 to 1),
                 1.05 to (1 to 1),
-                1.1 to null,
+                1.1 to (3 to 2),
                 1.5 to (3 to 2),
                 2.0 to (2 to 1),
                 0.5 to (1 to 2),
-                20.0 to null,
-                0.05 to null,
+                20.0 to (5 to 1),
+                0.05 to (1 to 5),
                 0.66 to (2 to 3),
             ),
         ) { (ratio, expected) ->
             assertEquals(expected, cycleRatio(ratio))
+        }
+
+    @Test
+    fun anExactRatioHasNoCyclePenalty() =
+        assertTable(
+            listOf(1.0, 1.5, 2.0, 0.5),
+        ) { ratio ->
+            assertEquals(0.0, cyclePenalty(ratio), TOLERANCE)
         }
 
     @Test
@@ -124,13 +133,13 @@ class DirectFeedTest {
 
     @Test
     fun aPairInASmallMachineRatioIsBuiltAsOneBand() {
-        val ecProduction = production(electronicCircuitRecipe, electronicCircuit)
+        val ecProduction = production(electronicCircuitRecipe, electronicCircuit, amount = 2.0)
         val feed =
             directFeed(
                 ecProduction,
                 factories(
                     ecProduction,
-                    production(copperCableRecipe, copperCable),
+                    production(copperCableRecipe, copperCable, amount = 3.0),
                 ),
                 scale = 1.0,
                 logistics = logistics,
@@ -206,7 +215,7 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aMaterialWithASecondConsumerGetsOneMoreProduction() {
+    fun aMaterialWithASecondConsumerStaysInTheBand() {
         val acProduction = production(advancedCircuitRecipe, advancedCircuit)
         val feed =
             directFeed(
@@ -222,16 +231,15 @@ class DirectFeedTest {
 
         val band = feed.bands.single()
         assertAll(
-            // the circuit takes its cable straight from the band: three cable and two circuits
+            // the cable feeds both the circuit and the advanced circuit from one band
             {
                 assertEquals(
-                    setOf(copperCableRecipe, electronicCircuitRecipe),
+                    setOf(copperCableRecipe, electronicCircuitRecipe, advancedCircuitRecipe),
                     band.machines.map { it.recipe }.toSet(),
                 )
             },
-            { assertEquals(5, band.machines.size) },
-            // the advanced circuit also takes cable over a belt, so one more cable row is built
-            { assertEquals(2, feed.recipes.count { it == copperCableRecipe }) },
+            { assertEquals(4, band.machines.size) },
+            { assertEquals(2, band.machines.count { it.recipe == copperCableRecipe }) },
             {
                 assertEquals(
                     setOf(copperCableRecipe, electronicCircuitRecipe, advancedCircuitRecipe),
@@ -242,7 +250,7 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aRealCircuitChainKeepsItsBeltRows() {
+    fun aCircuitChainGroupsTheSharedProducerAndLeavesTheTargetBelted() {
         val targetProduction = production(processingUnitRecipe, processingUnit)
         val feed =
             directFeed(
@@ -259,11 +267,19 @@ class DirectFeedTest {
 
         val band = feed.bands.single()
         assertAll(
-            { assertNotNull(band.machines.firstOrNull { it.recipe == electronicCircuitRecipe }) },
-            { assertNotNull(band.machines.firstOrNull { it.recipe == processingUnitRecipe }) },
-            // the advanced circuit and cable are built as belt rows of their own
-            { assertContains(feed.recipes, advancedCircuitRecipe) },
-            { assertContains(feed.recipes, copperCableRecipe) },
+            {
+                assertEquals(
+                    setOf(
+                        copperCableRecipe,
+                        electronicCircuitRecipe,
+                        advancedCircuitRecipe,
+                    ),
+                    band.machines.map { it.recipe }.toSet(),
+                )
+            },
+            // the target still needs four solid inputs and a product, so it stays a belt row
+            { assertNull(band.machines.firstOrNull { it.recipe == processingUnitRecipe }) },
+            { assertContains(feed.recipes, processingUnitRecipe) },
             // the target row is built exactly once
             { assertEquals(1, feed.recipes.count { it == processingUnitRecipe }) },
         )
@@ -303,58 +319,82 @@ class DirectFeedTest {
 
     @Test
     fun aRecipeThatTakesAFluidStillJoinsABand() {
-        val ecProduction = production(electricEngineUnitRecipe, electricEngineUnit)
+        val target = production(processingUnitRecipe, processingUnit)
         val feed =
             directFeed(
-                ecProduction,
+                target,
                 factories(
-                    ecProduction,
-                    production(engineUnitRecipe, engineUnit),
+                    target,
+                    production(advancedCircuitRecipe, advancedCircuit),
                 ),
                 scale = 1.0,
-                logistics = fluids(lubricant),
+                logistics = fluids(sulfuricAcid),
             )
 
-        // the linked material is the solid engine unit, so the band is built even though the
-        // consumer also takes lubricant; the fluid lane serves its port on the row's outside edge
+        // the linked material is the solid advanced circuit, so the band is built even though the
+        // consumer also takes sulfuric acid; the fluid lane serves its port on the row's outside
+        // edge
         assertEquals(
-            setOf(engineUnitRecipe, electricEngineUnitRecipe),
+            setOf(advancedCircuitRecipe, processingUnitRecipe),
             feed.bands.single().machines.map(FactoryProduction::recipe).toSet(),
         )
     }
 
     @Test
     fun aProducerThatTakesAFluidStillFeedsItsBand() {
-        val flyingRobotFrameProduction = production(flyingRobotFrameRecipe, flyingRobotFrame)
+        val advanced = production(advancedCircuitRecipe, advancedCircuit)
         val feed =
             directFeed(
-                flyingRobotFrameProduction,
+                advanced,
                 factories(
-                    flyingRobotFrameProduction,
-                    production(electricEngineUnitRecipe, electricEngineUnit),
+                    advanced,
+                    production(plasticBarRecipe, plasticBar),
+                ),
+                scale = 1.0,
+                logistics = fluids(petroleum),
+            )
+
+        val band = feed.bands.single()
+        assertAll(
+            // the plastic machine takes petroleum and still inserts its product; the fractional
+            // circuit need makes this a one-machine-each band
+            {
+                assertEquals(
+                    mapOf("plastic-bar" to 1, "advanced-circuit" to 1),
+                    band.machines.groupingBy { it.recipe.name }.eachCount(),
+                )
+            },
+            { assertEquals(listOf(plasticBar), band.links.map { it.material }) },
+            {
+                assertEquals(
+                    setOf(plasticBarRecipe, advancedCircuitRecipe),
+                    feed.recipes.toSet(),
+                )
+            },
+        )
+    }
+
+    @Test
+    fun aBandThatNeedsMoreThanFourBeltsIsRejected() {
+        val electric = production(electricEngineUnitRecipe, electricEngineUnit)
+        val feed =
+            directFeed(
+                electric,
+                factories(
+                    electric,
+                    production(engineUnitRecipe, engineUnit),
                 ),
                 scale = 1.0,
                 logistics = fluids(lubricant),
             )
 
-        val band = feed.bands.single()
         assertAll(
-            // the electric engine machine takes lubricant and still inserts its product
+            // the pair still needs steel, gear, pipe, circuit and the product: five lanes, so it
+            // stays belted instead of dropping one material from its row
+            { assertEquals(emptyList(), feed.bands) },
             {
                 assertEquals(
-                    mapOf("electric-engine-unit" to 1, "flying-robot-frame" to 2),
-                    band.machines.groupingBy { it.recipe.name }.eachCount(),
-                )
-            },
-            {
-                assertEquals(
-                    listOf(electricEngineUnit, electricEngineUnit),
-                    band.links.map { it.material },
-                )
-            },
-            {
-                assertEquals(
-                    setOf(electricEngineUnitRecipe, flyingRobotFrameRecipe),
+                    setOf(electricEngineUnitRecipe, engineUnitRecipe),
                     feed.recipes.toSet(),
                 )
             },

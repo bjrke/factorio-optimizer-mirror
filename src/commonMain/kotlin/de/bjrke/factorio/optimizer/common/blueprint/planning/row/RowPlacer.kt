@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineDirection
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.FAR_BOTTOM
@@ -81,13 +82,14 @@ internal class RowPlacer(
                 else -> listOf(NEAR_TOP, NEAR_BOTTOM, FAR_TOP, FAR_BOTTOM)
             }
 
-        val topLanes = beltLocations.take(solids.size).count { it.side == LineSide.NORTH }
+        val locations = beltLocations.take(MAX_ROW_BELTS)
+        val topLanes = locations.take(solids.size).count { it.side == LineSide.NORTH }
 
         val factoryTop = bandTop + topLanes + 1
         val factoryBottom = factoryTop + height - 1
 
         val belts = buildList {
-            beltLocations.zip(solids).forEach { (beltLocation, material) ->
+            locations.zip(solids).forEach { (beltLocation, material) ->
                 val side = beltLocation.side
                 val y = beltLocation.yfun(factoryTop, factoryBottom)
                 val (io, direction) =

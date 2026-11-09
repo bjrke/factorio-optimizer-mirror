@@ -7,6 +7,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoDanglingInserter
@@ -18,15 +21,18 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunn
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -278,6 +284,54 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
+     * The engine/pipe/gear band fits four solid lanes because the gear producer is internalized and
+     * shares the pipe's iron plate; the electric engine itself stays a belted row, so its product
+     * keeps a lane instead of falling off the band.
+     */
+    @Test
+    fun theElectricEngineBandKeepsItsProductOnABelt() {
+        val layout = layoutFromUrl("http://localhost:8080/#/0.25/electric-engine-unit/CFSXbmr/1/1")
+        val bands = layout.plan.rows.filter { it.links.isNotEmpty() }
+        val engineBand = bands.single { band ->
+            band.machines.any { it.recipe.name == "engine-unit" }
+        }
+
+        assertAll(
+            {
+                assertEquals(
+                    setOf("engine-unit", "pipe", "iron-gear-wheel"),
+                    engineBand.machines.map { it.recipe.name }.toSet(),
+                )
+            },
+            {
+                bands.forEach { band ->
+                    val solids = band.solidBeltMaterials(layout.logistics)
+                    assertTrue(
+                        solids.size <= MAX_ROW_BELTS,
+                        "band still needs ${solids.size} solid lanes: $solids",
+                    )
+                }
+            },
+            { assertContains(layout.plan.beltMaterials, electricEngineUnit) },
+            { assertEquals(emptyList(), layout.failures) },
+        )
+    }
+
+    /**
+     * The solid materials a row must move on belts, less the ones it inserts machine to machine.
+     */
+    private fun PlannedRow.solidBeltMaterials(logistics: LogisticsCalculator): Set<Material> {
+        val internal = links.map { it.material }.toSet()
+        return machines
+            .flatMap { production ->
+                production.recipe.ingredients.keys + production.recipe.result.keys
+            }
+            .filterNot { logistics.isFluid(it) }
+            .filterNot { it in internal }
+            .toSet()
+    }
+
+    /**
      * The long straight piercing-rounds run must not survive compaction: a corridor that only fails
      * after stretching is ruled out by its seam and the pass continues with the next one. The plan
      * now includes a uranium-reprocessing centrifuge row, so the bounds are that plan's size.
@@ -297,7 +351,10 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertTrue(width <= 23, "layout is still $width tiles wide") },
+            // the 5-belt firearm/piercing/uranium band is now split into a nuclear/uranium band
+            // and a firearm/piercing band, so the widest row is the nine-machine uranium band;
+            // the old 23- and 36-tile guards only held while that was one belted row
+            { assertTrue(width <= 42, "layout is still $width tiles wide") },
             {
                 assertTrue(
                     height <= 40,
