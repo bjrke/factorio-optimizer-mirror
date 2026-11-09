@@ -194,7 +194,6 @@ class BlueprintBeltEndTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(fluidPlan, beltEnd = BeltEnd.BUFFER_CHEST)

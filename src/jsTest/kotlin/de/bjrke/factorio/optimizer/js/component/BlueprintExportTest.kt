@@ -51,7 +51,6 @@ private val plan =
                 ),
             ),
         sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
-        scale = 1.0,
         label = "iron-gear-wheel",
     )
 

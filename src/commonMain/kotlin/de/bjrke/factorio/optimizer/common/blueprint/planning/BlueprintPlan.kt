@@ -24,7 +24,6 @@ import kotlin.math.roundToInt
 fun blueprintPlan(
     result: OptimizationResult,
     logistics: LogisticsCalculator,
-    scale: Double,
 ): BlueprintPlanResult {
     if (result.target.name == ALL_SCIENCE_PACKS) {
         return BlueprintPlanResult.Unavailable(
@@ -45,7 +44,6 @@ fun blueprintPlan(
         directFeed(
             targetFactory,
             result.factories,
-            scale,
             logistics,
         )
 
@@ -53,9 +51,8 @@ fun blueprintPlan(
         BlueprintPlan(
             target = result.target,
             rows = feed.rows,
-            sources = plannedSources(feed.rows, scale, logistics),
-            scale = scale,
-            label = planLabel(result.target, scale / scale),
+            sources = plannedSources(feed.rows, logistics),
+            label = planLabel(result.target, 1.0),
         ),
     )
 }

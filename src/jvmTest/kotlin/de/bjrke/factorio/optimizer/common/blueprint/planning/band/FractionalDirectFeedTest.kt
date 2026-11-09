@@ -57,7 +57,6 @@ class FractionalDirectFeedTest {
             directFeed(
                 target,
                 factories(target, belt, gear, circuit, cable),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -92,7 +91,6 @@ class FractionalDirectFeedTest {
             directFeed(
                 circuit,
                 factories(circuit, cable),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -121,7 +119,6 @@ class FractionalDirectFeedTest {
             directFeed(
                 circuit,
                 factories(circuit, cable),
-                scale = 1.0,
                 logistics = logistics,
             )
 

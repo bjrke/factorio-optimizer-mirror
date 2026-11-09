@@ -46,7 +46,6 @@ class RowPlacerTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
-                scale = 1.0,
                 label = "iron-gear-wheel",
             )
 
@@ -77,7 +76,6 @@ class RowPlacerTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
-                scale = 1.0,
                 label = "iron-gear-wheel",
             )
 
@@ -110,7 +108,6 @@ class RowPlacerTest {
                         PlannedSource(copperCable, 1.0, fluid = false),
                         PlannedSource(ironPlate, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "electronic-circuit",
             )
 
@@ -173,7 +170,6 @@ class RowPlacerTest {
                         PlannedSource(gear, 1.0, fluid = false),
                         PlannedSource(electronicCircuit, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "productivity-ranking",
             )
 
@@ -218,7 +214,6 @@ class RowPlacerTest {
                         PlannedSource(pipe, 1.0, fluid = false),
                         PlannedSource(steelPlate, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "band",
             )
 

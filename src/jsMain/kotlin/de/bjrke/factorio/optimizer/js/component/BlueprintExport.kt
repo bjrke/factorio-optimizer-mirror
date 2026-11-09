@@ -254,7 +254,7 @@ internal val blueprintButton =
 
 fun ChildrenBuilder.urlBlueprintButton(props: FactorioOptimizerProps) {
     blueprintButton {
-        outcome = blueprintPlan(props.optimizationResult, props.logistics, props.normalizeTarget)
+        outcome = blueprintPlan(props.optimizationResult, props.logistics)
         logistics = props.logistics
         beltEnd = props.beltEnd
     }

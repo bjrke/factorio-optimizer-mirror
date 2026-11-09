@@ -23,7 +23,6 @@ fun fluidRowPlan(
         target = product,
         rows = listOf(PlannedRow(List(machines.toInt().coerceAtLeast(1)) { planned })),
         sources = recipe.ingredients.keys.map { PlannedSource(it, 1.0, fluid = true) },
-        scale = 1.0,
         label = recipe.name,
     )
 }

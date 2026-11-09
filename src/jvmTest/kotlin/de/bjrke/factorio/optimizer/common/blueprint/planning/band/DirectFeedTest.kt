@@ -141,7 +141,6 @@ class DirectFeedTest {
                     ecProduction,
                     production(copperCableRecipe, copperCable, amount = 3.0),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -177,7 +176,6 @@ class DirectFeedTest {
                     production(ironPlateSmeltingRecipe, ironPlate),
                     production(ironGearWheelRecipe, gear),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -204,7 +202,6 @@ class DirectFeedTest {
                     ironPlateProduction,
                     production(ironOreRecipe, ironOre, amount = 0.05),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -225,7 +222,6 @@ class DirectFeedTest {
                     production(electronicCircuitRecipe, electronicCircuit),
                     production(copperCableRecipe, copperCable),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -261,7 +257,6 @@ class DirectFeedTest {
                     production(electronicCircuitRecipe, electronicCircuit),
                     production(copperCableRecipe, copperCable),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -296,7 +291,6 @@ class DirectFeedTest {
                     production(ironPlateSmeltingRecipe, ironPlate),
                     production(ironGearWheelRecipe, gear),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -327,7 +321,6 @@ class DirectFeedTest {
                     target,
                     production(advancedCircuitRecipe, advancedCircuit),
                 ),
-                scale = 1.0,
                 logistics = fluids(sulfuricAcid),
             )
 
@@ -350,7 +343,6 @@ class DirectFeedTest {
                     advanced,
                     production(plasticBarRecipe, plasticBar),
                 ),
-                scale = 1.0,
                 logistics = fluids(petroleum),
             )
 
@@ -384,7 +376,6 @@ class DirectFeedTest {
                     electric,
                     production(engineUnitRecipe, engineUnit),
                 ),
-                scale = 1.0,
                 logistics = fluids(lubricant),
             )
 
@@ -412,7 +403,6 @@ class DirectFeedTest {
                     production(ironGearWheelRecipe, gear),
                     production(ironPlateSmeltingRecipe, ironPlate),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -440,7 +430,6 @@ class DirectFeedTest {
                     production(ironGearWheelRecipe, gear),
                     production(ironPlateSmeltingRecipe, ironPlate),
                 ),
-                scale = 1.0,
                 logistics = logistics,
             )
 
@@ -464,7 +453,6 @@ class DirectFeedTest {
                     sulfuricAcidProduction,
                     production(ironPlateRecipe, ironPlate),
                 ),
-                scale = 1.0,
                 logistics = fluids(water, sulfuricAcid),
             )
 
@@ -492,7 +480,6 @@ class DirectFeedTest {
                     batteryProduction,
                     production(sulfuricAcidRecipe, sulfuricAcid),
                 ),
-                scale = 1.0,
                 logistics = fluids(sulfuricAcid, water),
             )
 
@@ -511,7 +498,6 @@ class DirectFeedTest {
             DirectFeedContext(
                 targetProduction,
                 factories(targetProduction, first, second),
-                1.0,
                 logistics,
             )
         val node = context.nodeOf(first)
@@ -537,7 +523,6 @@ class DirectFeedTest {
                     production(solidFuelFromLightOilRecipe, solidFuel),
                     production(solidFuelFromPetroleumGasRecipe, solidFuel),
                 ),
-                1.0,
                 logistics,
             )
 
@@ -559,7 +544,6 @@ class DirectFeedTest {
                     production(electronicCircuitRecipe, electronicCircuit),
                     production(copperCableRecipe, copperCable),
                 ),
-                1.0,
                 logistics,
             )
         val cableNode = context.nodeOf(production(copperCableRecipe, copperCable))

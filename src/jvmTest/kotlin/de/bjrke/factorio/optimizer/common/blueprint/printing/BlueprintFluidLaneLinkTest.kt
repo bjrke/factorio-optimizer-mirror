@@ -42,7 +42,6 @@ class BlueprintFluidLaneLinkTest {
                         PlannedSource(heavyOil, 1.0, fluid = true),
                         PlannedSource(steam, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "coal-liquefaction",
             )
         val fluids =

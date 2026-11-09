@@ -55,7 +55,7 @@ class OptimizerSurfaceTest {
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(oreSpoilingBacteria.keys) { ore ->
-            assertEquals(Factory.SPOILING, optimizer[ore].production(ore).factory)
+            assertEquals(Factory.SPOILING, optimizer.compute(ore).production(ore).factory)
         }
     }
 
@@ -64,7 +64,10 @@ class OptimizerSurfaceTest {
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(oreSpoilingBacteria.entries) { (ore, bacteria) ->
-            assertEquals("${bacteria.name}-spoiling", optimizer[ore].production(ore).recipe.name)
+            assertEquals(
+                "${bacteria.name}-spoiling",
+                optimizer.compute(ore).production(ore).recipe.name,
+            )
         }
     }
 
@@ -73,7 +76,7 @@ class OptimizerSurfaceTest {
         // the spoiling recipe must not shadow mining where ore patches exist
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS))
 
-        val production = optimizer[ironOre].production(ironOre)
+        val production = optimizer.compute(ironOre).production(ironOre)
         assertAll(
             { assertEquals(Factory.BIG_MINING_DRILL, production.factory) },
             { assertEquals("iron-ore", production.recipe.name) },
@@ -86,7 +89,7 @@ class OptimizerSurfaceTest {
         // which is one of the scrap-recycling outputs
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
 
-        val result = optimizer[ironOre]
+        val result = optimizer.compute(ironOre)
         val production = result.production(ironOre)
         assertAll(
             { assertEquals(Factory.RECYCLER, production.factory) },
@@ -107,7 +110,7 @@ class OptimizerSurfaceTest {
         // nothing on Fulgora recycles into copper ore, so it is imported instead of being spoiled
         // from imported bacteria
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
-        val production = optimizer[copperOre].production(copperOre)
+        val production = optimizer.compute(copperOre).production(copperOre)
         assertAll(
             { assertEquals(Factory.NO_FACTORY, production.factory) },
             { assertEquals("copper-ore", production.recipe.name) },
@@ -118,7 +121,7 @@ class OptimizerSurfaceTest {
     fun fulgoraScienceNeverSpoilsBacteria() {
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
 
-        val result = optimizer[Material(ALL_SCIENCE_PACKS)]
+        val result = optimizer.compute(Material(ALL_SCIENCE_PACKS))
         assertAll(
             {
                 assertEquals(
@@ -141,7 +144,7 @@ class OptimizerSurfaceTest {
         // dump's crafting speed (0.5), so its scrap input showed twice the drill's scrap output.
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
 
-        val result = optimizer[Material(ALL_SCIENCE_PACKS)]
+        val result = optimizer.compute(Material(ALL_SCIENCE_PACKS))
         val drill = result.factories.values.single { it.recipe.name == "scrap" }
         val recycler = result.factories.values.single { it.recipe.name == "scrap-recycling" }
         assertAll(
@@ -158,7 +161,7 @@ class OptimizerSurfaceTest {
         // copper-cable, ...) is not allowed.
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
 
-        val result = optimizer[assemblingMachine1]
+        val result = optimizer.compute(assemblingMachine1)
         val recipes = result.factories.values.map { it.recipe.name }.toSet()
         val scrap = result.factories.values.single { it.recipe.name == "scrap" }
         assertAll(
@@ -180,7 +183,7 @@ class OptimizerSurfaceTest {
         // (jellynut itself takes an hour) nor by spoiling expensive Gleba science packs.
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.GLEBA))
 
-        val result = optimizer[spoilage]
+        val result = optimizer.compute(spoilage)
         val production = result.production(spoilage)
         assertAll(
             { assertEquals("iron-bacteria", production.recipe.name) },
@@ -204,7 +207,7 @@ class OptimizerSurfaceTest {
         assertTable(harvestedFruits) { fruit ->
             assertEquals(
                 Factory.AGRICULTURAL_TOWER,
-                optimizer[fruit].production(fruit).factory,
+                optimizer.compute(fruit).production(fruit).factory,
             )
         }
     }
@@ -214,7 +217,7 @@ class OptimizerSurfaceTest {
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.GLEBA))
 
         assertTable(harvestedFruits) { fruit ->
-            val production = optimizer[fruit].production(fruit)
+            val production = optimizer.compute(fruit).production(fruit)
             assertEquals(50.0, production.recipe.result.getValue(fruit))
         }
     }
@@ -222,7 +225,7 @@ class OptimizerSurfaceTest {
     @Test
     fun nauvisWoodIsHarvestedByAgriculturalTower() {
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS))
-        val actual = optimizer[wood].production(wood).factory
+        val actual = optimizer.compute(wood).production(wood).factory
         assertEquals(Factory.AGRICULTURAL_TOWER, actual)
     }
 
@@ -234,7 +237,10 @@ class OptimizerSurfaceTest {
                 FactoryConfig(spaceAge = false).defaults,
             )
 
-        assertEquals(Factory.ROCKET_SILO, optimizer[spaceScience].production(spaceScience).factory)
+        assertEquals(
+            Factory.ROCKET_SILO,
+            optimizer.compute(spaceScience).production(spaceScience).factory,
+        )
     }
 
     @Test
@@ -245,7 +251,10 @@ class OptimizerSurfaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        assertEquals(Factory.NO_FACTORY, optimizer[spaceScience].production(spaceScience).factory)
+        assertEquals(
+            Factory.NO_FACTORY,
+            optimizer.compute(spaceScience).production(spaceScience).factory,
+        )
     }
 
     @Test
@@ -260,7 +269,7 @@ class OptimizerSurfaceTest {
 
         assertEquals(
             Factory.ELECTROMAGNETIC_PLANT,
-            optimizer[electronicCircuit].production(electronicCircuit).factory,
+            optimizer.compute(electronicCircuit).production(electronicCircuit).factory,
         )
     }
 
@@ -276,7 +285,7 @@ class OptimizerSurfaceTest {
 
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
-            optimizer[gear].production(gear).factory,
+            optimizer.compute(gear).production(gear).factory,
         )
     }
 
@@ -291,7 +300,7 @@ class OptimizerSurfaceTest {
 
         assertEquals(
             Factory.CRYOGENIC_PLANT,
-            optimizer[plasticBar].production(plasticBar).factory,
+            optimizer.compute(plasticBar).production(plasticBar).factory,
         )
     }
 
@@ -306,7 +315,7 @@ class OptimizerSurfaceTest {
 
         assertEquals(
             Factory.CHEMICAL_PLANT,
-            optimizer[lubricant].production(lubricant).factory,
+            optimizer.compute(lubricant).production(lubricant).factory,
         )
     }
 
@@ -320,7 +329,7 @@ class OptimizerSurfaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val production = optimizer[sulfur].production(sulfur)
+        val production = optimizer.compute(sulfur).production(sulfur)
         assertAll(
             { assertEquals("biosulfur", production.recipe.name) },
             { assertEquals(Factory.BIOCHAMBER, production.factory) },
@@ -333,7 +342,7 @@ class OptimizerSurfaceTest {
         // fallback, which stays available for plans that need more than the byproduct.
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
 
-        val result = optimizer[solidFuel]
+        val result = optimizer.compute(solidFuel)
 
         assertEquals("scrap-recycling", result.production(solidFuel).recipe.name)
     }
@@ -351,7 +360,7 @@ class OptimizerSurfaceTest {
             // LP from splitting solid fuel between producers.
             val parsed = RecipeLoader.forActiveMods().forSurface(surface)
             val solidFuelRecipes = parsed.recipes.filter { it.name.startsWith("solid-fuel-from-") }
-            val result = Optimizer(parsed.copy(recipes = solidFuelRecipes))[solidFuel]
+            val result = Optimizer(parsed.copy(recipes = solidFuelRecipes)).compute(solidFuel)
 
             assertEquals(expected, result.recipe.name, "surface $surface")
         }
@@ -362,7 +371,7 @@ class OptimizerSurfaceTest {
 
         assertEquals(
             Factory.CAPTIVE_BITER_SPAWNER,
-            optimizer[biterEgg].production(biterEgg).factory,
+            optimizer.compute(biterEgg).production(biterEgg).factory,
         )
     }
 
@@ -376,7 +385,7 @@ class OptimizerSurfaceTest {
 
         assertEquals(
             Factory.NO_FACTORY,
-            optimizer[metallicAsteroidChunk].production(metallicAsteroidChunk).factory,
+            optimizer.compute(metallicAsteroidChunk).production(metallicAsteroidChunk).factory,
         )
     }
 
@@ -391,7 +400,7 @@ class OptimizerSurfaceTest {
                 Triple(Surface.NAUVIS, uranium235, "kovarex-enrichment-process"),
             ),
         ) { (surface, target, banned) ->
-            val result = Optimizer(RecipeLoader.forActiveMods().forSurface(surface))[target]
+            val result = Optimizer(RecipeLoader.forActiveMods().forSurface(surface)).compute(target)
             // the import pseudo recipe is named after its material, so filter it out by category
             val planned =
                 result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
@@ -404,7 +413,8 @@ class OptimizerSurfaceTest {
         assertTable(Surface.entries) { surface ->
             // plastic is made from coal on the coal surfaces, so this exercises the coal/carbon
             // policy (Gleba uses bioplastic and Fulgora recycles it instead)
-            val result = Optimizer(RecipeLoader.forActiveMods().forSurface(surface))[plasticBar]
+            val result =
+                Optimizer(RecipeLoader.forActiveMods().forSurface(surface)).compute(plasticBar)
             val planned =
                 result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
             assertAll(

@@ -69,7 +69,8 @@ class FactorioOptimizerProps {
 
     val parsedRecipes = RecipeLoader.forActiveMods(spaceAgeEnabled).forSurface(surface)
 
-    val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
+    val optimizationResult: OptimizationResult =
+        Optimizer(parsedRecipes, factories).compute(target, normalizeTarget)
 
     val logisticsConfig = LogisticsConfig(parsedRecipes.logistics, spaceAgeEnabled)
     var belt = logisticsConfig.belt(selection)

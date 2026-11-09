@@ -28,6 +28,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -59,6 +60,39 @@ class BlueprintPlanTest {
         testBlueprintPlan(result(target, targetRecipe, productions), logistics)
 
     @Test
+    fun thePlanUsesTheScaledAmountForMachinesAndSources() {
+        val gearProduction =
+            production(
+                ironGearWheelRecipe,
+                gear,
+                Factory.ASSEMBLING_MACHINE_3,
+                amount = 2.0,
+            )
+        val planned = plan(gear, ironGearWheelRecipe, listOf(gearProduction))
+        val plate = planned.sources.single { it.material == ironPlate }
+
+        assertAll(
+            {
+                assertEquals(
+                    2,
+                    planned.rows
+                        .flatMap { it.machines }
+                        .count {
+                            it.recipe == ironGearWheelRecipe
+                        },
+                )
+            },
+            {
+                assertEquals(
+                    2.0 * gearProduction.inputPerMachine(ironPlate),
+                    plate.rate,
+                    TOLERANCE,
+                )
+            },
+        )
+    }
+
+    @Test
     fun theAllSciencePacksTargetIsUnavailable() {
         val smelt = ironPlateSmeltingRecipe
         val outcome =
@@ -71,7 +105,6 @@ class BlueprintPlanTest {
                     ),
                 ),
                 logistics,
-                scale = 1.0,
             )
 
         assertIs<BlueprintPlanResult.Unavailable>(outcome)

@@ -187,8 +187,7 @@ internal data class FeedLink(
 
 /**
  * The plan the direct-feed search walks: the [target] production, every [included] production, the
- * [scale] the plan is drawn at, the [logistics] that size the inserters, and the per-material
- * producer index.
+ * [logistics] that size the inserters, and the per-material producer index.
  *
  * The search keys machines and needs by [FactoryProduction], so a recipe must be held by exactly
  * one production of [included] — [target] included, since it is one of them: two of the same recipe
@@ -197,7 +196,6 @@ internal data class FeedLink(
 internal data class DirectFeedContext(
     val targetProduction: FactoryProduction,
     val factories: Map<Recipe, FactoryProduction>,
-    val scale: Double,
     val logistics: LogisticsCalculator,
 ) {
     private val nodeCache = mutableMapOf<FactoryProduction, FeedNode>()

@@ -54,7 +54,6 @@ class BlueprintFluidCharacterizationTest {
                     ),
                 ),
             sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-            scale = 1.0,
             label = "solid-fuel-from-petroleum-gas",
         )
 

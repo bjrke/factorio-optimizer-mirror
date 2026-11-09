@@ -46,7 +46,6 @@ class BlueprintLayoutSnapshotTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
         Layout(plan).assertSignature("749bb1b2462f902c")
@@ -70,7 +69,6 @@ class BlueprintLayoutSnapshotTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
-                scale = 1.0,
                 label = "iron-gear-wheel",
             )
         Layout(plan).assertSignature("94533f5e06df28d2")

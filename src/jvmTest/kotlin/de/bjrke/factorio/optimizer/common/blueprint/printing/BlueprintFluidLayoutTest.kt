@@ -75,7 +75,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(fluidPlan)
@@ -111,7 +110,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
         // the pipe-to-ground carries no input/output type, so its direction is the side the
@@ -149,7 +147,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(advancedCircuit, 1.0, fluid = false),
                         PlannedSource(sulfuricAcid, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "processing-unit",
             )
         val layout = Layout(fluidPlan)
@@ -187,7 +184,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(coal, 1.0, fluid = false),
                         PlannedSource(petroleum, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "plastic-bar",
             )
         val layout = Layout(plan)
@@ -233,7 +229,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
         val cheatLogistics =
@@ -281,7 +276,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
 
@@ -302,7 +296,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(steam, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "steam-condensation",
             )
 
@@ -327,7 +320,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(steam, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "steam-condensation",
             )
         val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(steam, water)))
@@ -362,7 +354,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(water, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "sulfuric-acid",
             )
         val layout = Layout(plan, beltEnd = BeltEnd.INFINITY_CHEST)
@@ -396,7 +387,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(water, 1.0, fluid = true),
                         PlannedSource(petroleum, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "sulfur",
             )
 
@@ -430,7 +420,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(water, 1.0, fluid = true),
                         PlannedSource(petroleum, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "sulfur",
             )
         val layout = Layout(fluidPlan)
@@ -486,7 +475,6 @@ class BlueprintFluidLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
-                scale = 1.0,
                 label = "solid-fuel-from-petroleum-gas",
             )
         val entities = Layout(fluidPlan).blueprint.entities
@@ -521,7 +509,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(water, 1.0, fluid = true),
                         PlannedSource(petroleum, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "sulfur",
             )
         val entities = Layout(fluidPlan).blueprint.entities
@@ -552,7 +539,6 @@ class BlueprintFluidLayoutTest {
                         PlannedSource(water, 1.0, fluid = true),
                         PlannedSource(petroleum, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "sulfur",
             )
         assertUndergroundRunsAreStretched(Layout(fluidPlan).entities)

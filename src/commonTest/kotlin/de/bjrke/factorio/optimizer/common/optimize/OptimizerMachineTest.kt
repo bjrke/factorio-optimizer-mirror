@@ -107,14 +107,15 @@ class OptimizerMachineTest {
 
         val result =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(concreteRecipe, pumpWater)),
-                setOf(
-                    Factory.ASSEMBLING_MACHINE_1,
-                    Factory.OFFSHORE_PUMP,
-                    Factory.NO_FACTORY,
-                    Factory.SCIENCE_LAB,
-                ),
-            )[concrete]
+                    ParsedRecipe(emptyList(), listOf(concreteRecipe, pumpWater)),
+                    setOf(
+                        Factory.ASSEMBLING_MACHINE_1,
+                        Factory.OFFSHORE_PUMP,
+                        Factory.NO_FACTORY,
+                        Factory.SCIENCE_LAB,
+                    ),
+                )
+                .compute(concrete)
 
         assertAll(
             { assertEquals(Factory.NO_FACTORY, result.production(concrete).factory) },
@@ -154,7 +155,7 @@ class OptimizerMachineTest {
                 ),
             )
 
-        val production = optimizer[copperCable].production(copperCable)
+        val production = optimizer.compute(copperCable).production(copperCable)
         assertAll(
             { assertEquals(Factory.ELECTROMAGNETIC_PLANT, production.factory) },
             // one machine makes 2 * 1.5 outputs per 0.5 s at speed 2 = 12/s, so 1/s needs 1/12

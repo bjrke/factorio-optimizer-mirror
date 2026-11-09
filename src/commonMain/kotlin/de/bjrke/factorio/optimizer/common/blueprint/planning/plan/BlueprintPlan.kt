@@ -26,17 +26,17 @@ sealed interface BlueprintPlanResult {
 }
 
 /**
- * Whole machines a plan builds for [production] at [scale]: the count the optimizer sized, rounded
- * up, and never more than [MAX_COPIES]. A machine count that should be whole but carries floating
- * point noise must not round up.
+ * Whole machines a plan builds for [production]: the count the optimizer sized at the requested
+ * rate, rounded up, and never more than [MAX_COPIES]. A machine count that should be whole but
+ * carries floating point noise must not round up.
  */
-internal fun plannedMachines(production: FactoryProduction, scale: Double): Int =
-    ceil(production.amount * scale - MACHINE_COUNT_EPSILON).toInt().coerceIn(1, MAX_COPIES)
+internal fun plannedMachines(production: FactoryProduction): Int =
+    ceil(production.amount - MACHINE_COUNT_EPSILON).toInt().coerceIn(1, MAX_COPIES)
 
 /**
  * The reduced production plan a blueprint is laid out from: the [rows] to build, the external
- * [sources] they draw from, and the [scale] the whole plan is drawn at. A [scale] below 1 means the
- * layout had to shrink to fit its belts; [label] explains that and how many copies reach full rate.
+ * [sources] they draw from, and the [label]. When the layout has to shrink to fit its belts, the
+ * label explains how much of the requested rate it covers and how many copies reach full rate.
  *
  * A [FactoryProduction] belongs to exactly one row: a row is the occurrence, so the same recipe in
  * two rows is two independent values, not one identity that has to be tracked.
@@ -50,7 +50,6 @@ data class BlueprintPlan(
      * drift from what the blueprint imports.
      */
     val sources: List<PlannedSource>,
-    val scale: Double,
     val label: String,
 ) {
 

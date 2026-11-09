@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.castingSteelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.factoryOf
+import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.iceMeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -23,6 +24,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -107,17 +109,18 @@ class OptimizerTest {
         // lava & calcite are extractable, so the lava recipe should win
         val result =
             Optimizer(
-                ParsedRecipe(
-                    emptyList(),
-                    listOf(
-                        ironOreMeltingRecipe,
-                        moltenIronFromLavaRecipe,
-                        pumpLava,
-                        mineCalcite,
+                    ParsedRecipe(
+                        emptyList(),
+                        listOf(
+                            ironOreMeltingRecipe,
+                            moltenIronFromLavaRecipe,
+                            pumpLava,
+                            mineCalcite,
+                        ),
                     ),
-                ),
-                vulcanusFactories,
-            )[moltenIron]
+                    vulcanusFactories,
+                )
+                .compute(moltenIron)
 
         assertEquals("molten-iron-from-lava", result.recipe.name)
     }
@@ -126,18 +129,19 @@ class OptimizerTest {
     fun vulcanusSteelUsesLavaNotChestOre() {
         val result =
             Optimizer(
-                ParsedRecipe(
-                    emptyList(),
-                    listOf(
-                        castingSteelRecipe,
-                        ironOreMeltingRecipe,
-                        moltenIronFromLavaRecipe,
-                        pumpLava,
-                        mineCalcite,
+                    ParsedRecipe(
+                        emptyList(),
+                        listOf(
+                            castingSteelRecipe,
+                            ironOreMeltingRecipe,
+                            moltenIronFromLavaRecipe,
+                            pumpLava,
+                            mineCalcite,
+                        ),
                     ),
-                ),
-                vulcanusFactories,
-            )[steelPlate]
+                    vulcanusFactories,
+                )
+                .compute(steelPlate)
 
         assertAll(
             { assertEquals("casting-steel", result.recipe.name) },
@@ -162,14 +166,53 @@ class OptimizerTest {
         // on Nauvis-like surface: iron-ore is mined, lava is not available (free source)
         val result =
             Optimizer(
-                ParsedRecipe(
-                    emptyList(),
-                    listOf(ironOreMeltingRecipe, moltenIronFromLavaRecipe, mineCalcite, miningIron),
-                ),
-                vulcanusFactories,
-            )[moltenIron]
+                    ParsedRecipe(
+                        emptyList(),
+                        listOf(
+                            ironOreMeltingRecipe,
+                            moltenIronFromLavaRecipe,
+                            mineCalcite,
+                            miningIron,
+                        ),
+                    ),
+                    vulcanusFactories,
+                )
+                .compute(moltenIron)
 
         assertEquals("iron-ore-melting", result.recipe.name)
+    }
+
+    @Test
+    fun scaleMultipliesMachinesAndImports() {
+        val optimizer =
+            Optimizer(
+                ParsedRecipe(emptyList(), listOf(ironGearWheelRecipe)),
+                setOf(Factory.ASSEMBLING_MACHINE_1, Factory.NO_FACTORY, Factory.SCIENCE_LAB),
+            )
+
+        val atOne = optimizer.compute(gear)
+        val atTwo = optimizer.compute(gear, 2.0)
+
+        fun amount(result: OptimizationResult, recipe: String) =
+            result.factories.values.single { it.recipe.name == recipe }.amount
+
+        assertAll(
+            {
+                assertEquals(
+                    amount(atOne, "iron-gear-wheel") * 2,
+                    amount(atTwo, "iron-gear-wheel"),
+                    TOLERANCE,
+                )
+            },
+            {
+                // the iron plate is imported, so the import has to scale with the target too
+                assertEquals(
+                    amount(atOne, "iron-plate") * 2,
+                    amount(atTwo, "iron-plate"),
+                    TOLERANCE,
+                )
+            },
+        )
     }
 
     @Test
@@ -185,7 +228,7 @@ class OptimizerTest {
                 ),
             )
 
-        val result = optimizer[uraniumFuelCell]
+        val result = optimizer.compute(uraniumFuelCell)
 
         val processing = result.factories.values.single { it.recipe.name == "uranium-processing" }
         assertAll(
@@ -220,7 +263,7 @@ class OptimizerTest {
                 ),
             )
 
-        val result = optimizer[engineUnit]
+        val result = optimizer.compute(engineUnit)
 
         val smelting = result.factories.values.single { it.recipe.name == "iron-plate" }
         // gear (2 plates) and pipe (1 plate each, 2 per engine) consume 4 plates/s in total

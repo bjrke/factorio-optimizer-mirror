@@ -40,7 +40,6 @@ class BlueprintBandTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
-                scale = 1.0,
                 label = "iron-gear-wheel",
             )
         val layout = Layout(bandPlan)

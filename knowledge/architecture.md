@@ -40,7 +40,9 @@ CLI (JVM) from one shared core.
     `prototypeStats.kt` (`machineStats`/`logisticsStats`).
   - `optimize` — the optimizer: `Optimizer.kt` and `MachineCatalog.kt`
     (machine choice and rates) and `LinearProgram.kt`. It takes a `ParsedRecipe`
-    in and returns an `OptimizationResult` (from `model`); it never loads the
+    in and returns an `OptimizationResult` (from `model`); `compute(target, scale)`
+    folds the requested rate into every `FactoryProduction.amount`, imports
+    included, so the result is the single source of the rate. It never loads the
     dump or builds a blueprint. Its output models now live in `model`, so the
     blueprint planner can consume an optimizer result without depending on the
     optimizer itself.
@@ -390,8 +392,8 @@ edge (producer node, consumer node, material), and `FeedNode.traverse()` walks
 the ingredients once, keeping a visited node set, so a shared production is not
 expanded twice. Real solid recipe cycles are filtered out by `unplannedRecipes`,
 so the walk keeps no cycle-specific state. `DirectFeedContext` owns the target,
-the included productions, the scale, the logistics, the per-material producer
-index (with `stone` always excluded) and the lazy node lookup (`nodeOf`); a
+the included productions, the logistics, the per-material producer index (with
+`stone` always excluded) and the lazy node lookup (`nodeOf`); a
 material with several in-plan producers must be kept out by an explicit recipe
 policy, not by picking one link. `Optimizer` keeps one solid-fuel recipe per
 surface (light oil elsewhere, heavy oil on Fulgora, ammonia on Aquilo).
@@ -406,7 +408,7 @@ can internalize an ingredient, but the finished group must fit
 `MAX_ROW_BELTS = 4` (`bandBeltMaterials`); otherwise the seed is dropped, its
 links return to the pool and another seed is tried. `BandSearch.kt` arranges a
 group into the shortest window that satisfies the **plan rates**:
-`groupNeeds` starts from each terminal production's `amount * scale` and
+`groupNeeds` starts from each terminal production's already-scaled `amount` and
 propagates fractional needs upstream, and `FeedWindow` distributes each link's
 demand over the built consumer machines. Overfeed is allowed, underfeed is not,
 and a repeated window may build extra copies to make a worse ratio balance.

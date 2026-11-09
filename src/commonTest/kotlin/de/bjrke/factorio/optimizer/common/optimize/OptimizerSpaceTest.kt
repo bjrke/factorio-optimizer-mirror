@@ -39,7 +39,7 @@ class OptimizerSpaceTest {
         // space science is a plain crafting recipe, so it uses the assembling machine
         assertEquals(
             Factory.ASSEMBLING_MACHINE_3,
-            optimizer[spaceScience].production(spaceScience).factory,
+            optimizer.compute(spaceScience).production(spaceScience).factory,
         )
     }
 
@@ -55,7 +55,7 @@ class OptimizerSpaceTest {
 
         assertEquals(
             Factory.ELECTROMAGNETIC_PLANT,
-            optimizer[quantumProcessor].production(quantumProcessor).factory,
+            optimizer.compute(quantumProcessor).production(quantumProcessor).factory,
         )
     }
 
@@ -65,7 +65,7 @@ class OptimizerSpaceTest {
         // promethium science must be imported on space platforms
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.SPACE))
 
-        assertEquals(Factory.NO_FACTORY, optimizer[biterEgg].production(biterEgg).factory)
+        assertEquals(Factory.NO_FACTORY, optimizer.compute(biterEgg).production(biterEgg).factory)
     }
 
     @Test
@@ -79,7 +79,7 @@ class OptimizerSpaceTest {
         assertTable(asteroidChunks) { chunk ->
             assertEquals(
                 Factory.ASTEROID_COLLECTOR,
-                optimizer[chunk].production(chunk).factory,
+                optimizer.compute(chunk).production(chunk).factory,
             )
         }
     }
@@ -95,7 +95,7 @@ class OptimizerSpaceTest {
         assertTable(asteroidChunks) { chunk ->
             assertEquals(
                 "asteroid-collection",
-                optimizer[chunk].production(chunk).recipe.name,
+                optimizer.compute(chunk).production(chunk).recipe.name,
             )
         }
     }
@@ -110,7 +110,7 @@ class OptimizerSpaceTest {
                 FactoryConfig(spaceAge = true).defaults,
             )
 
-        val result = optimizer[spaceScience]
+        val result = optimizer.compute(spaceScience)
 
         assertEquals(1, result.factories.values.count { it.recipe.name == "asteroid-collection" })
     }
@@ -127,7 +127,7 @@ class OptimizerSpaceTest {
 
         assertEquals(
             1,
-            optimizer[solarPanel].factories.values.count {
+            optimizer.compute(solarPanel).factories.values.count {
                 it.recipe.name == "advanced-metallic-asteroid-crushing"
             },
         )

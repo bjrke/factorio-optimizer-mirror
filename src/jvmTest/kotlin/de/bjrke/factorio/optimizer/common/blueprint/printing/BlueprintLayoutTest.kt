@@ -136,7 +136,6 @@ class BlueprintLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
-                scale = 1.0,
                 label = "iron-gear-wheel",
             )
 
@@ -166,7 +165,6 @@ class BlueprintLayoutTest {
                         ),
                     ),
                 sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
-                scale = 1.0,
                 label = "iron-gear-wheel",
             )
         val machines =
@@ -211,7 +209,6 @@ class BlueprintLayoutTest {
                         PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(copperCable, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "electronic-circuit",
             )
 
@@ -237,7 +234,6 @@ class BlueprintLayoutTest {
                         PlannedSource(ironOre, 1.0, fluid = false),
                         PlannedSource(water, 1.0, fluid = true),
                     ),
-                scale = 1.0,
                 label = "concrete",
             )
         val layout = Layout(twoPlan)
@@ -286,7 +282,6 @@ class BlueprintLayoutTest {
                         PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(wood, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "electronic-circuit",
             )
 
@@ -312,7 +307,6 @@ class BlueprintLayoutTest {
                         PlannedSource(ironPlate, 1.0, fluid = false),
                         PlannedSource(wood, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "electronic-circuit",
             )
 
@@ -432,7 +426,6 @@ class BlueprintLayoutTest {
                         PlannedSource(gear, 1.0, fluid = false),
                         PlannedSource(pipe, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "engine-unit",
             )
 

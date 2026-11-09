@@ -41,11 +41,12 @@ val chestMarkers =
         BeltEnd.STEEL_CHEST,
     )
 
-fun optimize(target: String, surface: Surface = Surface.NAUVIS) =
+fun optimize(target: String, surface: Surface = Surface.NAUVIS, scale: Double) =
     Optimizer(
-        RecipeLoader.forActiveMods().forSurface(surface),
-        FactoryConfig().defaults,
-    )[Material(target)]
+            RecipeLoader.forActiveMods().forSurface(surface),
+            FactoryConfig().defaults,
+        )
+        .compute(Material(target), scale)
 
 /** Resolves a pasted web-UI URL exactly like the CLI, so a reported layout can be replayed. */
 internal fun layoutFromUrl(url: String): Layout {
@@ -82,15 +83,15 @@ internal fun layoutFromUrl(url: String): Layout {
             ),
         )
 
-    val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
-    return Layout(result, logistics, cli.normalizeTarget, cli.beltEnd)
+    val result =
+        Optimizer(parsedRecipes, factories).compute(Material(cli.material), cli.normalizeTarget)
+    return Layout(result, logistics, cli.beltEnd)
 }
 
 fun testBlueprintPlan(
     result: OptimizationResult,
     logistics: LogisticsCalculator,
-    scale: Double = 1.0,
-) = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics, scale)).plan
+) = assertIs<BlueprintPlanResult.Planned>(blueprintPlan(result, logistics)).plan
 
 fun decode(blueprint: String): String {
     val compressed = Base64.getDecoder().decode(blueprint.substring(1))
@@ -112,16 +113,15 @@ data class Layout(
     constructor(
         result: OptimizationResult,
         logistics: LogisticsCalculator = LogisticsCalculator(result.logistics),
-        scale: Double,
         beltEnd: BeltEnd,
-    ) : this(testBlueprintPlan(result, logistics, scale), logistics, beltEnd)
+    ) : this(testBlueprintPlan(result, logistics), logistics, beltEnd)
 
     constructor(
         target: String,
         scale: Double = 1.0,
         beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
         surface: Surface = Surface.NAUVIS,
-    ) : this(result = optimize(target, surface), scale = scale, beltEnd = beltEnd)
+    ) : this(result = optimize(target, surface, scale), beltEnd = beltEnd)
 
     private val rowLayout by lazy { RowLayout(plan, logistics, beltEnd) }
 

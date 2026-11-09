@@ -131,7 +131,6 @@ class BlueprintImportTest {
                         PlannedSource(sulfur, 1.0, fluid = false),
                         PlannedSource(coal, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "explosives",
             )
         val layout = Layout(mixedPlan)
@@ -191,7 +190,6 @@ class BlueprintImportTest {
                         PlannedSource(electronicCircuit, 1.0, fluid = false),
                         PlannedSource(plasticBar, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "advanced-circuit",
             )
         val layout = Layout(plan)
@@ -253,7 +251,6 @@ class BlueprintImportTest {
                         PlannedSource(copperPlate, 1.0, fluid = false),
                         PlannedSource(ironPlate, 1.0, fluid = false),
                     ),
-                scale = 1.0,
                 label = "electronic-circuit",
             )
 

@@ -73,7 +73,6 @@ class BlueprintBandFluidTest {
                 target = electricEngineUnit,
                 rows = listOf(PlannedRow(machines, links)),
                 sources = sources,
-                scale = 1.0,
                 label = "electric-engine-unit",
             )
 
@@ -108,7 +107,6 @@ class BlueprintBandFluidTest {
                 target = flyingRobotFrame,
                 rows = listOf(PlannedRow(machines, links)),
                 sources = sources,
-                scale = 1.0,
                 label = "flying-robot-frame",
             )
 
@@ -136,7 +134,6 @@ class BlueprintBandFluidTest {
                 target = sulfuricAcid,
                 rows = listOf(PlannedRow(machines, links)),
                 sources = sources,
-                scale = 1.0,
                 label = "sulfuric-acid",
             )
         val layout = Layout(plan)

@@ -40,8 +40,8 @@ internal fun DirectFeedContext.candidateComparator(): Comparator<FeedLink> =
  * that has room to grow.
  */
 internal fun DirectFeedContext.candidateScore(link: FeedLink): Double {
-    val producerRate = link.producer.production.amount * scale * link.outputPerMachine
-    val consumerRate = link.consumer.production.amount * scale * link.inputPerMachine
+    val producerRate = link.producer.production.amount * link.outputPerMachine
+    val consumerRate = link.consumer.production.amount * link.inputPerMachine
     val beltSavings = logistics.beltCount(max(producerRate, consumerRate), logistics.beltStack)
     val beltRequirement = bandBeltMaterials(listOf(link)).size
     val solidIngredients = link.producer.recipe.ingredients.keys.count { !logistics.isFluid(it) }
@@ -50,8 +50,8 @@ internal fun DirectFeedContext.candidateScore(link: FeedLink): Double {
     val bulkGain = (link.producer.recipe.result[link.material] ?: 0.0) / max(1.0, solidInputs)
     val oneMachine =
         if (
-            link.producer.production.amount * scale <= 1.0 + FEED_EPSILON &&
-                link.consumer.production.amount * scale <= 1.0 + FEED_EPSILON
+            link.producer.production.amount <= 1.0 + FEED_EPSILON &&
+                link.consumer.production.amount <= 1.0 + FEED_EPSILON
         ) {
             1.0
         } else {

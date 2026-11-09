@@ -79,7 +79,6 @@ class DeliveryPreparationTest {
                     ),
                 ),
             sources = emptyList(),
-            scale = 1.0,
             label = "two products",
         )
     }
