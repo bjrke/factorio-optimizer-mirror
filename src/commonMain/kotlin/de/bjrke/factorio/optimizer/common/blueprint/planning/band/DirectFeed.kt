@@ -6,16 +6,12 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_COPIES
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.plannedMachines
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
 
 /** The rows a plan builds; a plain row repeats one recipe, a band interleaves several. */
-internal data class DirectFeed(
-    val rows: List<PlannedRow>,
-    val included: Map<Recipe, FactoryProduction>,
-)
+internal data class DirectFeed(val rows: List<PlannedRow>)
 
 /** Splits the plan into band rows, the target row and the remaining belted rows. */
 internal fun DirectFeedContext.build(): DirectFeed {
@@ -24,11 +20,10 @@ internal fun DirectFeedContext.build(): DirectFeed {
     val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
     val built = bands.flatMap { it.machines }.groupingBy { it }.eachCount()
     val onBelt = onBeltOf(bandPlans)
+    val demand = beltDemand(grouped)
     val belted =
-        included.values
-            .sortedBy { it.recipe.name }
-            .mapNotNull { belted(it, grouped, onBelt, built) }
-    return DirectFeed(bands + targetRow(built) + belted, included)
+        included.values.sortedBy { it.recipe.name }.mapNotNull { belted(it, demand, onBelt, built) }
+    return DirectFeed(bands + targetRow(built) + belted)
 }
 
 /** Builds one row per arranged band, with its machine sequence and the links between them. */
@@ -68,54 +63,52 @@ private fun DirectFeedContext.beltOutputPerMachine(production: FactoryProduction
 }
 
 /**
- * The rate a belted production still has to cover: every consumer outside the direct links, at the
- * rate the plan was sized for.
+ * The rate every belted production still has to cover: each consumer outside the direct links, at
+ * the rate the plan was sized for, grouped by the recipe that alone produces the material. A band's
+ * internal material never gets a belt.
  */
-private fun DirectFeedContext.beltedRate(recipe: Recipe, grouped: Set<FeedLink>) =
-    included.values.sumOf { consumer ->
-        consumer.recipe.ingredients.keys.sumOf { material ->
-            if (countsForBelt(recipe, consumer, material, grouped))
-                consumer.consumption(material) * scale
-            else 0.0
+private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): Map<Recipe, Double> {
+    val groupedTriples =
+        grouped
+            .map {
+                Triple(it.material, it.producer.production.recipe, it.consumer.production.recipe)
+            }
+            .toSet()
+    return buildMap {
+        for (consumer in included.values) {
+            for (material in consumer.recipe.ingredients.keys) {
+                if (logistics.isFluid(material)) continue
+                val producer = producers[material]?.singleOrNull() ?: continue
+                if (Triple(material, producer.recipe, consumer.recipe) in groupedTriples) continue
+                val rate = consumer.consumption(material) * scale
+                put(producer.recipe, (this[producer.recipe] ?: 0.0) + rate)
+            }
         }
     }
-
-/** Whether [consumer] still draws [material] over a belt rather than a band insertion. */
-private fun DirectFeedContext.countsForBelt(
-    recipe: Recipe,
-    consumer: FactoryProduction,
-    material: Material,
-    grouped: Set<FeedLink>,
-) =
-    material in recipe.result.keys &&
-        !logistics.isFluid(material) &&
-        producers[material]?.singleOrNull()?.recipe == recipe &&
-        grouped.none {
-            it.material == material &&
-                it.producer.production.recipe == recipe &&
-                it.consumer.production.recipe == consumer.recipe
-        }
+}
 
 /**
  * One belted production per recipe: what the consumers that are not direct-fed still need, at the
- * rate the plan was sized for, less what a band's own surplus already puts on a belt. A band's
- * internal material never gets a belt.
+ * rate the plan was sized for, less what a band's own surplus already puts on a belt. The target
+ * row is [targetRow]'s job, so a target that another included recipe consumes cannot get a second
+ * row here.
  */
 private fun DirectFeedContext.belted(
     production: FactoryProduction,
-    grouped: Set<FeedLink>,
+    demand: Map<Recipe, Double>,
     onBelt: Map<FactoryProduction, Int>,
     built: Map<FactoryProduction, Int>,
 ): PlannedRow? {
+    if (production == target.production) return null
     val recipe = production.recipe
-    val rate = beltedRate(recipe, grouped)
+    val rate = demand[recipe] ?: 0.0
     val perMachine = beltOutputPerMachine(production)
-    val demand =
+    val needed =
         if (perMachine > 0.0)
             ceil(rate / perMachine - MACHINE_COUNT_EPSILON).toInt() - (onBelt[production] ?: 0)
         else 0
     val leftover = (plannedMachines(production, scale) - (built[production] ?: 0)).coerceAtLeast(0)
-    val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)
+    val machines = maxOf(needed, leftover).coerceIn(0, MAX_COPIES)
     return if (rate <= 0.0 || machines <= 0) null
     else {
         PlannedRow.copies(production, machines)

@@ -181,7 +181,10 @@ An entry belongs here only with evidence, and should say how to recognize it.
   drops a target that is not in the per-material producer index, so the plan has no target row
   and `plannedSources` sees none of its consumers. Keep the seed separate from `buildable`:
   indexing the target in `producers` again can make a self-consuming target plan a second,
-  belted row. Evidence: `theTargetStaysIncludedWhenItsMaterialHasTwoProducers`.
+  belted row. `DirectFeed.belted` also skips the target production, so `targetRow` is the only
+  owner of the target row even when another included recipe consumes it. Evidence:
+  `theTargetStaysIncludedWhenItsMaterialHasTwoProducers`,
+  `aTargetThatAnotherIncludedRecipeConsumesGetsOneRow`.
 - **Belted machine counts must round with `MACHINE_COUNT_EPSILON`, not `FEED_EPSILON`.**
   `DirectFeed.belted` turns a plan rate into whole machines, so it needs the same `1e-6` slack as
   `plannedMachines`; the `1e-9` feed slack rounds a rate that is only floating-point noise above a

@@ -2,12 +2,17 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.fluoroketoneCold
 import de.bjrke.factorio.optimizer.common.fixtures.fluoroketoneHot
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessorRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.railgun
 import de.bjrke.factorio.optimizer.common.fixtures.railgunRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
+import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -59,6 +64,25 @@ class DirectFeedBeltTest {
         assertEquals(
             9,
             feed.rows.single { it.machines.first().recipe == quantumProcessorRecipe }.machines.size,
+        )
+    }
+
+    @Test
+    fun aTargetThatAnotherIncludedRecipeConsumesGetsOneRow() {
+        val gearProduction = production(ironGearWheelRecipe, gear)
+        val beltProduction = production(transportBeltRecipe, transportBelt)
+        val feed =
+            directFeed(
+                gearProduction,
+                factories(gearProduction, beltProduction),
+                logistics = calculator(),
+            )
+
+        // the belt recipe consumes gear, but the target row is the only gear row: the belted pass
+        // must not add a second one
+        assertEquals(
+            1,
+            feed.rows.count { row -> row.machines.any { it.recipe == ironGearWheelRecipe } },
         )
     }
 }
