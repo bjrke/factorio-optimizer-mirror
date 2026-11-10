@@ -105,8 +105,15 @@ internal class BandFeed(
     val producerIsLeft: Boolean,
 )
 
-/** One arrangement of a group: the machine sequence and the insertions between the machines. */
-internal class BandPlan(val machines: List<FactoryProduction>, val feeds: List<BandFeed>)
+/**
+ * One arrangement of a group: the machine sequence, the insertions between the machines, and the
+ * ratio penalty of the sequence, computed once so the comparator does not recount the machines.
+ */
+internal class BandPlan(
+    val machines: List<FactoryProduction>,
+    val feeds: List<BandFeed>,
+    val ratioPenalty: Double,
+)
 
 /**
  * One production in the direct-feed graph. A production may feed several consumers, so it is a

@@ -7,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.core.util.permute
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * The best arrangement of the recipes linked by [links], or null when none can be built: the
@@ -24,24 +23,45 @@ internal fun DirectFeedContext.arrange(links: List<FeedLink>): BandPlan? {
     val needs = groupNeeds(links) ?: return null
     val group = FeedGroup(links, needs)
 
-    return arrangeSequence(recipes, group).minWithOrNull(bandPlanComparator(group))
+    return arrangeBest(recipes, group)
 }
 
-private fun arrangeSequence(
+/**
+ * The best arrangement of [recipes], pruning every window longer than the best plan found so far.
+ * Machine count is the comparator's primary key, so a longer window can never win.
+ */
+private fun DirectFeedContext.arrangeBest(
     recipes: List<FactoryProduction>,
     group: FeedGroup,
-): Sequence<BandPlan> = sequence {
-    if (recipes.size > MAX_BAND_RECIPES) return@sequence
+): BandPlan? {
+    if (recipes.size > MAX_BAND_RECIPES) return null
+    val comparator = bandPlanComparator()
+    var best: BandPlan? = null
     for (length in recipes.size..MAX_BAND_RECIPES) {
+        val bestLength = best?.machines?.size
+        if (bestLength != null && length > bestLength) break
         for (counts in countVectors(recipes, length)) {
             if (counts.values.reduce(::greatestCommonDivisor) != 1) continue
-            for (cycle in permute(counts)) {
-                if (!adjacent(group, cycle)) continue
-                val plan = window(group, cycle, counts) ?: continue
-                yield(plan)
-            }
+            best = bestPlanForCounts(group, counts, best, comparator)
         }
     }
+    return best
+}
+
+private fun DirectFeedContext.bestPlanForCounts(
+    group: FeedGroup,
+    counts: Map<FactoryProduction, Int>,
+    best: BandPlan?,
+    comparator: Comparator<BandPlan>,
+): BandPlan? {
+    var current = best
+    for (cycle in permute(counts)) {
+        if (!adjacent(group, cycle)) continue
+        val maxLength = current?.machines?.size ?: maxBandMachines(group.links.size)
+        val plan = window(group, cycle, counts, maxLength) ?: continue
+        if (current == null || comparator.compare(plan, current) < 0) current = plan
+    }
+    return current
 }
 
 private fun footPrintsHaveDifferentSize(nodes: List<FeedNode>) =
@@ -55,9 +75,9 @@ private fun compareNames(first: List<FactoryProduction>, second: List<FactoryPro
     first.zip(second) { a, b -> a.recipe.name.compareTo(b.recipe.name) }.firstOrNull { it != 0 }
         ?: 0
 
-private fun DirectFeedContext.bandPlanComparator(group: FeedGroup): Comparator<BandPlan> =
+private fun DirectFeedContext.bandPlanComparator(): Comparator<BandPlan> =
     compareBy<BandPlan> { it.machines.size }
-        .thenBy { plan -> ratioPenalty(plan, group.links) }
+        .thenBy { it.ratioPenalty }
         .thenBy { plan -> plan.feeds.sumOf { inserters(it.flow) } }
         .then { a, b -> compareNames(a.machines, b.machines) }
 
@@ -98,8 +118,8 @@ private fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryProd
 }
 
 /** How far a plan's machine counts are from the links' per-machine rates. */
-private fun ratioPenalty(plan: BandPlan, links: List<FeedLink>): Double {
-    val counts = plan.machines.groupingBy { it }.eachCount()
+private fun ratioPenalty(machines: List<FactoryProduction>, links: List<FeedLink>): Double {
+    val counts = machines.groupingBy { it }.eachCount()
     return links.sumOf { link ->
         val producerCount = counts[link.producer.production] ?: return@sumOf 0.0
         val consumerCount = counts[link.consumer.production] ?: return@sumOf 0.0
@@ -121,13 +141,16 @@ private fun window(
     group: FeedGroup,
     cycle: List<FactoryProduction>,
     counts: Map<FactoryProduction, Int>,
+    maxLength: Int,
 ): BandPlan? {
     val repetitions =
         group.needs.maxOfOrNull { (recipe, count) ->
             if (count <= FEED_EPSILON) 0
             else ceil(count / counts.getValue(recipe) - FEED_EPSILON).toInt()
         } ?: 0
-    for (length in maxOf(cycle.size, repetitions * cycle.size)..maxBandMachines(group.links.size)) {
+    val start = maxOf(cycle.size, repetitions * cycle.size)
+    if (start > maxLength) return null
+    for (length in start..minOf(maxBandMachines(group.links.size), maxLength)) {
         for (offset in cycle.indices) {
             val machines = List(length) { cycle[(offset + it) % cycle.size] }
             val allNeedsFulfilled =
@@ -137,7 +160,7 @@ private fun window(
 
             if (!allNeedsFulfilled) continue
             val feeds = FeedWindow(group, machines).feeds() ?: continue
-            return BandPlan(machines, feeds)
+            return BandPlan(machines, feeds, ratioPenalty(machines, group.links))
         }
     }
     return null
@@ -158,15 +181,27 @@ private class FeedWindow(
     private val machines: List<FactoryProduction>,
 ) {
     private val links = group.links
-    private val machineCounts = machines.groupingBy { it }.eachCount()
-    private val demand = links.associateWith { link ->
-        (group.needs[link.consumer.production] ?: 0.0) * link.inputPerMachine
-    }
+    private val consumerCounts = IntArray(links.size)
+    private val demand =
+        DoubleArray(links.size) { index ->
+            (group.needs[links[index].consumer.production] ?: 0.0) * links[index].inputPerMachine
+        }
 
     private val supply = DoubleArray(machines.size * links.size)
     private val remaining = DoubleArray(machines.size) { machines[it].outputPerMachine() }
-    private val used = mutableSetOf<Int>()
-    private val feeds = mutableMapOf<Int, BandFeed>()
+    private val used = BooleanArray(machines.size)
+    private val feeds = arrayOfNulls<BandFeed>(machines.size - 1)
+    private val isProducer = BooleanArray(machines.size)
+
+    init {
+        for (position in machines.indices) {
+            val machine = machines[position]
+            for ((index, link) in links.withIndex()) {
+                if (machine == link.consumer.production) consumerCounts[index]++
+                if (machine == link.producer.production) isProducer[position] = true
+            }
+        }
+    }
 
     fun feeds(): List<BandFeed>? {
         seedSupply()
@@ -176,11 +211,12 @@ private class FeedWindow(
                 if (!consume(position, link, index)) return null
             }
         }
-        return if (everythingUsed()) feeds.values.sortedBy { it.gap } else null
+        return if (everythingUsed()) feeds.filterNotNull() else null
     }
 
     private fun seedSupply() {
         for (position in machines.indices) {
+            if (!isProducer[position]) continue
             for ((index, link) in links.withIndex()) {
                 if (machines[position] != link.producer.production) continue
                 supply[position * links.size + index] = link.outputPerMachine
@@ -189,8 +225,8 @@ private class FeedWindow(
     }
 
     private fun consume(position: Int, link: FeedLink, index: Int): Boolean {
-        val consumerCount = machineCounts.getValue(link.consumer.production)
-        var demandLeft = if (consumerCount <= 0) 0.0 else demand.getValue(link) / consumerCount
+        val consumerCount = consumerCounts[index]
+        var demandLeft = if (consumerCount <= 0) 0.0 else demand[index] / consumerCount
         for (side in listOf(position - 1, position + 1)) {
             if (side !in machines.indices) continue
             if (machines[side] != link.producer.production) continue
@@ -199,8 +235,8 @@ private class FeedWindow(
             if (taken <= FEED_EPSILON) continue
             supply[slot] -= taken
             remaining[side] -= taken
-            used += side
-            val gap = min(position, side)
+            used[side] = true
+            val gap = minOf(position, side)
             val known = feeds[gap]?.flow ?: 0.0
             feeds[gap] = BandFeed(gap, link, known + taken, side < position)
             demandLeft -= taken
@@ -210,9 +246,7 @@ private class FeedWindow(
 
     /** Every producer machine must have fed a consumer, or it would be built unused. */
     private fun everythingUsed() =
-        machines.indices.all { position ->
-            links.none { machines[position] == it.producer.production } || position in used
-        }
+        machines.indices.all { position -> !isProducer[position] || used[position] }
 }
 
 /** Whether every link has two adjacent machines in [cycle], ignoring the direction of the flow. */

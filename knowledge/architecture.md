@@ -415,6 +415,9 @@ shortest window that satisfies the **plan rates**:
 propagates fractional needs upstream, and `FeedWindow` distributes each link's
 demand over the built consumer machines. Overfeed is allowed, underfeed is not,
 and a repeated window may build extra copies to make a worse ratio balance.
+`arrange` keeps the best plan and passes its machine count as an upper bound to
+`window`, so no longer window is built once a shorter one exists; `BandPlan`
+caches its ratio penalty, and `FeedWindow` uses arrays instead of maps/sets.
 `cycleFit`/`cyclePenalty` only rank patterns (`p:q` with `p + q` at most 6);
 they never reject a link. A band is bounded by `GROUP_MAX_MACHINES = 10` (9
 when it has more than one link, so the row stays powerable) and
