@@ -468,6 +468,32 @@ baselines, so every finding fails.
   `imageChangedThreshold` (needs `imagemagick optipng pngquant`). Do not add icons
   by hand.
 
+## Profiling
+
+`./gradlew jvmTestProfile` reuses the `jvmTest` classpath and attaches JDK Flight
+Recorder (`-XX:StartFlightRecording=…,settings=profile,dumponexit=true`,
+`-XX:FlightRecorderOptions=stackdepth=1024`). It writes
+`build/profiles/jvmTest/jvmTest-<pid>.jfr` and forces `maxParallelForks = 1`, so
+every test case lands in one recording — that recording *is* the merge across
+test cases. The task deletes the directory before each run and never counts as
+up to date, so a stale profile cannot be mistaken for a fresh one.
+
+The report is CPU only: self time per method from `jdk.ExecutionSample`. The
+recording also carries `jdk.ThreadPark`, `jdk.ThreadSleep` and monitor events
+with stacks, so blocking time can be inspected without a re-run.
+
+There is no report generator and no text artifact: the JDK's own tooling reads
+the recording. Open the `.jfr` in IntelliJ's JFR viewer (`File | Open`), JDK
+Mission Control, or use the JDK CLI:
+
+```
+jfr view --width 160 hot-methods build/profiles/jvmTest/jvmTest-<pid>.jfr
+jfr summary build/profiles/jvmTest/jvmTest-<pid>.jfr
+```
+
+Filter to `de.bjrke` in the viewer: the recording starts at JVM launch and
+includes Gradle's test framework and regex/class-loading work.
+
 ## Prerequisites
 
 - JDK 25 is required. `gradle.properties` sets

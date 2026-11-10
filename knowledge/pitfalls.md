@@ -294,6 +294,15 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `GradleBuild` task fails with "build name 'buildSrc' … reserved name". buildSrc
   carries no tests today; wire a CI line plus `./gradlew -p buildSrc test` locally
   if one is added.
+- **A JFR recording is per forked JVM and needs an existing output directory.**
+  `-XX:StartFlightRecording=filename=…/jvmTest-%p.jfr` expands `%p` to the PID but
+  does not create `…/profiles/jvmTest`, so `jvmTestProfile` creates it in
+  `doFirst` (and deletes it first, or old PIDs would mix into a "merged" run).
+  JFR also truncates stacks at 64 frames by default;
+  `-XX:FlightRecorderOptions=stackdepth=1024` is required for deep Kotlin call
+  chains, and `jfr view`/JMC show the caller chain only from the stored depth.
+  Because recordings are per JVM, `maxParallelForks > 1` would produce several
+  files instead of one merged profile.
 - **`spotlessApply` after staging leaves the reformat unstaged.** It reorders the
   project imports, so run it before `git add`, or amend after it.
 - **A one-line collection assertion becomes a multi-line block and can push a

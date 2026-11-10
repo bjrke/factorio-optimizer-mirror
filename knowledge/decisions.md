@@ -7,6 +7,25 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-10 — Test profiling is JDK Flight Recorder, CPU only
+
+**Decision.** `jvmTestProfile` attaches the JDK's own Flight Recorder to the test
+JVM; it does not add async-profiler, a sampling agent or a report generator.
+The artifact is one merged `.jfr` per run, read by IntelliJ's JFR viewer, JMC or
+the `jfr` CLI. The profile is CPU (self time per method) only; wall-clock
+attribution is deliberately not computed, because reconstructing it from
+`jdk.ThreadPark`/`jdk.ThreadSleep`/monitor events is lossy and no maintained tool
+does it from this recording alone.
+
+**Guardrail.** Do not reintroduce a hand-written HTML/JSON report or a second
+profiler for the same task; if wall time becomes a requirement, prefer a tool
+that consumes the existing `.jfr` over new build code, and do not download a
+native agent without an explicit decision. Keep one fork
+(`maxParallelForks = 1`) so the recording stays a single merged profile.
+
+**See.** `architecture.md` §Profiling; `pitfalls.md` §Build, Detekt and
+environment (JFR recording traps).
+
 ## 2026-11-09 — Direct feed is sized by plan rates and grown maximally
 
 **Decision.** A band is no longer accepted by a per-machine cycle bound. `groupNeeds` starts

@@ -117,11 +117,42 @@ kotlin {
     }
 }
 
-tasks.named<Test>("jvmTest") {
+private val jvmProfileDir = layout.buildDirectory.dir("profiles/jvmTest")
+
+private fun Test.configureRepositoryTest() {
     useJUnitPlatform()
 
     reports { html.required.set(true) }
 }
+
+tasks.named<Test>("jvmTest", Test::configureRepositoryTest)
+
+val jvmTestProfile =
+    tasks.register<Test>("jvmTestProfile") {
+        group = "profiling"
+        description =
+            "runs jvmTest with a JDK Flight Recorder CPU profile; the merged recording lands in build/profiles/jvmTest"
+
+        val jvmTest = tasks.named<Test>("jvmTest").get()
+        testClassesDirs = jvmTest.testClassesDirs
+        classpath = jvmTest.classpath
+        configureRepositoryTest()
+
+        // A single fork keeps every test case in one recording, so the profile is merged by
+        // construction.
+        maxParallelForks = 1
+        outputs.upToDateWhen { false }
+
+        val profileDir = jvmProfileDir.get().asFile
+        doFirst {
+            profileDir.deleteRecursively()
+            profileDir.mkdirs()
+        }
+        jvmArgs(
+            "-XX:StartFlightRecording=filename=${profileDir.resolve("jvmTest-%p.jfr")},settings=profile,dumponexit=true",
+            "-XX:FlightRecorderOptions=stackdepth=1024",
+        )
+    }
 
 // Detekt's KMP support registers the type-resolved `detektMainJvm`/`detektTestJvm`
 // tasks but does not wire them into `check`, so do that explicitly. Those two analyse
