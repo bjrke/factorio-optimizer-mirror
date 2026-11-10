@@ -74,7 +74,7 @@ private fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryProd
         nodes
             .associate {
                 it.production to
-                    if (it.production in outgoing) 0.0 else max(0.0, it.production.amount)
+                    if (it.production in outgoing) 0.0 else max(0.0, it.production.amount * scale)
             }
             .toMutableMap()
 

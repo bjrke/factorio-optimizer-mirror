@@ -60,7 +60,7 @@ class BlueprintPlanTest {
         testBlueprintPlan(result(target, targetRecipe, productions), logistics)
 
     @Test
-    fun thePlanUsesTheScaledAmountForMachinesAndSources() {
+    fun thePlanUsesTheAmountForMachinesAndSources() {
         val gearProduction =
             production(
                 ironGearWheelRecipe,

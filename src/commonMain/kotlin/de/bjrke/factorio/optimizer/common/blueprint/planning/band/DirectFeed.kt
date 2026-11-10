@@ -61,7 +61,8 @@ private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
 private fun DirectFeedContext.beltedRate(recipe: Recipe, grouped: Set<FeedLink>) =
     included.values.sumOf { consumer ->
         consumer.recipe.ingredients.keys.sumOf { material ->
-            if (countsForBelt(recipe, consumer, material, grouped)) consumer.consumption(material)
+            if (countsForBelt(recipe, consumer, material, grouped))
+                consumer.consumption(material) * scale
             else 0.0
         }
     }
@@ -100,7 +101,7 @@ private fun DirectFeedContext.belted(
         if (perMachine > 0.0)
             ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[production] ?: 0)
         else 0
-    val leftover = (plannedMachines(production) - (built[production] ?: 0)).coerceAtLeast(0)
+    val leftover = (plannedMachines(production, scale) - (built[production] ?: 0)).coerceAtLeast(0)
     val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)
     return if (rate <= 0.0 || machines <= 0) null
     else {
@@ -112,7 +113,7 @@ private fun DirectFeedContext.belted(
 private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>): List<PlannedRow> {
     val targetProduction = target.production
     return if ((built[targetProduction] ?: 0) > 0) emptyList()
-    else listOf(PlannedRow.copies(targetProduction, plannedMachines(targetProduction)))
+    else listOf(PlannedRow.copies(targetProduction, plannedMachines(targetProduction, scale)))
 }
 
 /**
@@ -130,10 +131,12 @@ internal fun directFeed(
     targetProduction: FactoryProduction,
     factories: Map<Recipe, FactoryProduction>,
     logistics: LogisticsCalculator,
+    scale: Double = 1.0,
 ) =
     DirectFeedContext(
             targetProduction,
             factories,
             logistics,
+            scale,
         )
         .build()

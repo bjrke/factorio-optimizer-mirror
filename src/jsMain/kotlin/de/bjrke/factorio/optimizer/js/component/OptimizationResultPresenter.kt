@@ -58,13 +58,10 @@ private fun ChildrenBuilder.amountInput(
             width = 4.rem
             marginRight = 1.ch
         }
-        // amount already carries the normalize target; the edit sets a new target relative to it
-        value = superRound(amount).toString()
+        value = superRound(amount * props.normalizeTarget).toString()
         onChange = { event ->
             event.target.value.toDoubleOrNull()?.let { value ->
-                validNormalizeTarget(amount / (props.normalizeTarget * value))?.let {
-                    props.changeNormalizeTo(it)
-                }
+                validNormalizeTarget(amount / value)?.let { props.changeNormalizeTo(it) }
             }
         }
     }
@@ -82,7 +79,7 @@ private fun ChildrenBuilder.amountIcon(
 ) {
     a {
         css { marginRight = 1.ch }
-        onClick = { props.changeNormalizeTo(amount / props.normalizeTarget) }
+        onClick = { props.changeNormalizeTo(amount) }
         if (material != null) {
             // a middle click selects the material and must not start the browser's autoscroll
             onMouseDown = {
@@ -173,11 +170,10 @@ private fun ChildrenBuilder.logisticsInputIcon(
             width = LOGISTICS_INPUT_WIDTH
             marginRight = 0.25.rem
         }
-        // amount already carries the normalize target; the edit sets a new target relative to it
-        value = superRound(amount).toString()
+        value = superRound(amount * props.normalizeTarget).toString()
         onChange = {
             it.target.value.toDoubleOrNull()?.let { value ->
-                validNormalizeTarget(amount / (props.normalizeTarget * value))?.let { scale ->
+                validNormalizeTarget(amount / value)?.let { scale ->
                     props.changeNormalizeTo(scale)
                 }
             }
@@ -186,7 +182,7 @@ private fun ChildrenBuilder.logisticsInputIcon(
     a {
         css { marginRight = 0.5.rem }
         if (amount > 0.0) {
-            onClick = { props.changeNormalizeTo(amount / props.normalizeTarget) }
+            onClick = { props.changeNormalizeTo(amount) }
         }
         icon(name) {
             this.rotation = rotation

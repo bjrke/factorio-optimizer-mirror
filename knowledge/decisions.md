@@ -7,25 +7,10 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
-## 2026-11-09 — The requested rate is folded into the optimization result
-
-**Decision.** `Optimizer.compute(target, scale)` builds the `OptimizationResult` at the requested
-rate: every `FactoryProduction.amount`, imports included, is already scaled. The direct-feed
-planner and `plannedMachines` read that amount, and the web UI's `normalizeTarget` is the same
-scale, so the presenter renders an amount as-is. It only uses `normalizeTarget` to convert an
-edited or pinned value back into a new scale.
-
-**Guardrail.** Never multiply a result amount by `normalizeTarget` or pass a separate scale into
-`blueprintPlan`/`plannedSources`; that applies the rate twice. Imports must be scaled with the same
-factor as built recipes.
-
-**See.** `optimize/Optimizer.kt`, `blueprint/planning/plan/BlueprintPlan.kt`,
-`js/component/OptimizationResultPresenter.kt`.
-
 ## 2026-11-09 — Direct feed is sized by plan rates and grown maximally
 
 **Decision.** A band is no longer accepted by a per-machine cycle bound. `groupNeeds` starts
-from each terminal recipe's fractional (already scaled) `amount` and propagates needs upstream;
+from each terminal recipe's fractional `amount * scale` and propagates needs upstream;
 `FeedWindow` distributes each link's plan demand over the built consumers. Overfeed is allowed,
 underfeed is not, and repeating a pattern may build extra copies to compensate for a worse ratio.
 `cycleFit`/`cyclePenalty` rank patterns but never reject a link. `FeedRanking` sorts links by belt
@@ -93,8 +78,8 @@ lazy `ingredients` (links to the producers of its inputs) and `consumers` (links
 that take its product); a production may have several consumers. `FeedLink` is the
 edge `(producer, consumer, material)` with the per-machine rates, so a production
 and an edge exist once no matter how many paths reach them.
-`DirectFeedContext` owns the target, the included productions, the logistics,
-the per-material producer index and the lazy `nodeOf` lookup.
+`DirectFeedContext` owns the target, the included productions, the scale, the
+logistics, the per-material producer index and the lazy `nodeOf` lookup.
 `FeedNode.traverse()` keeps a visited-node set, so a shared producer is expanded only
 once; there is no cycle-specific state because the optimizer's `unplannedRecipes` keeps
 every real solid cycle out of the plan. `BandSearch` is a set of extensions on the
@@ -123,8 +108,7 @@ arbitrarily picking one link. Fluids are never links. Keep the `visited` set in
 extraction category. A recipe may produce one solid result plus any number of fluid
 results, because fluids leave a row through their own lanes; two solids still need a
 mixed output belt and stay unbuildable. `BlueprintPlan.sources` is derived from the
-rows that were actually placed (`plannedSources(rows, logistics)`; the rows already
-carry the requested rate), and the
+rows that were actually placed (`plannedSources(rows, logistics, scale)`), and the
 layout's solid-import classification reads `BlueprintPlan.sourceMaterials` instead of
 recomputing producers. Surface-specific imports are a separate explicit policy; stone
 on Vulcanus is covered by the 2026-11-07 entry.

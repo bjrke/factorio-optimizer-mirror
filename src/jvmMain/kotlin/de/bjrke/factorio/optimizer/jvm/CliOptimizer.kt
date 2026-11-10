@@ -105,12 +105,13 @@ fun main(args: Array<String>) {
             ),
         )
 
-    val result =
-        Optimizer(parsedRecipes, factories).compute(Material(cli.material), cli.normalizeTarget)
+    val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
 
     val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
     val blueprintOutputs = Output.order.filter { it.blueprint && it in outputs }
-    val outcome = if (blueprintOutputs.isEmpty()) null else blueprintPlan(result, logistics)
+    val outcome =
+        if (blueprintOutputs.isEmpty()) null
+        else blueprintPlan(result, logistics, cli.normalizeTarget)
 
     val sections = mutableListOf<() -> Unit>()
     if (Output.SETTINGS in outputs) sections += { println(settingsText(cli, factories, logistics)) }

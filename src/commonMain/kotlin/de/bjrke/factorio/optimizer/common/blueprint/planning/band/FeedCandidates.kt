@@ -190,7 +190,9 @@ private fun DirectFeedContext.groupMayFit(links: List<FeedLink>): Boolean {
     if (nodes.size > MAX_BAND_RECIPES) return false
     val budget = maxBandMachines(links.size)
     val machines = nodes.sumOf { node ->
-        ceil(max(1.0, node.production.amount) - FEED_EPSILON).toInt().coerceAtMost(budget + 1)
+        ceil(max(1.0, node.production.amount * scale) - FEED_EPSILON)
+            .toInt()
+            .coerceAtMost(budget + 1)
     }
     return machines <= budget
 }

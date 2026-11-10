@@ -15,7 +15,6 @@ import de.bjrke.test.fireEvent
 import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import web.html.HTMLInputElement
 
 /** What a click does: normalize an amount, select a material, or pin a count. */
 class OptimizationResultInteractionTest : OptimizationResultTestBase() {
@@ -74,55 +73,16 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
     }
 
     @Test
-    fun logisticsCountsFollowTheScaledResult() {
-        val rendered =
-            renderResult(
-                optimizationResult(
-                    ironGearWheelRecipe,
-                    gear,
-                    Factory.ASSEMBLING_MACHINE_1,
-                    amount = 1.0,
-                ),
-                normalizeTarget = 1.0,
-            )
+    fun logisticsCountsScaleWithTheNormalizeTarget() {
+        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+
+        val rendered = renderResult(result, normalizeTarget = 1.0)
         val atOne = firstBeltInput().value.toDouble()
 
-        rendered.rerender(
-            resultElement(
-                optimizationResult(
-                    ironGearWheelRecipe,
-                    gear,
-                    Factory.ASSEMBLING_MACHINE_1,
-                    amount = 2.0,
-                ),
-                normalizeTarget = 2.0,
-            ),
-        )
+        rendered.rerender(resultElement(result, normalizeTarget = 2.0))
         val atTwo = firstBeltInput().value.toDouble()
 
         assertEquals(atOne * 2, atTwo, 0.01)
-    }
-
-    @Test
-    fun amountsAreNotScaledAgainByThePresenter() {
-        renderResult(
-            optimizationResult(
-                ironGearWheelRecipe,
-                gear,
-                Factory.ASSEMBLING_MACHINE_1,
-                amount = 2.0,
-            ),
-            normalizeTarget = 2.0,
-        )
-
-        // the result amounts already carry the normalize target
-        val factoryBox =
-            screen
-                .getByTitle(Factory.ASSEMBLING_MACHINE_1.identifier)
-                .parentElement!!
-                .parentElement!!
-        val factoryAmount = factoryBox.querySelector("input[type=number]") as HTMLInputElement
-        assertEquals(2.0, factoryAmount.value.toDouble(), 0.01)
     }
 
     @Test

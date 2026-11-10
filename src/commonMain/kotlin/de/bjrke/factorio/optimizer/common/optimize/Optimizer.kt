@@ -16,7 +16,7 @@ private const val SLACK = 1e-6
 private const val IMPORT_DISPLAY_EPSILON = 1e-4
 
 /**
- * Works out how many machines of each recipe are needed to produce a target at the requested rate.
+ * Works out how many machines of each recipe are needed to produce one unit per second of a target.
  *
  * Instead of picking a single "cheapest" recipe per material, the production network is modelled as
  * a linear program: every recipe is a variable, every material a balance constraint (`production +
@@ -30,6 +30,7 @@ class Optimizer(
     private val parsedRecipe: ParsedRecipe,
     factories: Set<Factory> = FactoryConfig().defaults,
 ) {
+    private val cache = mutableMapOf<Material, OptimizationResult>()
     private val machine = MachineCatalog(parsedRecipe, factories)
 
     /**
@@ -114,12 +115,12 @@ class Optimizer(
     }
 
     /**
-     * Computes the production result for [target] at [scale] units per second. The material balance
-     * is a linear program solved in two lexicographic stages so the result is the true optimum and
-     * not just any vertex: first minimize imports, then total machines (which also removes the
-     * zero-cost cycling recipes the simplex would otherwise leave in the basis).
+     * Computes the machine counts for [target]. The material balance is a linear program solved in
+     * two lexicographic stages so the result is the true optimum and not just any vertex: first
+     * minimize imports, then total machines (which also removes the zero-cost cycling recipes the
+     * simplex would otherwise leave in the basis).
      */
-    fun compute(target: Material, scale: Double = 1.0): OptimizationResult {
+    private fun compute(target: Material): OptimizationResult {
         val materials = reachableMaterials(target)
         val recipes = allowedRecipes.filter {
             it.result.keys.any { material -> material in materials }
@@ -139,11 +140,7 @@ class Optimizer(
                 recipes
                     .filter { target in it.result.keys }
                     .maxByOrNull { solution[recipes.indexOf(it)] } ?: freeSource(target),
-            factories =
-                factoryProductions(target, materials, recipes, importMaterials, solution)
-                    .mapValues { (_, production) ->
-                        production.copy(amount = scale * production.amount)
-                    },
+            factories = factoryProductions(target, materials, recipes, importMaterials, solution),
             logistics = parsedRecipe.logistics,
         )
     }
@@ -306,6 +303,8 @@ class Optimizer(
             speed = machine.speedOf(recipe),
             productivity = machine.productivityOf(recipe),
         )
+
+    operator fun get(target: Material) = cache.getOrPut(target) { compute(target) }
 }
 
 /**

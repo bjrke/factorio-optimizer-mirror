@@ -15,12 +15,7 @@ import react.create
 import web.dom.Element
 import web.html.HTMLInputElement
 
-internal fun optimizationResult(
-    recipe: Recipe,
-    target: Material,
-    factory: Factory,
-    amount: Double = 1.0,
-) =
+internal fun optimizationResult(recipe: Recipe, target: Material, factory: Factory) =
     OptimizationResult(
         target = target,
         recipe = recipe,
@@ -31,7 +26,7 @@ internal fun optimizationResult(
                         material = target,
                         recipe = recipe,
                         factory = factory,
-                        amount = amount,
+                        amount = 1.0,
                         level = 0,
                     ),
             ),
