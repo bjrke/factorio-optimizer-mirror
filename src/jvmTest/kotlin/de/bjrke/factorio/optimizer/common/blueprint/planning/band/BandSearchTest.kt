@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
@@ -58,5 +60,23 @@ class BandSearchTest {
 
         // 6 cable + 4 circuit is the shortest window; a longer valid window must not win
         assertEquals(10, plan.machines.size)
+    }
+
+    @Test
+    fun arrangeRealizesEveryLinkAroundTheCycle() {
+        // three recipes in a triangle: one link is only adjacent across the cycle's wrap boundary,
+        // so the search must close the cycle before it accepts the arrangement
+        val advanced = production(advancedCircuitRecipe, advancedCircuit)
+        val circuit = production(electronicCircuitRecipe, electronicCircuit, amount = 4.0)
+        val cable = production(copperCableRecipe, copperCable, amount = 6.0)
+        val context = DirectFeedContext(advanced, factories(advanced, circuit, cable), logistics)
+        val links = context.candidateLinks()
+        val plan = assertNotNull(context.arrange(links))
+
+        assertEquals(
+            emptyList(),
+            links.filterNot { link -> plan.feeds.any { it.link == link } },
+            links.toString(),
+        )
     }
 }

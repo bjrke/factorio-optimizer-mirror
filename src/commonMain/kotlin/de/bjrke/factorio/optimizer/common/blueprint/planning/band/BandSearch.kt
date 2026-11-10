@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.core.util.countVectors
 import de.bjrke.factorio.optimizer.common.core.util.greatestCommonDivisor
-import de.bjrke.factorio.optimizer.common.core.util.permute
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
 import kotlin.math.max
@@ -35,33 +34,137 @@ private fun DirectFeedContext.arrangeBest(
     group: FeedGroup,
 ): BandPlan? {
     if (recipes.size > MAX_BAND_RECIPES) return null
-    val comparator = bandPlanComparator()
+    val cycles = BandCycleSearch(group, recipes, bandPlanComparator())
     var best: BandPlan? = null
     for (length in recipes.size..MAX_BAND_RECIPES) {
         val bestLength = best?.machines?.size
         if (bestLength != null && length > bestLength) break
         for (counts in countVectors(recipes, length)) {
             if (counts.values.reduce(::greatestCommonDivisor) != 1) continue
-            best = bestPlanForCounts(group, counts, best, comparator)
+            best = cycles.bestPlan(counts, best)
         }
     }
     return best
 }
 
-private fun DirectFeedContext.bestPlanForCounts(
-    group: FeedGroup,
-    counts: Map<FactoryProduction, Int>,
-    best: BandPlan?,
-    comparator: Comparator<BandPlan>,
-): BandPlan? {
-    var current = best
-    for (cycle in permute(counts)) {
-        if (!adjacent(group, cycle)) continue
-        val maxLength = current?.machines?.size ?: maxBandMachines(group.links.size)
-        val plan = window(group, cycle, counts, maxLength) ?: continue
-        if (current == null || comparator.compare(plan, current) < 0) current = plan
+/**
+ * One DFS over the cycles with a fixed machine-count vector. Placing a machine covers the links to
+ * its predecessor; a link whose two recipes are both used up but that is not on the cycle's wrap
+ * boundary can never become adjacent, so that branch is cut. At the boundary the last machine
+ * closes the cycle to the fixed first one, and [window] decides whether that cycle's plan-rate flow
+ * works. The first slot is fixed to the first recipe: every cycle contains it, and [window] already
+ * tries every rotation, so no arrangement is lost.
+ */
+private class BandCycleSearch(
+    private val group: FeedGroup,
+    private val recipes: List<FactoryProduction>,
+    private val comparator: Comparator<BandPlan>,
+) {
+    private val links = group.links
+    private val producerIndex =
+        IntArray(links.size) { recipes.indexOf(links[it].producer.production) }
+    private val consumerIndex =
+        IntArray(links.size) { recipes.indexOf(links[it].consumer.production) }
+    private val pairLinks =
+        Array(recipes.size * recipes.size) { pair ->
+            links.indices
+                .filter { pair == pairKey(producerIndex[it], consumerIndex[it]) }
+                .toIntArray()
+        }
+    private val covered = IntArray(links.size)
+    private val remaining = IntArray(recipes.size)
+    private var counts: Map<FactoryProduction, Int> = emptyMap()
+    private var best: BandPlan? = null
+
+    fun bestPlan(
+        counts: Map<FactoryProduction, Int>,
+        best: BandPlan?,
+    ): BandPlan? {
+        if (recipes.isEmpty()) return best
+        this.counts = counts
+        this.best = best
+        for ((index, recipe) in recipes.withIndex()) remaining[index] = counts.getValue(recipe)
+        val cycle = IntArray(remaining.sum())
+        cycle[0] = 0
+        remaining[0]--
+        search(1, cycle)
+        return this.best
     }
-    return current
+
+    private fun search(position: Int, cycle: IntArray) {
+        if (position == cycle.size) {
+            finish(cycle)
+            return
+        }
+        val previous = cycle[position - 1]
+        for (next in recipes.indices) {
+            if (remaining[next] == 0) continue
+            cycle[position] = next
+            remaining[next]--
+            cover(previous, next, 1)
+            if (position + 1 == cycle.size || linksStillReachable(next)) {
+                search(position + 1, cycle)
+            }
+            cover(previous, next, -1)
+            remaining[next]++
+        }
+    }
+
+    private fun finish(cycle: IntArray) {
+        val last = cycle[cycle.size - 1]
+        cover(last, cycle[0], 1)
+        if (covered.all { it > 0 }) {
+            val current = best
+            val plan =
+                window(
+                    group,
+                    cycle.map { recipes[it] },
+                    counts,
+                    current?.machines?.size ?: maxBandMachines(links.size),
+                )
+            if (plan != null && (current == null || comparator.compare(plan, current) < 0))
+                best = plan
+        }
+        cover(last, cycle[0], -1)
+    }
+
+    /** Whether every uncovered link can still become adjacent somewhere in the remaining cycle. */
+    private fun linksStillReachable(last: Int): Boolean {
+        val hasRemaining = remaining.any { it > 0 }
+        return links.indices.all { link ->
+            covered[link] > 0 || reachable(link, last, hasRemaining)
+        }
+    }
+
+    private fun reachable(link: Int, last: Int, hasRemaining: Boolean): Boolean {
+        val producer = producerIndex[link]
+        val consumer = consumerIndex[link]
+        val bothRemain =
+            remaining[producer] > 0 &&
+                remaining[consumer] > 0 &&
+                (producer != consumer || remaining[producer] >= 2)
+        val afterLast =
+            (last == producer && remaining[consumer] > 0) ||
+                (last == consumer && remaining[producer] > 0)
+        val viaWrap =
+            hasRemaining &&
+                ((producer == 0 && remaining[consumer] > 0) ||
+                    (consumer == 0 && remaining[producer] > 0))
+        return bothRemain || afterLast || viaWrap
+    }
+
+    private fun cover(
+        from: Int,
+        to: Int,
+        delta: Int,
+    ) {
+        for (link in pairLinks[pairKey(from, to)]) covered[link] += delta
+    }
+
+    private fun pairKey(
+        first: Int,
+        second: Int,
+    ) = minOf(first, second) * recipes.size + maxOf(first, second)
 }
 
 private fun footPrintsHaveDifferentSize(nodes: List<FeedNode>) =
@@ -248,13 +351,3 @@ private class FeedWindow(
     private fun everythingUsed() =
         machines.indices.all { position -> !isProducer[position] || used[position] }
 }
-
-/** Whether every link has two adjacent machines in [cycle], ignoring the direction of the flow. */
-private fun adjacent(group: FeedGroup, cycle: List<FactoryProduction>) =
-    group.links.all { link ->
-        cycle.withIndex().any { (index, current) ->
-            val next = cycle[(index + 1) % cycle.size]
-            (current == link.producer.production && next == link.consumer.production) ||
-                (current == link.consumer.production && next == link.producer.production)
-        }
-    }

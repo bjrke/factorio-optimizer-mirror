@@ -20,7 +20,7 @@ CLI (JVM) from one shared core.
     compass helpers), `Material.kt`, `IconLayer.kt`. A leaf: it imports no other
     project package.
   - `core/util` — `MinHeap`, `connectedComponents`, and `MathUtils` (`countVectors`,
-    `permute`, `greatestCommonDivisor`).
+    `greatestCommonDivisor`).
   - `game/prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (belt/inserter/pump stats and `LogisticsConfig`),
@@ -373,7 +373,7 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 
 `common/core/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the
 layout test fixtures instead of a per-suite breadth-first walk.
-`common/core/util/MathUtils.kt` holds the generic `countVectors`, `permute` and
+`common/core/util/MathUtils.kt` holds the generic `countVectors` and
 `greatestCommonDivisor` the band search uses.
 
 `blueprint/planning/band/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
@@ -416,8 +416,10 @@ propagates fractional needs upstream, and `FeedWindow` distributes each link's
 demand over the built consumer machines. Overfeed is allowed, underfeed is not,
 and a repeated window may build extra copies to make a worse ratio balance.
 `arrange` keeps the best plan and passes its machine count as an upper bound to
-`window`, so no longer window is built once a shorter one exists; `BandPlan`
-caches its ratio penalty, and `FeedWindow` uses arrays instead of maps/sets.
+`window`, so no longer window is built once a shorter one exists; it walks the
+cycles with a DFS that cuts a branch as soon as an uncovered link can no longer
+become adjacent, counting the cycle's wrap boundary. `BandPlan` caches its ratio
+penalty, and `FeedWindow` uses arrays instead of maps/sets.
 `cycleFit`/`cyclePenalty` only rank patterns (`p:q` with `p + q` at most 6);
 they never reject a link. A band is bounded by `GROUP_MAX_MACHINES = 10` (9
 when it has more than one link, so the row stays powerable) and
