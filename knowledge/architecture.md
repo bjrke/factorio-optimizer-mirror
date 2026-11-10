@@ -492,7 +492,9 @@ jfr summary build/profiles/jvmTest/jvmTest-<pid>.jfr
 ```
 
 Filter to `de.bjrke` in the viewer: the recording starts at JVM launch and
-includes Gradle's test framework and regex/class-loading work.
+includes Gradle's test framework and regex/class-loading work. For the agent
+workflow (filtering to `de.bjrke`, allocation/exception views), see
+`.opencode/skills/jfr-profiles/SKILL.md`.
 
 ## Prerequisites
 
