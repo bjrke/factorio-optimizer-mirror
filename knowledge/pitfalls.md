@@ -182,6 +182,11 @@ An entry belongs here only with evidence, and should say how to recognize it.
   and `plannedSources` sees none of its consumers. Keep the seed separate from `buildable`:
   indexing the target in `producers` again can make a self-consuming target plan a second,
   belted row. Evidence: `theTargetStaysIncludedWhenItsMaterialHasTwoProducers`.
+- **Belted machine counts must round with `MACHINE_COUNT_EPSILON`, not `FEED_EPSILON`.**
+  `DirectFeed.belted` turns a plan rate into whole machines, so it needs the same `1e-6` slack as
+  `plannedMachines`; the `1e-9` feed slack rounds a rate that is only floating-point noise above a
+  whole number up to an extra machine. Evidence:
+  `aBeltedProductionDoesNotRoundUpFloatingPointNoise`.
 - **Stone and solid fuel must stay out of the multi-producer direct feed.** `FeedNode.ingredients`
   links every in-plan producer, so a solid with two producers is direct-fed from whichever link
   the walk sees first; `maximalGroups` drops the others. `DirectFeedContext.producers` excludes

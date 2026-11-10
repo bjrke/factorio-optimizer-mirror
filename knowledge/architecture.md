@@ -404,11 +404,13 @@ belt volume saved, bulk gain (copper cable's two outputs from one input), few
 solid ingredients, partly-used machines, the pair's remaining solid belt lanes
 and the preferred cycle. `FeedCandidates.kt` grows each group maximally from the
 best remaining seed, retries links after every growth, tries one bounded swap,
-and merges groups that meet. Growth may pass through an over-belt group so an
-added producer can internalize an ingredient, but the finished group must fit
-`MAX_ROW_BELTS = 4` (`bandBeltMaterials`); otherwise the seed is dropped, its
-links return to the pool and another seed is tried. `BandSearch.kt` arranges a
-group into the shortest window that satisfies the **plan rates**:
+and merges groups that meet. It returns each finished group's already arranged
+`BandPlan`, so `DirectFeed.build` does not arrange a group a second time. Growth
+may pass through an over-belt group so an added producer can internalize an
+ingredient, but the finished group must fit `MAX_ROW_BELTS = 4`
+(`bandBeltMaterials`); otherwise the seed is dropped, its links return to the
+pool and another seed is tried. `BandSearch.kt` arranges a group into the
+shortest window that satisfies the **plan rates**:
 `groupNeeds` starts from each terminal production's `amount * scale` and
 propagates fractional needs upstream, and `FeedWindow` distributes each link's
 demand over the built consumer machines. Overfeed is allowed, underfeed is not,

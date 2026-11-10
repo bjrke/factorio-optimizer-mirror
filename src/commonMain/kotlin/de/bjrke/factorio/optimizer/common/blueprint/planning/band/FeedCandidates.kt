@@ -10,15 +10,15 @@ import kotlin.math.max
 // groups that meet and staying inside the machine budget.
 
 /**
- * Grows groups maximally. A seed grows by adding the best adjacent link that still arranges,
- * retries links after every growth and tries a single bounded swap when a better link does not fit.
- * Growth may pass through a group that needs too many belts, because adding a producer can
- * internalize an ingredient and bring the row back under the limit; only the finished group is
- * filtered. A seed whose group never fits is dropped and its links return to the pool, so another
- * seed can still use them. Groups that meet later are merged when the merged group arranges and
- * fits.
+ * Grows groups maximally and returns the best arrangement of every finished group. A seed grows by
+ * adding the best adjacent link that still arranges, retries links after every growth and tries a
+ * single bounded swap when a better link does not fit. Growth may pass through a group that needs
+ * too many belts, because adding a producer can internalize an ingredient and bring the row back
+ * under the limit; only the finished group is filtered. A seed whose group never fits is dropped
+ * and its links return to the pool, so another seed can still use them. Groups that meet later are
+ * merged when the merged group arranges and fits.
  */
-internal fun DirectFeedContext.maximalGroups(): List<List<FeedLink>> {
+internal fun DirectFeedContext.maximalGroups(): List<BandPlan> {
     val pool = candidateLinks().toMutableList()
     val groups = mutableListOf<MutableList<FeedLink>>()
     val assigned = mutableSetOf<FactoryProduction>()
@@ -44,7 +44,7 @@ internal fun DirectFeedContext.maximalGroups(): List<List<FeedLink>> {
         groups += group
     }
     mergeGroups(groups, ::arranged)
-    return groups.map { it.toList() }
+    return groups.mapNotNull { arranged(it) }
 }
 
 private fun FeedLink.productions() = listOf(producer.production, consumer.production)

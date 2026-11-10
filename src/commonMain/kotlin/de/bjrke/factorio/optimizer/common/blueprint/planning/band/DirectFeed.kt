@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MACHINE_COUNT_EPSILON
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_COPIES
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
@@ -18,7 +19,7 @@ internal data class DirectFeed(
 
 /** Splits the plan into band rows, the target row and the remaining belted rows. */
 internal fun DirectFeedContext.build(): DirectFeed {
-    val bandPlans = maximalGroups().mapNotNull { arrange(it) }
+    val bandPlans = maximalGroups()
     val bands = buildBands(bandPlans)
     val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
     val built = bands.flatMap { it.machines }.groupingBy { it }.eachCount()
@@ -99,7 +100,7 @@ private fun DirectFeedContext.belted(
     val perMachine = production.outputPerMachine()
     val demand =
         if (perMachine > 0.0)
-            ceil(rate / perMachine - FEED_EPSILON).toInt() - (onBelt[production] ?: 0)
+            ceil(rate / perMachine - MACHINE_COUNT_EPSILON).toInt() - (onBelt[production] ?: 0)
         else 0
     val leftover = (plannedMachines(production, scale) - (built[production] ?: 0)).coerceAtLeast(0)
     val machines = maxOf(demand, leftover).coerceIn(0, MAX_COPIES)

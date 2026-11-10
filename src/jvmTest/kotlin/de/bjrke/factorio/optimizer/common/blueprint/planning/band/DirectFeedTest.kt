@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.battery
 import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.castingIronRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
@@ -208,6 +209,38 @@ class DirectFeedTest {
         assertAll(
             { assertEquals(emptyList(), feed.bands) },
             { assertEquals(setOf(ironPlateSmeltingRecipe), feed.recipes.toSet()) },
+        )
+    }
+
+    @Test
+    fun aBeltedProductionDoesNotRoundUpFloatingPointNoise() {
+        // the foundry and the assembling machine have different footprints, so the plate stays
+        // belted and its machine count is rounded from the plan rate
+        val plate =
+            FactoryProduction(
+                ironPlate,
+                castingIronRecipe,
+                Factory.FOUNDRY,
+                amount = 3.0,
+                level = 0,
+            )
+        val gearBase = production(ironGearWheelRecipe, gear)
+        val ratePerMachine = 3.0 + 5e-7
+        val gearAmount =
+            ratePerMachine * plate.outputPerMachine() / gearBase.inputPerMachine(ironPlate)
+        val gearProduction = gearBase.copy(amount = gearAmount)
+        val feed =
+            directFeed(
+                gearProduction,
+                factories(gearProduction, plate),
+                logistics = logistics,
+            )
+
+        // the rate is just above three machines, but that is floating-point noise, not a fourth
+        // machine
+        assertEquals(
+            3,
+            feed.rows.single { it.machines.first().recipe == castingIronRecipe }.machines.size,
         )
     }
 
