@@ -82,6 +82,7 @@ internal class FeedGroup(
 internal fun DirectFeedContext.bandBeltMaterials(links: List<FeedLink>): Set<Material> {
     val internal = links.mapTo(mutableSetOf()) { it.material }
     return links
+        .asSequence()
         .flatMap { listOf(it.producer.production, it.consumer.production) }
         .distinct()
         .flatMap { production ->
@@ -162,25 +163,6 @@ internal class FeedNode(
 
         this@FeedNode.walk()
     }
-
-    override fun toString() = material.name
-}
-
-/**
- * One feed link: [producer] makes [material] and [consumer] takes it. A producer may have several
- * consumer links, and a consumer several producer links.
- */
-internal data class FeedLink(
-    val producer: FeedNode,
-    val consumer: FeedNode,
-    val material: Material,
-) {
-
-    val outputPerMachine by lazy { producer.production.outputPerMachine(material) }
-
-    val inputPerMachine by lazy { consumer.production.inputPerMachine(material) }
-
-    val ioRatio by lazy { inputPerMachine / outputPerMachine }
 
     override fun toString() = material.name
 }

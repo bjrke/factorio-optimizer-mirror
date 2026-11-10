@@ -571,4 +571,50 @@ class DirectFeedTest {
             { assertEquals(2, links.count { it.producer == circuitNode }) },
         )
     }
+
+    @Test
+    fun linkNamesAndTheCanonicalKeyIgnoreWalkOrder() {
+        // the cached arrangement key must canonicalize links by name, never by score or by the
+        // order the walk discovered them in: a pair of nodes may be reached from either end.
+        val productProduction = production(processingUnitRecipe, processingUnit)
+        val context =
+            DirectFeedContext(
+                productProduction,
+                factories(
+                    productProduction,
+                    production(advancedCircuitRecipe, advancedCircuit),
+                    production(electronicCircuitRecipe, electronicCircuit),
+                    production(copperCableRecipe, copperCable),
+                ),
+                logistics,
+            )
+        val links = context.candidateLinks()
+
+        assertAll(
+            { assertTrue(links.size > 1) },
+            {
+                assertTrue(
+                    links.all {
+                        it.name ==
+                            "${it.material.name}#${it.producer.recipe.name}#${it.consumer.recipe.name}"
+                    },
+                )
+            },
+            // seeded and grown groups look their key up in either direction
+            { assertEquals(linkKey(links), linkKey(links.reversed())) },
+            {
+                assertEquals(
+                    linkKey(links).map { it.name }.sorted(),
+                    linkKey(links).map { it.name },
+                )
+            },
+            // best first, as the walk's seed and growth order expect
+            {
+                assertEquals(
+                    links.map { it.candidateScore }.sortedDescending(),
+                    links.map { it.candidateScore },
+                )
+            },
+        )
+    }
 }

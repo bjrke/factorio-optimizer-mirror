@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
+import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
 import kotlin.math.max
@@ -26,7 +27,7 @@ internal fun DirectFeedContext.maximalGroups(): List<List<FeedLink>> {
     fun arranged(links: List<FeedLink>) = cache.getOrPut(linkKey(links)) { arrange(links) }
 
     while (true) {
-        pool.sortWith(candidateComparator())
+        pool.sortWith(linkComparator)
         val seed = pool.indexOfFirst { link -> link.productions().none { it in assigned } }
         if (seed < 0) break
         val seedLink = pool.removeAt(seed)
@@ -48,17 +49,6 @@ internal fun DirectFeedContext.maximalGroups(): List<List<FeedLink>> {
 
 private fun FeedLink.productions() = listOf(producer.production, consumer.production)
 
-private fun linkKey(links: List<FeedLink>) =
-    links
-        .sortedWith(
-            compareBy<FeedLink>(
-                { it.material.name },
-                { it.producer.recipe.name },
-                { it.consumer.recipe.name },
-            ),
-        )
-        .toList()
-
 /**
  * Whether [group] may grow by [candidate]. A group that already fits the row's belt budget may only
  * add a link that keeps the combined group fitting, so a link that would push a good row over the
@@ -73,30 +63,28 @@ private fun DirectFeedContext.mayGrow(group: List<FeedLink>, candidate: FeedLink
     return bandBeltMaterials(combined).size <= MAX_ROW_BELTS
 }
 
-private fun DirectFeedContext.growGroup(
+private tailrec fun DirectFeedContext.growGroup(
     group: MutableList<FeedLink>,
     pool: MutableList<FeedLink>,
     arranged: (List<FeedLink>) -> BandPlan?,
 ) {
-    var progressed = true
-    while (progressed) {
-        progressed = false
-        val adjacent =
-            pool
-                .filter { candidate -> group.any { sharesRecipe(it, candidate) } }
-                .sortedWith(candidateComparator())
-        for (candidate in adjacent) {
-            if (!mayGrow(group, candidate)) continue
-            if (arranged(group + candidate) != null) {
-                group += candidate
-                pool.remove(candidate)
-                progressed = true
-                break
-            }
-            if (swapInto(group, candidate, pool, arranged)) {
-                progressed = true
-                break
-            }
+
+    val adjacent =
+        MinHeap(
+                linkComparator,
+                pool.filter { candidate -> group.any { sharesRecipe(it, candidate) } },
+            )
+            .drainAll()
+
+    for (candidate in adjacent) {
+        if (!mayGrow(group, candidate)) continue
+        if (arranged(group + candidate) != null) {
+            group += candidate
+            pool.remove(candidate)
+            return growGroup(group, pool, arranged)
+        }
+        if (swapInto(group, candidate, pool, arranged)) {
+            return growGroup(group, pool, arranged)
         }
     }
 }
@@ -108,8 +96,8 @@ private fun DirectFeedContext.swapInto(
     arranged: (List<FeedLink>) -> BandPlan?,
 ): Boolean {
     if (group.size <= 1) return false
-    val weakest = group.minWithOrNull(candidateComparator()) ?: return false
-    if (candidateScore(candidate) <= candidateScore(weakest) + FEED_EPSILON) return false
+    val weakest = group.minWithOrNull(linkComparator) ?: return false
+    if (candidate.candidateScore <= weakest.candidateScore + FEED_EPSILON) return false
     val trial = group.filterNot { it == weakest } + candidate
     if (!groupMayFit(trial)) return false
     if (
@@ -130,9 +118,7 @@ private fun DirectFeedContext.mergeIntoGroup(
     groups: MutableList<MutableList<FeedLink>>,
     arranged: (List<FeedLink>) -> BandPlan?,
 ) {
-    var merged = true
-    while (merged) {
-        merged = false
+    while (true) {
         val index =
             groups.indices.firstOrNull { index ->
                 val combined = groups[index] + group
@@ -145,7 +131,6 @@ private fun DirectFeedContext.mergeIntoGroup(
         group.clear()
         group += combined
         groups.removeAt(index)
-        merged = true
     }
 }
 

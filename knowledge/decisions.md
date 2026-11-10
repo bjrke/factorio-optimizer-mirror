@@ -13,7 +13,7 @@ rewrites or deletes it — never add a "supersedes" note.
 from each terminal recipe's fractional `amount * scale` and propagates needs upstream;
 `FeedWindow` distributes each link's plan demand over the built consumers. Overfeed is allowed,
 underfeed is not, and repeating a pattern may build extra copies to compensate for a worse ratio.
-`cycleFit`/`cyclePenalty` rank patterns but never reject a link. `FeedRanking` sorts links by belt
+`cycleFit`/`cyclePenalty` rank patterns but never reject a link. `FeedLink.kt` sorts links by belt
 volume, bulk gain, solid-ingredient count, partly-used machines, the pair's remaining belt lanes and
 cycle quality; `FeedCandidates` grows each group maximally, retries links, swaps once, merges groups
 and only accepts a finished group whose solid inputs/results fit `MAX_ROW_BELTS = 4`. Growth may pass
@@ -27,7 +27,7 @@ keep each band's internal material off every belt, and never build a band needin
 `MAX_ROW_BELTS` solid lanes. The 6:4 cable/circuit case must stay the repeated 3:2 window
 `C E C E C C E C E C`, not two independent bands.
 
-**See.** `blueprint/planning/band/{DirectFeed,FeedRanking,FeedCandidates,BandSearch}.kt`;
+**See.** `blueprint/planning/band/{DirectFeed,FeedLink,FeedCandidates,BandSearch}.kt`;
 `FractionalDirectFeedTest`, `DirectFeedTest`; `architecture.md` §Blueprint layout.
 
 ## 2026-11-08 — Recipe exclusions are explicit names, not whole categories
@@ -97,7 +97,7 @@ arbitrarily picking one link. Fluids are never links. Keep the `visited` set in
 `countVectors` empty-list guard.
 
 **See.** `architecture.md` §Blueprint layout; `blueprint/planning/band/DirectFeed.kt`,
-`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/FeedRanking.kt`,
+`blueprint/planning/band/DirectFeedModel.kt`, `blueprint/planning/band/FeedLink.kt`,
 `blueprint/planning/band/FeedCandidates.kt`, `blueprint/planning/band/BandSearch.kt`,
 `core/util/MathUtils.kt`, `pitfalls.md` §Blueprint planning.
 

@@ -396,13 +396,16 @@ material with several in-plan producers must be kept out by an explicit recipe
 policy, not by picking one link. `Optimizer` keeps one solid-fuel recipe per
 surface (light oil elsewhere, heavy oil on Fulgora, ammonia on Aquilo).
 
-`FeedRanking.kt` scores every reachable link before grouping: belt volume saved,
-bulk gain (copper cable's two outputs from one input), few solid ingredients,
-partly-used machines, the pair's remaining solid belt lanes and the preferred
-cycle. `FeedCandidates.kt` grows each group maximally from the best remaining
-seed, retries links after every growth, tries one bounded swap, and merges
-groups that meet. Growth may pass through an over-belt group so an added producer
-can internalize an ingredient, but the finished group must fit
+`FeedLink.kt` holds the edge, its `candidateScore` and the two orders grouping
+uses: `linkComparator` (score, then fewer solid ingredients, then `name`) ranks
+links for the seed and growth walk, while the canonical `linkNameComparator` /
+`linkKey` is the order the arrangement cache keys a link set by. The score counts
+belt volume saved, bulk gain (copper cable's two outputs from one input), few
+solid ingredients, partly-used machines, the pair's remaining solid belt lanes
+and the preferred cycle. `FeedCandidates.kt` grows each group maximally from the
+best remaining seed, retries links after every growth, tries one bounded swap,
+and merges groups that meet. Growth may pass through an over-belt group so an
+added producer can internalize an ingredient, but the finished group must fit
 `MAX_ROW_BELTS = 4` (`bandBeltMaterials`); otherwise the seed is dropped, its
 links return to the pool and another seed is tried. `BandSearch.kt` arranges a
 group into the shortest window that satisfies the **plan rates**:
