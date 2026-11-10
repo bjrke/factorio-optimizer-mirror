@@ -131,11 +131,8 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 - Commit after the work is done (no explicit request needed). Headline ≤ 50
   chars; body wrapped at 72 chars, explaining why and recording findings that do
   not belong in `knowledge/`.
-- When asked to squash, do exactly that and nothing else, following the recipe in
-  `knowledge/conventions.md`: choose the upstream that is ahead with
-  `git merge-base`, then `git reset --soft` plus one commit whose message is
-  rewritten from the squashed content. The squash commit contains only the
-  branch's changes.
+- **Squash only via `/squash`** (`.opencode/commands/squash.md`); never do the
+  git steps by hand. If asked to squash, tell the user to run `/squash`.
 
 ## Generated data — do not hand-edit
 

@@ -229,17 +229,10 @@ up.
   body wrapped at 72 chars, explaining why and recording findings that do not
   belong in `knowledge/`. No `!<MR>` suffix: GitLab appends the MR number when it
   merges.
-- **A squash request means exactly one thing**: one commit on top of the current
-  upstream, with a rewritten message. Choose the upstream that is ahead:
-  `base=main; git merge-base --is-ancestor main origin/main && base=origin/main`
-  — rebase the branch onto `$base`, then fold the branch's own commits with
-  `git reset --soft "$base"` plus a single `git commit`. The squash commit must
-  contain only the branch's changes; commits already in `$base` are never
-  re-added, and nothing is pushed. Do nothing else — no content edits, no extra
-  commits, no rebase past `$base`.
-- Write the squash message from the squashed content as the source of truth, not
-  from the work log: state the branch's final state and drop anything that only
-  applied to an intermediate state (superseded wording, abandoned attempts).
+- `/squash` resets to `origin/main`, stages the branch's net changes with a squash
+  merge (restoring the former HEAD on failure), and writes the message from
+  `git diff --cached -w origin/main`. The result is one commit containing only the
+  branch's changes.
 
 ## Knowledge promotion
 
