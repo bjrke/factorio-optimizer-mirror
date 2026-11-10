@@ -386,8 +386,15 @@ not by whole consumer machines:
 
 `machines = max(ceil(beltedRate ÷ outputPerMachine) − bandOutputMachines,
 need − builtMachines)`, capped at `MAX_COPIES`, and built only when at least one
-consumer is not direct-fed. A band's inserted (internal) link never counts as belt
-output.
+consumer is not direct-fed. `outputPerMachine` here is the recipe's single
+non-fluid result (`beltOutputPerMachine`), because the plan may label a
+multi-output recipe with one of its fluids. A band's inserted (internal) link
+never counts as belt output, even when a consumer outside the band still draws
+the material: the row keeps no lane for a material it inserts (`RowPlacer.rowShape`
+subtracts link materials, and `PlannedRow.exports` is false for a linked
+material), so the band's surplus cannot leave the row. Only a production with no
+link of that material exports it, and the belted row still covers every outside
+consumer.
 
 **Guardrail.** Keep one belt source per material; a fully inserted recipe gets no
 belt row. `realBlueprintsPutEveryMaterialOnAtMostOneBelt` (in

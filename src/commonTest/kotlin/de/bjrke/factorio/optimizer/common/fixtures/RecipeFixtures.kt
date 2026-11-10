@@ -342,6 +342,21 @@ val quantumProcessorRecipe =
         surfaceConditions = listOf(SurfaceCondition(SurfaceProperty.PRESSURE, Int.MIN_VALUE..600)),
     )
 
+val railgunRecipe =
+    Recipe(
+        name = "railgun",
+        ingredients =
+            mapOf(
+                tungstenPlate to 10.0,
+                superconductor to 10.0,
+                quantumProcessor to 20.0,
+                fluoroketoneCold to 10.0,
+            ),
+        result = mapOf(railgun to 1.0),
+        time = 10.0,
+        categories = setOf(Category.CRYOGENICS),
+    )
+
 val ironGearWheelRecyclingRecipe =
     Recipe(
         name = "iron-gear-wheel-recycling",

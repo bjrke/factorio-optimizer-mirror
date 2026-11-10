@@ -427,7 +427,11 @@ when it has more than one link, so the row stays powerable) and
 places every row through one `placeRow`: a plain row repeats its production with
 touching machines, while a row with links leaves a gap column after each machine
 that has a `PlannedLink` and touches everywhere else. Only belted productions
-feed belts and sinks, so a band's internal material never gets a belt; the row
+feed belts and sinks, so a band's internal material never gets a belt and a band
+producer's surplus cannot leave the row; the belted row therefore still covers
+every consumer outside the links. `belted` sizes a row by the recipe's single
+non-fluid result (`beltOutputPerMachine`), so a multi-output recipe the plan
+labelled with one of its fluids is still sized by its solid; the row
 still gets **fluid lanes** for its machines' fluid ports, including a machine
 that takes or gives a fluid while its solid link comes from a neighbor; only the
 link material must be solid (see `decisions.md`, 2026-11-02). See `decisions.md`

@@ -44,7 +44,9 @@ private fun buildBands(bandPlans: List<BandPlan>) = bandPlans.map { plan ->
 
 // machines a band builds whose product still leaves it over a belt, i.e. the band's output as
 // opposed to a link that is inserted machine to machine; those already supply the belted
-// consumers
+// consumers. A producer with any link of its product cannot export that product: its row keeps no
+// lane for a material it inserts, so its surplus stays in the band and the belted row must still
+// cover the outside consumers.
 private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
     for (plan in bandPlans) {
         val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer.production }
@@ -53,6 +55,16 @@ private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
             this[recipe] = (this[recipe] ?: 0) + machines
         }
     }
+}
+
+/**
+ * The items one machine of [production] puts on a belt. A recipe with one solid result is sized by
+ * that result even when the plan labelled the production with one of its fluids, because a fluid
+ * never rides a belt row. Multi-solid recipes keep the label's rate.
+ */
+private fun DirectFeedContext.beltOutputPerMachine(production: FactoryProduction): Double {
+    val solid = production.recipe.result.keys.singleOrNull { !logistics.isFluid(it) }
+    return production.outputPerMachine(solid ?: production.material)
 }
 
 /**
@@ -97,7 +109,7 @@ private fun DirectFeedContext.belted(
 ): PlannedRow? {
     val recipe = production.recipe
     val rate = beltedRate(recipe, grouped)
-    val perMachine = production.outputPerMachine()
+    val perMachine = beltOutputPerMachine(production)
     val demand =
         if (perMachine > 0.0)
             ceil(rate / perMachine - MACHINE_COUNT_EPSILON).toInt() - (onBelt[production] ?: 0)
