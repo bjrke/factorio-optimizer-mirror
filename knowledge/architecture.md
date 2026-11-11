@@ -246,8 +246,11 @@ belt or the previous run (an output end may feed the next input directly);
 compaction rejects a corridor that would leave an entrance or exit orphaned
 (connector ends are recognized by their 2/4-tile partner pattern).
 `RowLayout.layoutDump()` is the one read-back of a finished layout
-(`LayoutDump`: placed `LayoutEntity`s plus failure strings); the CLI's `--layout`
-renders it and the `jvmTest` suites assert on it through the `Layout` fixture in
+(`LayoutDump`: placed `LayoutEntity`s plus failure strings); route failures and any
+`validateLayout` errors of the finished layout share that list, so a pre-existing
+error that switches compaction off is reported instead of silently shipping an
+uncompacted layout. The CLI's `--layout` renders it and the `jvmTest` suites assert
+on it through the `Layout` fixture in
 `jvmTest/…/common/blueprint/printing/fixtures/BlueprintIntegrationFixtures.kt`, so `RowLayout`
 is `internal` and keeps its accessors private.
 
@@ -312,9 +315,9 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   port, whose ends sit one row inside the lane and on the port tile.
   `blueprint/planning/row/RowFluidLane.kt` assigns the recipe's fluids to the machine ports in
   `prototypeFluidPorts` order — inputs before outputs, each in recipe order — and
-  decides which side that puts a lane on, the lane row (two rows beyond the
-  outermost belt) and its depth: a side places one lane per fluid, each two rows
-  further out than the last.
+  decides which side that puts a lane on, the lane row (two rows beyond the row's
+  outermost belt or mixed-belt merge/turn tile) and its depth: a side places one
+  lane per fluid, each two rows further out than the last.
   `blueprint/planning/row/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
   horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds
   no room so only that port falls back to the route. It plans each run once
@@ -424,7 +427,10 @@ producer's product outside the pair plus the producer overfeed. A shared product
 therefore stays a band output instead of being internalized into one consumer.
 `FeedCandidates.kt` grows each group maximally from the
 best remaining seed, retries links after every growth, tries one bounded swap,
-and merges groups that meet. `internalizesSharedOutput` rejects a growth link
+and merges groups that meet. Growth only adds a link whose productions are
+unassigned or already in the group, so a production belongs to exactly one band;
+a material a second band also needs gets a belted row instead of being imported.
+`internalizesSharedOutput` rejects a growth link
 that would turn a terminal output with consumers outside the group into an
 internal link; the belted pass inherits the main scope through `consumerScope`. It returns each finished group's already arranged
 `BandPlan`, so `DirectFeed.build` does not arrange a group a second time. Growth

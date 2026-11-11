@@ -231,19 +231,20 @@ class BlueprintPlanIntegrationTest {
         ) { url ->
             val layout = layoutFromUrl(url)
             val plan = layout.plan
-            val plainCableOrCircuit =
+            // a plain cable row may cover the advanced circuits: cable is no longer inserted in
+            // two bands, so the second consumer gets a row of its own. The circuit must stay a
+            // band output for the robot frames.
+            val plainCircuit =
                 plan.rows.filter { row ->
-                    row.links.isEmpty() &&
-                        row.machines.first().recipe.name in
-                            setOf("copper-cable", "electronic-circuit")
+                    row.links.isEmpty() && row.machines.first().recipe.name == "electronic-circuit"
                 }
             assertAll(
                 { assertEquals(emptyList(), layout.failures, "$url failures: ${layout.failures}") },
                 {
                     assertEquals(
                         emptyList(),
-                        plainCableOrCircuit.map { it.machines.first().recipe.name },
-                        "$url still has plain cable/circuit rows",
+                        plainCircuit.map { it.machines.first().recipe.name },
+                        "$url still has a plain circuit row",
                     )
                 },
                 {
@@ -265,6 +266,20 @@ class BlueprintPlanIntegrationTest {
                 },
                 { assertContains(plan.beltMaterials, electronicCircuit) },
                 { assertContainsNot(plan.sourceMaterials, electronicCircuit) },
+                { assertContainsNot(plan.sourceMaterials, copperCable) },
+                {
+                    val built =
+                        plan.rows
+                            .flatMap { row ->
+                                row.machines.flatMap { it.recipe.result.keys }
+                            }
+                            .toSet()
+                    assertEquals(
+                        emptyList(),
+                        plan.sources.map { it.material }.filter { it in built },
+                        "$url imports a material it builds",
+                    )
+                },
                 { assertOneBeltSourcePerMaterial(plan) },
             )
         }

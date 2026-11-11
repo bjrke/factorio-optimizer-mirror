@@ -6,8 +6,10 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.joinsAt
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.directionBetween
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.north
@@ -30,6 +32,12 @@ internal fun validateMaterials(
     }
 }
 
+/**
+ * Whether this conveyor feeds the tile it faces. A buried underground entrance does not: it dives
+ * into its run, and the tile ahead of it is the tunnel span, so any belt there is independent.
+ */
+private fun ConveyorEntity.feedsAhead() = this !is UndergroundBeltEntity || io != Io.INPUT
+
 private fun checkConveyor(
     conveyor: ConveyorEntity,
     index: LayoutIndex,
@@ -38,9 +46,13 @@ private fun checkConveyor(
     val tile = conveyor.area.topLeft
     val aheadTile = tile + conveyor.direction.step
     val ahead = index.at(aheadTile)
-    if (ahead is ConveyorEntity) checkAhead(conveyor, ahead, aheadTile, errors)
+    if (conveyor.feedsAhead() && ahead is ConveyorEntity) {
+        checkAhead(conveyor, ahead, aheadTile, errors)
+    }
     for (side in fourNeighbours(tile)) {
         val other = index.at(side) as? ConveyorEntity ?: continue
+        // a buried entrance dives instead of feeding the tile it faces
+        if (!other.feedsAhead()) continue
         if (other.direction.step != tile - side) continue
         checkSideLoad(conveyor, other, tile, side, errors)
     }

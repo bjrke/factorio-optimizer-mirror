@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
+import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.placing.compaction.CompactionPass
 import de.bjrke.factorio.optimizer.common.blueprint.placing.compaction.UndergroundStretcher
 import de.bjrke.factorio.optimizer.common.blueprint.placing.plumbing.FluidFeeder
@@ -104,6 +105,9 @@ internal class RowLayout(
             stretchUndergroundRuns()
             compactionPass.compact()
             PowerPlacer(board, imports.poleWestBound).place()
+            // compaction accepts a corridor only when the whole layout validates, so an earlier
+            // error silently turns the pass off; surface it instead of shipping a broken layout
+            failures += validateLayout(board.placed.toList())
         }
     }
 

@@ -78,11 +78,20 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
      * The row the lane runs on: two rows beyond the outermost belt the row already uses, so the row
      * between holds the shafts' lane-side ends. It is never between a belt and the machines. A
      * [depth] of n puts the lane 2n rows further out than the first lane of that side.
+     *
+     * A mixed input belt's merge and turn tiles stand one and two rows outside its lane, at the
+     * row's edge. They are part of the row's outline too: a lane row chosen from the belts alone
+     * would run through them, and the marker block west of the head would collide with the merge.
      */
     fun laneRow(row: Row, side: LineSide, depth: Int = 0): Int {
         val depthDist = 2 + 2 * depth
         val belts = sequence {
-            for ((y) in row.belts) yield(y)
+            for (belt in row.belts) {
+                yield(belt.y)
+                val merge = belt.merge ?: continue
+                yield(merge.mergeRow(belt.y))
+                yield(merge.turnRow(belt.y))
+            }
             yield(row.factoryTop - 2)
             yield(row.factoryBottom + 2)
         }

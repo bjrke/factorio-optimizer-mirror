@@ -36,7 +36,7 @@ internal fun DirectFeedContext.maximalGroups(
         if (seed < 0) break
         val seedLink = pool.removeAt(seed)
         val group = mutableListOf(seedLink)
-        growGroup(group, pool, ::growthArranged)
+        growGroup(group, pool, assigned, ::growthArranged)
         val plan = arranged(group)
         if (plan == null || !bandBeltFits(plan)) {
             // the best arrangement of this seed still leaves a lane without a belt; retry the links
@@ -89,9 +89,11 @@ internal fun DirectFeedContext.internalizesSharedOutput(
 private tailrec fun DirectFeedContext.growGroup(
     group: MutableList<FeedLink>,
     pool: MutableList<FeedLink>,
+    assigned: Set<FactoryProduction>,
     arranged: (List<FeedLink>) -> BandPlan?,
 ) {
 
+    val groupNodes = group.flatMap { it.productions() }.toSet()
     val adjacent =
         MinHeap(
                 linkComparator,
@@ -100,14 +102,16 @@ private tailrec fun DirectFeedContext.growGroup(
             .drainAll()
 
     for (candidate in adjacent) {
+        // a production belongs to exactly one row: never grow into a group another seed assigned
+        if (candidate.productions().any { it in assigned && it !in groupNodes }) continue
         if (!mayGrow(group, candidate)) continue
         if (arranged(group + candidate) != null) {
             group += candidate
             pool.remove(candidate)
-            return growGroup(group, pool, arranged)
+            return growGroup(group, pool, assigned, arranged)
         }
         if (swapInto(group, candidate, pool, arranged)) {
-            return growGroup(group, pool, arranged)
+            return growGroup(group, pool, assigned, arranged)
         }
     }
 }

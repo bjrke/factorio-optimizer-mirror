@@ -89,6 +89,11 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
         val surface = current.tile + direction.step
         // a belt cannot turn back into the tile it just came from
         if (profile.tunnels.forbidReverse && direction == current.heading.opposite()) return
+        // never double back onto the tile a tunnel just surfaced on: that tile is one entity and
+        // cannot also become this route's next entrance
+        if (direction == current.heading.opposite() && (previous[current]?.straight ?: 0) > 0) {
+            return
+        }
         // a split route must not step back onto its start: that would leave a dead end
         if (strictStart && surface == from) return
         // the belt next to the goal has to face the goal, so judge that tile by the direction it

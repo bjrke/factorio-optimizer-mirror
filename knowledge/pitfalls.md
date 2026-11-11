@@ -85,6 +85,16 @@ An entry belongs here only with evidence, and should say how to recognize it.
   outermost belt lands **on the far belt row**, `board.isFree` fails on the belt
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
+- **A mixed input belt's merge and turn tiles are part of the row outline.** A
+  mixed lane's merge sits one row outside the belt and its turn tile two rows
+  outside, at the row's west/east edge. `RowFluidLane.laneRow` chose the lane row
+  from the belts alone, so the acid lane of the reported utility-science battery
+  row landed on the merge row; its marker block west of the lane head collided
+  with the gear belt's merge, `sourceEnd` found no room, the lane was dropped and
+  the batteries got no acid. Include every mixed belt's `mergeRow`/`turnRow` in
+  the outline before applying the two-row gap. Evidence:
+  `aMixedBeltMergePushesTheLaneBeyondItsTurnTile`,
+  `theReportedUtilityScienceUrlCompacts`.
 - **A wide band forces belt crossings, and a multi-link band longer than nine machines can leave
   inserters outside pole coverage.** `GROUP_MAX_MACHINES = 10`
   (`blueprint/planning/band/DirectFeedModel.kt`) is a pair's ceiling; a band with more than one link
@@ -175,6 +185,32 @@ An entry belongs here only with evidence, and should say how to recognize it.
   beside it). A post-stretch failure must also rule out that seam and continue, not
   abort the pass: the `0.3` uranium variant kept a 13-tile straight piercing belt
   until the retry was added.
+- **A buried entrance does not feed the tile it faces.** `validateMaterials`
+  treated every conveyor as feeding the tile ahead, so an underground belt input
+  looked like it side-loaded a belt standing above its tunnel span. In the reported
+  fusion-reactor URL the entrance at `(67,82)` "side-loaded" the plastic belt at
+  `(68,82)`; the game keeps them independent. Do not re-add the entrance to
+  `checkAhead`, and skip it in the side-load neighbor loop: it dives instead of
+  feeding the tile it faces. Evidence: `aBuriedEntranceDoesNotFeedTheBeltAboveItsRun`,
+  `theReportedFusionReactorUrlCompacts`.
+- **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
+  corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
+  error anywhere rejects every candidate and the pass returns after its first
+  iteration, leaving the layout uncompacted. The two reported URLs had exactly that:
+  the fusion plan's false entrance side-load and the utility plan's dangling pipe
+  left them at 78x184 and 72x131. `RowLayout` now appends `validateLayout` errors to
+  the layout's failures, so a silently disabled compaction is visible instead of
+  looking like "the layout is just big". Fix the pre-existing error; do not relax
+  the gate to an error-count or error-kind comparison. Evidence:
+  `theReportedFusionReactorUrlCompacts`, `theReportedUtilityScienceUrlCompacts`.
+- **A route must not double back onto its tunnel landing.** A pipe route landed at
+  `(55,124)`, was forced one surface tile west to `(54,124)`, then reversed onto the
+  landing to dive east; `PathPlacer.roles` keys one entity per tile, so the second
+  run overwrote the first exit and left the entrance at `(62,124)` unpaired. The
+  same tile cannot be both the exit of one run and the entrance of the next.
+  `RouteSearch` now refuses a reverse back onto the tile it just surfaced from.
+  Evidence: `aPipeRouteDoesNotDoubleBackOntoItsLanding`,
+  `theReportedUtilityScienceUrlCompacts`.
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom
@@ -251,6 +287,17 @@ An entry belongs here only with evidence, and should say how to recognize it.
   set treat them as the main band's production. The belted band's internal
   material still stays off the belt; only its output is a source. Evidence:
   `theReportedUtilityScienceUrlsBandTheirBeltedCableAndCircuit`.
+- **A production belongs to exactly one band.** The seed loop only picks an
+  unassigned link, but the pool keeps links that touch a production another seed
+  already assigned, and `growGroup` could add one. The same
+  flying-robot-frame/utility-science production then sat in two bands: the first
+  band internalized battery/electric-engine/engine/pipe, the second imported
+  them, and the reported utility-science plan imported battery,
+  electric-engine-unit, LDS and processing-unit while building them. Skip a
+  growth candidate whose productions include an assigned one outside the group;
+  the second consumer gets a belted row instead. Evidence:
+  `assertNoPlannedMaterialIsImported` on `theReportedUtilityScienceUrlCompacts`,
+  `theReportedUtilityScienceUrlsKeepCircuitAsABandOutput`.
 - **The target production must be seeded into `DirectFeedContext.included`.** Deriving
   `included` only from the materials with a single buildable producer (`producers.values`)
   drops a target that is not in the per-material producer index, so the plan has no target row

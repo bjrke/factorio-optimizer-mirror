@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltRowBudget
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
@@ -149,6 +150,61 @@ class BlueprintLayoutIntegrationTest {
             { assertTrue(height < 80, "layout is still $height tiles tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
+        )
+    }
+
+    /**
+     * The reported fusion-reactor layout was invalid before compaction: an underground entrance was
+     * treated as feeding the belt above its tunnel span. Every corridor was then rejected, so the
+     * plan kept its uncompacted 78x184 shape.
+     */
+    @Test
+    fun theReportedFusionReactorUrlCompacts() {
+        val layout =
+            layoutFromUrl(
+                "http://localhost:8080/#/0.041666666667/fusion-reactor-equipment/CFSXbmr/1/1",
+            )
+        val width =
+            layout.entities.maxOf { it.area.bottomRight.x } -
+                layout.entities.minOf { it.area.topLeft.x } + 1
+        val height =
+            layout.entities.maxOf { it.area.bottomRight.y } -
+                layout.entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertTrue(width <= 50, "layout is still $width tiles wide") },
+            { assertTrue(height <= 95, "layout is still $height rows tall") },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertNoPlannedMaterialIsImported(layout.plan) },
+        )
+    }
+
+    /**
+     * The reported utility-science layout used to import battery, electric-engine-unit, LDS and
+     * processing-unit while building them: the band search had put the same production into two
+     * rows, so one row internalized the material and the other imported it. Its acid lane also
+     * collided with the gear belt's mixed merge and was dropped, leaving the batteries dry.
+     */
+    @Test
+    fun theReportedUtilityScienceUrlCompacts() {
+        val layout =
+            layoutFromUrl(
+                "http://localhost:8080/#/0.178571428571/utility-science-pack/FSbr/1/1",
+            )
+        val width =
+            layout.entities.maxOf { it.area.bottomRight.x } -
+                layout.entities.minOf { it.area.topLeft.x } + 1
+        val height =
+            layout.entities.maxOf { it.area.bottomRight.y } -
+                layout.entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertTrue(width <= 45, "layout is still $width tiles wide") },
+            { assertTrue(height <= 75, "layout is still $height rows tall") },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertNoPlannedMaterialIsImported(layout.plan) },
         )
     }
 
@@ -404,4 +460,20 @@ class BlueprintLayoutIntegrationTest {
                 layout.beltMaterials,
             )
         }
+
+    /** A plan must never import a material one of its own rows builds. */
+    private fun assertNoPlannedMaterialIsImported(plan: BlueprintPlan) {
+        val built =
+            plan.rows
+                .flatMap { row ->
+                    row.machines.flatMap { it.recipe.result.keys }
+                }
+                .toSet()
+
+        assertEquals(
+            emptyList(),
+            plan.sources.map { it.material }.filter { it in built },
+            "the plan imports a material it builds",
+        )
+    }
 }
