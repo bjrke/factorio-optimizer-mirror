@@ -11,8 +11,13 @@ import kotlin.test.assertEquals
 /** Plumbing validity and fluid network connectivity on the real prototype dump. */
 class BlueprintFluidIntegrationTest {
 
+    /**
+     * One layout per target feeds both fluid checks: plumbing validity and network connectivity.
+     * Only the fluid findings count here, because `utility-science-pack` has a pre-existing belt
+     * side-load.
+     */
     @Test
-    fun realBlueprintsHaveValidPlumbing() =
+    fun realBlueprintsHaveValidPlumbingAndConnectedNetworks() =
         assertTableOf(
             "advanced-circuit",
             "electronic-circuit",
@@ -24,7 +29,6 @@ class BlueprintFluidIntegrationTest {
             "petroleum-gas",
         ) { target ->
             val layout = Layout(target)
-            // only the fluid checks here: utility-science-pack has a pre-existing belt side-load
             val plumbing =
                 validateLayout(layout.entities).filter {
                     it.contains("fluid") || it.contains("unpaired")
@@ -32,24 +36,6 @@ class BlueprintFluidIntegrationTest {
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
                 { assertEquals(emptyList(), plumbing) },
-            )
-        }
-
-    @Test
-    fun realFluidNetworksAreConnected() =
-        assertTableOf(
-            "advanced-circuit",
-            "electronic-circuit",
-            "logistic-science-pack",
-            "processing-unit",
-            "utility-science-pack",
-            "lubricant",
-            "plastic-bar",
-            "petroleum-gas",
-        ) { target ->
-            val layout = Layout(target)
-            assertAll(
-                { assertEquals(emptyList(), layout.failures) },
                 { assertEquals(emptyList(), fluidNetworkProblems(layout.entities)) },
             )
         }

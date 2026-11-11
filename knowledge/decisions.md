@@ -569,7 +569,7 @@ link of that material exports it, and the belted row still covers every outside
 consumer.
 
 **Guardrail.** Keep one belt source per material; a fully inserted recipe gets no
-belt row. `realBlueprintsPutEveryMaterialOnAtMostOneBelt` (in
+belt row. `realBlueprintsAreValid` (in
 `BlueprintLayoutIntegrationTest`) asserts the invariant.
 
 **See.** `blueprint/planning/band/DirectFeed.kt` (`belted`); `architecture.md` §Blueprint layout.

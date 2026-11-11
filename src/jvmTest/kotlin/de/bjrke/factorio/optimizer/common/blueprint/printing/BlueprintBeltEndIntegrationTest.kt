@@ -24,23 +24,19 @@ class BlueprintBeltEndIntegrationTest {
             )
         }
 
+    /**
+     * The same layout must survive the chest connector on every marker: connected tunnels and every
+     * inserter inside one power network.
+     */
     @Test
-    fun realChestMarkerBlueprintsHaveConnectedUndergroundBelts() =
+    fun realChestMarkerBlueprintsHaveConnectedBeltsAndPower() =
         assertTable(chestMarkers) { beltEnd ->
             val layout = Layout("advanced-circuit", beltEnd = beltEnd)
+            val entities = layout.blueprint.entities
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
-                { assertConnectedUndergroundBelts(layout.blueprint.entities) },
-            )
-        }
-
-    @Test
-    fun realChestMarkerBlueprintsPowerEveryInserter() =
-        assertTable(chestMarkers) { beltEnd ->
-            val layout = Layout("advanced-circuit", beltEnd = beltEnd)
-            assertAll(
-                { assertEquals(emptyList(), layout.failures) },
-                { assertPolesCoverAndConnect(layout.blueprint.entities) },
+                { assertConnectedUndergroundBelts(entities) },
+                { assertPolesCoverAndConnect(entities) },
             )
         }
 

@@ -169,6 +169,19 @@ up.
   lambdas in `assertAll`.
 - Do not append the actual value's `.toString()` to a message; equality assertions
   already print it. Keep only messages that add context.
+- **Build each real layout once and assert every invariant on it.** A layout costs
+  about 200 ms while its invariants are cheap, so `realBlueprintsAreValid` in
+  `BlueprintLayoutIntegrationTest` builds one layout per target and runs the overlap,
+  inserter, tunnel, splitter, merge, stretch and belt-source checks on it. Add an
+  invariant to that table instead of a new table over the same targets. A memoized
+  `Layout` fixture is not the answer: a shared cache is not safe once suites run in
+  parallel.
+- **A belt fed by several materials is only a merge when its own lanes cannot hold
+  them.** `assertNoMergingBelts` takes the `LaneLoad` of every belt tile
+  (`layout.beltLoads`) next to `layout.beltMaterials`: a planned mixed input belt
+  joins two single-material lanes on purpose, while a merge into an occupied lane
+  stays a failure. Passing materials alone flagged the mixed rows of
+  `utility-science-pack`.
 - `commonTest` runs on JVM **and** JS: keep it platform-neutral; target specifics
   go in `src/jvmTest` / `src/jsTest`.
 - Run Gradle only when the change reaches the build. `./gradlew check` runs

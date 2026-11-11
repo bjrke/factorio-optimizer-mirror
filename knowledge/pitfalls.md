@@ -160,7 +160,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   tiles of a row and leave an inserter facing nothing; `inserterTiles` now protects
   the one- or two-tile pickup/drop positions. Evidence: `utility-science-pack`'s
   low-density-structure row after the electric-engine band split
-  (`UndergroundStretcherTest`, `realBlueprintsHaveNoDanglingInserter`).
+  (`UndergroundStretcherTest`, `realBlueprintsAreValid`).
 - **A fluid marker joins the solid import column unless the source block or a run
   end is taken.** The link (`blueprint/placing/routing/FluidFeedLinker.kt`) buries under a belt,
   underground belt or inserter that crosses the lane row in the west corridor, so a
@@ -272,7 +272,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom
-  violation. `realBlueprintsStretchUndergroundRuns` did exactly that for
+  violation. `realBlueprintsAreValid` did exactly that for
   `advanced-circuit` ("input (38,22) can still grow back") after the band reshaped
   the layout; the layout's own `undergroundOutputOf` compares the material, and the
   test now does too. Match material (or `blueprintTransportMaterials`' map)

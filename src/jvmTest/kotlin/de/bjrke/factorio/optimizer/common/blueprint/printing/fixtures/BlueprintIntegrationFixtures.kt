@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
@@ -164,6 +165,11 @@ data class Layout(
         entities.filterIsInstance<TransportEntity>().associate {
             it.area.topLeft to it.material
         }
+    }
+
+    /** Both lanes each belt tile carries, so a mixed merge can be told from an accidental one. */
+    val beltLoads by lazy {
+        entities.filterIsInstance<BeltEntity>().associate { it.area.topLeft to it.load }
     }
 
     /**

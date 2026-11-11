@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -81,10 +82,15 @@ fun assertSplittersOnlyFeedSurface(entities: List<BlueprintEntity>) {
     assertEquals(emptyList(), problems, "splitter output feeds underground belt")
 }
 
-/** A belt tile must not be fed by two belts of different materials (they would merge). */
+/**
+ * A belt tile must not be fed by belts of several materials unless the tile's own lanes carry them
+ * all: a mixed input belt merges one lane per material on purpose, while any other merge would pour
+ * two materials into one lane or discard one.
+ */
 fun assertNoMergingBelts(
     entities: List<BlueprintEntity>,
     materials: Map<Coordinate, Material>,
+    lanes: Map<Coordinate, LaneLoad>,
 ) {
     val belts =
         entities
@@ -95,8 +101,12 @@ fun assertNoMergingBelts(
     val merges =
         belts
             .filter { (tile, _) ->
-                val feeding = belts.filter { (from, direction) -> from + direction.step == tile }
-                feeding.map { materials[it.key] }.distinct().size > 1
+                val fed =
+                    belts
+                        .filter { (from, direction) -> from + direction.step == tile }
+                        .mapNotNull { materials[it.key] }
+                        .toSet()
+                fed.size > 1 && lanes[tile]?.materials != fed
             }
             .keys
     assertEquals(emptySet(), merges, "belts fed by several materials")
