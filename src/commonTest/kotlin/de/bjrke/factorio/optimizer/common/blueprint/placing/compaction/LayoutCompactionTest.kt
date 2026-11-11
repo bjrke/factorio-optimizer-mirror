@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
@@ -283,6 +284,36 @@ class LayoutCompactionTest {
         assertTableOf(SeamOrientation.VERTICAL, SeamOrientation.HORIZONTAL) { orientation ->
             assertNull(nextCompaction(listOf(machine(0, 0)), orientation))
         }
+
+    /**
+     * A corner belt where a feeder turns into a perpendicular lane can be dropped: the feeder
+     * behind it side-loads the lane once the shift moves the lane onto the corner's row. The marker
+     * above the feeder keeps it from being cut too, so the whole corner row is the only corridor.
+     */
+    @Test
+    fun aCornerBeltIsDroppedAndItsFeederSideLoadsTheLane() {
+        val lane = (-2..0).map { belt(it, 2, direction = WEST) }
+        val entities =
+            listOf(marker(0, -1), belt(0, 0, direction = SOUTH), belt(0, 1, direction = SOUTH)) +
+                lane
+
+        val result = assertNotNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+        val movedLane = result.entities.filterIsInstance<BeltEntity>().filter { it.area.y == 1 }
+        val feeder = result.entities.filterIsInstance<BeltEntity>().single { it.area.y == 0 }
+
+        assertAll(
+            { assertEquals(1, result.width, "the corner row goes in one shift") },
+            { assertEquals(SOUTH, feeder.direction, "the feeder stays and turns into the lane") },
+            {
+                assertEquals(
+                    listOf(WEST, WEST, WEST),
+                    movedLane.sortedBy { it.area.x }.map { it.direction },
+                    "the lane slid up one row",
+                )
+            },
+            { assertEquals(emptyList(), validateLayout(result.entities)) },
+        )
+    }
 
     /**
      * A corridor made only of empty tiles would leave one side of the layout empty. It must never

@@ -62,29 +62,49 @@ private fun isRemovable(
 }
 
 /**
- * A belt is spliceable when the run on both sides is the same material and direction and no belt
- * side-loads into it. Anything other than a plain belt next to it (a splitter, a loader, an
- * underground end, a machine) stops the corridor, so a shift can never pull a belt off such a
- * neighbour.
+ * A belt is spliceable when the run on both sides is the same material and direction, or when it is
+ * a corner: the belt behind it feeds it straight and the tile ahead is a perpendicular belt of the
+ * same material. Dropping the corner frees the row for the shift and lets the belt behind side-load
+ * the lane that moved up. No belt may side-load into the cut tile. Anything other than a plain belt
+ * next to it (a splitter, a loader, an underground end, a machine) stops the corridor, so a shift
+ * can never pull a belt off such a neighbour.
  */
 private fun beltCuttable(
     index: LayoutIndex,
     tile: Coordinate,
     belt: BeltEntity,
     orientation: SeamOrientation,
-): Boolean =
-    alongTiles(orientation, tile).all { side ->
-        when (val other = index.at(side)) {
-            null -> true
-            is BeltEntity -> other.materials == belt.materials && other.direction == belt.direction
-            else -> false
-        }
-    } &&
-        acrossTiles(orientation, tile).none { side ->
+): Boolean {
+    if (
+        acrossTiles(orientation, tile).any { side ->
             val other = index.at(side)
             // a perpendicular belt facing into this tile would lose its side-load
             other is ConveyorEntity && other.direction.step == tile - side
         }
+    ) {
+        return false
+    }
+    val behind = index.at(tile - belt.direction.step)
+    val ahead = index.at(tile + belt.direction.step)
+    val straight =
+        alongTiles(orientation, tile).all { side ->
+            when (val other = index.at(side)) {
+                null -> true
+                is BeltEntity ->
+                    other.materials == belt.materials && other.direction == belt.direction
+                else -> false
+            }
+        }
+    if (straight) return true
+    // a corner into a perpendicular lane: drop the turn belt, the one behind it side-loads the lane
+    return behind is BeltEntity &&
+        behind.materials == belt.materials &&
+        behind.direction == belt.direction &&
+        ahead is BeltEntity &&
+        ahead.materials == belt.materials &&
+        ahead.direction != belt.direction &&
+        ahead.direction != belt.direction.opposite()
+}
 
 /**
  * A pipe is spliceable only on a straight run: a pipe branching north/south (for a vertical seam),

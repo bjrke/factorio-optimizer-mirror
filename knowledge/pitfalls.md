@@ -186,6 +186,16 @@ An entry belongs here only with evidence, and should say how to recognize it.
   beside it). A post-stretch failure must also rule out that seam and continue, not
   abort the pass: the `0.3` uranium variant kept a 13-tile straight piercing belt
   until the retry was added.
+- **A corner belt is removable when the belt behind it feeds it straight into a
+  perpendicular same-material lane.** The splice rule only accepted a belt with the
+  same direction and material on both sides, so the last belt of a feeder before its
+  turn blocked the corridor that would have pulled its lane up a row. Dropping the
+  corner and shifting the lane up leaves the feeder side-loading the lane, which
+  `validateLayout` accepts as a same-material turn. The perpendicular lane is never
+  itself in the corridor (it is not removable), so the corner is always at the
+  corridor's far or near edge and the shift lands the lane next to the feeder.
+  Evidence: `aCornerBeltIsDroppedAndItsFeederSideLoadsTheLane`,
+  `theReportedLogisticScienceUrlCompactsBothCorners`.
 - **A buried entrance does not feed the tile it faces.** `validateMaterials`
   treated every conveyor as feeding the tile ahead, so an underground belt input
   looked like it side-loaded a belt standing above its tunnel span. In the reported

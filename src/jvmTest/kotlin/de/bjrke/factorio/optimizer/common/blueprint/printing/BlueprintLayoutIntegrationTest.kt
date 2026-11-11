@@ -254,6 +254,28 @@ class BlueprintLayoutIntegrationTest {
         )
     }
 
+    /**
+     * The reported logistic-science layout kept one free row at each corner where a feeder turns
+     * into a lane: compaction treated the corner belt as a wall, so the layout stayed 21x50. The
+     * corner can be dropped and the feeder side-loads the lane that moved up, giving 21x48.
+     */
+    @Test
+    fun theReportedLogisticScienceUrlCompactsBothCorners() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSXbmr/1/1")
+        val entities = layout.entities
+        val width =
+            entities.maxOf { it.area.bottomRight.x } - entities.minOf { it.area.topLeft.x } + 1
+        val height =
+            entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(entities)) },
+            { assertTrue(width <= 21, "layout is still $width tiles wide") },
+            { assertTrue(height <= 48, "layout is still $height rows tall") },
+        )
+    }
+
     @Test
     fun reportedUrlKeepsInputLanesAtTheMachineEdge() =
         assertTableOf(BeltEnd.CONSTANT_COMBINATOR, BeltEnd.INFINITY_CHEST) { beltEnd ->
