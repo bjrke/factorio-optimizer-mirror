@@ -11,8 +11,19 @@ import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 /** West edge no feed route may cross, so a route cannot run around the import lanes. */
 private const val ROUTE_WEST_BOUND = 2
 
-/** How far past everything placed a route may still search, so A* stays near the blueprint. */
-private const val ROUTE_MARGIN = 24
+/**
+ * How far past everything placed a route may still search on the north, south and east side: one
+ * ring lane to travel along the outside, one to turn back in, and one spare. The west side keeps
+ * [ROUTE_WEST_BOUND] instead, because the import connectors stand there.
+ */
+internal const val ROUTE_MARGIN = 3
+
+/**
+ * The fallback box: a route that only exists past [ROUTE_MARGIN] is still found, so a blueprint
+ * stays usable, but [LayoutRouter] reports it — a silent widen would hide a layout that needs the
+ * room. Every layout test asserts the failures are empty, so this turns the widen into a red suite.
+ */
+internal const val WIDE_ROUTE_MARGIN = 24
 
 /** Safety cap on A* expansions; a route that needs more is reported as unreachable. */
 private const val MAX_ROUTE_EXPANSIONS = 1_000_000
@@ -43,7 +54,11 @@ private class RouteEntry(
  * ends, so route costs stay independent of placement code. The search keeps its own frontier and
  * scores; [LayoutRouter] owns the belt/pipe profiles and exposes the public entry points.
  */
-internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest) {
+internal class RouteSearch(
+    private val board: LayoutBoard,
+    request: RouteRequest,
+    margin: Int = ROUTE_MARGIN,
+) {
 
     private val from = request.from
     private val to = request.to
@@ -52,6 +67,11 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
     private val strictStart = request.strictStart
     private val cheapestTile = profile.costs.cheapestTile
     private val start = RouteNode(from, request.heading, straight = 0)
+
+    // the board does not change while one search runs, so the region is fixed up front
+    private val eastBound = board.maxX + margin
+    private val northBound = board.minY - margin
+    private val southBound = board.maxY + margin
 
     private val gScore = mutableMapOf(start to 0)
     private val previous = mutableMapOf<RouteNode, RouteNode>()
@@ -98,7 +118,7 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
         if (strictStart && surface == from) return
         // the belt next to the goal has to face the goal, so judge that tile by the direction it
         // will leave in, not by the one it arrived from
-        val towardGoal = Direction.entries.firstOrNull { surface + it.step == to }
+        val towardGoal = towardGoal(surface)
         if (!inRegion(surface) || !allowed(surface, towardGoal ?: direction)) return
 
         val turn = if (current.heading != direction) profile.costs.turnCost else 0
@@ -185,14 +205,35 @@ internal class RouteSearch(private val board: LayoutBoard, request: RouteRequest
             tile.y in minOf(from.y, to.y)..maxOf(from.y, to.y)
 
     /**
+     * The direction from [surface] into [to], or null when the tile does not touch the goal.
+     * Reading the two coordinate deltas keeps the per-expansion check allocation free.
+     */
+    private fun towardGoal(surface: Coordinate) =
+        when {
+            to.y == surface.y ->
+                when (to.x - surface.x) {
+                    1 -> Direction.EAST
+                    -1 -> Direction.WEST
+                    else -> null
+                }
+            to.x == surface.x ->
+                when (to.y - surface.y) {
+                    1 -> Direction.SOUTH
+                    -1 -> Direction.NORTH
+                    else -> null
+                }
+            else -> null
+        }
+
+    /**
      * Whether a route may use [coordinate]: east of [ROUTE_WEST_BOUND], and within [ROUTE_MARGIN]
-     * of everything placed, so the search stays near the blueprint instead of roaming forever.
+     * past everything placed on the other three sides, so the search stays near the blueprint.
      */
     private fun inRegion(coordinate: Coordinate) =
         coordinate.x >= ROUTE_WEST_BOUND &&
-            coordinate.x <= board.maxX + ROUTE_MARGIN &&
-            coordinate.y >= board.minY - ROUTE_MARGIN &&
-            coordinate.y <= board.maxY + ROUTE_MARGIN
+            coordinate.y >= northBound &&
+            coordinate.x <= eastBound &&
+            coordinate.y <= southBound
 
     /**
      * True when a tunnel of [reach] tiles in [direction] clashes with a tunnel already there. Two

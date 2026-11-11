@@ -86,7 +86,10 @@ class BlueprintLayoutCompactionTest {
         val layout = Layout(plan)
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val mixed = belts.filter { it.load.isMixed }
-        val laneRows = mixed.filter { it.area.topLeft.x >= 40 }.map { it.area.topLeft.y }.distinct()
+        // the lane belts start at the machine edge; the merge tiles sit west of it
+        val rowLeft = layout.machineEntities.minOf { it.area.topLeft.x }
+        val laneRows =
+            mixed.filter { it.area.topLeft.x >= rowLeft }.map { it.area.topLeft.y }.distinct()
         val product = belts.filter { it.material == output }
         val carried = belts.flatMap { it.materials }.toSet()
         val budget =

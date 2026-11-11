@@ -126,6 +126,20 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `aCornerMayTurnOverAForeignBeltItDoesNotFeed`). The reserved-feed approach check in
   the same class still reads the arrival direction: the advanced-circuit layout needs
   it to tunnel its circuit feed, so do not "fix" it without re-pinning that layout.
+- **`LANE_MARGIN` offsets the blueprint, it does not widen it.** The machine rows start at column
+  `LANE_MARGIN`, but `ImportTrimmer` moves every connector to the furthest west column that still has
+  a straight east feed and deletes the prefix, so the finished layout begins at the connector:
+  `advanced-circuit` is 39x22 and `utility-science-pack` 43x105 both with the margin at 40 (the old
+  value) and at 10. Only the x coordinates move, by `LANE_MARGIN - 40`. The constant must hold the
+  widest connector (five tiles for a chest), the merge column at `LANE_MARGIN - EAST_MERGE_OFFSET`
+  and that merge's approach tile, which puts the floor at eight. Tests that pin absolute tiles read
+  the `internal` constant, not a literal.
+- **A route must not need the wide search box.** `RouteSearch` searches north, south and east only
+  `ROUTE_MARGIN` (3) tiles past everything placed — one ring lane for the route and one for its turn.
+  `LayoutRouter.routeWide` retries with `WIDE_ROUTE_MARGIN` (24) and still appends
+  `route … needed the wide search box` to `failures`, so a layout that depends on the room fails every
+  suite that asserts `failures` empty. Recognize it by that message; fix it by re-routing, not by
+  widening the compact box without re-pinning the layouts.
 - **Recipe cycles are excluded by the optimizer, not by `buildable`.**
   `game/prototype/RecipePolicy.kt` lists `fish-breeding`, `nutrients-from-fish` and
   `kovarex-enrichment-process` in `unplannedRecipes` and discards them even when one produces the

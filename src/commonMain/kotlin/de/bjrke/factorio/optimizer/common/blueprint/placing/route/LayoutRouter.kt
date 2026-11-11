@@ -9,7 +9,11 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
  * The weighted A* router shared by belts and pipes. It only asks the [board] what a tile holds and
  * where the layout currently ends, so route costs stay independent of placement code.
  */
-internal class LayoutRouter(private val board: LayoutBoard) {
+internal class LayoutRouter(
+    private val board: LayoutBoard,
+    /** The layout's failure list; a route that only fits the wide box is recorded here. */
+    private val failures: MutableList<String> = mutableListOf(),
+) {
 
     /**
      * Belts tunnel only over an obstacle. The fixed entry cost makes a short surface detour cheaper
@@ -75,9 +79,23 @@ internal class LayoutRouter(private val board: LayoutBoard) {
      * only straight, and (for belts) only over an obstacle so surface stays the first choice. The
      * goal is always reached on the surface; the caller decides which way the goal entity faces.
      * Manhattan times the cheapest tile is the (admissible) heuristic.
+     *
+     * The search starts in the compact [ROUTE_MARGIN] box. A route that only exists past it is
+     * still found with [WIDE_ROUTE_MARGIN], but it is reported: the compact box has to grow instead
+     * of a layout quietly depending on the wide one.
      */
     fun route(request: RouteRequest): List<Coordinate>? {
         if (request.from == request.to) return emptyList()
-        return RouteSearch(board, request).find()
+        return RouteSearch(board, request).find() ?: routeWide(request)
+    }
+
+    /**
+     * The fallback search: it finds a route the compact box missed and still reports it, because a
+     * layout must not depend on the extra room without anyone noticing.
+     */
+    private fun routeWide(request: RouteRequest): List<Coordinate>? {
+        val wide = RouteSearch(board, request, WIDE_ROUTE_MARGIN).find() ?: return null
+        failures += "route ${request.from} -> ${request.to} needed the wide search box"
+        return wide
     }
 }

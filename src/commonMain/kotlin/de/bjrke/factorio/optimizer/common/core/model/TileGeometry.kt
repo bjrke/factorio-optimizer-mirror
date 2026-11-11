@@ -18,7 +18,8 @@ fun Coordinate.chebyshevDist(b: Coordinate) = (this - b).chebyshevLen
 val Coordinate.manhattanLen: Int
     get() = abs(x) + abs(y)
 
-fun Coordinate.manhattanDist(b: Coordinate) = (this - b).manhattanLen
+/** The tile distance without a subtraction, so the route search does not allocate per estimate. */
+fun Coordinate.manhattanDist(b: Coordinate) = abs(x - b.x) + abs(y - b.y)
 
 /** True when [to] is one tile orthogonally next to this. */
 fun Coordinate.adjacent(to: Coordinate) = manhattanDist(to) == 1

@@ -7,6 +7,26 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-11 — A route box is three tiles, and a wider search is a failure
+
+**Decision.** `RouteSearch` looks at most three tiles past everything placed on the north, south and
+east side (`ROUTE_MARGIN = 3`); the west side keeps the fixed `ROUTE_WEST_BOUND = 2`, so no route
+runs around the import lanes. The ring must carry one lane to travel along the outside and one to
+turn back in, so two is the geometric floor and three leaves a spare column. `LayoutRouter` still
+retries with `WIDE_ROUTE_MARGIN` (24) when the compact box finds nothing, but it appends
+`route … needed the wide search box` to the layout's failures: a layout that depends on the room
+turns the suite red instead of passing quietly. A 24-tile ring made the A* fill the whole permitted
+region, because its heuristic prices a tile at 3 while a straight surface tile costs 4; the route
+search was then 47 % of the layout suite's CPU, and shrinking the box removed 65 % of it.
+
+**Guardrail.** Do not widen the compact box silently, and do not treat the wide retry as normal:
+every layout test asserts `failures` is empty, which is the tripwire. The region reads
+`LayoutBoard`'s incremental `minX/maxX/minY/maxY`, updated per placement — never recompute them by
+scanning the placed entities, and do not re-add a margin on the west side.
+
+**See.** `blueprint/placing/route/RouteSearch.kt`, `blueprint/placing/route/LayoutRouter.kt`;
+`LayoutRouterTest.aRoutePastTheCompactBoxIsFoundButReported`.
+
 ## 2026-11-11 — A belt bend costs more than a straight tile, a tunnel more than a detour
 
 **Decision.** Belt routes price a turn above one straight tile (`turnCost = 6` against

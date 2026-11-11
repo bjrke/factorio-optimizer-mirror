@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LANE_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
@@ -68,8 +69,8 @@ class BlueprintFluidPortLayoutTest {
             {
                 assertEquals(
                     mapOf(
-                        Coordinate(43, 2) to sulfur,
-                        Coordinate(45, 1) to ironPlate,
+                        Coordinate(LANE_MARGIN + 3, 2) to sulfur,
+                        Coordinate(LANE_MARGIN + 5, 1) to ironPlate,
                     ),
                     inserters.associateBy({ it.area.topLeft }, { it.material }),
                 )

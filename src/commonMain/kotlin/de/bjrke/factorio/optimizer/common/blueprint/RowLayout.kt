@@ -50,7 +50,13 @@ internal class RowLayout(
             logistics::fluidTemperature,
         )
 
-    private val router = LayoutRouter(board)
+    /**
+     * What the layout could not do: an input whose belt did not route, or a route that only exists
+     * outside the compact search box. A non-empty list means the layout needs attention.
+     */
+    private val failures = mutableListOf<String>()
+
+    private val router = LayoutRouter(board, failures)
 
     private val connector = BeltEndConnector(board, beltEnd)
 
@@ -59,9 +65,6 @@ internal class RowLayout(
      * a run cannot pull a pipe off the machine it feeds.
      */
     private val fluidPorts = mutableSetOf<Coordinate>()
-
-    /** Inputs whose belt could not be routed; a non-empty list means the blueprint is broken. */
-    private val failures = mutableListOf<String>()
 
     /** The import markers and west bounds the trim, compaction and power stages share. */
     private val imports = ImportExtension()

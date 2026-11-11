@@ -285,7 +285,10 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   the `RouteRequest`, and `blueprint/placing/route/RouteSearch.kt` owns the weighted A* frontier and node
   expansion. The belt profile prices a bend above a straight tile and a tunnel entry at seven tiles
   (`RouteCosts.turnCost`/`tunnelEntry`), so a route runs straight and rounds a belt row instead of
-  tunneling under it; a long crossing still tunnels.
+  tunneling under it; a long crossing still tunnels. The search region is everything placed plus
+  `ROUTE_MARGIN` (3) tiles on the north, south and east side and the fixed `ROUTE_WEST_BOUND` on the
+  west; `LayoutRouter` retries with `WIDE_ROUTE_MARGIN` only when that box has no route, and records
+  the retry in the layout's failures.
 - `blueprint/placing/special/PathPlacer.kt` — `placePath` and the tile roles for plain and
   underground runs; shared by belt and pipe routes. `placePath` rejects a belt path that uses one
   tile twice (`pathConflicts`, the tiles are returned and nothing is placed) and lets the caller

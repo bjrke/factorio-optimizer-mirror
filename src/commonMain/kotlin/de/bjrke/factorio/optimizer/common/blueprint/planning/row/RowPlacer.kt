@@ -29,8 +29,15 @@ import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
 
-/** Tiles on the left kept clear for the import markers and the feed belts. */
-private const val LANE_MARGIN = 40
+/**
+ * The column the machine rows start on: the west corridor kept clear for the import connectors,
+ * their feed belts and a mixed lane's merge. The import trimmer later moves every connector to the
+ * furthest west column with a straight feed and deletes the prefix, so this offsets the blueprint
+ * instead of widening it — the finished layout starts at the connector, not here. It must hold the
+ * widest connector (five tiles for a chest), the merge column at `LANE_MARGIN - EAST_MERGE_OFFSET`
+ * and that merge's approach tile.
+ */
+internal const val LANE_MARGIN = 10
 
 /** Free rows between two recipe rows, so their belts can be routed between them. */
 private const val ROW_GAP = 17

@@ -59,9 +59,14 @@ class RowPlacerTest {
         val row = place(plan).single()
 
         assertAll(
-            { assertEquals(40, row.left) },
+            { assertEquals(LANE_MARGIN, row.left) },
             { assertEquals(3, row.width) },
-            { assertEquals(listOf(40, 43, 46), row.machines.map { it.left }) },
+            {
+                assertEquals(
+                    listOf(LANE_MARGIN, LANE_MARGIN + 3, LANE_MARGIN + 6),
+                    row.machines.map { it.left },
+                )
+            },
         )
     }
 
@@ -89,9 +94,14 @@ class RowPlacerTest {
         val row = place(plan).single()
 
         assertAll(
-            { assertEquals(40, row.left) },
+            { assertEquals(LANE_MARGIN, row.left) },
             { assertEquals(3, row.width) },
-            { assertEquals(listOf(40, 44, 47), row.machines.map { it.left }) },
+            {
+                assertEquals(
+                    listOf(LANE_MARGIN, LANE_MARGIN + 4, LANE_MARGIN + 7),
+                    row.machines.map { it.left },
+                )
+            },
         )
     }
 
