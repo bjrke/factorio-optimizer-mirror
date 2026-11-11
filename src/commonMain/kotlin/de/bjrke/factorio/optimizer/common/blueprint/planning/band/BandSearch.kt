@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.util.countVectors
 import de.bjrke.factorio.optimizer.common.core.util.greatestCommonDivisor
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -12,7 +13,10 @@ import kotlin.math.max
  * machine sequence that covers every recipe's plan machine need with no consumer underfed and no
  * producer left unused, at most [maxBandMachines] machines long.
  */
-internal fun DirectFeedContext.arrange(links: List<FeedLink>): BandPlan? {
+internal fun DirectFeedContext.arrange(
+    links: List<FeedLink>,
+    requireComplete: Boolean = true,
+): BandPlan? {
     val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
     val recipes = nodes.map { it.production }
 
@@ -22,7 +26,7 @@ internal fun DirectFeedContext.arrange(links: List<FeedLink>): BandPlan? {
     val needs = groupNeeds(links) ?: return null
     val group = FeedGroup(links, needs)
 
-    return arrangeBest(recipes, group)
+    return arrangeBest(recipes, group, requireComplete)
 }
 
 /**
@@ -32,11 +36,19 @@ internal fun DirectFeedContext.arrange(links: List<FeedLink>): BandPlan? {
 private fun DirectFeedContext.arrangeBest(
     recipes: List<FactoryProduction>,
     group: FeedGroup,
+    requireComplete: Boolean,
 ): BandPlan? {
     if (recipes.size > MAX_BAND_RECIPES) return null
-    val cycles = BandCycleSearch(group, recipes, bandPlanComparator())
+    val cycles =
+        BandCycleSearch(
+            group,
+            recipes,
+            bandPlanComparator(),
+            logistics::isFluid,
+            requireComplete,
+        )
     var best: BandPlan? = null
-    for (length in recipes.size..MAX_BAND_RECIPES) {
+    for (length in recipes.size..maxBandMachines(group.links.size)) {
         val bestLength = best?.machines?.size
         if (bestLength != null && length > bestLength) break
         for (counts in countVectors(recipes, length)) {
@@ -59,6 +71,8 @@ private class BandCycleSearch(
     private val group: FeedGroup,
     private val recipes: List<FactoryProduction>,
     private val comparator: Comparator<BandPlan>,
+    private val isFluid: (Material) -> Boolean,
+    private val requireComplete: Boolean,
 ) {
     private val links = group.links
     private val producerIndex =
@@ -110,6 +124,60 @@ private class BandCycleSearch(
         }
     }
 
+    /**
+     * The band built from cycling [cycle]: the pattern repeated often enough to cover every
+     * recipe's plan machine need, cut to the shortest window at which no consumer is underfed and
+     * no producer is left without a consumer next to it. Null when even [maxBandMachines] machines
+     * cannot do it.
+     */
+    private fun window(
+        cycle: List<FactoryProduction>,
+        counts: Map<FactoryProduction, Int>,
+        maxLength: Int,
+    ): BandPlan? {
+        val repetitions =
+            group.needs.maxOfOrNull { (recipe, count) ->
+                if (count <= FEED_EPSILON) 0
+                else ceil(count / counts.getValue(recipe) - FEED_EPSILON).toInt()
+            } ?: 0
+        val start = maxOf(cycle.size, repetitions * cycle.size)
+        if (start > maxLength) return null
+        for (length in start..minOf(maxBandMachines(group.links.size), maxLength)) {
+            for (offset in cycle.indices) {
+                val machines = List(length) { cycle[(offset + it) % cycle.size] }
+                val allNeedsFulfilled =
+                    group.needs.all { (recipe, count) ->
+                        machines.count { it == recipe } + FEED_EPSILON >= count
+                    }
+
+                if (!allNeedsFulfilled) continue
+                val feeds = FeedWindow(group, machines).feeds() ?: continue
+                val plan = BandPlan(machines, feeds, ratioPenalty(machines, group.links))
+                if (requireComplete && plan.hasInBandBeltInput()) continue
+                return plan
+            }
+        }
+        return null
+    }
+
+    /**
+     * Whether a solid material the band produces is still taken from a belt by a machine of the
+     * same window. The band would need an extra belt for a resource it already makes; such a window
+     * is not a valid band. A material produced and consumed outside the window (an export) is fine.
+     */
+    private fun BandPlan.hasInBandBeltInput(): Boolean {
+        val produced = machines.flatMap { it.recipe.result.keys }.filterNot(isFluid).toSet()
+        val incoming =
+            feeds.mapTo(mutableSetOf()) { feed ->
+                (if (feed.producerIsLeft) feed.gap + 1 else feed.gap) to feed.link.material
+            }
+        return machines.withIndex().any { (index, machine) ->
+            machine.recipe.ingredients.keys.any { material ->
+                !isFluid(material) && material in produced && (index to material) !in incoming
+            }
+        }
+    }
+
     private fun finish(cycle: IntArray) {
         val last = cycle[cycle.size - 1]
         cover(last, cycle[0], 1)
@@ -117,7 +185,6 @@ private class BandCycleSearch(
             val current = best
             val plan =
                 window(
-                    group,
                     cycle.map { recipes[it] },
                     counts,
                     current?.machines?.size ?: maxBandMachines(links.size),
@@ -190,7 +257,7 @@ private fun DirectFeedContext.bandPlanComparator(): Comparator<BandPlan> =
  * Needs are fractional: a recipe the plan uses only partly still needs one machine, not a whole
  * consumer machine at a different rate.
  */
-private fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryProduction, Double>? {
+internal fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryProduction, Double>? {
     val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
     val outgoing = links.groupBy { it.producer.production }
     val needs =
@@ -220,6 +287,32 @@ private fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryProd
     return if (changed) null else needs
 }
 
+/**
+ * A quick machine budget before the expensive arrangement search: one band cannot hold more than
+ * [maxBandMachines] machines, and the arrangement search stops at [MAX_BAND_RECIPES] recipes.
+ */
+internal fun DirectFeedContext.groupMayFit(links: List<FeedLink>): Boolean {
+    val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
+    if (nodes.size > MAX_BAND_RECIPES) return false
+    val budget = maxBandMachines(links.size)
+    // The plan's per-recipe machine count overstates a group that internalizes links; the
+    // propagated needs are the rates the window actually has to cover.
+    val needs = groupNeeds(links)
+    val machines =
+        if (needs != null) {
+            needs.values.sumOf { need ->
+                ceil(max(1.0, need) - FEED_EPSILON).toInt().coerceAtMost(budget + 1)
+            }
+        } else {
+            nodes.sumOf { node ->
+                ceil(max(1.0, node.production.amount * scale) - FEED_EPSILON)
+                    .toInt()
+                    .coerceAtMost(budget + 1)
+            }
+        }
+    return machines <= budget
+}
+
 /** How far a plan's machine counts are from the links' per-machine rates. */
 private fun ratioPenalty(machines: List<FactoryProduction>, links: List<FeedLink>): Double {
     val counts = machines.groupingBy { it }.eachCount()
@@ -233,40 +326,6 @@ private fun ratioPenalty(machines: List<FactoryProduction>, links: List<FeedLink
         val over = max(0.0, value - wanted) / wanted
         under * UNDERFEED_PENALTY + over * OVERFEED_PENALTY
     }
-}
-
-/**
- * The band built from cycling [cycle]: the pattern repeated often enough to cover every recipe's
- * plan machine need, cut to the shortest window at which no consumer is underfed and no producer is
- * left without a consumer next to it. Null when even [maxBandMachines] machines cannot do it.
- */
-private fun window(
-    group: FeedGroup,
-    cycle: List<FactoryProduction>,
-    counts: Map<FactoryProduction, Int>,
-    maxLength: Int,
-): BandPlan? {
-    val repetitions =
-        group.needs.maxOfOrNull { (recipe, count) ->
-            if (count <= FEED_EPSILON) 0
-            else ceil(count / counts.getValue(recipe) - FEED_EPSILON).toInt()
-        } ?: 0
-    val start = maxOf(cycle.size, repetitions * cycle.size)
-    if (start > maxLength) return null
-    for (length in start..minOf(maxBandMachines(group.links.size), maxLength)) {
-        for (offset in cycle.indices) {
-            val machines = List(length) { cycle[(offset + it) % cycle.size] }
-            val allNeedsFulfilled =
-                group.needs.all { (recipe, count) ->
-                    machines.count { it == recipe } + FEED_EPSILON >= count
-                }
-
-            if (!allNeedsFulfilled) continue
-            val feeds = FeedWindow(group, machines).feeds() ?: continue
-            return BandPlan(machines, feeds, ratioPenalty(machines, group.links))
-        }
-    }
-    return null
 }
 
 /** How many inserters one machine-to-machine flow needs, at least one. */

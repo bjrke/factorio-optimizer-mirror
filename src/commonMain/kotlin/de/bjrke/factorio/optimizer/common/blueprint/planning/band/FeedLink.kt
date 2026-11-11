@@ -13,6 +13,12 @@ private const val ONE_MACHINE_SCORE = 20.0
 private const val INGREDIENT_SCORE = 5.0
 private const val RATIO_SCORE_WEIGHT = 10.0
 
+/** A material another recipe still needs is a belt source, not a private band input. */
+private const val SHARED_CONSUMER_SCORE_WEIGHT = 25.0
+
+/** Building a producer far beyond the plan's machine need is wasted capacity. */
+private const val OVERFEED_SCORE_WEIGHT = 30.0
+
 /**
  * One feed link: [producer] makes [material] and [consumer] takes it. A producer may have several
  * consumer links, and a consumer several producer links.
@@ -60,12 +66,23 @@ internal data class FeedLink(
         val oneMachine =
             if (producerAmount <= 1.0 + FEED_EPSILON && consumerAmount <= 1.0 + FEED_EPSILON) 1.0
             else 0.0
+        // a shared product internalized into one consumer strands the other consumers
+        val outsideConsumers =
+            ctx.consumersInPlan.count {
+                it != consumer.production && material in it.recipe.ingredients
+            }
+        val neededProducer = consumerAmount * ioRatio
+        val overfeed =
+            if (producerAmount > 0.0) max(0.0, producerAmount - neededProducer) / producerAmount
+            else 0.0
         beltSavings * BELT_SCORE_WEIGHT +
             bulkGain * BULK_SCORE_WEIGHT +
             oneMachine * ONE_MACHINE_SCORE -
             beltRequirement * BELT_REQUIREMENT_WEIGHT -
             solidInputs.size * INGREDIENT_SCORE -
-            cyclePenalty(ioRatio) * RATIO_SCORE_WEIGHT
+            cyclePenalty(ioRatio) * RATIO_SCORE_WEIGHT -
+            outsideConsumers * SHARED_CONSUMER_SCORE_WEIGHT -
+            overfeed * OVERFEED_SCORE_WEIGHT
     }
 }
 

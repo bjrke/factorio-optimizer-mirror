@@ -18,13 +18,19 @@ internal fun plannedSources(
     logistics: LogisticsCalculator,
     scale: Double = 1.0,
 ) = buildMap {
-    val produced = rows.flatMap { row -> row.productions.flatMap { it.recipe.result.keys } }.toSet()
+    // A solid only leaves a row through its belt materials; a material that is merely a recipe
+    // result but is inserted internally is not a source for another row. A link covers only the
+    // machine it reaches, so the other machines of a partially linked row still import it.
+    val produced = rows.flatMap { row -> row.beltMaterials }.toSet()
     for (row in rows) {
         val rowProducts = row.productions.flatMap { it.recipe.result.keys }.toSet()
-        for (machine in row.machines) {
+        val internal = row.internalInputs
+        for ((index, machine) in row.machines.withIndex()) {
             for ((material, amount) in machine.recipe.ingredients) {
-                val products = if (logistics.isFluid(material)) rowProducts else produced
-                if (material !in products)
+                val covered =
+                    if (logistics.isFluid(material)) material in rowProducts
+                    else material in produced || (index to material) in internal
+                if (!covered)
                     put(material, (this[material] ?: 0.0) + machine.inputPerMachine(amount))
             }
         }

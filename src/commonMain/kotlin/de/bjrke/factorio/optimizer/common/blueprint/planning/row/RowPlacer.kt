@@ -88,11 +88,16 @@ internal class RowPlacer(
     private fun rowShape(
         size: Dimension,
         bandTop: Int,
+        plannedRow: PlannedRow,
         machines: List<PlacedMachine>,
-        internal: Set<Material>,
     ): RowLanes {
-        val outputs = rowOutputs(machines.map { it.production }, logistics).minus(internal)
-        val inputs = rowInputs(machines.map { it.production }, logistics).minus(internal)
+        val linked = plannedRow.links.mapTo(mutableSetOf()) { it.material }
+        val outputs = rowOutputs(machines.map { it.production }, logistics).minus(linked)
+        // A link only internalizes the consumers it actually reaches. A material another machine
+        // of the same row still takes from a belt keeps its input lane.
+        val inputs =
+            rowInputs(machines.map { it.production }, logistics)
+                .minus(plannedRow.fullyInternalInputs)
         val solids =
             (inputs.entries + outputs.entries).sortedByDescending { it.value }.map { it.key }
         val directions =
@@ -174,13 +179,14 @@ internal class RowPlacer(
     }
 
     /**
-     * A product belt is filled from the machine edge only: an eastbound belt above the machines
-     * gets its right lane filled, one below them its left lane. The other lane stays free.
+     * A product belt is filled from the machine edge only. An inserter drops onto the lane farther
+     * from it: an eastbound belt above the machines (inserters below it) fills its left lane, one
+     * below them (inserters above it) its right lane. The other lane stays free.
      */
     private fun productLoad(material: Material, side: LineSide) =
         when (side) {
-            LineSide.NORTH -> LaneLoad.half(material, left = false)
-            LineSide.SOUTH -> LaneLoad.half(material, left = true)
+            LineSide.NORTH -> LaneLoad.half(material, left = true)
+            LineSide.SOUTH -> LaneLoad.half(material, left = false)
         }
 
     /** A far north or near south lane merges above itself; the other two merge below. */
@@ -198,7 +204,6 @@ internal class RowPlacer(
      * between the two machines; every other neighbor pair touches.
      */
     private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
-        val internal = plannedRow.links.map { it.material }.toSet()
         val size = planner.footprint(plannedRow.machines.first())
 
         val linkedGaps = plannedRow.links.mapTo(mutableSetOf()) { it.gap }
@@ -211,7 +216,7 @@ internal class RowPlacer(
             }
         }
 
-        val lanes = rowShape(size, bandTop, machines, internal)
+        val lanes = rowShape(size, bandTop, plannedRow, machines)
         val row =
             Row(
                 plannedRow = plannedRow,

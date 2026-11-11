@@ -70,6 +70,7 @@ internal class DeliveryPreparation(
     private val connector: BeltEndConnector,
     private val imports: ImportExtension,
     private val beltEnd: BeltEnd,
+    private val failures: MutableList<String> = mutableListOf(),
 ) {
     private val board = stage.board
     private val plan = stage.plan
@@ -148,8 +149,16 @@ internal class DeliveryPreparation(
     private fun producedDeliveries(
         produced: List<Map.Entry<Material, List<Triple<Material, Row, Sink>>>>,
     ) = produced.flatMap { (material, list) ->
-        val producerRow = rowPlacer.producerRow(material) ?: return@flatMap emptyList()
-        val start = outputStart(producerRow, material) ?: return@flatMap emptyList()
+        val producerRow = rowPlacer.producerRow(material)
+        if (producerRow == null) {
+            failures += "${material.name} has no producer row"
+            return@flatMap emptyList()
+        }
+        val start = outputStart(producerRow, material)
+        if (start == null) {
+            failures += "${material.name} has no output belt on its producer row"
+            return@flatMap emptyList()
+        }
         val distinctSinks = list.map { it.third }.distinctBy { it.feed }
         // the trunk reaches the farthest consumer, so it passes the nearer ones on the way
         val sorted = distinctSinks.sortedByDescending { start.manhattanDist(it.feed) }

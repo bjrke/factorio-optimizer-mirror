@@ -1,13 +1,21 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.testBlueprintPlan
 import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.advancedOilProcessingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.castingIronRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -15,6 +23,8 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.rocketSilo
 import de.bjrke.factorio.optimizer.common.fixtures.rocketSiloRecipe
@@ -30,6 +40,7 @@ import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -224,6 +235,59 @@ class BlueprintPlanTest {
             },
             { assertEquals(setOf(gear), band.links.mapTo(mutableSetOf()) { it.material }) },
             { assertEquals(setOf(transportBelt), planned.beltMaterials) },
+        )
+    }
+
+    @Test
+    fun aMaterialOnlyLinkedInsideABandIsASourceForAnotherRow() {
+        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3)
+        val circuit =
+            production(electronicCircuitRecipe, electronicCircuit, Factory.ASSEMBLING_MACHINE_3)
+        val advanced =
+            production(advancedCircuitRecipe, advancedCircuit, Factory.ASSEMBLING_MACHINE_3)
+        val processing =
+            production(processingUnitRecipe, processingUnit, Factory.ASSEMBLING_MACHINE_3)
+        val band =
+            PlannedRow(
+                machines = listOf(cable, circuit, advanced),
+                links =
+                    listOf(
+                        PlannedLink(0, copperCable, 1.0, producerIsLeft = true),
+                        PlannedLink(1, electronicCircuit, 1.0, producerIsLeft = true),
+                    ),
+            )
+
+        // the band inserts circuit internally; the processing row still needs a belt source
+        val sources = plannedSources(listOf(band, PlannedRow.copies(processing, 1)), logistics)
+
+        assertContains(sources.map { it.material }, electronicCircuit)
+    }
+
+    @Test
+    fun aPartialLinkStillImportsTheMaterialItsOtherMachinesNeed() {
+        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3)
+        val circuit =
+            production(electronicCircuitRecipe, electronicCircuit, Factory.ASSEMBLING_MACHINE_3)
+        val advanced =
+            production(advancedCircuitRecipe, advancedCircuit, Factory.ASSEMBLING_MACHINE_3)
+        val band =
+            PlannedRow(
+                machines = listOf(advanced, circuit, cable),
+                links =
+                    listOf(
+                        PlannedLink(0, electronicCircuit, 1.0, producerIsLeft = false),
+                        PlannedLink(1, copperCable, 1.0, producerIsLeft = false),
+                    ),
+            )
+
+        // the cable link reaches only the circuit machine, so the advanced machine still needs an
+        // import at its own rate; the linked circuit machine's cable must not be added
+        val sources = plannedSources(listOf(band), logistics)
+        val cableSource = sources.single { it.material == copperCable }
+
+        assertAll(
+            { assertEquals(advanced.inputPerMachine(copperCable), cableSource.rate, TOLERANCE) },
+            { assertContainsNot(sources.map { it.material }, electronicCircuit) },
         )
     }
 

@@ -3,8 +3,10 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
 import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.moltenIron
@@ -15,10 +17,12 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /** Which recipes a real optimization result reduces to, and which materials it imports. */
 class BlueprintPlanIntegrationTest {
@@ -216,6 +220,74 @@ class BlueprintPlanIntegrationTest {
                     "the layout imports molten iron",
                 )
             },
+        )
+    }
+
+    @Test
+    fun theReportedUtilityScienceUrlsKeepCircuitAsABandOutput() =
+        assertTableOf(
+            "http://localhost:8080/#/1/utility-science-pack/CFSXbmr/1/1",
+            "http://localhost:8080/#/0.66666/processing-unit/CFSXbmr/1/1",
+        ) { url ->
+            val layout = layoutFromUrl(url)
+            val plan = layout.plan
+            val plainCableOrCircuit =
+                plan.rows.filter { row ->
+                    row.links.isEmpty() &&
+                        row.machines.first().recipe.name in
+                            setOf("copper-cable", "electronic-circuit")
+                }
+            assertAll(
+                { assertEquals(emptyList(), layout.failures, "$url failures: ${layout.failures}") },
+                {
+                    assertEquals(
+                        emptyList(),
+                        plainCableOrCircuit.map { it.machines.first().recipe.name },
+                        "$url still has plain cable/circuit rows",
+                    )
+                },
+                {
+                    // cable feeds circuit directly, and the circuit machines stay an output so the
+                    // robot frames can draw them
+                    assertTrue(
+                        plan.rows.any { row ->
+                            row.links.any { it.material == copperCable } &&
+                                row.machines.any { it.recipe.name == "electronic-circuit" }
+                        },
+                        "$url has no cable-to-circuit band",
+                    )
+                },
+                {
+                    assertTrue(
+                        plan.rows.any { row -> row.links.any { it.material == advancedCircuit } },
+                        "$url has no advanced-circuit-to-processing-unit band",
+                    )
+                },
+                { assertContains(plan.beltMaterials, electronicCircuit) },
+                { assertContainsNot(plan.sourceMaterials, electronicCircuit) },
+                { assertOneBeltSourcePerMaterial(plan) },
+            )
+        }
+
+    @Test
+    fun theReportedChemicalScienceUrlKeepsCableOutOfTheBand() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1/chemical-science-pack/CFSXbmr/1/1")
+        val plan = layout.plan
+        val cableBands =
+            plan.rows.filter { row ->
+                row.links.isNotEmpty() && row.machines.any { copperCable in it.recipe.result.keys }
+            }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures, layout.failures.toString()) },
+            // cable is produced and consumed in the belt row, not inside a band that would still
+            // need a cable belt for another machine
+            {
+                assertEquals(emptyList(), cableBands.map { it.machines.map { m -> m.recipe.name } })
+            },
+            { assertContains(plan.beltMaterials, copperCable) },
+            { assertContainsNot(plan.sourceMaterials, copperCable) },
+            { assertOneBeltSourcePerMaterial(plan) },
         )
     }
 

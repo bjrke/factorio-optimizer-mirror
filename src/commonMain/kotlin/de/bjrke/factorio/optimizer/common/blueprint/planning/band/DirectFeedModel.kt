@@ -227,6 +227,12 @@ internal data class DirectFeedContext(
     val factories: Map<Recipe, FactoryProduction>,
     val logistics: LogisticsCalculator,
     val scale: Double = 1.0,
+    /**
+     * The productions that may consume a material in the whole plan. The belted pass runs on a
+     * subset of the plan, so it passes the main context's productions here; the default is this
+     * context's own [included] set.
+     */
+    val consumerScope: Set<FactoryProduction>? = null,
 ) {
     private val nodeCache = mutableMapOf<FactoryProduction, FeedNode>()
 
@@ -257,6 +263,9 @@ internal data class DirectFeedContext(
         putAll(producers.values.mapNotNull { it.singleOrNull() }.associateBy { it.recipe })
         put(target.production.recipe, target.production)
     }
+
+    /** The plan's consumers, including the ones outside a belted sub-plan. */
+    val consumersInPlan = consumerScope ?: included.values.toSet()
 
     /** The one node for [production], created on first use. */
     internal fun nodeOf(production: FactoryProduction) =

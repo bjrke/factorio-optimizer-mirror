@@ -99,6 +99,30 @@ data class PlannedRow(
     val productions
         get() = machines.toSet()
 
+    /**
+     * The (machine index, material) pairs a link inserts directly into a machine. A link only
+     * internalizes the consumer it reaches: another machine of the row may still take the same
+     * material from a belt.
+     */
+    val internalInputs: Set<Pair<Int, Material>>
+        get() =
+            links.mapTo(mutableSetOf()) { link ->
+                (if (link.producerIsLeft) link.gap + 1 else link.gap) to link.material
+            }
+
+    /** The link materials every consuming machine of this row takes through a link. */
+    val fullyInternalInputs: Set<Material>
+        get() {
+            val incoming = internalInputs
+            return links
+                .mapTo(mutableSetOf()) { it.material }
+                .filterTo(mutableSetOf()) { material ->
+                    machines.withIndex().all { (index, machine) ->
+                        material !in machine.recipe.ingredients || (index to material) in incoming
+                    }
+                }
+        }
+
     /** The products a machine of this row puts on a belt rather than into a neighbor. */
     val beltMaterials
         get() =

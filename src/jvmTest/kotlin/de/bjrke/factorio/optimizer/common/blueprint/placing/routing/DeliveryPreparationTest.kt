@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LayoutStage
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer
@@ -15,6 +16,14 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.uranium235
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCell
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCellRecipe
@@ -24,6 +33,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class DeliveryPreparationTest {
 
@@ -53,6 +63,70 @@ class DeliveryPreparationTest {
         assertEquals(
             expected,
             deliveries.produced.associate { it.material to it.start },
+        )
+    }
+
+    @Test
+    fun aProducedSinkWithoutAProducerRowIsReported() {
+        val band =
+            PlannedRow(
+                machines =
+                    listOf(
+                        planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
+                        planned(
+                            electronicCircuitRecipe,
+                            electronicCircuit,
+                            Factory.ASSEMBLING_MACHINE_3,
+                        ),
+                        planned(
+                            advancedCircuitRecipe,
+                            advancedCircuit,
+                            Factory.ASSEMBLING_MACHINE_3,
+                        ),
+                    ),
+                links =
+                    listOf(
+                        PlannedLink(0, copperCable, 1.0, producerIsLeft = true),
+                        PlannedLink(1, electronicCircuit, 1.0, producerIsLeft = true),
+                    ),
+            )
+        val plan =
+            BlueprintPlan(
+                target = processingUnit,
+                rows =
+                    listOf(
+                        band,
+                        PlannedRow.copies(
+                            planned(
+                                processingUnitRecipe,
+                                processingUnit,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
+                            1,
+                        ),
+                    ),
+                sources = emptyList(),
+                label = "missing circuit source",
+            )
+        val board = board()
+        val planner = RowPlanner(plan, logistics)
+        val rowPlacer = RowPlacer(board, plan, logistics, planner)
+        val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, LayoutRouter(board))
+        rowPlacer.placeAll()
+        val failures = mutableListOf<String>()
+
+        DeliveryPreparation(
+                stage,
+                BeltEndConnector(board, BeltEnd.CONSTANT_COMBINATOR),
+                ImportExtension(),
+                BeltEnd.CONSTANT_COMBINATOR,
+                failures,
+            )
+            .prepareDeliveries()
+
+        assertTrue(
+            failures.any { "electronic-circuit" in it && "no producer row" in it },
+            failures.toString(),
         )
     }
 

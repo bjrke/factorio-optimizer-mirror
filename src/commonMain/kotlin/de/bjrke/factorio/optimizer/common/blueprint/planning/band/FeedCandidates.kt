@@ -2,8 +2,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import kotlin.math.ceil
-import kotlin.math.max
 
 // Maximal grouping for direct feed: a group keeps growing while an arrangement exists, merging
 // groups that meet and staying inside the machine budget.
@@ -17,13 +15,20 @@ import kotlin.math.max
  * and its links return to the pool, so another seed can still use them. Groups that meet later are
  * merged when the merged group arranges and fits.
  */
-internal fun DirectFeedContext.maximalGroups(): List<BandPlan> {
-    val pool = candidateLinks().toMutableList()
+internal fun DirectFeedContext.maximalGroups(
+    candidates: List<FeedLink> = candidateLinks(),
+): List<BandPlan> {
+    val pool = candidates.toMutableList()
     val groups = mutableListOf<MutableList<FeedLink>>()
     val assigned = mutableSetOf<FactoryProduction>()
-    val cache = mutableMapOf<List<FeedLink>, BandPlan?>()
+    val completeCache = mutableMapOf<List<FeedLink>, BandPlan?>()
+    val growthCache = mutableMapOf<List<FeedLink>, BandPlan?>()
 
-    fun arranged(links: List<FeedLink>) = cache.getOrPut(linkKey(links)) { arrange(links) }
+    fun arranged(links: List<FeedLink>) = completeCache.getOrPut(linkKey(links)) { arrange(links) }
+
+    // growth may pass through a partial link: the added link can complete the band
+    fun growthArranged(links: List<FeedLink>) =
+        growthCache.getOrPut(linkKey(links)) { arrange(links, requireComplete = false) }
 
     while (true) {
         pool.sortWith(linkComparator)
@@ -31,7 +36,7 @@ internal fun DirectFeedContext.maximalGroups(): List<BandPlan> {
         if (seed < 0) break
         val seedLink = pool.removeAt(seed)
         val group = mutableListOf(seedLink)
-        growGroup(group, pool, ::arranged)
+        growGroup(group, pool, ::growthArranged)
         val plan = arranged(group)
         if (plan == null || !bandBeltFits(plan)) {
             // the best arrangement of this seed still leaves a lane without a belt; retry the links
@@ -57,10 +62,28 @@ private fun FeedLink.productions() = listOf(producer.production, consumer.produc
  * only on the finished group.
  */
 private fun DirectFeedContext.mayGrow(group: List<FeedLink>, candidate: FeedLink): Boolean {
+    if (internalizesSharedOutput(group, candidate)) return false
     val combined = group + candidate
     if (!groupMayFit(combined)) return false
     if (!bandBeltMayFit(group)) return true
     return bandBeltMayFit(combined)
+}
+
+/**
+ * Whether [candidate] would turn a product that currently leaves the group over a belt into an
+ * internal link while another plan consumer still needs it. A band cannot export such a product, so
+ * its other consumers would be stranded.
+ */
+internal fun DirectFeedContext.internalizesSharedOutput(
+    group: List<FeedLink>,
+    candidate: FeedLink,
+): Boolean {
+    val groupNodes = group.flatMap { it.productions() }.toSet()
+    if (candidate.producer.production !in groupNodes) return false
+    val groupProducers = group.mapTo(mutableSetOf()) { it.producer.production }
+    if (candidate.producer.production in groupProducers) return false
+    val nodes = groupNodes + candidate.consumer.production
+    return consumersInPlan.any { it !in nodes && candidate.material in it.recipe.ingredients }
 }
 
 private tailrec fun DirectFeedContext.growGroup(
@@ -98,7 +121,10 @@ private fun DirectFeedContext.swapInto(
     if (group.size <= 1) return false
     val weakest = group.minWithOrNull(linkComparator) ?: return false
     if (candidate.candidateScore <= weakest.candidateScore + FEED_EPSILON) return false
-    val trial = group.filterNot { it == weakest } + candidate
+    val kept = group.filterNot { it == weakest }
+    // test the group without the candidate: adding it first would hide the shared consumer
+    if (internalizesSharedOutput(kept, candidate)) return false
+    val trial = kept + candidate
     if (!groupMayFit(trial)) return false
     if (bandBeltMayFit(group) && !bandBeltMayFit(trial)) return false
     val plan = arranged(trial) ?: return false
@@ -176,19 +202,3 @@ private fun sharesRecipe(first: FeedLink, second: FeedLink) =
     first.consumer == second.producer ||
         second.consumer == first.producer ||
         first.consumer == second.consumer
-
-/**
- * A quick machine budget before the expensive arrangement search: one band cannot hold more than
- * [maxBandMachines] machines, and the arrangement search stops at [MAX_BAND_RECIPES] recipes.
- */
-private fun DirectFeedContext.groupMayFit(links: List<FeedLink>): Boolean {
-    val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
-    if (nodes.size > MAX_BAND_RECIPES) return false
-    val budget = maxBandMachines(links.size)
-    val machines = nodes.sumOf { node ->
-        ceil(max(1.0, node.production.amount * scale) - FEED_EPSILON)
-            .toInt()
-            .coerceAtMost(budget + 1)
-    }
-    return machines <= budget
-}

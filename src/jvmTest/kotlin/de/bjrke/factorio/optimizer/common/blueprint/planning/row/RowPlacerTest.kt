@@ -9,7 +9,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.core.model.LineSide
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
@@ -30,6 +34,9 @@ import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class RowPlacerTest {
 
@@ -89,6 +96,51 @@ class RowPlacerTest {
     }
 
     @Test
+    fun aLinkOnlyRemovesTheInputsItActuallyReaches() {
+        val advanced = planned(advancedCircuitRecipe, advancedCircuit, Factory.ASSEMBLING_MACHINE_3)
+        val circuit =
+            planned(electronicCircuitRecipe, electronicCircuit, Factory.ASSEMBLING_MACHINE_3)
+        val cable = planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3)
+        val plan =
+            BlueprintPlan(
+                target = advancedCircuit,
+                rows =
+                    listOf(
+                        PlannedRow(
+                            machines = listOf(advanced, circuit, cable),
+                            links =
+                                listOf(
+                                    PlannedLink(
+                                        0,
+                                        electronicCircuit,
+                                        flow = 0.1,
+                                        producerIsLeft = false,
+                                    ),
+                                    PlannedLink(
+                                        1,
+                                        copperCable,
+                                        flow = 0.1,
+                                        producerIsLeft = false,
+                                    ),
+                                ),
+                        ),
+                    ),
+                sources = emptyList(),
+                label = "advanced-circuit",
+            )
+
+        val row = place(plan).single()
+        val inputs = row.belts.filter { it.io == Io.INPUT }.map { it.material }
+
+        // the electronic circuit is inserted into the advanced circuit, but the cable link only
+        // reaches the circuit machine; the advanced circuit still needs a cable belt lane
+        assertAll(
+            { assertTrue(copperCable in inputs, inputs.toString()) },
+            { assertFalse(row.belts.any { it.io == Io.OUTPUT && it.material == copperCable }) },
+        )
+    }
+
+    @Test
     fun theNearLaneCarriesTheMostConsumedIngredient() {
         val plan =
             BlueprintPlan(
@@ -131,6 +183,40 @@ class RowPlacerTest {
                     row.belts.associateBy({ it.material }, { it.y }),
                 )
             },
+        )
+    }
+
+    @Test
+    fun aProductBeltFillsTheLaneFartherFromItsInserters() {
+        val plan =
+            BlueprintPlan(
+                target = electronicCircuit,
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(
+                                electronicCircuitRecipe,
+                                Factory.ASSEMBLING_MACHINE_3,
+                            ),
+                            1,
+                        ),
+                    ),
+                sources =
+                    listOf(
+                        PlannedSource(copperCable, 1.0, fluid = false),
+                        PlannedSource(ironPlate, 1.0, fluid = false),
+                    ),
+                label = "electronic-circuit",
+            )
+
+        val product = place(plan).single().belts.single { it.io == Io.OUTPUT }
+
+        // the product lane is south of its machines, so the inserters sit north of it and drop on
+        // its south (right) lane
+        assertAll(
+            { assertEquals(LineSide.SOUTH, product.side) },
+            { assertNull(product.load.left, "the near lane must stay free") },
+            { assertEquals(electronicCircuit, product.load.right) },
         )
     }
 

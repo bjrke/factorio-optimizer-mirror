@@ -23,8 +23,50 @@ internal fun DirectFeedContext.build(): DirectFeed {
     val demand = beltDemand(grouped)
     val belted =
         included.values.sortedBy { it.recipe.name }.mapNotNull { belted(it, demand, onBelt, built) }
-    return DirectFeed(bands + targetRow(built) + belted)
+    return DirectFeed(bands + targetRow(built) + beltedBands(belted))
 }
+
+/**
+ * Runs the same band search over the belted rows. A recipe that still has belt consumers can be
+ * direct-fed from its producer even when the main band already inserts it: the belted rows are
+ * copied with their whole-machine amount and planned at scale 1, so the copies are distinct from
+ * the main band's productions and can sit in a row of their own.
+ */
+private fun DirectFeedContext.beltedBands(rows: List<PlannedRow>): List<PlannedRow> {
+    if (rows.size < 2) return rows
+    val productions = rows.associate { row ->
+        val production = row.machines.first()
+        production.recipe to production.copy(amount = row.machines.size.toDouble())
+    }
+    // the belted pass must still see the main plan's consumers, so a shared product is not
+    // internalized just because its other consumer is in the main band
+    val scope =
+        included.values.map { production -> productions[production.recipe] ?: production }.toSet()
+    val context =
+        DirectFeedContext(
+            productions.values.first(),
+            productions,
+            logistics,
+            scale = 1.0,
+            consumerScope = scope,
+        )
+    val plans = context.maximalGroups(context.linksBetween(productions.values))
+    if (plans.isEmpty()) return rows
+    val banded = plans.flatMap { plan -> plan.machines }.mapTo(mutableSetOf()) { it.recipe }
+    return buildBands(plans) + rows.filterNot { it.machines.first().recipe in banded }
+}
+
+/** Every solid producer link between the [productions], for the belted band search. */
+private fun DirectFeedContext.linksBetween(productions: Collection<FactoryProduction>) =
+    productions
+        .flatMap { consumer ->
+            consumer.recipe.ingredients.keys
+                .filterNot { logistics.isFluid(it) }
+                .flatMap { material -> producers[material].orEmpty() }
+                .filter { it != consumer }
+                .map { feedLink(it, consumer) }
+        }
+        .distinct()
 
 /** Builds one row per arranged band, with its machine sequence and the links between them. */
 private fun buildBands(bandPlans: List<BandPlan>) = bandPlans.map { plan ->

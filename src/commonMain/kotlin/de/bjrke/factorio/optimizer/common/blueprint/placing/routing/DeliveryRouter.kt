@@ -48,7 +48,7 @@ internal class DeliveryRouter(
     private val splits = SplitDeliveryRouter(board, router, networks, rules, failures)
 
     /** Places the sinks and sources; [prepareDeliveries] delegates to it. */
-    private val preparation = DeliveryPreparation(stage, connector, imports, beltEnd)
+    private val preparation = DeliveryPreparation(stage, connector, imports, beltEnd, failures)
 
     /**
      * Places every solid source up front and returns the deliveries to route. The sinks' feeds are

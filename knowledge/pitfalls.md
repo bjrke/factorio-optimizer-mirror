@@ -8,8 +8,8 @@ An entry belongs here only with evidence, and should say how to recognize it.
 - **A lane load is in the belt's own left/right frame, not the compass.** `LaneLoad.left` is
   north for an eastbound belt, south for a westbound one; `laneAt(direction, side)` is the one
   place that maps a neighbor side to a lane. A turn keeps the slots, so the merge tile's load is
-  also the lane's load. A half product belt fills only the lane its inserters drop onto; the
-  other side is `null`.
+  also the lane's load. A half product belt fills only the lane farther from its inserters
+  (above the machines: the left lane; below them: the right lane); the other side is `null`.
 - **The T merge must use the lane mapping, not just the material set.** Above the lane the merge
   tile faces south: the west feeder fills the right lane and the east feeder the left. Below the
   lane it faces north: west fills left, east fills right. The merge sits outside the pair of lane
@@ -24,7 +24,8 @@ An entry belongs here only with evidence, and should say how to recognize it.
 - **A half output belt may feed a full trunk, but not enter a tunnel or a route side.** Compare
   `materials` for a straight continuation and for a seam splice; use exact full loads for
   `UndergroundStretcher.swallowable`, `BeltRouteRules` and the tunnel-end checks. A mixed belt is
-  never swallowed, never spliced into a tunnel and never side-loaded by a route.
+  never swallowed, never spliced into a tunnel and never side-loaded by a route. Evidence:
+  `aRunLeavesAHalfBeltLane`.
 - **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed
   and never a material above one lane, a fluid or an output; `bandBeltFits(plan)` must read the
   arranged machine rates, not `bandBeltMaterials(...).size`. A row that still needs more than
@@ -206,6 +207,50 @@ An entry belongs here only with evidence, and should say how to recognize it.
 
 ## Blueprint planning
 
+- **A shared product stays the band's output.** `electronic-circuit` feeds the
+  advanced circuit, the processing unit and the flying robot frame. Internalizing
+  it into one of them leaves the other two with a placed but unfed input belt.
+  `FeedCandidates.internalizesSharedOutput` rejects that growth, and
+  `FeedLink.candidateScore` penalizes outside consumers and producer overfeed;
+  the belted pass must pass the main `consumerScope`. Test the guard on the group
+  **without** the candidate: once the candidate is in the group its producer
+  counts as internal and the guard always returns false, so the swap path must
+  pass `group.filterNot { it == weakest }`. Evidence:
+  `theReportedUtilityScienceUrlsKeepCircuitAsABandOutput`,
+  `aSharedProductCannotBeInternalizedWhileAnotherConsumerNeedsIt`.
+- **A band must not need a belt for a material it produces.**
+  `BandSearch.hasInBandBeltInput` rejects a window where a solid the band makes
+  is consumed by an in-band machine without an incoming link; otherwise the row
+  needs an extra belt for a resource it already produces. Growth may pass
+  through a partial arrangement (`arrange(..., requireComplete = false)`) so a
+  later link can complete it; only the finished group is checked. `RowPlacer`
+  keeps a partial input lane as a guard for hand-built plans. Evidence: the
+  reported chemical-science URL keeps cable entirely out of the band;
+  `theReportedChemicalScienceUrlKeepsCableOutOfTheBand`,
+  `aCircuitChainWithSharedConsumersBuildsTheTargetOnce`.
+- **A recipe result is not automatically a source.** `plannedSources` must read
+  `beltMaterials` plus the **consuming machine's** link, not the row's whole link
+  set: a link only covers the machine it reaches, so a partially linked material
+  still imports the rate of the machines that take it from a belt. Share
+  `PlannedRow.internalInputs`/`fullyInternalInputs` with `RowPlacer`; an
+  internal-only result is not produced for another row. `DeliveryPreparation`
+  reports a sink with no producer row so a missing feed cannot stay silent.
+  Evidence: `aMaterialOnlyLinkedInsideABandIsASourceForAnotherRow`,
+  `aPartialLinkStillImportsTheMaterialItsOtherMachinesNeed`.
+- **`MAX_BAND_RECIPES` is a recipe cap, not the window length.** `arrangeBest`
+  must search count vectors to `maxBandMachines(links.size)`; using
+  `MAX_BAND_RECIPES` there silently caps a multi-link band at eight machines.
+  The growth pre-filter must likewise use the propagated `groupNeeds`, not
+  `ceil(production.amount * scale)`: the plan count includes consumers a band
+  internalizes and can reject a feasible group. The reported utility-science
+  four-recipe chain sums to ten plan machines but nine propagated ones.
+  Evidence: `theGrowthBudgetUsesPropagatedNeedsInsteadOfThePlanMachineCounts`.
+- **A belted row can be re-banded, but only as a copy.** `DirectFeed.beltedBands`
+  copies the belted `FactoryProduction` with `amount = machines` and plans at
+  scale 1; the copies must differ by `amount`, or `nodeCache` and the `assigned`
+  set treat them as the main band's production. The belted band's internal
+  material still stays off the belt; only its output is a source. Evidence:
+  `theReportedUtilityScienceUrlsBandTheirBeltedCableAndCircuit`.
 - **The target production must be seeded into `DirectFeedContext.included`.** Deriving
   `included` only from the materials with a single buildable producer (`producers.values`)
   drops a target that is not in the per-material producer index, so the plan has no target row

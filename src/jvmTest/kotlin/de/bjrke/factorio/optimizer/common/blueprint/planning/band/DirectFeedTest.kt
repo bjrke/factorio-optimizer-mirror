@@ -278,7 +278,27 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aCircuitChainGroupsTheSharedProducerAndTheTarget() {
+    fun theGrowthBudgetUsesPropagatedNeedsInsteadOfThePlanMachineCounts() {
+        val processing = production(processingUnitRecipe, processingUnit, amount = 2.0)
+        // the plan machine counts alone sum to more than a multi-link band may hold; the rates the
+        // window actually has to cover are lower once plastic feeds the advanced circuits
+        val advanced = production(advancedCircuitRecipe, advancedCircuit, amount = 4.0)
+        val plastic = production(plasticBarRecipe, plasticBar, amount = 4.0)
+        val feed =
+            directFeed(
+                processing,
+                factories(processing, advanced, plastic),
+                logistics = fluids(petroleum, sulfuricAcid),
+            )
+
+        assertEquals(
+            setOf(plasticBarRecipe, advancedCircuitRecipe, processingUnitRecipe),
+            feed.bands.single().machines.mapTo(mutableSetOf()) { it.recipe },
+        )
+    }
+
+    @Test
+    fun aCircuitChainWithSharedConsumersBuildsTheTargetOnce() {
         val targetProduction = production(processingUnitRecipe, processingUnit)
         val feed =
             directFeed(
@@ -292,23 +312,12 @@ class DirectFeedTest {
                 logistics = logistics,
             )
 
-        val band = feed.bands.single()
         assertAll(
-            {
-                assertEquals(
-                    setOf(
-                        copperCableRecipe,
-                        electronicCircuitRecipe,
-                        advancedCircuitRecipe,
-                        processingUnitRecipe,
-                    ),
-                    band.machines.map { it.recipe }.toSet(),
-                )
-            },
-            // the target's four solid inputs plus its product fit four rows with one mixed belt
             { assertContains(feed.recipes, processingUnitRecipe) },
-            // the target row is built exactly once
+            // the target row is built exactly once even though the chain splits at its shared
+            // circuit and cable consumers
             { assertEquals(1, feed.recipes.count { it == processingUnitRecipe }) },
+            { assertTrue(feed.rows.any { row -> row.links.any { it.material == copperCable } }) },
         )
     }
 

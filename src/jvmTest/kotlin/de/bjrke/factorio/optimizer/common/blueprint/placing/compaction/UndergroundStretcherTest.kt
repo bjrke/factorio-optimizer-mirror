@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.compaction
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeInserter
@@ -43,6 +44,24 @@ class UndergroundStretcherTest {
 
         val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(5, 0)))
         assertEquals(Io.OUTPUT, output.io)
+    }
+
+    @Test
+    fun aRunLeavesAHalfBeltLane() {
+        val board = board()
+        board.placeTunnel(ironPlate, Coordinate(0, 0), Coordinate(2, 0), EAST)
+        // a product lane fills one lane only; a tunnel would lose that lane, so it must stay
+        for (x in 3..6) {
+            board.placeBelt(Coordinate(x, 0), LaneLoad.half(ironPlate, left = false), EAST)
+        }
+
+        UndergroundStretcher(board, emptySet()).stretchAll()
+
+        val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(2, 0)))
+        assertAll(
+            { assertEquals(Io.OUTPUT, output.io) },
+            { assertIs<BeltEntity>(board.entityAt(Coordinate(3, 0))) },
+        )
     }
 
     @Test

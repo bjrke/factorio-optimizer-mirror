@@ -7,6 +7,81 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-11 — A band never needs a belt for its own product
+
+**Decision.** The arrangement search rejects a window where a solid material the
+band produces is consumed by a machine of the same band without an incoming
+link. Such a band would need an extra belt for a resource it already makes.
+Growth may pass through a partial arrangement (`arrange(..., requireComplete =
+false)`) so a later link can complete the band; only the finished group is
+checked. `RowPlacer.rowShape` keeps a belt input for a partially linked material
+as a guard for a hand-built plan, but the planner does not produce one.
+
+**Guardrail.** Keep the check on the finished window, not on every growth step:
+the chemical-science chain needs the intermediate partial link before the next
+link completes it. The check is per machine consumer and covers produced
+materials without a link, not only linked materials. Evidence: the reported
+chemical-science URL now keeps cable out of the band entirely;
+`theReportedChemicalScienceUrlKeepsCableOutOfTheBand`,
+`aCircuitChainWithSharedConsumersBuildsTheTargetOnce`,
+`aLinkOnlyRemovesTheInputsItActuallyReaches`.
+
+**See.** `blueprint/planning/band/BandSearch.kt` (`hasInBandBeltInput`),
+`blueprint/planning/band/FeedCandidates.kt`,
+`blueprint/planning/row/RowPlacer.kt`; `pitfalls.md` §Blueprint planning.
+
+## 2026-11-11 — A band keeps a shared product on the belt
+
+**Decision.** Growth may not turn a product that currently leaves a band over a
+belt into an internal link while another plan consumer still needs it. A link
+that internalizes a producer whose product has outside consumers is rejected,
+and `candidateScore` penalizes every outside consumer plus producer overfeed.
+`DirectFeedContext.consumerScope` carries the main plan's consumers into the
+belted pass. `plannedSources` covers a solid only through a row's
+`beltMaterials` or a link that reaches the consuming machine
+(`PlannedRow.internalInputs`); a partially linked row therefore still imports the
+material for its other machines, and `DeliveryPreparation` reports a sink with
+no producer row as a failure.
+
+**Guardrail.** Keep a shared material such as `electronic-circuit` as the band's
+output; do not let the cable/circuit pair be swallowed into an
+advanced-circuit/processing-unit band, because that strands the other circuit
+consumers. The belted pass must pass the main scope, and `plannedSources` must
+not count an internal-only recipe result as produced. Evidence: the reported
+utility-science and processing-unit URLs build a cable→circuit band and a
+cable→advanced-circuit→processing-unit band; robot frames draw circuit from the
+cable/circuit band. `theReportedUtilityScienceUrlsKeepCircuitAsABandOutput`,
+`aMaterialOnlyLinkedInsideABandIsASourceForAnotherRow`.
+
+**See.** `blueprint/planning/band/{FeedCandidates,FeedLink,DirectFeedModel,DirectFeed}.kt`,
+`blueprint/planning/BlueprintSelection.kt`,
+`blueprint/placing/routing/DeliveryPreparation.kt`; `pitfalls.md` §Blueprint
+planning.
+
+## 2026-11-11 — Belted rows are banded again
+
+**Decision.** After the main direct-feed bands are chosen, `DirectFeed.build`
+copies the remaining belted rows as whole-machine `FactoryProduction` values and
+runs the same group search over the links between them at scale 1; the finished
+bands replace the plain rows. A recipe may therefore appear in the main band and
+in a belted band as two independent productions. The growth pre-filter
+(`groupMayFit`) uses the propagated `groupNeeds`, not each recipe's plan machine
+count, and `arrangeBest` searches count vectors up to
+`maxBandMachines(links.size)`; `MAX_BAND_RECIPES` remains only the recipe-count
+ceiling.
+
+**Guardrail.** Keep the belted copies distinct by `amount`, or `nodeCache` and
+the `assigned` set treat them as one production. Keep the main band's internal
+material off every belt; only the belted band's output is a belt source, so
+`BlueprintPlan.producerOf` and the one-belt-source rule stay valid. Evidence: the
+reported utility-science and processing-unit URLs now band their belted
+cable/circuit pair instead of adding a second plain pair;
+`theReportedUtilityScienceUrlsBandTheirBeltedCableAndCircuit`,
+`theGrowthBudgetUsesPropagatedNeedsInsteadOfThePlanMachineCounts`.
+
+**See.** `blueprint/planning/band/{DirectFeed,FeedCandidates,BandSearch}.kt`;
+`pitfalls.md` §Blueprint planning.
+
 ## 2026-11-10 — A wide row mixes inputs two per belt
 
 **Decision.** A row that would need more than `MAX_ROW_BELTS` solid belt rows pairs the
