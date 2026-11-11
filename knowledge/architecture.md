@@ -242,9 +242,11 @@ before solid belts, solid imports go before produced deliveries, the lane link
 after the other routes so it can go around them, the import trim before the
 underground stretch, compaction before the poles. `blueprint/layout/validation` also
 requires every routed underground belt end to connect through a same-material
-belt or the previous run (an output end may feed the next input directly);
-compaction rejects a corridor that would leave an entrance or exit orphaned
-(connector ends are recognized by their 2/4-tile partner pattern).
+belt or the previous run (an output end may feed the next input directly), every
+splitter to be fed on its back face, and no belt to circle back into itself
+(`LayoutValidationFlow.kt`); compaction rejects a corridor that would leave an
+entrance or exit orphaned (connector ends are recognized by their 2/4-tile partner
+pattern).
 `RowLayout.layoutDump()` is the one read-back of a finished layout
 (`LayoutDump`: placed `LayoutEntity`s plus failure strings); route failures and any
 `validateLayout` errors of the finished layout share that list, so a pre-existing

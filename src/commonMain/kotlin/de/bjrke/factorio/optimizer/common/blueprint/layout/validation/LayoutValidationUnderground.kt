@@ -135,7 +135,7 @@ private fun LayoutEntity?.isConnectorFurniture() =
     }
 
 /** The output [input] pairs with, looking along its direction within its run's reach. */
-private fun findUndergroundOutput(
+internal fun findUndergroundOutput(
     index: LayoutIndex,
     input: UndergroundEntity,
 ): UndergroundEntity? {

@@ -7,12 +7,12 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 /**
  * The invariant checks a compacted layout has to keep. It is deliberately absolute rather than a
  * diff: the original layout satisfies these, so any corridor that keeps them cannot merge two
- * materials, split a fluid network, misalign an underground run or leave an inserter without a
- * source or target.
+ * materials, split a fluid network, misalign an underground run, leave an inserter without a source
+ * or target, starve a splitter or loop a belt back into itself.
  *
  * Each check group lives in its own file (`LayoutValidationTransport.kt`,
- * `LayoutValidationUnderground.kt`, `LayoutValidationInserter.kt`) and appends to the shared error
- * list; their order is the order the errors are reported in.
+ * `LayoutValidationUnderground.kt`, `LayoutValidationInserter.kt`, `LayoutValidationFlow.kt`) and
+ * appends to the shared error list; their order is the order the errors are reported in.
  */
 internal fun validateLayout(entities: List<LayoutEntity>): List<String> {
     val errors = mutableListOf<String>()
@@ -20,6 +20,7 @@ internal fun validateLayout(entities: List<LayoutEntity>): List<String> {
     validateMaterials(index, entities, errors)
     validateUndergrounds(index, entities, errors)
     validateInserters(index, entities, errors)
+    validateBeltFlow(index, entities, errors)
     return errors
 }
 

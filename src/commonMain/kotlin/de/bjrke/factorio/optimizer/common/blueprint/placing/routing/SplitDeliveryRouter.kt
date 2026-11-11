@@ -2,7 +2,9 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -11,6 +13,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.adjacent
 import de.bjrke.factorio.optimizer.common.core.model.area
@@ -97,6 +100,9 @@ internal class SplitDeliveryRouter(
             if (next == null || next.material != material || next.direction != direction) {
                 return@flatMap emptyList()
             }
+            // a splitter takes items on its back only: on a turn the trunk would feed its side and
+            // the branch would start without input
+            if (!fedStraight(tile, direction, material)) return@flatMap emptyList()
             sides(direction).mapNotNull { sideDirection ->
                 val side = tile + sideDirection.step
                 if (!board.isFree(side) || board.isReserved(side)) return@mapNotNull null
@@ -106,6 +112,23 @@ internal class SplitDeliveryRouter(
                 if (!area.all { it == tile || board.isFree(it) }) return@mapNotNull null
                 SplitCandidate(tile, side, exit, direction)
             }
+        }
+    }
+
+    /** Whether the tile behind [tile] feeds it straight on, the way a splitter's back expects. */
+    private fun fedStraight(tile: Coordinate, direction: Direction, material: Material): Boolean {
+        val feeder = board.entityAt(tile - direction.step)
+        return when (feeder) {
+            is UndergroundBeltEntity ->
+                feeder.io == Io.OUTPUT &&
+                    feeder.direction == direction &&
+                    feeder.material == material
+            is BeltEntity -> feeder.direction == direction && feeder.material == material
+            is LoaderEntity ->
+                feeder.io == Io.OUTPUT &&
+                    feeder.direction == direction &&
+                    feeder.material == material
+            else -> false
         }
     }
 

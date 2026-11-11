@@ -7,6 +7,31 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-11 — Belts flow forward: a splitter needs its back, no belt circles
+
+**Decision.** `validateLayout` also checks the belt flow: every splitter must be
+fed straight from behind, and no belt may circle back into itself
+(`LayoutValidationFlow.kt`). The routing keeps the two invariants instead of
+relying on the check: `SplitDeliveryRouter` inserts a splitter only where a
+same-material belt feeds its back straight on (not on a turn), and
+`BeltRouteRules` refuses a route tile that any neighboring belt pours into, even a
+belt of the same material.
+
+**Guardrail.** Do not allow a same-material merge into a route tile: it absorbs a
+lane's dead end and closes a circle (the reported fusion-reactor plastic belt ran
+from the LDS lane's west end into the trunk and back around the splitter). Keep
+the splitter on the trunk's straight run; a splitter is not a belt tile that a
+belt may turn into. Keep both checks inside `validateLayout`: a pre-existing flow
+error then surfaces as a failure, and by the all-or-nothing gate compaction stays
+off instead of shipping silently. Evidence:
+`aSplitterWithoutABeltOnItsBackIsReported`,
+`aBeltCircleIsReportedOnceAtItsFirstTile`,
+`theReportedFusionReactorUrlCompacts`.
+
+**See.** `blueprint/layout/validation/LayoutValidationFlow.kt`,
+`blueprint/placing/routing/{SplitDeliveryRouter,BeltRouteRules}.kt`;
+`pitfalls.md` §Layout and fluids.
+
 ## 2026-11-11 — A band never needs a belt for its own product
 
 **Decision.** The arrangement search rejects a window where a solid material the

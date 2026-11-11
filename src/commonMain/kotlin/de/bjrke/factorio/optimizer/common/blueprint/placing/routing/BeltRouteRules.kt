@@ -25,18 +25,16 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
         // the feed may side-load its target (a fourth input does), but no earlier tile may
         (routable(coordinate) || goal) &&
             coordinate !in blocked &&
-            !sideLoaded(coordinate, material) &&
+            !sideLoaded(coordinate) &&
             (goal || !poursIntoSide(coordinate, facing, material)) &&
             !facesReservedFeed(coordinate, facing, sink.feed, material)
     }
 
-    /** True when a belt next to [coordinate] pours a different load into that tile. */
-    private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean =
+    /** True when a belt next to [coordinate] pours its load into that tile. */
+    private fun sideLoaded(coordinate: Coordinate): Boolean =
         coordinate.neighbors.any { neighbor ->
             val belt = board.entityAt(neighbor) as? ConveyorEntity
-            belt != null &&
-                belt.direction == directionBetween(neighbor, coordinate) &&
-                !belt.isRouteMaterial(material)
+            belt != null && belt.direction == directionBetween(neighbor, coordinate)
         }
 
     /** True when a belt at [coordinate] leaving in [direction] would side-load a foreign belt. */

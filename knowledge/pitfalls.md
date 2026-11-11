@@ -193,6 +193,21 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `checkAhead`, and skip it in the side-load neighbor loop: it dives instead of
   feeding the tile it faces. Evidence: `aBuriedEntranceDoesNotFeedTheBeltAboveItsRun`,
   `theReportedFusionReactorUrlCompacts`.
+- **A splitter only takes items on its back, and a belt that pours into a route
+  tile closes a circle.** The reported fusion-reactor layout inserted a circuit
+  splitter on the tile where the trunk turned, so the trunk fed its side and the
+  branch started with no input; its plastic trunk also descended one tile beside
+  the LDS lane's dead end, absorbed that lane, and the lane ran back around the
+  splitter into the trunk. `SplitDeliveryRouter` now needs a straight same-material
+  feeder behind a splitter candidate (`fedStraight`), and
+  `BeltRouteRules.sideLoaded` rejects any belt pouring into a route tile, not only
+  a foreign one. `validateBeltFlow` (`LayoutValidationFlow.kt`) reports `splitter
+  at … has no input` and `<material> belt loops back at …`; the circle report
+  names one tile per circle and ignores a belt merely downstream of it. Do not
+  treat a splitter as a belt tile a belt may turn into. Evidence:
+  `aSplitterWithoutABeltOnItsBackIsReported`,
+  `aBeltCircleIsReportedOnceAtItsFirstTile`,
+  `theReportedFusionReactorUrlCompacts`.
 - **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
   corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
   error anywhere rejects every candidate and the pass returns after its first
