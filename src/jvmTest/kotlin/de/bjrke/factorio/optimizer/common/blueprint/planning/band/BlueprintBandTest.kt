@@ -55,6 +55,7 @@ class BlueprintBandTest {
                 .filter { it.area.topLeft.x == gap }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(2, machines.size) },
             { assertEquals(1, machines.map { it.area.topLeft.y }.distinct().size) },
             // the inserter picks the plate up on the east side, where the producer stands

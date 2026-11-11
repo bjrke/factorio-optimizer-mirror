@@ -52,7 +52,11 @@ class BlueprintLayoutIntegrationTest {
             "utility-science-pack",
             "lubricant",
         ) {
-            assertNoOverlap(Layout(it).blueprint.entities)
+            val layout = Layout(it)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertNoOverlap(layout.blueprint.entities) },
+            )
         }
 
     @Test
@@ -63,19 +67,24 @@ class BlueprintLayoutIntegrationTest {
             "utility-science-pack",
             "processing-unit",
         ) {
-            assertNoOverlap(Layout(it, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities)
+            val layout = Layout(it, beltEnd = BeltEnd.INFINITY_CHEST)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertNoOverlap(layout.blueprint.entities) },
+            )
         }
 
     @Test
     fun theCheatFluidImportIsAnInfinityPipeAtTheFluidsDefaultTemperature() {
         // plastic is built from petroleum gas now, so the plan imports two fluids; pin the acid one
-        val entities =
-            Layout("processing-unit", beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
+        val layout = Layout("processing-unit", beltEnd = BeltEnd.INFINITY_CHEST)
+        val entities = layout.blueprint.entities
         val pipe = entities.single {
             it.name == "infinity-pipe" && it.infinityPipe?.fluid == sulfuricAcid
         }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(sulfuricAcid, pipe.infinityPipe?.fluid) },
             { assertEquals(25, pipe.infinityPipe?.temperature) },
         )
@@ -90,7 +99,11 @@ class BlueprintLayoutIntegrationTest {
             "processing-unit",
             "utility-science-pack",
         ) {
-            assertNoDanglingInserter(Layout(it).blueprint.entities)
+            val layout = Layout(it)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertNoDanglingInserter(layout.blueprint.entities) },
+            )
         }
 
     @Test
@@ -103,7 +116,11 @@ class BlueprintLayoutIntegrationTest {
             "lubricant",
             "utility-science-pack",
         ) {
-            assertOneBeltSourcePerMaterial(Layout(it).plan)
+            val layout = Layout(it)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertOneBeltSourcePerMaterial(layout.plan) },
+            )
         }
 
     @Test
@@ -115,17 +132,20 @@ class BlueprintLayoutIntegrationTest {
             "processing-unit",
             "utility-science-pack",
         ) {
-            assertConnectedUndergroundBelts(Layout(it).blueprint.entities)
+            val layout = Layout(it)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertConnectedUndergroundBelts(layout.blueprint.entities) },
+            )
         }
 
     @Test
     fun splitterBranchesStartOnTheSurface() {
-        val blueprintEntities =
-            layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
-                .blueprint
-                .entities
+        val layout = layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+        val blueprintEntities = layout.blueprint.entities
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertSplittersOnlyFeedSurface(blueprintEntities) },
             { assertConnectedUndergroundBelts(blueprintEntities) },
         )
@@ -430,9 +450,14 @@ class BlueprintLayoutIntegrationTest {
     fun realBlueprintsStretchUndergroundRuns() =
         assertTableOf("advanced-circuit", "electronic-circuit", "processing-unit") { target ->
             val layout = Layout(target)
-            assertUndergroundRunsAreStretched(
-                layout.blueprint.entities,
-                layout.beltMaterials,
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                {
+                    assertUndergroundRunsAreStretched(
+                        layout.blueprint.entities,
+                        layout.beltMaterials,
+                    )
+                },
             )
         }
 
@@ -455,9 +480,9 @@ class BlueprintLayoutIntegrationTest {
     fun realBlueprintsDoNotMergeMaterials() =
         assertTableOf("inserter", "advanced-circuit", "electronic-circuit") { target ->
             val layout = Layout(target)
-            assertNoMergingBelts(
-                layout.blueprint.entities,
-                layout.beltMaterials,
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertNoMergingBelts(layout.blueprint.entities, layout.beltMaterials) },
             )
         }
 

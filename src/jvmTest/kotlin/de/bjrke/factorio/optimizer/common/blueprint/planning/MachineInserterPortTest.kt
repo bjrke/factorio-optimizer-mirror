@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPl
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,10 +62,15 @@ class MachineInserterPortTest {
             val blocked =
                 (columns.top.map { Coordinate(machine.x + it, machine.y - 1) } +
                     columns.bottom.map { Coordinate(machine.x + it, machine.y + machine.height) })
-            assertEquals(
-                emptyList(),
-                blocked.filter { it in layout.inserters },
-                "$factory puts an inserter on a used fluid port",
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                {
+                    assertEquals(
+                        emptyList(),
+                        blocked.filter { it in layout.inserters },
+                        "$factory puts an inserter on a used fluid port",
+                    )
+                },
             )
         }
 }

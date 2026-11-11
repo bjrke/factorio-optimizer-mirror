@@ -83,7 +83,10 @@ class BlueprintFluidCharacterizationTest {
                 "solid-fuel-from-petroleum-gas",
             ),
         ) { expected ->
-            assertEquals(expected, layout.entities.single { it.area == expected.area })
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(expected, layout.entities.single { it.area == expected.area }) },
+            )
         }
 
     @Test
@@ -99,7 +102,10 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(44, -3) to "pipe-to-ground",
             Coordinate(45, -3) to "pipe-to-ground",
         ) { (tile, name) ->
-            assertEquals(name, plumbingAt(tile).name)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(name, plumbingAt(tile).name) },
+            )
         }
 
     @Test
@@ -110,7 +116,10 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(44, -3) to INPUT,
             Coordinate(45, -3) to OUTPUT,
         ) { (tile, io) ->
-            assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile))
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile)) },
+            )
         }
 
     @Test
@@ -121,6 +130,7 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(46, -2) to Coordinate(46, -1),
         ) { (top, port) ->
             assertAll(
+                { assertEquals(emptyList(), layout.failures) },
                 { assertEquals(end(top, petroleum, SOUTH, INPUT), plumbingAt(top)) },
                 { assertEquals(end(port, petroleum, SOUTH, OUTPUT), plumbingAt(port)) },
             )
@@ -132,6 +142,7 @@ class BlueprintFluidCharacterizationTest {
         val fluidMarker = markers.single { it.signal.fluid }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             // the solid target marker is the only other one
             { assertEquals(2, markers.size) },
             {
@@ -154,7 +165,10 @@ class BlueprintFluidCharacterizationTest {
             Coordinate(37, -3) to INPUT,
             Coordinate(39, -3) to OUTPUT,
         ) { (tile, io) ->
-            assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile))
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile)) },
+            )
         }
 
     @Test
@@ -163,6 +177,7 @@ class BlueprintFluidCharacterizationTest {
         val pipes = plumbing.filterIsInstance<PipeEntity>().map { it.area.topLeft }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             // three junctions, four gap ends, the marker's two ends and six shaft ends
             { assertEquals(15, plumbing.size) },
             { assertEquals(12, plumbing.count { it is PipeToGroundEntity }) },
@@ -211,7 +226,10 @@ class BlueprintFluidCharacterizationTest {
               C = constant-combinator: solid-fuel
             """
                 .trimIndent()
-        assertEquals(normalized(expected), normalized(layoutAscii(layout.dump)))
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(normalized(expected), normalized(layoutAscii(layout.dump))) },
+        )
     }
 
     /** A drawing without the trailing blanks of its grid rows, so only the glyphs are pinned. */
@@ -220,7 +238,10 @@ class BlueprintFluidCharacterizationTest {
 
     @Test
     fun theFluidRowKeepsEveryUndergroundRunStretched() {
-        assertUndergroundRunsAreStretched(layout.entities)
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertUndergroundRunsAreStretched(layout.entities) },
+        )
     }
 
     /**

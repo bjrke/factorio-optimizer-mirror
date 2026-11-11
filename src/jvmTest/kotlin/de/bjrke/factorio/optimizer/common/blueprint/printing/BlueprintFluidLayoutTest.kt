@@ -89,6 +89,7 @@ class BlueprintFluidLayoutTest {
             }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(Io.INPUT, input.io) },
             { assertEquals(Io.OUTPUT, output.io) },
             { assertEquals(EAST, input.direction) },
@@ -114,7 +115,8 @@ class BlueprintFluidLayoutTest {
             )
         // the pipe-to-ground carries no input/output type, so its direction is the side the
         // surface pipe attaches on: the entrance faces west (away from the label), the exit east
-        val blueprint = Layout(fluidPlan).blueprint
+        val layout = Layout(fluidPlan)
+        val blueprint = layout.blueprint
         val label =
             blueprint.entities.single {
                 it.name == "constant-combinator" && it.markerFluid
@@ -123,6 +125,7 @@ class BlueprintFluidLayoutTest {
         val east = blueprint.entities.single { it.area.topLeft == label.area.topLeft.east() }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals("pipe-to-ground", west.name) },
             { assertEquals(WEST, west.direction) },
             { assertEquals(EAST, east.direction) },
@@ -238,10 +241,11 @@ class BlueprintFluidLayoutTest {
                     fluidTemperatures = mapOf(petroleum to 15),
                 ),
             )
-        val entities =
-            Layout(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
+        val layout = Layout(fluidPlan, cheatLogistics, beltEnd = BeltEnd.INFINITY_CHEST)
+        val entities = layout.blueprint.entities
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(1, entities.count { it.name == "infinity-pipe" }) },
             {
                 assertEquals(
@@ -279,8 +283,12 @@ class BlueprintFluidLayoutTest {
                 label = "solid-fuel-from-petroleum-gas",
             )
 
-        val names = Layout(fluidPlan).blueprint.entities.map { it.name }
-        assertContains(names, "pipe-to-ground")
+        val layout = Layout(fluidPlan)
+        val names = layout.blueprint.entities.map { it.name }
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertContains(names, "pipe-to-ground") },
+        )
     }
 
     @Test
@@ -300,8 +308,10 @@ class BlueprintFluidLayoutTest {
             )
 
         val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(steam, water)))
-        val names = Layout(fluidPlan, fluids).blueprint.entities.map { it.name }
+        val layout = Layout(fluidPlan, fluids)
+        val names = layout.blueprint.entities.map { it.name }
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertContains(names, "pipe") },
             { assertContainsNot(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
         )
@@ -323,12 +333,11 @@ class BlueprintFluidLayoutTest {
                 label = "steam-condensation",
             )
         val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(steam, water)))
-        val pipes =
-            Layout(fluidPlan, fluids, beltEnd = BeltEnd.INFINITY_CHEST)
-                .entities
-                .filterIsInstance<InfinityPipeEntity>()
+        val layout = Layout(fluidPlan, fluids, beltEnd = BeltEnd.INFINITY_CHEST)
+        val pipes = layout.entities.filterIsInstance<InfinityPipeEntity>()
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             // the steam import is a filtered source, the water output an unfiltered sink
             { assertEquals(2, pipes.size) },
             { assertEquals(setOf(steam), pipes.mapNotNull { it.settings?.fluid }.toSet()) },
@@ -396,6 +405,7 @@ class BlueprintFluidLayoutTest {
 
         // each connected pipe network must carry exactly one fluid, so two fluids never merge
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(setOf(water, petroleum), layout.plumbing.values.toSet()) },
             {
                 assertEquals(
@@ -477,7 +487,8 @@ class BlueprintFluidLayoutTest {
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
-        val entities = Layout(fluidPlan).blueprint.entities
+        val layout = Layout(fluidPlan)
+        val entities = layout.blueprint.entities
         val machineTiles =
             entities
                 .filter { it.name == Factory.CHEMICAL_PLANT.identifier }
@@ -488,6 +499,7 @@ class BlueprintFluidLayoutTest {
             listOf(tile.west(), tile.east(), tile.north(), tile.south()).any { it in machineTiles }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(1, components.size, "the fluid lane is split") },
             {
                 assertNotNull(
@@ -511,12 +523,14 @@ class BlueprintFluidLayoutTest {
                     ),
                 label = "sulfur",
             )
-        val entities = Layout(fluidPlan).blueprint.entities
+        val layout = Layout(fluidPlan)
+        val entities = layout.blueprint.entities
         val grounds = entities.count { it.name == "pipe-to-ground" }
         val components = plumbingComponents(entities)
 
         // more pipe-to-ground ends than the two source markers, and one network per fluid
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertTrue(grounds > 2, "no underground pipes were used: $grounds") },
             { assertEquals(2, components.size, "the pipe runs are split") },
         )
@@ -541,6 +555,10 @@ class BlueprintFluidLayoutTest {
                     ),
                 label = "sulfur",
             )
-        assertUndergroundRunsAreStretched(Layout(fluidPlan).entities)
+        val layout = Layout(fluidPlan)
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertUndergroundRunsAreStretched(layout.entities) },
+        )
     }
 }

@@ -40,20 +40,24 @@ class BlueprintBeltEndTest {
 
     @Test
     fun infinityChestsAreOptIn() {
-        val without = Layout(basePlan).blueprint.entities
-        val with = Layout(basePlan, beltEnd = BeltEnd.INFINITY_CHEST).blueprint.entities
+        val without = Layout(basePlan)
+        val with = Layout(basePlan, beltEnd = BeltEnd.INFINITY_CHEST)
+        val withoutEntities = without.blueprint.entities
+        val withEntities = with.blueprint.entities
 
         assertAll(
+            { assertEquals(emptyList(), without.failures) },
+            { assertEquals(emptyList(), with.failures) },
             {
                 assertEquals(
                     emptyList(),
-                    without.filter { it.name == "infinity-chest" },
+                    withoutEntities.filter { it.name == "infinity-chest" },
                     "chests by default",
                 )
             },
             {
                 assertNotNull(
-                    with.firstOrNull {
+                    withEntities.firstOrNull {
                         it.name == "infinity-chest" && it.infinity?.item == ironOre
                     },
                     "no input chest for the imported ore",
@@ -61,7 +65,7 @@ class BlueprintBeltEndTest {
             },
             {
                 assertNotNull(
-                    with.firstOrNull { it.name.endsWith("-loader") },
+                    withEntities.firstOrNull { it.name.endsWith("-loader") },
                     "no loader",
                 )
             },
@@ -80,6 +84,7 @@ class BlueprintBeltEndTest {
         val byTile = layout.entities.associateBy { it.area.topLeft }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(BeltEnd.BUFFER_CHEST.identifier, chest.name) },
             {
                 assertEquals(
@@ -129,6 +134,7 @@ class BlueprintBeltEndTest {
         val condition = CircuitCondition(gear.name, "<", 200)
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
                     RequestFilter(gear.name, 200, trashNotRequested = true),
@@ -147,28 +153,36 @@ class BlueprintBeltEndTest {
     fun eachFilteredChestMarkerKeepsItsRequest() =
         assertTable(listOf(BeltEnd.BUFFER_CHEST to 100, BeltEnd.STORAGE_CHEST to 1)) {
             (beltEnd, count) ->
+            val layout = Layout(basePlan, beltEnd = beltEnd)
             val chest =
-                Layout(basePlan, beltEnd = beltEnd).blueprint.entities.single {
+                layout.blueprint.entities.single {
                     it.name == beltEnd.identifier && it.requestFilter?.name == ironOre.name
                 }
-            assertEquals(
-                RequestFilter(
-                    ironOre.name,
-                    count,
-                    trashNotRequested = beltEnd == BeltEnd.BUFFER_CHEST,
-                ),
-                chest.requestFilter,
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                {
+                    assertEquals(
+                        RequestFilter(
+                            ironOre.name,
+                            count,
+                            trashNotRequested = beltEnd == BeltEnd.BUFFER_CHEST,
+                        ),
+                        chest.requestFilter,
+                    )
+                },
             )
         }
 
     @Test
     fun plainChestMarkersAreBarred() =
         assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST) { beltEnd ->
+            val layout = Layout(basePlan, beltEnd = beltEnd)
             val chests =
-                Layout(basePlan, beltEnd = beltEnd).blueprint.entities.filter {
+                layout.blueprint.entities.filter {
                     it.name == beltEnd.identifier
                 }
             assertAll(
+                { assertEquals(emptyList(), layout.failures) },
                 { assertEquals(2, chests.size, "one input and one output chest") },
                 { assertEquals(emptyList(), chests.filterNot { it.bar == 4 }, chests.toString()) },
                 {
@@ -215,35 +229,46 @@ class BlueprintBeltEndTest {
 
     @Test
     fun theChestOutputWiresBothInsertersToTheChest() {
-        val blueprint = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).blueprint
+        val layout = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST)
+        val blueprint = layout.blueprint
         val chest = blueprint.entities.indexOfFirst { it.requestFilter?.name == gear.name } + 1
 
-        assertEquals(
-            listOf(
-                BlueprintWire(chest - 2, 1, chest, 1),
-                BlueprintWire(chest - 1, 1, chest, 1),
-            ),
-            blueprint.wires,
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertEquals(
+                    listOf(
+                        BlueprintWire(chest - 2, 1, chest, 1),
+                        BlueprintWire(chest - 1, 1, chest, 1),
+                    ),
+                    blueprint.wires,
+                )
+            },
         )
     }
 
     @Test
     fun theChestInputNeedsNoCircuitWire() =
         assertTable(listOf(BeltEnd.BUFFER_CHEST, BeltEnd.STORAGE_CHEST)) { beltEnd ->
-            val blueprint = Layout(basePlan, beltEnd = beltEnd).blueprint
+            val layout = Layout(basePlan, beltEnd = beltEnd)
+            val blueprint = layout.blueprint
             val inputChest =
                 blueprint.entities.indexOfFirst { it.requestFilter?.name == ironOre.name } + 1
             val wired = blueprint.wires.flatMap { listOf(it.first, it.second) }
 
-            assertContainsNot(wired, inputChest)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertContainsNot(wired, inputChest) },
+            )
         }
 
     @Test
     fun plainAndCheatMarkersNeedNoCircuitWire() =
         assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST, BeltEnd.INFINITY_CHEST) {
-            assertEquals(
-                emptyList(),
-                Layout(basePlan, beltEnd = it).blueprint.wires,
+            val layout = Layout(basePlan, beltEnd = it)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(emptyList(), layout.blueprint.wires) },
             )
         }
 }

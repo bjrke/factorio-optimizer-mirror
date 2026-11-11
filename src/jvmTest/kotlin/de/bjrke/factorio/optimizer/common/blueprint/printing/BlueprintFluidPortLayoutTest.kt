@@ -50,6 +50,7 @@ class BlueprintFluidPortLayoutTest {
         val north = machine.area.topLeft + Coordinate(2, -1)
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(Direction.SOUTH, layout.direction(machine)) },
             { assertEquals(petroleum, layout.plumbing[north]) },
         )
@@ -85,6 +86,7 @@ class BlueprintFluidPortLayoutTest {
         val right = machine.area.topLeft + Coordinate(2, -1)
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(water, layout.plumbing[left]) },
             { assertEquals(heavyOil, layout.plumbing[right]) },
         )
@@ -111,6 +113,7 @@ class BlueprintFluidPortLayoutTest {
         val pipes = layout.entities.filterIsInstance<Plumbing>().filter { it.material == heavyOil }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             // the same west column as the water marker, one lane further out
             { assertEquals(waterMarker.area.topLeft.x, marker.area.topLeft.x) },
             { assertTrue(markerRow < waterMarker.area.topLeft.y) },
@@ -171,6 +174,7 @@ class BlueprintFluidPortLayoutTest {
         val topLeft = machine.area.topLeft
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(Direction.EAST, layout.direction(machine)) },
             { assertEquals(heavyOil, layout.plumbing[topLeft + Coordinate(1, -1)]) },
             { assertEquals(holmiumSolution, layout.plumbing[topLeft + Coordinate(2, 4)]) },
@@ -191,6 +195,9 @@ class BlueprintFluidPortLayoutTest {
                     it.area.topLeft.x < machine.area.topLeft.x
             }
 
-        assertEquals(1, sources.size, "the electrolyte output lost its west infinity pipe")
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(1, sources.size, "the electrolyte output lost its west infinity pipe") },
+        )
     }
 }

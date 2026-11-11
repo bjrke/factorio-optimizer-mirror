@@ -61,6 +61,7 @@ class BlueprintImportTest {
             }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(Io.INPUT, input.io) },
             { assertEquals(Io.OUTPUT, output.io) },
             { assertEquals(EAST, input.direction) },
@@ -84,6 +85,7 @@ class BlueprintImportTest {
             }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertEquals(Io.INPUT, input.io) },
             { assertEquals(Io.OUTPUT, output.io) },
             { assertEquals(EAST, input.direction) },
@@ -103,6 +105,7 @@ class BlueprintImportTest {
         val poles = layout.entities.filterIsInstance<PoleEntity>()
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertTrue(poles.isNotEmpty(), "no poles were placed") },
             {
                 assertEquals(
@@ -254,7 +257,8 @@ class BlueprintImportTest {
                 label = "electronic-circuit",
             )
 
-        val entities = Layout(produced).entities
+        val layout = Layout(produced)
+        val entities = layout.entities
         val machineArea =
             entities
                 .filterIsInstance<MachineEntity>()
@@ -272,6 +276,9 @@ class BlueprintImportTest {
                     .maxByOrNull { it.area.topLeft.x },
                 "no feed at the produced lane",
             )
-        assertEquals(WEST, feed.direction, "the feed does not face the lane")
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(WEST, feed.direction, "the feed does not face the lane") },
+        )
     }
 }

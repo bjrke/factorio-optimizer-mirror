@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
+import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,7 +29,10 @@ class BlueprintFluidIntegrationTest {
                 validateLayout(layout.entities).filter {
                     it.contains("fluid") || it.contains("unpaired")
                 }
-            assertEquals(emptyList(), plumbing)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(emptyList(), plumbing) },
+            )
         }
 
     @Test
@@ -43,9 +47,10 @@ class BlueprintFluidIntegrationTest {
             "plastic-bar",
             "petroleum-gas",
         ) { target ->
-            assertEquals(
-                emptyList(),
-                fluidNetworkProblems(Layout(target).entities),
+            val layout = Layout(target)
+            assertAll(
+                { assertEquals(emptyList(), layout.failures) },
+                { assertEquals(emptyList(), fluidNetworkProblems(layout.entities)) },
             )
         }
 }

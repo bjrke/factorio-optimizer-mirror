@@ -119,6 +119,12 @@ up.
   matching source set (`commonMain`/`jsMain`/`jvmMain` →
   `commonTest`/`jsTest`/`jvmTest`); a missing test means the change is incomplete.
   Exception: pure formatting/docs. Use `kotlin.test`.
+- Every test that builds the blueprint `Layout` fixture (`Layout(...)` or
+  `layoutFromUrl(...)`) asserts `assertEquals(emptyList(), layout.failures)` in
+  that test. A layout can still satisfy a geometry assertion while leaving a feed
+  unrouted; the failures list is the cheap check. Only a test that pins failure
+  reporting (e.g. `aRowThatCannotFitReportsTheMissingMaterials`) asserts failures
+  are non-empty.
 - Use the shared material and recipe fixtures before defining a local recipe:
   `common/fixtures/MaterialFixtures.kt` and `common/fixtures/RecipeFixtures.kt`
   hold real game recipes (`smeltRecipe`, `makeCopperCable`,

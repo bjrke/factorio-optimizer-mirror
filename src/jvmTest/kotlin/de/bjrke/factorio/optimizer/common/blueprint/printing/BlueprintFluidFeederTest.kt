@@ -31,6 +31,7 @@ class BlueprintFluidFeederTest {
         val machine = layout.machineEntities.single().area
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
                     listOf(Coordinate(machine.x, machine.y - 1)),
@@ -64,6 +65,7 @@ class BlueprintFluidFeederTest {
         val feed = row.portPipes
 
         assertAll(
+            { assertEquals(emptyList(), row.failures) },
             // one port per fluid, both on the input edge the row reaches: the two top corners
             { assertEquals(2, feed.size, "each fluid needs exactly one port") },
             { assertEquals(setOf(water, petroleum), feed.values.toSet()) },

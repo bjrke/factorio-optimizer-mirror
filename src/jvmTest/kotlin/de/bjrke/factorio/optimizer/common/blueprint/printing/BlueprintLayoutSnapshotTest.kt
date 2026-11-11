@@ -21,6 +21,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasReci
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -30,11 +31,23 @@ import kotlin.test.assertEquals
  */
 class BlueprintLayoutSnapshotTest {
 
-    @Test fun baseLayoutIsStable() = Layout(basePlan).assertSignature("577596b91c039b08")
+    @Test
+    fun baseLayoutIsStable() {
+        val layout = Layout(basePlan)
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { layout.assertSignature("577596b91c039b08") },
+        )
+    }
 
     @Test
-    fun chestBeltEndIsStable() =
-        Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST).assertSignature("3c6ccdc7d3988898")
+    fun chestBeltEndIsStable() {
+        val layout = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST)
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { layout.assertSignature("3c6ccdc7d3988898") },
+        )
+    }
 
     @Test
     fun fluidLayoutIsStable() {
@@ -51,10 +64,21 @@ class BlueprintLayoutSnapshotTest {
                 sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
-        Layout(plan).assertSignature("749bb1b2462f902c")
+        val layout = Layout(plan)
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { layout.assertSignature("749bb1b2462f902c") },
+        )
     }
 
-    @Test fun wideLayoutIsStable() = Layout(sixInputPlan()).assertSignature("75054a3c2b32bafc")
+    @Test
+    fun wideLayoutIsStable() {
+        val layout = Layout(sixInputPlan())
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { layout.assertSignature("75054a3c2b32bafc") },
+        )
+    }
 
     @Test
     fun bandLayoutIsStable() {
@@ -76,7 +100,11 @@ class BlueprintLayoutSnapshotTest {
                 sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
                 label = "iron-gear-wheel",
             )
-        Layout(plan).assertSignature("94533f5e06df28d2")
+        val layout = Layout(plan)
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { layout.assertSignature("94533f5e06df28d2") },
+        )
     }
 
     private fun Layout.assertSignature(expected: String) {

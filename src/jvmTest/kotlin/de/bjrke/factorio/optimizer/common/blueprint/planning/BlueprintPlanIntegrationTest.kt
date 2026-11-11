@@ -31,12 +31,14 @@ class BlueprintPlanIntegrationTest {
     fun advancedCircuitsBuildTheirPlasticAndCopperCable() {
         // plastic is a simple chemistry recipe, so it is built; its oil chain stays imported as
         // petroleum gas instead of planning an oil refinery
-        val planned = Layout("advanced-circuit").plan
+        val layout = Layout("advanced-circuit")
+        val planned = layout.plan
         val categories = planned.recipes.flatMap { it.recipe.categories }.toSet()
         val sourceMaterials = planned.sources.map { it.material }
         val recipeNames = planned.recipes.map { it.recipe.name }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertContains(
                     recipeNames,
@@ -78,9 +80,11 @@ class BlueprintPlanIntegrationTest {
 
     @Test
     fun lubricantIsBuiltAndItsHeavyOilIsImported() {
-        val planned = Layout("lubricant").plan
+        val layout = Layout("lubricant")
+        val planned = layout.plan
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertContains(planned.recipes.map { it.recipe.name }, "lubricant") },
             {
                 assertNotNull(
@@ -94,21 +98,24 @@ class BlueprintPlanIntegrationTest {
     @Test
     fun aSolidFuelTargetStillImportsItsLightOil() {
         // only the light-oil solid-fuel recipe is planned, and its fluid input stays an import
-        val planned = Layout("solid-fuel").plan
+        val layout = Layout("solid-fuel")
+        val planned = layout.plan
 
-        assertContains(
-            planned.sources.map { it.material },
-            lightOil,
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertContains(planned.sources.map { it.material }, lightOil) },
         )
     }
 
     @Test
     fun uranium235IsBuiltByProcessingNotKovarex() {
         // kovarex is discarded even as the target's producer; uranium-processing is the allowed way
-        val planned = Layout("uranium-235").plan
+        val layout = Layout("uranium-235")
+        val planned = layout.plan
         val recipes = planned.recipes.map { it.recipe.name }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertContains(recipes, "uranium-processing") },
             { assertContainsNot(recipes, "kovarex-enrichment-process") },
         )
@@ -118,9 +125,11 @@ class BlueprintPlanIntegrationTest {
     fun nutrientsAreNotBredFromFish() {
         // both fish recipes are banned in the optimizer, so the real plan must not contain the
         // cycle
-        val recipes = Layout("nutrients").plan.recipes.map { it.recipe.name }
+        val layout = Layout("nutrients")
+        val recipes = layout.plan.recipes.map { it.recipe.name }
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertContainsNot(recipes, "fish-breeding") },
             { assertContainsNot(recipes, "nutrients-from-fish") },
         )
@@ -130,9 +139,11 @@ class BlueprintPlanIntegrationTest {
     fun vulcanusStoneIsImported() {
         // stone is a byproduct of the molten-metal recipes, so it is not a buildable row: a
         // stone-brick plan imports it instead of running a lava foundry
-        val planned = Layout("stone-brick", surface = Surface.VULCANUS).plan
+        val layout = Layout("stone-brick", surface = Surface.VULCANUS)
+        val planned = layout.plan
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertContainsNot(
                     planned.recipes.map { it.recipe.name },
@@ -147,9 +158,11 @@ class BlueprintPlanIntegrationTest {
     fun rocketFuelUsesTheLightOilSolidFuelRecipe() {
         // only the light-oil recipe is planned, so solid fuel is built and light oil is the single
         // source instead of solid fuel being direct-fed from one of several producers
-        val planned = Layout("rocket-fuel").plan
+        val layout = Layout("rocket-fuel")
+        val planned = layout.plan
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertContains(
                     planned.recipes.map { it.recipe.name },
@@ -180,9 +193,11 @@ class BlueprintPlanIntegrationTest {
     @Test
     fun aquiloSolidFuelUsesAmmonia() {
         // Aquilo is the one surface where the ammonia recipe replaces the oil-based source
-        val planned = Layout("solid-fuel", surface = Surface.AQUILO).plan
+        val layout = Layout("solid-fuel", surface = Surface.AQUILO)
+        val planned = layout.plan
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             {
                 assertContains(
                     planned.recipes.map { it.recipe.name },
@@ -212,6 +227,7 @@ class BlueprintPlanIntegrationTest {
         val layout = Layout("iron-plate", surface = Surface.VULCANUS)
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertContains(layout.plan.sources.map { it.material }, moltenIron) },
             {
                 assertContains(
@@ -308,11 +324,12 @@ class BlueprintPlanIntegrationTest {
 
     @Test
     fun theReportedLogisticSciencePackUrlBuildsNoRedundantFactory() {
-        val plan =
-            layoutFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1").plan
+        val layout = layoutFromUrl("http://localhost:8080/#/2.5/logistic-science-pack/CFSXbmr/1/1")
+        val plan = layout.plan
         val machines = plan.rows.flatMap { it.machines }.groupingBy { it.recipe.name }.eachCount()
 
         assertAll(
+            { assertEquals(emptyList(), layout.failures) },
             { assertOneBeltSourcePerMaterial(plan) },
             // cable + EC and gear + inserter are the direct-feed bands; the inserter band's output
             // already feeds the science row, so no second EC or inserter factory is built, and the
