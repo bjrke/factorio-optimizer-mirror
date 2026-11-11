@@ -21,6 +21,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -180,6 +181,11 @@ class BlueprintLayoutCompactionTest {
                 ),
             )
 
-        assertNotNull(layout.failures.firstOrNull(), "a row that cannot fit must report it")
+        assertAll(
+            {
+                assertNotNull(layout.failures.firstOrNull(), "a row that cannot fit must report it")
+            },
+            { assertContains(layout.failures, "output has no output belt on its row") },
+        )
     }
 }

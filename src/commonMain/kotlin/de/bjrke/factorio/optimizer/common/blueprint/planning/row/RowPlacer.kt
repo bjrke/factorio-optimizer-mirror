@@ -47,7 +47,9 @@ private const val WEST_MERGE_OFFSET = 8
  *
  * A row that would need more than [MAX_ROW_BELTS] solid belt rows pairs its lowest-rate eligible
  * inputs two per belt; each pair is fed by a T merge west or east of the row and carries one
- * material per lane. Rows that already fit keep their single-material belts.
+ * material per lane. Inputs whose rate fits one lane pair first, so a fast input only shares a belt
+ * when the row would otherwise drop a row (or its product). Rows that already fit keep their
+ * single-material belts.
  */
 internal class RowPlacer(
     private val board: LayoutBoard,

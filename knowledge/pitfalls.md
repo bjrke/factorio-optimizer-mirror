@@ -26,13 +26,15 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `UndergroundStretcher.swallowable`, `BeltRouteRules` and the tunnel-end checks. A mixed belt is
   never swallowed, never spliced into a tunnel and never side-loaded by a route. Evidence:
   `aRunLeavesAHalfBeltLane`.
-- **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed
-  and never a material above one lane, a fluid or an output; `bandBeltFits(plan)` must read the
-  arranged machine rates, not `bandBeltMaterials(...).size`. A row that still needs more than
-  `MAX_ROW_BELTS` rows has to report a failure; silently dropping the fifth material leaves a
-  machine unfed. Evidence: `aSixInputRowMixesThreeInputPairs`,
-  `producedInputsPairOnBothFeedSides`, `aRowThatCannotFitReportsTheMissingMaterials`,
-  `wideLayoutIsStable`.
+- **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed,
+  prefers the ones whose rate fits a lane, and never pairs a fluid or an output; `bandBeltFits(plan)`
+  must read the arranged machine rates, not `bandBeltMaterials(...).size`. Pairing an over-capacity
+  input is allowed once the row would otherwise drop a belt row or its product: half a lane is still
+  better than no belt (the rocket-silo row has five solid inputs and one product on four rows). A row
+  that still needs more disjoint pairs than its inputs can form has to report a failure; silently
+  dropping a belt leaves a machine unfed. Evidence: `aSixInputRowMixesThreeInputPairs`,
+  `producedInputsPairOnBothFeedSides`, `anOverCapacityInputPairsBeforeTheRowLosesABelt`,
+  `aRowThatCannotFitReportsTheMissingMaterials`, `wideLayoutIsStable`.
 
 ## Layout and fluids
 
@@ -129,18 +131,17 @@ An entry belongs here only with evidence, and should say how to recognize it.
   band both take sulfuric acid) has two disconnected networks. Both are fed; do not assert
   that one fluid is one network. `fluidNetworkProblems` instead requires every network to
   reach a source. Evidence: `realFluidNetworksAreConnected` (`utility-science-pack`).
-- **A row has four solid belt locations, so a recipe needing a fifth solid lane is
-  out of scope.** `RowPlacer.rowShape` ranks inputs and outputs together and zips
-  them onto two top and two bottom locations (near/far each), at most
-  `MAX_ROW_BELTS`; every input belt is end-fed by `DeliveryPreparation.sinkOf`, so
-  the old below-row
-  side-load into the row's product columns is gone. A **band** that would need more
-  is now filtered out (`bandBeltMaterials`, `bandBeltFits`), because its product or
-  an input would silently lose its lane; a plain recipe such as `flying-robot-frame`
-  (four solid inputs plus a product) still needs a **mixed belt** in a
-  single-material layout, which is out of scope and not a router bug. Recognize a
-  genuine routing failure by `foreign side-load into …` while the row still has a
-  free input lane, not by compaction rejecting every corridor.
+- **A row has four solid belt locations, so a fifth solid lane only fits as a mixed belt.**
+  `RowPlacer.rowShape` ranks inputs and outputs together and zips them onto two top
+  and two bottom locations (near/far each), at most `MAX_ROW_BELTS`; every input
+  belt is end-fed by `DeliveryPreparation.sinkOf`, so the old below-row
+  side-load into the row's product columns is gone. A row that needs more pairs
+  than its inputs can form is reported (`row needs N solid belt rows`), and a
+  missing target product belt is reported too (`<target> has no output belt on its
+  row`); a plain recipe such as `flying-robot-frame` (four solid inputs plus a
+  product) fits through one mixed belt. Recognize a genuine routing failure by
+  `foreign side-load into …` while the row still has a free input lane, not by
+  compaction rejecting every corridor.
 - **The underground stretcher must not swallow a belt an inserter takes from or drops
   onto.** Only fluid ports were protected, so a run could grow under the last lane
   tiles of a row and leave an inserter facing nothing; `inserterTiles` now protects
@@ -218,14 +219,23 @@ An entry belongs here only with evidence, and should say how to recognize it.
   looking like "the layout is just big". Fix the pre-existing error; do not relax
   the gate to an error-count or error-kind comparison. Evidence:
   `theReportedFusionReactorUrlCompacts`, `theReportedUtilityScienceUrlCompacts`.
-- **A route must not double back onto its tunnel landing.** A pipe route landed at
-  `(55,124)`, was forced one surface tile west to `(54,124)`, then reversed onto the
-  landing to dive east; `PathPlacer.roles` keys one entity per tile, so the second
-  run overwrote the first exit and left the entrance at `(62,124)` unpaired. The
-  same tile cannot be both the exit of one run and the entrance of the next.
-  `RouteSearch` now refuses a reverse back onto the tile it just surfaced from.
-  Evidence: `aPipeRouteDoesNotDoubleBackOntoItsLanding`,
-  `theReportedUtilityScienceUrlCompacts`.
+- **A belt route must stay a simple path; a revisit loses the belt already placed there.** A
+  pipe route landed at `(55,124)`, was forced one surface tile west, then reversed onto the
+  landing to dive east; a belt route looped four tiles around a 2×2 block to get from a westward
+  tunnel landing back into a southbound lane. `PathPlacer.roles` keys one entity per tile, so the
+  second use overwrote the first run's belt, leaving either an entrance without a feeder or an
+  exit that empties onto the next entrance. `RouteSearch` refuses the direct reverse onto the
+  landing, `PathPlacer.pathConflicts` rejects any belt path that uses a tile twice (nothing is
+  placed), and `DeliveryRouter` re-searches with those tiles blocked. Pipes are exempt: a pipe tile
+  is a junction. Evidence: `aPipeRouteDoesNotDoubleBackOntoItsLanding`,
+  `aBeltPathThatRevisitsATileIsRejected`, `theReportedRocketSiloUrlCompacts`.
+- **A feed's approach tile is part of the feed.** A sink reserves its feed tile, but its belt
+  takes its items from the tile behind (`feed - heading.step`); when a produced trunk already
+  ran south on that tile, the copper-cable lane could never be fed (`copper-cable to … (no
+  route)`). `DeliveryPreparation` reserves the approach tile for the feed's material,
+  `BeltRouteRules` admits it for that material only and refuses a foreign belt that would pour
+  into it. Evidence: `aForeignRouteMayNotTakeTheApproachTileOfAFeed`,
+  `theReportedRocketSiloUrlCompacts`.
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom

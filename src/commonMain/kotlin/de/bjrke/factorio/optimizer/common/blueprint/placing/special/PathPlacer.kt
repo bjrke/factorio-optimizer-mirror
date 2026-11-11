@@ -25,16 +25,22 @@ internal data class TunnelOutputRole(override val direction: Direction) : PathRo
 
 /**
  * Draws the transport entities of [material] along [nodes]; a jump becomes an underground run. A
- * route may revisit a tile: to enter a tunnel a belt must already head straight, so the search can
- * step back onto a tile to turn first. A tile carries one entity, so each gets its final role from
- * [roles] before anything is placed. A fluid material routes as pipes.
+ * tile carries one entity, so each gets its final role from [roles] before anything is placed. A
+ * fluid material routes as pipes.
+ *
+ * Returns the tiles a belt route uses twice; nothing is placed then and the caller has to route
+ * again. A belt tile carries one entity with one facing, so a revisit silently drops the first
+ * run's belt there (usually the belt a tunnel exit empties onto); a pipe connects on every side, so
+ * a revisit is fine for a fluid.
  */
 internal fun placePath(
     board: LayoutBoard,
     material: Material,
     nodes: List<Coordinate>,
     finalHeading: Direction? = null,
-) {
+): Set<Coordinate> {
+    val revisited = pathConflicts(board, material, nodes)
+    if (revisited.isNotEmpty()) return revisited
     for ((tile, role) in roles(nodes, finalHeading)) {
         if (!board.isFree(tile)) continue
         when (role) {
@@ -44,13 +50,27 @@ internal fun placePath(
         }
     }
     board.markTunnels(nodes, board.endName(material))
+    return emptySet()
 }
 
 /**
- * The role of every tile in [nodes], keyed by tile. A tunnel end beats a plain belt, so a revisit
- * never breaks a paired run; otherwise the last occurrence wins. [finalHeading] is the direction
- * the last tile must face, so a feed can turn onto its target regardless of the side the route
- * arrived from.
+ * The tiles a belt route in [nodes] uses twice, so the caller can rule them out and search again. A
+ * pipe route may reuse a tile: a pipe tile is a junction.
+ */
+internal fun pathConflicts(
+    board: LayoutBoard,
+    material: Material,
+    nodes: List<Coordinate>,
+): Set<Coordinate> =
+    if (board.isFluid(material)) emptySet()
+    else nodes.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+
+/**
+ * The role of every tile in [nodes], keyed by tile. A corner gets its outgoing direction (the last
+ * occurrence wins), while a tunnel end beats a plain belt so a revisit never breaks a paired run. A
+ * belt route with two different uses of one tile is rejected by [pathConflicts] before this runs.
+ * [finalHeading] is the direction the last tile must face, so a feed can turn onto its target
+ * regardless of the side the route arrived from.
  */
 private fun roles(
     nodes: List<Coordinate>,

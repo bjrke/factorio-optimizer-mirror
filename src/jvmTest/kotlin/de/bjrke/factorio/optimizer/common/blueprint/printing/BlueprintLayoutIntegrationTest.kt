@@ -24,6 +24,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunn
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -225,6 +226,31 @@ class BlueprintLayoutIntegrationTest {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             { assertNoPlannedMaterialIsImported(layout.plan) },
+        )
+    }
+
+    /**
+     * The rocket-silo row has five solid inputs plus its product, more belt rows than a row can
+     * hold at one lane each. The row pairs two over-capacity inputs instead of dropping the product
+     * belt (which used to leave the target without any output connector), and every belt route
+     * keeps its own tiles, so the layout compacts.
+     */
+    @Test
+    fun theReportedRocketSiloUrlCompacts() {
+        val layout = layoutFromUrl("http://localhost:8080/#/0.041666666667/rocket-silo/CFSXbmr/1/1")
+        val entities = layout.entities
+        val width =
+            entities.maxOf { it.area.bottomRight.x } - entities.minOf { it.area.topLeft.x } + 1
+        val height =
+            entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(entities)) },
+            { assertTrue(width <= 50, "layout is still $width tiles wide") },
+            { assertTrue(height <= 125, "layout is still $height rows tall") },
+            { assertNoPlannedMaterialIsImported(layout.plan) },
+            { assertContains(layout.plan.beltMaterials, Material("rocket-silo")) },
         )
     }
 

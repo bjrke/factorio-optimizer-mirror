@@ -127,7 +127,8 @@ internal fun DirectFeedContext.bandBeltMayFit(links: List<FeedLink>) =
 
 /**
  * Whether the arranged [plan] fits the row's four belt rows. This is the precise check: the machine
- * rates decide which inputs fit one lane, and only those may share a belt.
+ * rates decide which inputs pair without losing throughput and which only share a belt because the
+ * row would otherwise have to drop a belt row.
  */
 internal fun DirectFeedContext.bandBeltFits(plan: BandPlan): Boolean {
     val internal = plan.feeds.mapTo(mutableSetOf()) { it.link.material }

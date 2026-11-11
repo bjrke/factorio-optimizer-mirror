@@ -13,14 +13,20 @@ internal const val MAX_MATERIALS_PER_BELT = 2
 /**
  * How many belt rows a row needs for its solid [inputs] and [outputs], and whether it can fit.
  *
- * Only inputs are paired. A material whose plan rate does not fit one lane stays on its own full
- * belt; pairing it would halve its throughput. The count is direction-agnostic: placement pairs
- * same-direction feeds first and may pair across directions (routing one feed around), so this
- * budget is the optimistic upper bound both the row planner and the band search use.
+ * Only inputs are paired. Pairing is preferred between materials whose plan rate fits one lane, so
+ * sharing a belt costs no throughput. A row that would otherwise lose a whole belt row (its product
+ * included) pairs the remaining lowest-rate inputs anyway and accepts the smaller lane rate: a belt
+ * that cannot carry the full plan rate is still better than a missing belt. The count is
+ * direction-agnostic: placement pairs same-direction feeds first and may pair across directions
+ * (routing one feed around), so this budget is the optimistic upper bound both the row planner and
+ * the band search use.
  */
 internal data class BeltRowBudget(
     val materialCount: Int,
     val pairsNeeded: Int,
+    /** The pairs whose two inputs each fit one lane, so sharing costs no throughput. */
+    val capacitySafePairs: Int,
+    /** Every pair the inputs can form, whether or not the lane keeps its full rate. */
     val pairablePairs: Int,
 ) {
     val fits: Boolean
@@ -38,14 +44,13 @@ internal fun beltRowBudget(
 ): BeltRowBudget {
     val materials = (inputs.keys + outputs.keys).toSet()
     val pairs = max(0, materials.size - MAX_ROW_BELTS)
-    val pairable =
-        (inputs.keys - outputs.keys).count { material ->
-            inputs.getValue(material) <= pairCapacity
-        }
+    val pairable = inputs.keys - outputs.keys
+    val capacitySafe = pairable.count { material -> inputs.getValue(material) <= pairCapacity }
     return BeltRowBudget(
         materialCount = materials.size,
         pairsNeeded = pairs,
-        pairablePairs = pairable / MAX_MATERIALS_PER_BELT,
+        capacitySafePairs = capacitySafe / MAX_MATERIALS_PER_BELT,
+        pairablePairs = pairable.size / MAX_MATERIALS_PER_BELT,
     )
 }
 
@@ -65,7 +70,8 @@ internal data class BeltPacking(val groups: List<BeltGroup>) {
  * Packs a row's [solids] into one belt row each, pairing just enough inputs to get back to
  * [MAX_ROW_BELTS]. Pairs form within one feed [directions] group first, lowest rate first; a
  * remaining pair may straddle directions and then runs east, where the west margin has room to
- * route the other feed around. A material whose rate does not fit one lane is never paired.
+ * route the other feed around. Inputs whose rate fits one lane pair first, so a fast material only
+ * shares a belt when the row cannot fit otherwise.
  */
 internal fun packRowBelts(
     solids: List<Material>,
@@ -75,11 +81,18 @@ internal fun packRowBelts(
     pairCapacity: Double,
 ): BeltPacking {
     val needed = pairsNeeded(solids.size)
-    val pairable =
-        (inputs.keys - outputs.keys)
-            .filter { inputs.getValue(it) <= pairCapacity }
-            .sortedWith(compareBy({ inputs.getValue(it) }, { it.name }))
-    val pairs = choosePairs(pairable, directions, needed)
+    val pairable = inputs.keys - outputs.keys
+    fun byRate(materials: Iterable<Material>) =
+        materials.sortedWith(compareBy({ inputs.getValue(it) }, { it.name }))
+    val capacitySafe = byRate(pairable.filter { inputs.getValue(it) <= pairCapacity })
+    val overCapacity = byRate(pairable.filter { inputs.getValue(it) > pairCapacity })
+    val pairs = mutableListOf<BeltGroup>()
+    pairs += choosePairs(capacitySafe, directions, needed)
+    pairs += choosePairs(overCapacity, directions, needed - pairs.size)
+    // an odd count leaves one material per list; those may still pair across the capacity split
+    val paired = pairs.flatMapTo(mutableSetOf()) { it.materials }
+    pairs +=
+        choosePairs(byRate(pairable.filterNot { it in paired }), directions, needed - pairs.size)
     return BeltPacking(groupMaterials(solids, pairs, inputs, outputs))
 }
 
@@ -88,7 +101,7 @@ private fun choosePairs(
     directions: Map<Material, Direction>,
     needed: Int,
 ): List<BeltGroup> {
-    if (needed == 0) return emptyList()
+    if (needed <= 0) return emptyList()
     val pairs = mutableListOf<BeltGroup>()
     val used = mutableSetOf<Material>()
 

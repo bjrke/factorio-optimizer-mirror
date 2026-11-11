@@ -7,6 +7,25 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-11 — A belt route is a simple path and keeps its feed approach clear
+
+**Decision.** `PathPlacer` refuses a belt path that uses one tile twice (`pathConflicts`) and
+places nothing then; `DeliveryRouter` re-searches with those tiles blocked (bounded) and reports
+`no route` when none stays simple. Pipes are exempt: a pipe tile is a junction. A feed's approach
+tile (`feed - heading.step`, the tile its belt takes from) is reserved for the feed's material, so
+no foreign trunk parks there.
+
+**Guardrail.** A belt tile carries one entity with one facing; never let a tunnel role beat the
+belt an earlier run placed on the same tile (that is how an underground exit loses its landing,
+and one such error switches off all compaction). Keep a sink's `feed` reserved and its approach
+tile reserved for the same material; `BeltRouteRules` admits the approach tile for that material
+only. Evidence: `PathPlacerTest`, `aForeignRouteMayNotTakeTheApproachTileOfAFeed`,
+`theReportedRocketSiloUrlCompacts`.
+
+**See.** `blueprint/placing/special/PathPlacer.kt`,
+`blueprint/placing/routing/{DeliveryRouter,SplitDeliveryRouter,BeltRouteRules,DeliveryPreparation}.kt`,
+`blueprint/layout/LayoutBoard.kt`, `pitfalls.md` §Belt lanes and mixed rows.
+
 ## 2026-11-11 — Belts flow forward: a splitter needs its back, no belt circles
 
 **Decision.** `validateLayout` also checks the belt flow: every splitter must be
@@ -110,21 +129,26 @@ cable/circuit pair instead of adding a second plain pair;
 ## 2026-11-10 — A wide row mixes inputs two per belt
 
 **Decision.** A row that would need more than `MAX_ROW_BELTS` solid belt rows pairs the
-minimum number of inputs needed to get back to four, lowest-rate first, and only when each
-pair member's plan rate fits one belt lane. Pairs form within one feed direction first; a
-remaining pair may straddle directions and then runs east. A row with four or fewer materials
-keeps its single belts, and a row that still cannot fit reports a failure instead of silently
-dropping a material. Outputs keep their own belt and fill only the inserter lane; input/output
-mixing with its end filter is out of scope.
+minimum number of inputs needed to get back to four, lowest-rate first. Inputs whose plan rate
+fits one belt lane pair first, so sharing costs no throughput; a row that still would not fit
+pairs over-capacity inputs anyway and accepts the smaller lane rate, because a belt that cannot
+carry the full plan rate is better than a missing belt or a dropped product. Pairs form within
+one feed direction first; a remaining pair may straddle directions and then runs east. A row
+with four or fewer materials keeps its single belts, and a row that still cannot fit (more
+disjoint pairs than inputs) reports a failure instead of silently dropping a material. Outputs
+keep their own belt and fill only the inserter lane; input/output mixing with its end filter is
+out of scope.
 
 **Guardrail.** `MAX_ROW_BELTS` is still the number of rows, never a material count; keep
 `packRowBelts`/`beltRowBudget` the only budget. A mixed belt is modelled by `LaneLoad` in its
 own left/right frame, and a turn keeps the slots. Keep the T-merge sides (far north above,
 near north below, near south above, far south below), the feeder-side-to-lane mapping, and the
-rule that a route never side-loads a mixed or half-lane belt. Never pair a material that needs
-more than one lane, a fluid, or an output. Keep the band fit on the arranged machine rates
-(`bandBeltFits(plan)`), not on material count, and keep the failure path for a row that still
-needs too many rows.
+rule that a route never side-loads a mixed or half-lane belt. Pair capacity-safe inputs before
+over-capacity ones, never pair a fluid or an output, and keep the failure path for a row that
+still needs too many rows. Keep the band fit on the arranged machine rates
+(`bandBeltFits(plan)`), not on material count. Evidence:
+`anOverCapacityInputPairsBeforeTheRowLosesABelt`, `theReportedRocketSiloUrlCompacts` (five
+solid inputs and one product on four belt rows).
 
 **See.** `blueprint/planning/plan/BeltRows.kt`,
 `blueprint/planning/row/{Row,RowPlacer,MachineInserterPlacer}.kt`,

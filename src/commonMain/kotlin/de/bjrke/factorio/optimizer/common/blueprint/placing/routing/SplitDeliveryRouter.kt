@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
+import de.bjrke.factorio.optimizer.common.blueprint.placing.special.pathConflicts
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
@@ -60,7 +61,10 @@ internal class SplitDeliveryRouter(
                     rules.allowed(material, sink, splitterTiles),
                     strictStart = true,
                 ) ?: continue
-            val score = routeScore(listOf(candidate.exit) + segment)
+            // a branch that reuses one of its own belt tiles would lose the belt it already placed
+            val nodes = listOf(candidate.exit) + segment
+            if (pathConflicts(board, material, nodes).isNotEmpty()) continue
+            val score = routeScore(nodes)
             if (score < bestScore) {
                 bestScore = score
                 best = candidate to segment
@@ -105,15 +109,25 @@ internal class SplitDeliveryRouter(
             if (!fedStraight(tile, direction, material)) return@flatMap emptyList()
             sides(direction).mapNotNull { sideDirection ->
                 val side = tile + sideDirection.step
-                if (!board.isFree(side) || board.isReserved(side)) return@mapNotNull null
                 val exit = side + direction.step
-                if (!board.isFree(exit) || board.isReserved(exit)) return@mapNotNull null
+                if (!freeForSplit(side, material) || !freeForSplit(exit, material)) {
+                    return@mapNotNull null
+                }
                 val area = splitterArea(tile, side, direction)
                 if (!area.all { it == tile || board.isFree(it) }) return@mapNotNull null
                 SplitCandidate(tile, side, exit, direction)
             }
         }
     }
+
+    /**
+     * A side or exit tile a splitter may take: free, not a reserved feed and not a foreign
+     * approach.
+     */
+    private fun freeForSplit(tile: Coordinate, material: Material) =
+        board.isFree(tile) &&
+            !board.isReserved(tile) &&
+            (board.reservedMaterialAt(tile)?.let { it == material } ?: true)
 
     /** Whether the tile behind [tile] feeds it straight on, the way a splitter's back expects. */
     private fun fedStraight(tile: Coordinate, direction: Direction, material: Material): Boolean {

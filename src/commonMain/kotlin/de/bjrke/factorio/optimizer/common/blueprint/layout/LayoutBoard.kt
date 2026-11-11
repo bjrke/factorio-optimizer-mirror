@@ -92,12 +92,14 @@ internal class LayoutBoard(
     fun isReserved(coordinate: Coordinate) = grid[coordinate]?.reserved == true
 
     /** Marks [coordinate] as needed by a feed or source of [material]. */
-    fun reserve(coordinate: Coordinate, material: Material) {
+    fun reserve(coordinate: Coordinate, material: Material, approach: Boolean = false) {
         grid
             .getOrPut(coordinate) { Cell() }
             .apply {
-                reserved = true
                 reservedFor = material
+                // an approach tile is the tile the feed takes its items from: its own material's
+                // route may use it, while a foreign one would cut the feed off from behind
+                if (!approach) reserved = true
             }
     }
 

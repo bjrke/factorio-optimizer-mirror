@@ -23,7 +23,7 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
         val goal = coordinate == sink.feed
         val facing = if (goal) sink.heading ?: heading else heading
         // the feed may side-load its target (a fourth input does), but no earlier tile may
-        (routable(coordinate) || goal) &&
+        (routable(coordinate, material) || goal) &&
             coordinate !in blocked &&
             !sideLoaded(coordinate) &&
             (goal || !poursIntoSide(coordinate, facing, material)) &&
@@ -55,8 +55,8 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
 
     /**
      * True when a belt at [coordinate] leaving in [direction] would run straight at a reserved feed
-     * tile. That feed would later be entered from another side, so the belt would either block it
-     * or side-load a foreign material into the lane.
+     * tile or at another feed's approach tile. That feed would later be entered from there, so the
+     * belt would either block it or side-load a foreign material into the lane.
      */
     private fun facesReservedFeed(
         coordinate: Coordinate,
@@ -71,6 +71,9 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
         return reserved != material
     }
 
-    private fun routable(coordinate: Coordinate) =
-        board.isFree(coordinate) && !board.isReserved(coordinate)
+    private fun routable(coordinate: Coordinate, material: Material) =
+        board.isFree(coordinate) &&
+            !board.isReserved(coordinate) &&
+            // another material's feed needs this tile as its approach
+            (board.reservedMaterialAt(coordinate)?.let { it == material } ?: true)
 }

@@ -83,7 +83,11 @@ internal class DeliveryPreparation(
      */
     fun prepareDeliveries(): SolidDeliveries {
         val sinks = allSolidSinks()
-        for ((material, _, sink) in sinks) reserve(sink.feed, material)
+        for ((material, _, sink) in sinks) {
+            reserve(sink.feed, material)
+            // the feed takes its items from behind, so no other material's route may sit there
+            sink.heading?.let { board.reserve(sink.feed - it.step, material, approach = true) }
+        }
         return prepareSolidDeliveries(sinks)
     }
 

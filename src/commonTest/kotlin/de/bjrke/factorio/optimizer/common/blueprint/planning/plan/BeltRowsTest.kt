@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.plan
 
+import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
@@ -33,14 +34,19 @@ class BeltRowsTest {
         assertAll(
             { assertEquals(7, budget.materialCount) },
             { assertEquals(3, budget.pairsNeeded) },
+            { assertEquals(3, budget.capacitySafePairs) },
             { assertEquals(3, budget.pairablePairs) },
             { assertTrue(budget.fits) },
             { assertEquals(4, budget.rows) },
         )
     }
 
+    /**
+     * A fast input only shares a belt when the row cannot fit otherwise: a belt that carries half
+     * the plan rate is still better than a material without a belt or a dropped product.
+     */
     @Test
-    fun aMaterialThatNeedsMoreThanOneLaneKeepsItsOwnBelt() {
+    fun anOverCapacityInputPairsBeforeTheRowLosesABelt() {
         val budget =
             beltRowBudget(
                 inputs = inputs.associateWith { 50.0 },
@@ -49,9 +55,10 @@ class BeltRowsTest {
             )
 
         assertAll(
-            { assertEquals(0, budget.pairablePairs) },
-            { assertFalse(budget.fits) },
-            { assertEquals(7, budget.rows) },
+            { assertEquals(0, budget.capacitySafePairs) },
+            { assertEquals(3, budget.pairablePairs) },
+            { assertTrue(budget.fits) },
+            { assertEquals(4, budget.rows) },
         )
     }
 
@@ -71,6 +78,59 @@ class BeltRowsTest {
             // both has its own output belt, so only the other five inputs are pairable
             { assertEquals(2, budget.pairablePairs) },
             { assertFalse(budget.fits) },
+        )
+    }
+
+    @Test
+    fun capacitySafeInputsPairBeforeOverCapacityOnes() {
+        val safe = (1..2).map { Material("safe-$it") }
+        val fast = (1..2).map { Material("fast-$it") }
+        val rates = safe.associateWith { 1.0 } + fast.associateWith { 50.0 }
+
+        val packing =
+            packRowBelts(
+                solids = rates.keys.toList() + output,
+                inputs = rates,
+                outputs = mapOf(output to 1.0),
+                directions = rates.keys.associateWith { EAST },
+                pairCapacity = 10.0,
+            )
+
+        assertAll(
+            { assertTrue(packing.fits) },
+            { assertEquals(4, packing.groups.size) },
+            { assertEquals(1, packing.groups.count { it.materials.toSet() == safe.toSet() }) },
+        )
+    }
+
+    /** With six inputs the row needs three pairs: the safe pair plus the two it cannot avoid. */
+    @Test
+    fun overCapacityInputsPairOnlyAsFarAsTheRowNeeds() {
+        val safe = (1..2).map { Material("safe-$it") }
+        val fast = (1..4).map { Material("fast-$it") }
+        val rates = safe.associateWith { 1.0 } + fast.associateWith { 50.0 }
+
+        val packing =
+            packRowBelts(
+                solids = rates.keys.toList() + output,
+                inputs = rates,
+                outputs = mapOf(output to 1.0),
+                directions = rates.keys.associateWith { EAST },
+                pairCapacity = 10.0,
+            )
+
+        assertAll(
+            { assertTrue(packing.fits) },
+            { assertEquals(4, packing.groups.size) },
+            { assertEquals(1, packing.groups.count { it.materials.toSet() == safe.toSet() }) },
+            {
+                assertEquals(
+                    2,
+                    packing.groups.count { group ->
+                        group.materials.size == 2 && group.materials.all { it in fast }
+                    },
+                )
+            },
         )
     }
 }

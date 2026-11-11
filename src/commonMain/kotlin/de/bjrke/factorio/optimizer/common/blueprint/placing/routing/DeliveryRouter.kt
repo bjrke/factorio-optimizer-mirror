@@ -20,6 +20,9 @@ import de.bjrke.factorio.optimizer.common.core.model.west
 /** Belt tiles laid east of the last row before the target's connector may start. */
 private const val OUTPUT_BELT_LEAD = 3
 
+/** How often one delivery is routed again after a path wanted two facings on one belt tile. */
+private const val ROUTE_ATTEMPTS = 4
+
 /** How many columns east of a blocked belt a free marker spot is searched for. */
 private const val MARKER_SEARCH_COLUMNS = 12
 
@@ -104,27 +107,53 @@ internal class DeliveryRouter(
             board.placeSurface(material, sink.feed, sink.heading ?: direction)
             return true
         }
-        val segment = router.findRoute(start, direction, sink.feed, rules.allowed(material, sink))
-        if (segment == null) {
-            failures += "${material.name} to ${sink.feed} (no route)"
-            return false
+        // a route can come back onto a tile it already used and want another facing there; that
+        // would drop the belt an earlier tunnel exit empties onto, so those tiles are excluded and
+        // the route is searched again
+        val blocked = mutableSetOf<Coordinate>()
+        repeat(ROUTE_ATTEMPTS) {
+            val segment =
+                router.findRoute(
+                    start,
+                    direction,
+                    sink.feed,
+                    rules.allowed(material, sink, blocked),
+                ) ?: return fail(material, sink)
+            val nodes = buildList {
+                add(start)
+                addAll(segment)
+            }
+            val conflicts = placePath(board, material, nodes, sink.heading)
+            if (conflicts.isEmpty()) {
+                networks.record(material, nodes, sink)
+                return true
+            }
+            blocked += conflicts
         }
+        return fail(material, sink)
+    }
 
-        val nodes = buildList {
-            add(start)
-            addAll(segment)
-        }
-        placePath(board, material, nodes, sink.heading)
-        networks.record(material, nodes, sink)
-        return true
+    private fun fail(material: Material, sink: Sink): Boolean {
+        failures += "${material.name} to ${sink.feed} (no route)"
+        return false
     }
 
     /** Extends the target's output belt and ends it in the selected solid connector. */
     fun placeTargetOutput() {
         val targetMaterial = plan.target
-        val row = rowPlacer.producerRow(targetMaterial) ?: return
+        // a fluid target leaves through the pipe output FluidFeeder places
+        if (board.isFluid(targetMaterial)) return
+        val row = rowPlacer.producerRow(targetMaterial)
+        if (row == null) {
+            failures += "${targetMaterial.name} has no producer row"
+            return
+        }
         val outputBelt =
-            row.belts.firstOrNull { it.io == Io.OUTPUT && it.material == targetMaterial } ?: return
+            row.belts.firstOrNull { it.io == Io.OUTPUT && it.material == targetMaterial }
+        if (outputBelt == null) {
+            failures += "${targetMaterial.name} has no output belt on its row"
+            return
+        }
         var coordinate = Coordinate(row.right + 1, outputBelt.y)
 
         while (coordinate.x <= row.right + OUTPUT_BELT_LEAD && board.isFree(coordinate)) {

@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
@@ -31,8 +32,11 @@ import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumRoundsMagazineRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
+import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DeliveryPreparationTest {
@@ -127,6 +131,39 @@ class DeliveryPreparationTest {
         assertTrue(
             failures.any { "electronic-circuit" in it && "no producer row" in it },
             failures.toString(),
+        )
+    }
+
+    @Test
+    fun aForeignRouteMayNotTakeTheApproachTileOfAFeed() {
+        val plan = twoProductPlan()
+        val board = board()
+        val planner = RowPlanner(plan, logistics)
+        val rowPlacer = RowPlacer(board, plan, logistics, planner)
+        val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, LayoutRouter(board))
+        rowPlacer.placeAll()
+        val delivery =
+            DeliveryPreparation(
+                    stage,
+                    BeltEndConnector(board, BeltEnd.CONSTANT_COMBINATOR),
+                    ImportExtension(),
+                    BeltEnd.CONSTANT_COMBINATOR,
+                )
+                .prepareDeliveries()
+                .produced
+                .first()
+        val heading = assertNotNull(delivery.sink.heading)
+        val approach = delivery.sink.feed - heading.step
+        val rules = BeltRouteRules(board)
+
+        assertAll(
+            { assertEquals(delivery.material, board.reservedMaterialAt(approach)) },
+            { assertTrue(rules.allowed(delivery.material, delivery.sink)(approach, heading)) },
+            {
+                assertFalse(
+                    rules.allowed(Material("foreign"), delivery.sink)(approach, heading),
+                )
+            },
         )
     }
 

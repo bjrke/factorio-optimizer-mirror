@@ -248,9 +248,9 @@ splitter to be fed on its back face, and no belt to circle back into itself
 entrance or exit orphaned (connector ends are recognized by their 2/4-tile partner
 pattern).
 `RowLayout.layoutDump()` is the one read-back of a finished layout
-(`LayoutDump`: placed `LayoutEntity`s plus failure strings); route failures and any
-`validateLayout` errors of the finished layout share that list, so a pre-existing
-error that switches compaction off is reported instead of silently shipping an
+(`LayoutDump`: placed `LayoutEntity`s plus failure strings); row-budget and target-output
+failures, route failures and any `validateLayout` errors of the finished layout share that list,
+so a pre-existing error that switches compaction off is reported instead of silently shipping an
 uncompacted layout. The CLI's `--layout` renders it and the `jvmTest` suites assert
 on it through the `Layout` fixture in
 `jvmTest/…/common/blueprint/printing/fixtures/BlueprintIntegrationFixtures.kt`, so `RowLayout`
@@ -276,13 +276,18 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   `Plumbing.joinsAt` reads a pipe-to-ground end's single mouth
   (`PipeToGroundEntity.mouth`), so a pipe beside a foreign end's closed side does
   not count as a merge. A tile merely *reserved* for another fluid stays the
-  caller's check (`FluidFeeder.pipeAllowed` via `edgeFluidAt`).
+  caller's check (`FluidFeeder.pipeAllowed` via `edgeFluidAt`). `reserve(…, approach =
+  true)` marks the tile a solid feed's belt takes from (`feed - heading.step`) for that
+  feed's material without blocking its own route; `reservedMaterialAt` reads it, and
+  `BeltRouteRules` lets only that material use it.
 - `blueprint/placing/route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
   `blueprint/placing/route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
   the `RouteRequest`, and `blueprint/placing/route/RouteSearch.kt` owns the weighted A* frontier and node
   expansion.
 - `blueprint/placing/special/PathPlacer.kt` — `placePath` and the tile roles for plain and
-  underground runs; shared by belt and pipe routes. It is the shared
+  underground runs; shared by belt and pipe routes. `placePath` rejects a belt path that uses one
+  tile twice (`pathConflicts`, the tiles are returned and nothing is placed) and lets the caller
+  re-route; a pipe may revisit a tile, which is a junction. It is the shared
   helper `routing` reaches (the `special` edge in the package dependency table).
   `directionBetween` is the compass helper on the model (`core/model/Tile.kt`).
 - `blueprint/placing/compaction/UndergroundStretcher.kt` — grows underground runs along their own
@@ -304,10 +309,11 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   merge; the merge sits outside the pair of lane rows (far north above, near north
   below, near south above, far south below), at `row.left - 2` for an east-fed lane
   and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the pure
-  packing budget (`packRowBelts`, `beltRowBudget`): a material that does not fit one
-  lane is never paired, only the minimum pairs needed are formed, and same-direction
-  pairs win before a cross-direction pair runs east. A `PlacedMachine` carries its own
-  `production`; `producerRow(material)` scans `placedRows` for the row whose
+  packing budget (`packRowBelts`, `beltRowBudget`): only the minimum pairs needed are formed,
+  inputs whose rate fits one lane pair first, and same-direction pairs win before a
+  cross-direction pair runs east. An over-capacity input only pairs when the row would otherwise
+  drop a belt row (or its product), and then accepts the smaller lane rate. A `PlacedMachine`
+  carries its own `production`; `producerRow(material)` scans `placedRows` for the row whose
   `plannedRow` equals `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
   `BandInterfacePlacer` the gap inserters.
@@ -377,13 +383,17 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 - `blueprint/placing/special/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
 - `blueprint/placing/routing/DeliveryRouter.kt` — routes the solid imports first and the produced
-  deliveries afterwards, and places the target's output connector;
-  `DeliveryPreparation` reserves the sinks and sources (imports first); a mixed
+  deliveries afterwards, and places the target's output connector (reporting a target without a
+  product belt instead of silently skipping it);
+  `DeliveryPreparation` reserves the sinks and sources (imports first) and each sink's approach
+  tile for its material; a mixed
   input belt contributes two sinks (its straight feeder and its U-turn feeder) and
-  pins the merge group. `SplitDeliveryRouter` inserts the branch splitters,
+  pins the merge group. A delivery is re-searched with the tiles blocked when its path uses a
+  belt tile twice. `SplitDeliveryRouter` inserts the branch splitters,
   `DeliveryNetworks` remembers the produced trunks and `BeltRouteRules` is the
   belt-tile predicate shared by both routes; it never side-loads a mixed or
-  half-lane belt. `blueprint/placing/routing/FluidFeedLinker.kt` links a trimmed
+  half-lane belt and keeps foreign belts off another feed's approach tile.
+  `blueprint/placing/routing/FluidFeedLinker.kt` links a trimmed
   fluid marker to its lane head.
 - `RowLayout` keeps the ordered `build()` pipeline (idempotent, so `blueprint()`
   and `layoutDump()` can share one instance); the `RowPlacer`,
@@ -438,9 +448,10 @@ internal link; the belted pass inherits the main scope through `consumerScope`. 
 `BandPlan`, so `DirectFeed.build` does not arrange a group a second time. Growth
 may pass through an over-belt group so an added producer can internalize an
 ingredient, but the finished group must fit `MAX_ROW_BELTS = 4` belt rows
-(`bandBeltFits(plan)` over `beltRowBudget`); a material that does not fit one lane
-is never paired, and a group whose arranged machines still need more rows is
-dropped, its links return to the pool and another seed is tried.
+(`bandBeltFits(plan)` over `beltRowBudget`); a group whose arranged machines still need more rows
+than its inputs can pair is dropped, its links return to the pool and another seed is tried.
+Inputs whose rate fits one lane pair first; an over-capacity pair is accepted only for a group
+that would otherwise not fit, at the smaller lane rate.
 `bandBeltMayFit`/`bandBeltRows` are the capacity-blind pre-filter and ranking used
 during growth, while `bandBeltFits(plan)` reads the arranged machine rates.
 `groupMayFit` ranks with the propagated `groupNeeds`, not each recipe's plan
