@@ -53,7 +53,6 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** Every recipe in row order; a recipe may appear once per row. */
@@ -279,7 +278,7 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aCircuitChainGroupsTheSharedProducerAndLeavesTheTargetBelted() {
+    fun aCircuitChainGroupsTheSharedProducerAndTheTarget() {
         val targetProduction = production(processingUnitRecipe, processingUnit)
         val feed =
             directFeed(
@@ -301,12 +300,12 @@ class DirectFeedTest {
                         copperCableRecipe,
                         electronicCircuitRecipe,
                         advancedCircuitRecipe,
+                        processingUnitRecipe,
                     ),
                     band.machines.map { it.recipe }.toSet(),
                 )
             },
-            // the target still needs four solid inputs and a product, so it stays a belt row
-            { assertNull(band.machines.firstOrNull { it.recipe == processingUnitRecipe }) },
+            // the target's four solid inputs plus its product fit four rows with one mixed belt
             { assertContains(feed.recipes, processingUnitRecipe) },
             // the target row is built exactly once
             { assertEquals(1, feed.recipes.count { it == processingUnitRecipe }) },
@@ -400,7 +399,7 @@ class DirectFeedTest {
     }
 
     @Test
-    fun aBandThatNeedsMoreThanFourBeltsIsRejected() {
+    fun aBandWithFiveBeltMaterialsUsesAMixedBelt() {
         val electric = production(electricEngineUnitRecipe, electricEngineUnit)
         val feed =
             directFeed(
@@ -412,16 +411,12 @@ class DirectFeedTest {
                 logistics = fluids(lubricant),
             )
 
-        assertAll(
-            // the pair still needs steel, gear, pipe, circuit and the product: five lanes, so it
-            // stays belted instead of dropping one material from its row
-            { assertEquals(emptyList(), feed.bands) },
-            {
-                assertEquals(
-                    setOf(electricEngineUnitRecipe, engineUnitRecipe),
-                    feed.recipes.toSet(),
-                )
-            },
+        val band = feed.bands.single()
+        // steel, gear, pipe, circuit and the product are five materials; one input shares a belt
+        // and the band still fits the row's four belt rows
+        assertEquals(
+            setOf(electricEngineUnitRecipe, engineUnitRecipe),
+            band.machines.map { it.recipe }.toSet(),
         )
     }
 

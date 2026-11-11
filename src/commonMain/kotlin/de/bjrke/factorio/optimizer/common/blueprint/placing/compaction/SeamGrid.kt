@@ -76,7 +76,7 @@ private fun beltCuttable(
     alongTiles(orientation, tile).all { side ->
         when (val other = index.at(side)) {
             null -> true
-            is BeltEntity -> other.material == belt.material && other.direction == belt.direction
+            is BeltEntity -> other.materials == belt.materials && other.direction == belt.direction
             else -> false
         }
     } &&

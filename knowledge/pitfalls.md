@@ -3,6 +3,36 @@
 Verified traps, non-obvious behavior and diagnostic dead ends, grouped by area.
 An entry belongs here only with evidence, and should say how to recognize it.
 
+## Belt lanes and mixed rows
+
+- **A lane load is in the belt's own left/right frame, not the compass.** `LaneLoad.left` is
+  north for an eastbound belt, south for a westbound one; `laneAt(direction, side)` is the one
+  place that maps a neighbor side to a lane. A turn keeps the slots, so the merge tile's load is
+  also the lane's load. A half product belt fills only the lane its inserters drop onto; the
+  other side is `null`.
+- **The T merge must use the lane mapping, not just the material set.** Above the lane the merge
+  tile faces south: the west feeder fills the right lane and the east feeder the left. Below the
+  lane it faces north: west fills left, east fills right. The merge sits outside the pair of lane
+  rows (far north above, near north below, near south above, far south below), at
+  `row.left - 2` for east-fed mixes and `row.right + 8` for west-fed ones. Getting the side wrong
+  looks valid to a material-only check but side-loads the wrong lane; `validateLayout` uses
+  `LaneLoad.laneAt` and should report a foreign side-load.
+- **A mixed feed that turns before its merge must not set the import column.** `ImportTrimmer`
+  returns `null` from `lastStraightEast` for it, and only the straight feeds choose the common
+  column. Treating the old `start.x - 1` fallback as a real end drags every marker west and the
+  layout looks untrimmed.
+- **A half output belt may feed a full trunk, but not enter a tunnel or a route side.** Compare
+  `materials` for a straight continuation and for a seam splice; use exact full loads for
+  `UndergroundStretcher.swallowable`, `BeltRouteRules` and the tunnel-end checks. A mixed belt is
+  never swallowed, never spliced into a tunnel and never side-loaded by a route.
+- **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed
+  and never a material above one lane, a fluid or an output; `bandBeltFits(plan)` must read the
+  arranged machine rates, not `bandBeltMaterials(...).size`. A row that still needs more than
+  `MAX_ROW_BELTS` rows has to report a failure; silently dropping the fifth material leaves a
+  machine unfed. Evidence: `aSixInputRowMixesThreeInputPairs`,
+  `producedInputsPairOnBothFeedSides`, `aRowThatCannotFitReportsTheMissingMaterials`,
+  `wideLayoutIsStable`.
+
 ## Layout and fluids
 
 - **A machine's port table is written in the placed orientation, in recipe-assignment order.**

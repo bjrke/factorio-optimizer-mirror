@@ -1,7 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_MATERIALS_PER_BELT
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltRowBudget
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.pairsNeeded
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
@@ -74,28 +80,61 @@ internal class FeedGroup(
     val needs: Map<FactoryProduction, Double>,
 )
 
-/**
- * The solid materials a band row moves on belts: every machine input and result except the
- * materials inserted machine to machine. Mirrors `RowPlacer.rowShape`, which places at most
- * [MAX_ROW_BELTS] lanes; anything beyond that would silently lose its lane.
- */
+/** The solid materials a band row belts and does not insert machine to machine. */
 internal fun DirectFeedContext.bandBeltMaterials(links: List<FeedLink>): Set<Material> {
+    val materials = bandBeltInputs(links) + bandBeltOutputs(links)
+    return materials
+}
+
+/** The solid inputs a band draws from outside its links. */
+internal fun DirectFeedContext.bandBeltInputs(links: List<FeedLink>): Set<Material> {
     val internal = links.mapTo(mutableSetOf()) { it.material }
     return links
         .asSequence()
         .flatMap { listOf(it.producer.production, it.consumer.production) }
         .distinct()
-        .flatMap { production ->
-            production.recipe.ingredients.keys + production.recipe.result.keys
-        }
+        .flatMap { production -> production.recipe.ingredients.keys }
         .filterNot { logistics.isFluid(it) }
         .filterNot { it in internal }
         .toSet()
 }
 
-/** Whether a band built from [links] fits the solid belt locations one row has. */
-internal fun DirectFeedContext.bandBeltFits(links: List<FeedLink>) =
-    bandBeltMaterials(links).size <= MAX_ROW_BELTS
+/** The solid results a band puts on a belt rather than inserting them. */
+internal fun DirectFeedContext.bandBeltOutputs(links: List<FeedLink>): Set<Material> {
+    val internal = links.mapTo(mutableSetOf()) { it.material }
+    return links
+        .asSequence()
+        .flatMap { listOf(it.producer.production, it.consumer.production) }
+        .distinct()
+        .flatMap { production -> production.recipe.result.keys }
+        .filterNot { logistics.isFluid(it) }
+        .filterNot { it in internal }
+        .toSet()
+}
+
+/** The belt rows [links] need, ignoring lane capacity: the quick pre-filter for growth. */
+internal fun DirectFeedContext.bandBeltRows(links: List<FeedLink>): Int {
+    val inputs = bandBeltInputs(links)
+    val outputs = bandBeltOutputs(links)
+    val materials = (inputs + outputs).size
+    val pairable = (inputs - outputs).size
+    return materials - minOf(pairsNeeded(materials), pairable / MAX_MATERIALS_PER_BELT)
+}
+
+/** Whether [links] can still fit the row's belt budget before the expensive arrangement. */
+internal fun DirectFeedContext.bandBeltMayFit(links: List<FeedLink>) =
+    bandBeltRows(links) <= MAX_ROW_BELTS
+
+/**
+ * Whether the arranged [plan] fits the row's four belt rows. This is the precise check: the machine
+ * rates decide which inputs fit one lane, and only those may share a belt.
+ */
+internal fun DirectFeedContext.bandBeltFits(plan: BandPlan): Boolean {
+    val internal = plan.feeds.mapTo(mutableSetOf()) { it.link.material }
+    val inputs = rowInputs(plan.machines, logistics).minus(internal)
+    val outputs = rowOutputs(plan.machines, logistics).minus(internal)
+    return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity()).fits
+}
 
 /** One machine-to-machine insertion an arrangement realizes. */
 internal class BandFeed(

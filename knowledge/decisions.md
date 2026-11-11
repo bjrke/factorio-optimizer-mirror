@@ -7,6 +7,30 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-10 — A wide row mixes inputs two per belt
+
+**Decision.** A row that would need more than `MAX_ROW_BELTS` solid belt rows pairs the
+minimum number of inputs needed to get back to four, lowest-rate first, and only when each
+pair member's plan rate fits one belt lane. Pairs form within one feed direction first; a
+remaining pair may straddle directions and then runs east. A row with four or fewer materials
+keeps its single belts, and a row that still cannot fit reports a failure instead of silently
+dropping a material. Outputs keep their own belt and fill only the inserter lane; input/output
+mixing with its end filter is out of scope.
+
+**Guardrail.** `MAX_ROW_BELTS` is still the number of rows, never a material count; keep
+`packRowBelts`/`beltRowBudget` the only budget. A mixed belt is modelled by `LaneLoad` in its
+own left/right frame, and a turn keeps the slots. Keep the T-merge sides (far north above,
+near north below, near south above, far south below), the feeder-side-to-lane mapping, and the
+rule that a route never side-loads a mixed or half-lane belt. Never pair a material that needs
+more than one lane, a fluid, or an output. Keep the band fit on the arranged machine rates
+(`bandBeltFits(plan)`), not on material count, and keep the failure path for a row that still
+needs too many rows.
+
+**See.** `blueprint/planning/plan/BeltRows.kt`,
+`blueprint/planning/row/{Row,RowPlacer,MachineInserterPlacer}.kt`,
+`blueprint/placing/routing/{DeliveryPreparation,ImportTrimmer}.kt`,
+`pitfalls.md` §Belt lanes and mixed rows.
+
 ## 2026-11-10 — Test profiling is JDK Flight Recorder, CPU only
 
 **Decision.** `jvmTestProfile` attaches the JDK's own Flight Recorder to the test

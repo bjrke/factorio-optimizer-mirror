@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
 import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
@@ -33,7 +32,8 @@ internal fun DirectFeedContext.maximalGroups(): List<BandPlan> {
         val seedLink = pool.removeAt(seed)
         val group = mutableListOf(seedLink)
         growGroup(group, pool, ::arranged)
-        if (arranged(group) == null || !bandBeltFits(group)) {
+        val plan = arranged(group)
+        if (plan == null || !bandBeltFits(plan)) {
             // the best arrangement of this seed still leaves a lane without a belt; retry the links
             // it gathered from another seed
             pool += group.filterNot { it == seedLink }
@@ -59,8 +59,8 @@ private fun FeedLink.productions() = listOf(producer.production, consumer.produc
 private fun DirectFeedContext.mayGrow(group: List<FeedLink>, candidate: FeedLink): Boolean {
     val combined = group + candidate
     if (!groupMayFit(combined)) return false
-    if (bandBeltMaterials(group).size > MAX_ROW_BELTS) return true
-    return bandBeltMaterials(combined).size <= MAX_ROW_BELTS
+    if (!bandBeltMayFit(group)) return true
+    return bandBeltMayFit(combined)
 }
 
 private tailrec fun DirectFeedContext.growGroup(
@@ -100,12 +100,9 @@ private fun DirectFeedContext.swapInto(
     if (candidate.candidateScore <= weakest.candidateScore + FEED_EPSILON) return false
     val trial = group.filterNot { it == weakest } + candidate
     if (!groupMayFit(trial)) return false
-    if (
-        bandBeltMaterials(group).size <= MAX_ROW_BELTS &&
-            bandBeltMaterials(trial).size > MAX_ROW_BELTS
-    )
-        return false
-    if (arranged(trial) == null) return false
+    if (bandBeltMayFit(group) && !bandBeltMayFit(trial)) return false
+    val plan = arranged(trial) ?: return false
+    if (!bandBeltFits(plan)) return false
     group.remove(weakest)
     group += candidate
     pool.remove(candidate)
@@ -122,10 +119,14 @@ private fun DirectFeedContext.mergeIntoGroup(
         val index =
             groups.indices.firstOrNull { index ->
                 val combined = groups[index] + group
-                groupMayFit(combined) &&
-                    bandBeltFits(combined) &&
-                    group.any { link -> groups[index].any { sharesRecipe(it, link) } } &&
-                    arranged(combined) != null
+                if (
+                    !groupMayFit(combined) ||
+                        !bandBeltMayFit(combined) ||
+                        !group.any { link -> groups[index].any { sharesRecipe(it, link) } }
+                )
+                    return@firstOrNull false
+                val plan = arranged(combined) ?: return@firstOrNull false
+                bandBeltFits(plan)
             } ?: return
         val combined = (groups[index] + group).distinct()
         group.clear()
@@ -143,17 +144,27 @@ private fun DirectFeedContext.mergeGroups(
         merged = false
         outer@ for (first in groups.indices) {
             for (second in first + 1 until groups.size) {
-                val combined = groups[first] + groups[second]
-                if (!groupAnyShared(groups[first], groups[second])) continue
-                if (!groupMayFit(combined) || !bandBeltFits(combined) || arranged(combined) == null)
-                    continue
-                groups[first] = combined.distinct().toMutableList()
+                val combined = mergedLinks(groups[first], groups[second], arranged) ?: continue
+                groups[first] = combined.toMutableList()
                 groups.removeAt(second)
                 merged = true
                 break@outer
             }
         }
     }
+}
+
+/** The distinct links of two groups that may merge, or null when the merge does not fit. */
+private fun DirectFeedContext.mergedLinks(
+    first: List<FeedLink>,
+    second: List<FeedLink>,
+    arranged: (List<FeedLink>) -> BandPlan?,
+): List<FeedLink>? {
+    if (!groupAnyShared(first, second)) return null
+    val combined = first + second
+    if (!groupMayFit(combined) || !bandBeltMayFit(combined)) return null
+    val plan = arranged(combined) ?: return null
+    return if (bandBeltFits(plan)) combined.distinct() else null
 }
 
 private fun groupAnyShared(first: List<FeedLink>, second: List<FeedLink>) = first.any { link ->

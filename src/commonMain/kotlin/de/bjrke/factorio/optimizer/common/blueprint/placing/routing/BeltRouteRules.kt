@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
@@ -29,13 +30,13 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
             !facesReservedFeed(coordinate, facing, sink.feed, material)
     }
 
-    /** True when a belt next to [coordinate] pours a different material into that tile. */
+    /** True when a belt next to [coordinate] pours a different load into that tile. */
     private fun sideLoaded(coordinate: Coordinate, material: Material): Boolean =
         coordinate.neighbors.any { neighbor ->
             val belt = board.entityAt(neighbor) as? ConveyorEntity
             belt != null &&
                 belt.direction == directionBetween(neighbor, coordinate) &&
-                belt.material != material
+                !belt.isRouteMaterial(material)
         }
 
     /** True when a belt at [coordinate] leaving in [direction] would side-load a foreign belt. */
@@ -45,10 +46,14 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
         material: Material,
     ): Boolean {
         val belt = board.entityAt(coordinate + direction.step) as? ConveyorEntity ?: return false
-        return belt.material != material &&
+        return !belt.isRouteMaterial(material) &&
             belt.direction != direction &&
             belt.direction != direction.opposite()
     }
+
+    /** A route carries one material on both lanes; a mixed or half belt would merge a lane. */
+    private fun ConveyorEntity.isRouteMaterial(material: Material) =
+        materials == setOf(material) && (this as? BeltEntity)?.load?.isFull != false
 
     /**
      * True when a belt at [coordinate] leaving in [direction] would run straight at a reserved feed

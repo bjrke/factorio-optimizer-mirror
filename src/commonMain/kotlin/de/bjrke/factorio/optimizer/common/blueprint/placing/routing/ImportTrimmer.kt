@@ -11,7 +11,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtensio
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportFeed
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.core.model.east
 
 /**
  * Moves every import marker to one common column and removes the straight belt prefix in front of
@@ -34,27 +33,39 @@ internal class ImportTrimmer(
 
     fun trim() {
         val width = connector.width
-        // the connector takes `width` tiles, so its column is the straight run's end - width
-        val common = imports.importFeeds.minOfOrNull { feed -> lastStraightEast(feed) - width }
-        val trimmedColumn = common?.takeIf { it > connector.left && trimSolid(it, width) }
+        // a mixed feed that turns before its lane cannot be trimmed; it must not drag the common
+        // column west for the straight imports, so only the straight runs decide the column
+        val straight =
+            imports.importFeeds.mapNotNull { feed ->
+                lastStraightEast(feed)?.let { end -> feed to end }
+            }
+        val common = straight.minOfOrNull { (_, end) -> end - width }
+        val trimmable = straight.map { it.first }
+        val trimmedColumn = common?.takeIf {
+            it > connector.left && trimSolid(trimmable, it, width)
+        }
         val column = trimmedColumn ?: fallbackColumn()
         // a chest marker is powered, so its poles may sit in the import extension
         if (!beltEnd.isChest) {
             imports.poleWestBound = maxOf(imports.poleWestBound, column + width)
         }
         fluidLinker.link(column)
-        pinSolidConnectors(trimmedColumn, width)
+        pinSolidConnectors(
+            trimmedColumn,
+            if (trimmedColumn == null) emptySet() else trimmable.toSet(),
+            width,
+        )
         // the old connector marks are gone; re-index the tunnels before stretching
         board.rebuildTunnels()
     }
 
     /**
-     * Moves the solid connectors to [common], or restores the board and returns false when the
+     * Moves the [feeds] connectors to [common], or restores the board and returns false when the
      * moved column breaks the layout.
      */
-    private fun trimSolid(common: Int, width: Int): Boolean {
+    private fun trimSolid(feeds: List<ImportFeed>, common: Int, width: Int): Boolean {
         val saved = board.placed.toList()
-        for (feed in imports.importFeeds) {
+        for (feed in feeds) {
             for (x in (feed.start.x - width) until feed.start.x) {
                 board.removeAt(Coordinate(x, feed.row))
             }
@@ -80,9 +91,15 @@ internal class ImportTrimmer(
      * Pins the whole connector, its feed tile and the lane tile that receives it together, so the
      * markers keep one column and a vertical corridor cannot slip between them and the lane.
      */
-    private fun pinSolidConnectors(trimmedColumn: Int?, width: Int) {
+    private fun pinSolidConnectors(
+        trimmedColumn: Int?,
+        trimmed: Set<ImportFeed>,
+        width: Int,
+    ) {
         for (feed in imports.importFeeds) {
-            val connectorStart = trimmedColumn ?: (feed.start.x - width)
+            val connectorStart =
+                if (feed in trimmed && trimmedColumn != null) trimmedColumn
+                else feed.start.x - width
             for (x in connectorStart..(connectorStart + width)) {
                 imports.pinnedImportTiles += Coordinate(x, feed.row)
             }
@@ -104,20 +121,22 @@ internal class ImportTrimmer(
     private fun laneTile(feed: ImportFeed): Coordinate? {
         val feedTile = Coordinate(feed.feed.x, feed.feed.y)
         val belt = board.entityAt(feedTile) as? BeltEntity ?: return null
-        if (belt.material != feed.material || belt.direction != EAST) return null
-        return feedTile.east()
+        val target = board.entityAt(feedTile + belt.direction.step) as? BeltEntity ?: return null
+        // a mixed merge tile contains both feeder materials; a lane head contains its one
+        if (feed.material !in target.materials) return null
+        return target.area.topLeft
     }
 
     /**
      * The last column of the straight eastward belt run from [feed]'s source to its lane. The lane
      * itself starts behind [ImportFeed.feed] and is never part of the trim.
      */
-    private fun lastStraightEast(feed: ImportFeed): Int {
-        if (feed.feed.y != feed.row || feed.feed.x < feed.start.x) return feed.start.x - 1
+    private fun lastStraightEast(feed: ImportFeed): Int? {
+        if (feed.feed.y != feed.row || feed.feed.x < feed.start.x) return null
         for (x in feed.start.x..feed.feed.x) {
             val belt = board.entityAt(Coordinate(x, feed.row)) as? BeltEntity
             if (belt == null || belt.material != feed.material || belt.direction != EAST) {
-                return feed.start.x - 1
+                return null
             }
         }
         return feed.feed.x

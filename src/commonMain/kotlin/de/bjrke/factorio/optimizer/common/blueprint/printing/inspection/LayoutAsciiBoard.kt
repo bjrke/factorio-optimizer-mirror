@@ -93,7 +93,8 @@ private class AsciiCodes(entities: List<LayoutEntity>) {
         when (entity) {
             is MachineEntity -> recipeCodes.getValue(entity.recipe)
             is InserterEntity -> arrow(entity.direction)
-            is BeltEntity -> materialCodes.getValue(entity.material)
+            is BeltEntity ->
+                if (entity.load.isMixed) '~' else materialCodes.getValue(entity.material)
             is UndergroundBeltEntity -> if (entity.io == Io.INPUT) '(' else ')'
             is SplitterEntity -> '='
             is LoaderEntity -> arrow(entity.direction)
@@ -124,9 +125,9 @@ private fun materials(entities: List<LayoutEntity>): List<Material> =
     entities
         .flatMap { entity ->
             when (entity) {
-                is TransportEntity -> listOf(entity.material)
-                is MarkerEntity -> listOf(entity.signal.material)
-                else -> emptyList()
+                is TransportEntity -> entity.materials
+                is MarkerEntity -> setOf(entity.signal.material)
+                else -> emptySet()
             }
         }
         .distinct()
@@ -164,6 +165,9 @@ internal fun asciiLegend(entities: List<LayoutEntity>): String {
     }
     for (material in codes.materials()) {
         legend.append("  ${codes.materialCode(material)} = ${material.name}\n")
+    }
+    if (entities.any { it is BeltEntity && it.load.isMixed }) {
+        legend.append("  ~ = mixed belt\n")
     }
     return legend
         .append(markerLegend(entities))

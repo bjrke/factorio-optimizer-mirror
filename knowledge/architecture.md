@@ -134,10 +134,10 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | optimize | 3 |
 | blueprint | 1 |
 | blueprint.layout | 9 |
-| blueprint.layout.entity | 4 |
+| blueprint.layout.entity | 5 |
 | blueprint.layout.validation | 4 |
 | blueprint.planning | 2 |
-| blueprint.planning.plan | 4 |
+| blueprint.planning.plan | 5 |
 | blueprint.planning.row | 9 |
 | blueprint.planning.band | 5 |
 | blueprint.placing.route | 3 |
@@ -290,10 +290,20 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 - `blueprint/planning/row/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
   `Area` + `RowLanes` + machines, declared in `Row.kt`) and the bands, and owns
   the ordered `placedRows` list and the lane direction. `RowLanes` holds at most
-  `MAX_ROW_BELTS` fixed belt locations as `RowBelt` values (y, material, direction,
-  io and side), including the product. A `PlacedMachine` carries its own `production`;
-  `producerRow(material)` scans `placedRows` for the row whose `plannedRow` equals
-  `BlueprintPlan.producerOf(material)`.
+  `MAX_ROW_BELTS` fixed belt locations as `RowBelt` values (y, `LaneLoad`, direction,
+  io and side), including the product; a mixed input belt also carries its `BeltMerge`
+  (merge column, above/below, the two feeder materials and the lane direction).
+  `LaneLoad` (in `layout/entity`) is the belt's two lanes in its own left/right
+  frame: both lanes for a plain input, one material per lane for a mix, and only the
+  inserter lane for a product. `beltFor` and `placeLanes` place the lane and its T
+  merge; the merge sits outside the pair of lane rows (far north above, near north
+  below, near south above, far south below), at `row.left - 2` for an east-fed lane
+  and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the pure
+  packing budget (`packRowBelts`, `beltRowBudget`): a material that does not fit one
+  lane is never paired, only the minimum pairs needed are formed, and same-direction
+  pairs win before a cross-direction pair runs east. A `PlacedMachine` carries its own
+  `production`; `producerRow(material)` scans `placedRows` for the row whose
+  `plannedRow` equals `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
   `BandInterfacePlacer` the gap inserters.
 - `blueprint/planning/row/FluidLane.kt` — the board-free lane shape: a plain junction pipe above
@@ -334,7 +344,9 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   after `RowPlacer.placeAll()`, so the belts and inserters a shaft buries itself
   under already stand (see `decisions.md`, 2026-10-26).
 - `blueprint/placing/routing/ImportTrimmer.kt` — moves every import marker to one common column and
-  removes the straight belt prefix in front of it (`lastStraightEast`). A **fluid**
+  removes the straight belt prefix in front of it (`lastStraightEast`). Only a
+  straight run decides the column; a mixed feed that turns before its merge stays
+  inline instead of dragging every marker west. A **fluid**
   lane marker moves into that same column; `blueprint/placing/routing/FluidFeedLinker.kt` joins its
   lane head with pipe-to-ground runs along the lane row (`FluidFeed` in
   `blueprint/planning/plan/ImportExtension.kt`). Without solid imports the column is the westmost
@@ -361,11 +373,13 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   their connector width/offset, and the chest circuit wires.
 - `blueprint/placing/routing/DeliveryRouter.kt` — routes the solid imports first and the produced
   deliveries afterwards, and places the target's output connector;
-  `DeliveryPreparation` reserves the sinks and sources (imports first),
-  `SplitDeliveryRouter` inserts the branch splitters, `DeliveryNetworks` remembers
-  the produced trunks and `BeltRouteRules` is the belt-tile predicate shared by
-  both routes. `blueprint/placing/routing/FluidFeedLinker.kt` links a trimmed fluid marker to its
-  lane head.
+  `DeliveryPreparation` reserves the sinks and sources (imports first); a mixed
+  input belt contributes two sinks (its straight feeder and its U-turn feeder) and
+  pins the merge group. `SplitDeliveryRouter` inserts the branch splitters,
+  `DeliveryNetworks` remembers the produced trunks and `BeltRouteRules` is the
+  belt-tile predicate shared by both routes; it never side-loads a mixed or
+  half-lane belt. `blueprint/placing/routing/FluidFeedLinker.kt` links a trimmed
+  fluid marker to its lane head.
 - `RowLayout` keeps the ordered `build()` pipeline (idempotent, so `blueprint()`
   and `layoutDump()` can share one instance); the `RowPlacer`,
   `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and `CompactionPass` stages own
@@ -407,9 +421,12 @@ best remaining seed, retries links after every growth, tries one bounded swap,
 and merges groups that meet. It returns each finished group's already arranged
 `BandPlan`, so `DirectFeed.build` does not arrange a group a second time. Growth
 may pass through an over-belt group so an added producer can internalize an
-ingredient, but the finished group must fit `MAX_ROW_BELTS = 4`
-(`bandBeltMaterials`); otherwise the seed is dropped, its links return to the
-pool and another seed is tried. `BandSearch.kt` arranges a group into the
+ingredient, but the finished group must fit `MAX_ROW_BELTS = 4` belt rows
+(`bandBeltFits(plan)` over `beltRowBudget`); a material that does not fit one lane
+is never paired, and a group whose arranged machines still need more rows is
+dropped, its links return to the pool and another seed is tried.
+`bandBeltMayFit`/`bandBeltRows` are the capacity-blind pre-filter and ranking used
+during growth, while `bandBeltFits(plan)` reads the arranged machine rates. `BandSearch.kt` arranges a group into the
 shortest window that satisfies the **plan rates**:
 `groupNeeds` starts from each terminal production's `amount * scale` and
 propagates fractional needs upstream, and `FeedWindow` distributes each link's
@@ -455,9 +472,12 @@ geometry and `pitfalls.md` for the wire and pole traps.
 
 The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintImportTest`, `BlueprintFluidLayoutTest`, `BlueprintBandTest`,
-`BlueprintBandFluidTest`, `BlueprintBeltEndTest`); `BlueprintLayoutSnapshotTest`
-hashes the canonical entity/wire list of representative plans, so any geometry or
-entity-order change is deliberate. The JVM integration suite is split by plan, layout, power, fluid,
+`BlueprintBandFluidTest`, `BlueprintBeltEndTest`); `LaneLoadTest`, `BeltRowsTest`,
+`BeltRowLimitTest` and the `aSixInputRowMixesThreeInputPairs` /
+`producedInputsPairOnBothFeedSides` cases pin the mixed-belt budget and merge;
+`BlueprintLayoutSnapshotTest` hashes the canonical entity/wire list of
+representative plans, including `wideLayoutIsStable`'s six-input row, so any
+geometry or entity-order change is deliberate. The JVM integration suite is split by plan, layout, power, fluid,
 belt end and serialization. `./gradlew check` runs Detekt (see `conventions.md`):
 the type-resolved `detektMainJvm`/`detektTestJvm` plus the light
 `detektJsMainSourceSet`/`detektJsTestSourceSet`; there are no committed

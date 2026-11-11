@@ -7,9 +7,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltRowBudget
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoDanglingInserter
@@ -21,7 +23,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunn
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -34,6 +35,7 @@ import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Layout invariants on the real prototype dump: overlap, belts, tunnels and compaction. */
@@ -284,9 +286,8 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
-     * The engine/pipe/gear band fits four solid lanes because the gear producer is internalized and
-     * shares the pipe's iron plate; the electric engine itself stays a belted row, so its product
-     * keeps a lane instead of falling off the band.
+     * The electric engine now joins the engine/pipe band: its five solid materials need one mixed
+     * input belt, so the product still keeps its own lane instead of falling off the band.
      */
     @Test
     fun theElectricEngineBandKeepsItsProductOnABelt() {
@@ -299,36 +300,39 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             {
                 assertEquals(
-                    setOf("engine-unit", "pipe", "iron-gear-wheel"),
+                    setOf("electric-engine-unit", "engine-unit", "pipe"),
                     engineBand.machines.map { it.recipe.name }.toSet(),
                 )
             },
             {
                 bands.forEach { band ->
-                    val solids = band.solidBeltMaterials(layout.logistics)
+                    val internal = band.links.map { it.material }.toSet()
+                    val inputs = rowInputs(band.machines, layout.logistics).minus(internal)
+                    val outputs = rowOutputs(band.machines, layout.logistics).minus(internal)
+                    val budget = beltRowBudget(inputs, outputs, layout.logistics.oneLaneCapacity())
                     assertTrue(
-                        solids.size <= MAX_ROW_BELTS,
-                        "band still needs ${solids.size} solid lanes: $solids",
+                        budget.fits && budget.rows <= MAX_ROW_BELTS,
+                        "band needs ${budget.rows} solid rows: $inputs + $outputs",
                     )
                 }
             },
             { assertContains(layout.plan.beltMaterials, electricEngineUnit) },
             { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
     }
 
-    /**
-     * The solid materials a row must move on belts, less the ones it inserts machine to machine.
-     */
-    private fun PlannedRow.solidBeltMaterials(logistics: LogisticsCalculator): Set<Material> {
-        val internal = links.map { it.material }.toSet()
-        return machines
-            .flatMap { production ->
-                production.recipe.ingredients.keys + production.recipe.result.keys
-            }
-            .filterNot { logistics.isFluid(it) }
-            .filterNot { it in internal }
-            .toSet()
+    @Test
+    fun aFiveInputRealRecipeUsesAMixedBelt() {
+        val layout = Layout(target = "oil-refinery")
+        val mixed = layout.entities.filterIsInstance<BeltEntity>().filter { it.load.isMixed }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertNotNull(mixed.firstOrNull(), "no mixed belt") },
+            { assertEquals(emptyList(), mixed.filterNot { it.load.materials.size == 2 }) },
+        )
     }
 
     /**

@@ -35,11 +35,15 @@ sealed interface LayoutEntity {
 
 /**
  * Everything the layout moves material with: items on belts, inserters and loaders, fluids in
- * pipes. Each carries exactly the one [material] it handles, so a higher layer can tell what is on
- * a tile (and whether two feed materials would merge).
+ * pipes. Each carries the [material] it handles; a belt may carry two, one per lane, so a higher
+ * layer reads [materials] instead of assuming a single one.
  */
 sealed interface TransportEntity : LayoutEntity {
     val material: Material
+
+    /** Every material the entity can carry. A single-lane entity has exactly one. */
+    val materials: Set<Material>
+        get() = setOf(material)
 }
 
 /** A belt, underground belt or splitter: a transport entity that faces a [direction]. */

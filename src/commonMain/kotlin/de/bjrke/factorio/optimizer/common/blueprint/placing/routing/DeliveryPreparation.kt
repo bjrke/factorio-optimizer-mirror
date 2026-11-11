@@ -91,11 +91,35 @@ internal class DeliveryPreparation(
             Sink(Coordinate(row.left, belt.y), Coordinate(row.left - 1, belt.y), EAST)
         else Sink(Coordinate(row.right, belt.y), Coordinate(row.right + 1, belt.y), WEST)
 
+    /**
+     * One input belt has one sink; a mixed belt has two, one on each side of its T merge. The
+     * straight feeder enters from the lane's source side, the U-turn feeder from the other side.
+     */
+    private fun sinksOf(row: Row, belt: RowBelt): List<Pair<Material, Sink>> {
+        val merge = belt.merge ?: return listOf(belt.material to sinkOf(row, belt))
+        val mergeRow = merge.mergeRow(belt.y)
+        val turnRow = merge.turnRow(belt.y)
+        val straightFeed =
+            if (belt.direction == EAST) Coordinate(merge.column - 1, mergeRow)
+            else Coordinate(merge.column + 1, mergeRow)
+        val straightTarget = Coordinate(merge.column, mergeRow)
+        val straightDirection = if (belt.direction == EAST) EAST else WEST
+        val turnFeed = Coordinate(merge.column, turnRow)
+        val turnTarget = Coordinate(merge.turnColumn, turnRow)
+        return listOf(
+            merge.straightMaterial to Sink(straightTarget, straightFeed, straightDirection),
+            merge.turnMaterial to Sink(turnTarget, turnFeed, straightDirection),
+        )
+    }
+
     private fun allSolidSinks() =
         rowPlacer.placedRows.flatMap { row ->
             row.belts
                 .filter { it.io == Io.INPUT }
-                .map { belt -> Triple(belt.material, row, sinkOf(row, belt)) }
+                .flatMap { belt ->
+                    belt.merge?.let { pinMerge(imports, belt) }
+                    sinksOf(row, belt).map { (material, sink) -> Triple(material, row, sink) }
+                }
         }
 
     /**
@@ -179,4 +203,13 @@ internal class DeliveryPreparation(
 
     private fun reserve(coordinate: Coordinate, material: Material) =
         board.reserve(coordinate, material)
+}
+
+/** The merge group the trimmer and compaction must keep together. */
+private fun pinMerge(imports: ImportExtension, belt: RowBelt) {
+    val merge = belt.merge ?: return
+    imports.pinnedImportTiles += Coordinate(merge.column, belt.y)
+    imports.pinnedImportTiles += Coordinate(merge.column, merge.mergeRow(belt.y))
+    imports.pinnedImportTiles += Coordinate(merge.turnColumn, merge.turnRow(belt.y))
+    imports.pinnedImportTiles += Coordinate(merge.turnColumn, merge.mergeRow(belt.y))
 }

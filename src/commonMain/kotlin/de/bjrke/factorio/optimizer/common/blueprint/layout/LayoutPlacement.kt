@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEn
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
@@ -21,13 +22,22 @@ import de.bjrke.factorio.optimizer.common.core.model.area
 // live in one place rather than at every call site. They are board extensions so the kernel keeps
 // only the grid and reservation primitives.
 
-/** Places a belt (always one tile) carrying [material] and facing [direction]. */
+/** Places a belt (always one tile) carrying [material] on both lanes and facing [direction]. */
 internal fun LayoutBoard.placeBelt(
     coordinate: Coordinate,
     material: Material,
     direction: Direction,
 ) {
-    place(BeltEntity(coordinate.area(), names.belt, material, direction))
+    placeBelt(coordinate, LaneLoad.full(material), direction)
+}
+
+/** Places a belt (always one tile) with the given [load] and facing [direction]. */
+internal fun LayoutBoard.placeBelt(
+    coordinate: Coordinate,
+    load: LaneLoad,
+    direction: Direction,
+) {
+    place(BeltEntity(coordinate.area(), names.belt, direction, load))
 }
 
 /** Places an inserter (always one tile) of the selected tier, long when [long]. */

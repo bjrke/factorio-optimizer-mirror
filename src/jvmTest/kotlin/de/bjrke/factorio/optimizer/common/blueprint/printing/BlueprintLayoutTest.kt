@@ -10,6 +10,10 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltRowBudget
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
@@ -40,8 +44,10 @@ import de.bjrke.factorio.optimizer.common.fixtures.stoneBrick
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.fixtures.wood
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -480,5 +486,126 @@ class BlueprintLayoutTest {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
+    }
+
+    @Test
+    fun aSixInputRowMixesThreeInputPairs() {
+        val inputs = (1..6).map { Material("input-$it") }
+        val output = Material("output")
+        val recipe =
+            Recipe(
+                name = "six-inputs",
+                ingredients = inputs.associateWith { 1.0 },
+                result = mapOf(output to 1.0),
+                time = 10.0,
+                categories = setOf(Category.CRAFTING),
+            )
+        val production = planned(recipe, Factory.ASSEMBLING_MACHINE_3)
+        val plan =
+            BlueprintPlan(
+                target = output,
+                rows = listOf(PlannedRow.copies(production, 1)),
+                sources = inputs.map { PlannedSource(it, 1.0, fluid = false) },
+                label = "six-inputs",
+            )
+        val layout = Layout(plan)
+        val belts = layout.entities.filterIsInstance<BeltEntity>()
+        val mixed = belts.filter { it.load.isMixed }
+        val laneRows = mixed.filter { it.area.topLeft.x >= 40 }.map { it.area.topLeft.y }.distinct()
+        val product = belts.filter { it.material == output }
+        val carried = belts.flatMap { it.materials }.toSet()
+        val budget =
+            beltRowBudget(
+                rowInputs(listOf(production), layout.logistics),
+                rowOutputs(listOf(production), layout.logistics),
+                layout.logistics.oneLaneCapacity(),
+            )
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertEquals(3, laneRows.size) },
+            { assertEquals(emptyList(), mixed.filterNot { it.load.materials.size == 2 }) },
+            { assertNotNull(product.firstOrNull(), "no product belt") },
+            { assertEquals(emptyList(), product.filter { it.load.isFull }) },
+            { assertEquals(emptyList(), inputs.filterNot { it in carried }) },
+            { assertTrue(budget.fits) },
+            { assertEquals(4, budget.rows) },
+        )
+    }
+
+    @Test
+    fun producedInputsPairOnBothFeedSides() {
+        val ore = Material("ore")
+        val parts = (1..5).map { Material("part-$it") }
+        val product = Material("product")
+        val producerRows = parts.mapIndexed { index, part ->
+            val recipe =
+                Recipe(
+                    name = "producer-${index + 1}",
+                    ingredients = mapOf(ore to 1.0),
+                    result = mapOf(part to 1.0),
+                    time = 10.0,
+                    categories = setOf(Category.CRAFTING),
+                )
+            PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), index + 1)
+        }
+        val consumerRecipe =
+            Recipe(
+                name = "consumer",
+                ingredients = parts.associateWith { 1.0 },
+                result = mapOf(product to 1.0),
+                time = 10.0,
+                categories = setOf(Category.CRAFTING),
+            )
+        val plan =
+            BlueprintPlan(
+                target = product,
+                rows =
+                    producerRows +
+                        PlannedRow.copies(
+                            planned(consumerRecipe, Factory.ASSEMBLING_MACHINE_3),
+                            1,
+                        ),
+                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                label = "consumer",
+            )
+
+        val layout = Layout(plan)
+        val mixed = layout.entities.filterIsInstance<BeltEntity>().filter { it.load.isMixed }
+        val lanes = mixed.filter { it.direction == EAST || it.direction == WEST }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertEquals(setOf(EAST, WEST), lanes.map { it.direction }.toSet()) },
+            { assertEquals(emptyList(), mixed.filterNot { it.load.materials.size == 2 }) },
+        )
+    }
+
+    @Test
+    fun aRowThatCannotFitReportsTheMissingMaterials() {
+        val inputs = (1..7).map { Material("input-$it") }
+        val output = Material("output")
+        val recipe =
+            Recipe(
+                name = "seven-inputs",
+                ingredients = inputs.associateWith { 1.0 },
+                result = mapOf(output to 1.0),
+                time = 10.0,
+                categories = setOf(Category.CRAFTING),
+            )
+        val production = planned(recipe, Factory.ASSEMBLING_MACHINE_3)
+        val layout =
+            Layout(
+                BlueprintPlan(
+                    target = output,
+                    rows = listOf(PlannedRow.copies(production, 1)),
+                    sources = inputs.map { PlannedSource(it, 1.0, fluid = false) },
+                    label = "seven-inputs",
+                ),
+            )
+
+        assertNotNull(layout.failures.firstOrNull(), "a row that cannot fit must report it")
     }
 }

@@ -128,7 +128,7 @@ internal class DeliveryRouter(
         var coordinate = Coordinate(row.right + 1, outputBelt.y)
 
         while (coordinate.x <= row.right + OUTPUT_BELT_LEAD && board.isFree(coordinate)) {
-            board.placeBelt(coordinate, targetMaterial, EAST)
+            board.placeBelt(coordinate, outputBelt.load, EAST)
             coordinate = coordinate.east()
         }
         val fits = (0 until connector.width).all { board.isFree(coordinate.east(it)) }

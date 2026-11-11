@@ -67,7 +67,7 @@ internal class RowLayout(
 
     private val planner = RowPlanner(plan, logistics)
 
-    private val rowPlacer = RowPlacer(board, plan, logistics, planner)
+    private val rowPlacer = RowPlacer(board, plan, logistics, planner, failures)
 
     private val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, router)
 

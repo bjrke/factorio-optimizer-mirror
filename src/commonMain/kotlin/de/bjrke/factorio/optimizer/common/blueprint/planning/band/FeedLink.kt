@@ -52,7 +52,7 @@ internal data class FeedLink(
                 ),
                 ctx.logistics.beltStack,
             )
-        val beltRequirement = ctx.bandBeltMaterials(listOf(this)).size
+        val beltRequirement = ctx.bandBeltRows(listOf(this))
 
         val solidInputs = producer.recipe.ingredients.filterKeys { !ctx.logistics.isFluid(it) }
         val bulkGain =

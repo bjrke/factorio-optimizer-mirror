@@ -140,7 +140,7 @@ private class RunGrowth(
             is BeltEntity ->
                 !fluid &&
                     tile !in protected &&
-                    entity.material == material &&
+                    entity.materials == setOf(material) &&
                     entity.direction == direction
             // a pipe is only swallowable when it is a straight pass-through of the same fluid;
             // a machine port or a corner must stay a surface tile, or the run would end on it

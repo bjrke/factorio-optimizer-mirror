@@ -8,9 +8,11 @@ import kotlin.math.ceil
 internal const val MAX_COPIES = 9
 
 /**
- * The solid belts one row can place: two above and two below its machines. A band that would need
- * more is not grouped; the row can place fewer, so the product would silently lose its lane. Must
- * match the belt locations `RowPlacer.FixedBeltLocation` offers.
+ * The solid belt rows one row can place: two above and two below its machines. A mixed input belt
+ * carries two materials, one per lane, so a row can feed up to six imported inputs plus its
+ * product. The row planner pairs only as many inputs as are needed to get back to this limit; a row
+ * that still needs more rows reports a failure instead of losing a lane. Must match the belt
+ * locations `RowPlacer.FixedBeltLocation` offers.
  */
 internal const val MAX_ROW_BELTS = 4
 

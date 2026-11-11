@@ -10,7 +10,24 @@ data class BeltEntity(
     override val name: String,
     override val material: Material,
     override val direction: Direction,
+    /** The two lanes; [material] is one of them, the primary the entity is labelled with. */
+    val load: LaneLoad = LaneLoad.full(material),
 ) : BeltLikeEntity {
+
+    init {
+        require(material in load.materials) { "primary $material is not on the belt $load" }
+    }
+
+    constructor(
+        area: Area,
+        name: String,
+        direction: Direction,
+        load: LaneLoad,
+    ) : this(area, name, load.material, direction, load)
+
+    override val materials: Set<Material>
+        get() = load.materials
+
     override fun withArea(area: Area) = copy(area = area)
 }
 

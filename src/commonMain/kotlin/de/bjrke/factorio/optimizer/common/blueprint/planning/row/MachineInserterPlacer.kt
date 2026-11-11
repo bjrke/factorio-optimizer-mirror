@@ -80,7 +80,9 @@ internal class MachineInserterPlacer(
 
         val inserterRow = row.inserterRow(side)
 
-        val amounts =
+        // A mixed belt may carry two inputs this machine uses; the inserter count is sized by
+        // their combined flow, and the inserter is labelled with the material it mostly moves.
+        val usedByBelt =
             row.belts
                 .filter { it.side == side }
                 .associateWith { belt ->
@@ -89,12 +91,16 @@ internal class MachineInserterPlacer(
                             Io.INPUT -> ingredients
                             Io.OUTPUT -> results
                         }
-                    planner.insertersFor(
-                        production,
-                        belt.io,
-                        recipesMaterials[belt.material] ?: 0.0,
-                    )
+                    belt.materials.mapNotNull { material ->
+                        recipesMaterials[material]?.let { material to it }
+                    }
                 }
+        val amounts = usedByBelt.mapValues { (belt, used) ->
+            planner.insertersFor(production, belt.io, used.sumOf { it.second })
+        }
+        val materialByBelt = usedByBelt.mapValues { (belt, used) ->
+            used.maxByOrNull { it.second }?.first ?: belt.material
+        }
 
         val pattern = planner.inserterPattern(amounts, freeColumns.size)
 
@@ -110,7 +116,7 @@ internal class MachineInserterPlacer(
             board.placeInserter(
                 coordinate,
                 ioDirection,
-                belt.material,
+                materialByBelt.getValue(belt),
                 long,
             )
         }

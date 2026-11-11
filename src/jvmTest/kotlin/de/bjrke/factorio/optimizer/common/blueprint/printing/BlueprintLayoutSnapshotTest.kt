@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -17,7 +18,9 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -50,6 +53,8 @@ class BlueprintLayoutSnapshotTest {
             )
         Layout(plan).assertSignature("749bb1b2462f902c")
     }
+
+    @Test fun wideLayoutIsStable() = Layout(sixInputPlan()).assertSignature("75054a3c2b32bafc")
 
     @Test
     fun bandLayoutIsStable() {
@@ -97,4 +102,24 @@ class BlueprintLayoutSnapshotTest {
         blueprint.entities.forEach { append(it).append('\n') }
         blueprint.wires.forEach { append(it).append('\n') }
     }
+}
+
+/** A six-input row: three mixed belts plus the product. */
+private fun sixInputPlan(): BlueprintPlan {
+    val inputs = (1..6).map { Material("input-$it") }
+    val output = Material("output")
+    val recipe =
+        Recipe(
+            name = "six-inputs",
+            ingredients = inputs.associateWith { 1.0 },
+            result = mapOf(output to 1.0),
+            time = 10.0,
+            categories = setOf(Category.CRAFTING),
+        )
+    return BlueprintPlan(
+        target = output,
+        rows = listOf(PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), 1)),
+        sources = inputs.map { PlannedSource(it, 1.0, fluid = false) },
+        label = "six-inputs",
+    )
 }
