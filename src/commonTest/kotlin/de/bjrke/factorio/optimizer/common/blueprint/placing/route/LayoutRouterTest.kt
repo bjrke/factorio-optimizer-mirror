@@ -15,8 +15,17 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class LayoutRouterTest {
+
+    private fun board() =
+        LayoutBoard(
+            LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
+            undergroundRange = 4,
+            fluidPredicate = { false },
+            temperatureOf = { 0 },
+        )
 
     /**
      * The belt beside the goal faces the goal, not the direction it arrived from. A foreign belt
@@ -25,13 +34,7 @@ class LayoutRouterTest {
      */
     @Test
     fun theTileBesideTheGoalFacesTheGoalNotTheArrival() {
-        val board =
-            LayoutBoard(
-                LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
-                undergroundRange = 4,
-                fluidPredicate = { false },
-                temperatureOf = { 0 },
-            )
+        val board = board()
         board.placeBelt(Coordinate(3, 3), copperPlate, EAST)
         val sink = Sink(Coordinate(1, 2), Coordinate(2, 2), WEST)
 
@@ -48,6 +51,45 @@ class LayoutRouterTest {
             listOf(Coordinate(3, 1), Coordinate(3, 2), Coordinate(2, 2)),
             route,
         )
+    }
+
+    /**
+     * A corner belt also faces the tile it turns into, not the one the route arrived from. A
+     * foreign belt below the corner must not read as a side-load, or the route jogs two extra tiles
+     * around a turn it can take; the reported logistic-science layout had that jog before its
+     * circuit feed.
+     */
+    @Test
+    fun aCornerMayTurnOverAForeignBeltItDoesNotFeed() {
+        val board = board()
+        board.placeBelt(Coordinate(5, 3), copperPlate, EAST)
+        val sink = Sink(Coordinate(2, 2), Coordinate(3, 2), WEST)
+
+        val route =
+            LayoutRouter(board)
+                .findRoute(
+                    Coordinate(5, 0),
+                    SOUTH,
+                    sink.feed,
+                    BeltRouteRules(board).allowed(ironPlate, sink),
+                )
+
+        assertEquals(
+            listOf(Coordinate(5, 1), Coordinate(5, 2), Coordinate(4, 2), Coordinate(3, 2)),
+            route,
+        )
+    }
+
+    /**
+     * A bend is its own belt piece, so it costs more than a straight tile: a route pays one extra
+     * tile rather than one extra bend. Together with the tunnel entry this keeps the reported
+     * logistic-science gear belt out of the tunnels it would otherwise need.
+     */
+    @Test
+    fun aBeltTurnCostsMoreThanAStraightTile() {
+        val costs = LayoutRouter(board()).beltProfile.costs
+
+        assertTrue(costs.turnCost > costs.surfaceCost)
     }
 
     /**

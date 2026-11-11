@@ -7,6 +7,30 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-11 — A belt bend costs more than a straight tile, a tunnel more than a detour
+
+**Decision.** Belt routes price a turn above one straight tile (`turnCost = 6` against
+`surfaceCost = 4`) and a tunnel entry at seven surface tiles (`tunnelEntry = 28`). A route runs
+straight and rounds the end of a belt row instead of diving under it; a crossing no detour can avoid
+still tunnels. The reported logistic-science gear belt no longer tunnels under the plate rows (it
+rounds them), so the circuit trunk is the layout's only route tunnel and the layout is 21x47. The
+reported rocket-silo URL drops nine underground runs in exchange for surface belts (50x113 instead of
+47x116).
+
+**Guardrail.** Keep `RouteCosts.turnCost > RouteCosts.surfaceCost`; do not move the tunnel entry
+without re-pinning the reported layouts, because the gear belt and the rocket-silo layout sit within
+a few tiles of the threshold. A belt tile faces the tile it turns into, so a route predicate must
+not judge the arrival direction: the side-load rule asks only whether a tile is free and not poured
+into. The reserved-feed approach rule still reads the arrival direction, because the
+advanced-circuit layout depends on it. Evidence:
+`LayoutRouterTest.aBeltTurnCostsMoreThanAStraightTile`,
+`LayoutRouterTest.aCornerMayTurnOverAForeignBeltItDoesNotFeed`,
+`theReportedLogisticScienceUrlCompactsBothCorners`, `theReportedRocketSiloUrlCompacts`,
+`advancedCircuitUrlOnlyTunnelsForItsBandedFeeds`.
+
+**See.** `blueprint/placing/route/LayoutRouter.kt`,
+`blueprint/placing/routing/BeltRouteRules.kt`; `pitfalls.md` §Layout and fluids.
+
 ## 2026-11-11 — A belt route is a simple path and keeps its feed approach clear
 
 **Decision.** `PathPlacer` refuses a belt path that uses one tile twice (`pathConflicts`) and

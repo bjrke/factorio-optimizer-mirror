@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.endName
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
@@ -117,23 +118,35 @@ private class RunGrowth(
 
     /**
      * How far the end at [start] can grow in [step], at most [budget] tiles: every swallowed tile
-     * must be [swallowable], it must leave something for the new end to join beyond it (never
+     * must be [swallowable], a same-material belt must still face into the run beyond it (never
      * another underground end of a belt), and the tile that becomes part of the run must not
      * already carry a tunnel of the same [type] on the same axis.
      */
     private fun length(start: Coordinate, step: Coordinate): Int {
         var count = 0
-        while (count < budget) {
-            val next = start + step * (count + 1)
-            val beyond = board.entityAt(next + step)
-            if (!swallowable(next) || beyond == null) break
-            // a belt exit/entrance joins a surface belt, not the next run's underground end
-            if (!fluid && beyond is UndergroundBeltEntity) break
-            if (board.hasTunnel(start + step * count, step, type)) break
-            count++
-        }
+        while (count < budget && growsOne(start, step, count)) count++
         return count
     }
+
+    /** Whether the run may swallow the tile [count] steps past [start]. */
+    private fun growsOne(start: Coordinate, step: Coordinate, count: Int): Boolean {
+        val next = start + step * (count + 1)
+        val beyond = board.entityAt(next + step) ?: return false
+        if (!swallowable(next)) return false
+        // a belt exit/entrance joins a surface belt, not the next run's underground end
+        if (!fluid && beyond is UndergroundBeltEntity) return false
+        // the new end must still join a belt of its own material: the feed behind a moved
+        // entrance and the lane in front of a moved exit both face into the run
+        if (!fluid && !continues(beyond)) return false
+        return !board.hasTunnel(start + step * count, step, type)
+    }
+
+    /** Whether a belt past [tile] carries the run's material and faces into it. */
+    private fun continues(tile: LayoutEntity): Boolean =
+        tile is BeltEntity &&
+            tile.materials == setOf(material) &&
+            tile.load.isFull &&
+            tile.direction == direction
 
     private fun swallowable(tile: Coordinate) =
         when (val entity = board.entityAt(tile)) {

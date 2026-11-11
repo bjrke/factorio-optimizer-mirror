@@ -108,11 +108,24 @@ An entry belongs here only with evidence, and should say how to recognize it.
   planned, its extra row also forces the electronic-circuit feed to tunnel; on a plan
   without that row the lane tail beside the machines blocks the straight column and
   the router turns east one column and comes back on the surface.
-  Two things make that work: the tile beside the goal must be judged by the direction
-  **into** the goal, not by the direction it arrived from (a corner belt faces its next
-  tile), and the belt tunnel entry costs 16 (four surface tiles), so a short detour wins
-  over an unnecessary tunnel. Line breaking a band too wide is a deferred follow-up, not
+  The route costs make that work: a bend costs more than a straight tile (`turnCost = 6`
+  against `surfaceCost = 4`) and a tunnel entry costs seven surface tiles
+  (`tunnelEntry = 28`), so a route runs straight, rounds the end of a belt row instead
+  of diving under it, and still tunnels a long crossing. The reported
+  logistic-science gear belt used to dive under both plate rows and the circuit row
+  (two tunnels); with those costs it rounds the plate rows and the circuit trunk is the
+  only route tunnel left. Line breaking a band too wide is a deferred follow-up, not
   a bug in the router.
+- **A belt tile faces the tile it turns into, so a route must not judge its arrival
+  direction.** `BeltRouteRules` used to reject a tile that would side-load a foreign
+  belt in the direction it arrived from; at a corner that is not the belt's facing, so
+  the reported logistic-science circuit feed jogged two tiles (and turned twice) at the
+  row edge before its feed, because a belt of the next row sat under the arrival
+  direction. A route only uses free tiles and its belt faces the next route tile, so
+  that side-load check never fires correctly; it is gone (keep
+  `aCornerMayTurnOverAForeignBeltItDoesNotFeed`). The reserved-feed approach check in
+  the same class still reads the arrival direction: the advanced-circuit layout needs
+  it to tunnel its circuit feed, so do not "fix" it without re-pinning that layout.
 - **Recipe cycles are excluded by the optimizer, not by `buildable`.**
   `game/prototype/RecipePolicy.kt` lists `fish-breeding`, `nutrients-from-fish` and
   `kovarex-enrichment-process` in `unplannedRecipes` and discards them even when one produces the
@@ -196,6 +209,16 @@ An entry belongs here only with evidence, and should say how to recognize it.
   corridor's far or near edge and the shift lands the lane next to the feeder.
   Evidence: `aCornerBeltIsDroppedAndItsFeederSideLoadsTheLane`,
   `theReportedLogisticScienceUrlCompactsBothCorners`.
+- **A grown underground run must leave a belt of its own material beyond the tile it swallows.**
+  `UndergroundStretcher.RunGrowth` grows a run by swallowing plain same-material belts, so a moved
+  entrance is fed by the belt past the swallowed one and a moved exit pours into the lane past it.
+  Checking only that *something* stands there is not enough: the reported rocket-silo layout let a
+  copper-cable run swallow the corner belt of its split branch, and the entrance slid onto a tile
+  whose east neighbor was a concrete belt, so `validateLayout` reported the entrance as unfed and
+  compaction stayed off. Require a same-material full belt facing into the run (`continues`); a
+  foreign belt, or no belt at all, stops the growth. Evidence:
+  `aRunDoesNotMoveItsEntranceOntoAForeignFeed`,
+  `aRunDoesNotGrowItsExitIntoAForeignLane`, `theReportedRocketSiloUrlCompacts`.
 - **A buried entrance does not feed the tile it faces.** `validateMaterials`
   treated every conveyor as feeding the tile ahead, so an underground belt input
   looked like it side-loaded a belt standing above its tunnel span. In the reported

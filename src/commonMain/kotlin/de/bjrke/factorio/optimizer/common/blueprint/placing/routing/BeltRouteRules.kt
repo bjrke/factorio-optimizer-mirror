@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
@@ -10,8 +9,12 @@ import de.bjrke.factorio.optimizer.common.core.model.directionBetween
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 
 /**
- * What a belt route may do: stay off foreign belts, leave every other sink's feed clear, and avoid
- * [blocked] tiles (the splitter a branch starts from must not be routed over).
+ * What a belt route may do: stay off foreign belts, leave another feed's approach tile clear, avoid
+ * [blocked] tiles (the splitter a branch starts from must not be routed over), and not take a tile
+ * another belt already pours into. A route's belt faces the next route tile, which is free by
+ * [routable], so a tile it may use never side-loads a foreign belt; judging that by the arrival
+ * direction wrongly rejected corners
+ * (`LayoutRouterTest.aCornerMayTurnOverAForeignBeltItDoesNotFeed`).
  */
 internal class BeltRouteRules(private val board: LayoutBoard) {
 
@@ -26,7 +29,6 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
         (routable(coordinate, material) || goal) &&
             coordinate !in blocked &&
             !sideLoaded(coordinate) &&
-            (goal || !poursIntoSide(coordinate, facing, material)) &&
             !facesReservedFeed(coordinate, facing, sink.feed, material)
     }
 
@@ -37,26 +39,13 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
             belt != null && belt.direction == directionBetween(neighbor, coordinate)
         }
 
-    /** True when a belt at [coordinate] leaving in [direction] would side-load a foreign belt. */
-    private fun poursIntoSide(
-        coordinate: Coordinate,
-        direction: Direction,
-        material: Material,
-    ): Boolean {
-        val belt = board.entityAt(coordinate + direction.step) as? ConveyorEntity ?: return false
-        return !belt.isRouteMaterial(material) &&
-            belt.direction != direction &&
-            belt.direction != direction.opposite()
-    }
-
-    /** A route carries one material on both lanes; a mixed or half belt would merge a lane. */
-    private fun ConveyorEntity.isRouteMaterial(material: Material) =
-        materials == setOf(material) && (this as? BeltEntity)?.load?.isFull != false
-
     /**
      * True when a belt at [coordinate] leaving in [direction] would run straight at a reserved feed
      * tile or at another feed's approach tile. That feed would later be entered from there, so the
-     * belt would either block it or side-load a foreign material into the lane.
+     * belt would either block it or side-load a foreign material into the lane. Unlike the
+     * side-load rule above this check keeps reading the arrival direction; the reported
+     * advanced-circuit layout relies on that to tunnel its circuit feed
+     * (`advancedCircuitUrlOnlyTunnelsForItsBandedFeeds`).
      */
     private fun facesReservedFeed(
         coordinate: Coordinate,

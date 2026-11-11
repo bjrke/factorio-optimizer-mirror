@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
@@ -26,12 +27,14 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFrom
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
+import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -257,7 +260,11 @@ class BlueprintLayoutIntegrationTest {
     /**
      * The reported logistic-science layout kept one free row at each corner where a feeder turns
      * into a lane: compaction treated the corner belt as a wall, so the layout stayed 21x50. The
-     * corner can be dropped and the feeder side-loads the lane that moved up, giving 21x48.
+     * corner can be dropped and the feeder side-loads the lane that moved up.
+     *
+     * A belt turns at its corner, not at the tile the route arrives from, so the electronic-circuit
+     * trunk reaches the inserter band in one turn. The gear belt then goes around the plate rows
+     * instead of tunneling under them, and its only tunnel left is the circuit trunk's crossing.
      */
     @Test
     fun theReportedLogisticScienceUrlCompactsBothCorners() {
@@ -267,12 +274,28 @@ class BlueprintLayoutIntegrationTest {
             entities.maxOf { it.area.bottomRight.x } - entities.minOf { it.area.topLeft.x } + 1
         val height =
             entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+        val circuitCorners = corners(entities, electronicCircuit)
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
             { assertTrue(width <= 21, "layout is still $width tiles wide") },
-            { assertTrue(height <= 48, "layout is still $height rows tall") },
+            { assertTrue(height <= 47, "layout is still $height rows tall") },
+            {
+                assertEquals(
+                    2,
+                    circuitCorners.size,
+                    "the circuit feed turns only at its trunk and at its lane: $circuitCorners",
+                )
+            },
+            {
+                assertEquals(
+                    setOf(electronicCircuit, transportBelt),
+                    routeTunnels(entities).map { it.material }.toSet(),
+                    "the gear belt may go around the plate rows, but every route tunnel left is " +
+                        "still a crossing",
+                )
+            },
         )
     }
 
@@ -329,20 +352,12 @@ class BlueprintLayoutIntegrationTest {
     fun advancedCircuitUrlOnlyTunnelsForItsBandedFeeds() {
         val layout = layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
 
-        // the import connectors are fixed marker pairs; only route tunnels are checked here
-        val routeTunnels =
-            layout.entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
-                layout.entities.none {
-                    it is MarkerEntity && it.area.topLeft.manhattanDist(tunnel.area.topLeft) == 1
-                }
-            }
-
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
                     setOf(copperCable, electronicCircuit),
-                    routeTunnels.map { it.material }.toSet(),
+                    routeTunnels(layout.entities).map { it.material }.toSet(),
                     "only the band's feeds may need an underground belt",
                 )
             },
@@ -549,4 +564,30 @@ class BlueprintLayoutIntegrationTest {
             "the plan imports a material it builds",
         )
     }
+
+    /**
+     * The belt tiles of [material] that a belt of another direction pours into: the side-loads that
+     * make a route turn. A corner faces the tile it turns into, so its feeder lies on another axis.
+     */
+    private fun corners(entities: List<LayoutEntity>, material: Material): List<BeltEntity> {
+        val belts = entities.filterIsInstance<BeltEntity>().filter { it.material == material }
+        val byTile = belts.associateBy { it.area.topLeft }
+        return belts.filter { belt ->
+            val tile = belt.area.topLeft
+            tile.neighbors.any { neighbor ->
+                val feeder = byTile[neighbor]
+                feeder != null &&
+                    feeder.direction.step == tile - neighbor &&
+                    feeder.direction != belt.direction
+            }
+        }
+    }
+
+    /** The underground belt ends of the belt routes, without the fixed import connectors. */
+    private fun routeTunnels(entities: List<LayoutEntity>) =
+        entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->
+            entities.none {
+                it is MarkerEntity && it.area.topLeft.manhattanDist(tunnel.area.topLeft) == 1
+            }
+        }
 }

@@ -283,7 +283,9 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 - `blueprint/placing/route/LayoutRouter.kt` — the belt/pipe profiles and the routing entry points;
   `blueprint/placing/route/RouteProfile.kt` groups the costs (`RouteCosts`) and tunnel rules (`TunnelRules`) with
   the `RouteRequest`, and `blueprint/placing/route/RouteSearch.kt` owns the weighted A* frontier and node
-  expansion.
+  expansion. The belt profile prices a bend above a straight tile and a tunnel entry at seven tiles
+  (`RouteCosts.turnCost`/`tunnelEntry`), so a route runs straight and rounds a belt row instead of
+  tunneling under it; a long crossing still tunnels.
 - `blueprint/placing/special/PathPlacer.kt` — `placePath` and the tile roles for plain and
   underground runs; shared by belt and pipe routes. `placePath` rejects a belt path that uses one
   tile twice (`pathConflicts`, the tiles are returned and nothing is placed) and lets the caller
@@ -293,7 +295,9 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 - `blueprint/placing/compaction/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
   end sharing. It never swallows a fluid port or a belt tile an inserter takes from
-  or drops onto, so a run cannot strand a row inserter.
+  or drops onto, so a run cannot strand a row inserter, and it only grows where a
+  same-material full belt still faces into the run past the swallowed tile, so a moved
+  entrance or exit keeps its feeder or lane.
 - `blueprint/planning/row/RowPlanner.kt` — the plan-level row order: the depth of every row
   (a DFS over `BlueprintPlan.rows` with a recipe path as the cycle guard), the
   `RowUnit(row, depth)` order and the pure sizing helpers (`inserterPattern`).

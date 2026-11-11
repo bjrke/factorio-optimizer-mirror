@@ -20,10 +20,15 @@ internal class LayoutRouter(private val board: LayoutBoard) {
         RouteProfile(
             costs =
                 RouteCosts(
+                    // a bend is its own belt piece, so a route pays more for a turn than for a
+                    // straight tile and runs straight where it can
+                    turnCost = 6,
                     undergroundCost = 3,
-                    // high enough that a short surface detour around an obstacle wins, while a long
-                    // crossing is still cheaper underground.
-                    tunnelEntry = 16,
+                    // a tunnel must save more than seven surface tiles; going around the end of a
+                    // belt row is cheaper than diving under plates it only has to cross, so the
+                    // reported logistic-science gear belt rounds them and a long crossing still
+                    // tunnels (its circuit trunk does)
+                    tunnelEntry = 28,
                     detourCost = 0,
                 ),
             tunnels =
