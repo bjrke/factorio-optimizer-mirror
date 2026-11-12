@@ -264,7 +264,13 @@ class BlueprintImportTest {
                 .filterIsInstance<MachineEntity>()
                 .single { it.recipe == "electronic-circuit" }
                 .area
-        val laneRow = machineArea.topLeft.y - 2
+        val laneRows =
+            setOf(
+                machineArea.topLeft.y - 2,
+                machineArea.topLeft.y - 3,
+                machineArea.bottomRight.y + 2,
+                machineArea.bottomRight.y + 3,
+            )
 
         // a produced lane runs west into the machine; compaction may shorten it, so take the
         // eastmost remaining lane belt rather than a fixed coordinate
@@ -272,7 +278,8 @@ class BlueprintImportTest {
             assertNotNull(
                 entities
                     .filterIsInstance<BeltEntity>()
-                    .filter { it.material == copperCable && it.area.topLeft.y == laneRow }
+                    .filter { it.material == copperCable && it.area.topLeft.y in laneRows }
+                    .filter { it.direction == EAST || it.direction == WEST }
                     .maxByOrNull { it.area.topLeft.x },
                 "no feed at the produced lane",
             )

@@ -70,9 +70,9 @@ CLI (JVM) from one shared core.
       (`MAX_COPIES`), `ImportExtension` (the import
       state the marker, trim, compaction and power stages share) and
       `LogisticsCalculator` (the layout's belt/inserter rates)); `row` — the row
-      planner (`RowPlanner`, `RowPlacer`, `Row` and the inserter/interface
-      placers) with the shared `LayoutStage`; `band` — the direct-feed band
-      (`DirectFeed`, `DirectFeedModel`, `BandSearch`).
+      planner (`RowPlanner`, `RowTopology`, `RowPlacer`, `RowBeltPlacement`, `Row`
+      and the inserter/interface placers) with the shared `LayoutStage`; `band` — the
+      direct-feed band (`DirectFeed`, `DirectFeedModel`, `BandSearch`).
     - `blueprint/placing` — placing the entities and their connections:`route`
       (the weighted A* shared by belts and pipes — `LayoutRouter`,
       `RouteSearch`, `RouteProfile`), `routing` (implicit delivery — `Delivery*`,
@@ -138,7 +138,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.layout.validation | 4 |
 | blueprint.planning | 2 |
 | blueprint.planning.plan | 5 |
-| blueprint.planning.row | 9 |
+| blueprint.planning.row | 11 |
 | blueprint.planning.band | 5 |
 | blueprint.placing.route | 3 |
 | blueprint.placing.routing | 7 |
@@ -151,7 +151,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.printing.output | 4 |
 
 `game.production` is at 10 files — the warn line itself, so split it before adding a
-file; `blueprint.layout` and `blueprint.planning.row` (9) are next.
+file; `blueprint.layout` (9) and `blueprint.planning.row` (11) are next.
 
 ## Package dependencies
 
@@ -301,12 +301,29 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   or drops onto, so a run cannot strand a row inserter, and it only grows where a
   same-material full belt still faces into the run past the swallowed tile, so a moved
   entrance or exit keeps its feeder or lane.
-- `blueprint/planning/row/RowPlanner.kt` — the plan-level row order: the depth of every row
-  (a DFS over `BlueprintPlan.rows` with a recipe path as the cycle guard), the
-  `RowUnit(row, depth)` order and the pure sizing helpers (`inserterPattern`).
+- `blueprint/planning/row/RowTopology.kt` — the target-centred row topology. It builds the
+  producer graph from each row's external solid inputs (`rowInputs` minus
+  `fullyInternalInputs`) and `BlueprintPlan.producerOf`, roots it at the target, sends a direct
+  producer north when the plan lists it before the target and south when after, and keeps every
+  branch contiguous outward. A target with three or more direct producers distributes them across
+  both sides when the largest branch is 3-4 rows (largest north, next south, next north, product
+  south); a two-branch target keeps the plan-order split. Every other target keeps the compact
+  one-sided order: the target sits at the opposite end, the product moves to the empty side and the
+  branches are ordered largest-first, so the largest branch is nearest the target. It owns the
+  `RowUnit(index, row, side)` order, the preferred input and output sides, the planned outlet
+  columns (`outletX`) and the topology-aware test. Graph nodes are plan-row positions, so
+  structurally equal rows stay distinct occurrences.
+- `blueprint/planning/row/RowPlanner.kt` — delegates to `RowTopology`, exposes the `RowUnit` order,
+  side queries and `outletX`, and keeps the pure sizing helpers (`inserterPattern`).
+- `blueprint/planning/row/RowBeltPlacement.kt` — assigns every `BeltGroup` to the fixed belt rows:
+  a product faces its consumer, an input faces its producer, each side takes at most two rows, and
+  an overflowing input shares a capacity-safe mixed belt on its preferred side before moving across.
+  A row without a producer/consumer row keeps the legacy rate-ranked layout.
 - `blueprint/planning/row/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
   `Area` + `RowLanes` + machines, declared in `Row.kt`) and the bands, and owns
-  the ordered `placedRows` list and the lane direction. `RowLanes` holds at most
+  the ordered `placedRows` list and the lane direction. It consumes `planner.units` (already
+  north to south) and `assignRowBelts`; lane direction sorts by `planner.outletX`, so a producer
+  placed after its consumer still has a defined outlet. `RowLanes` holds at most
   `MAX_ROW_BELTS` fixed belt locations as `RowBelt` values (y, `LaneLoad`, direction,
   io and side), including the product; a mixed input belt also carries its `BeltMerge`
   (merge column, above/below, the two feeder materials and the lane direction).
@@ -488,7 +505,10 @@ the main band and in a belted band as two independent productions, but each valu
 belongs to one row. `RowPlacer`
 places every row through one `placeRow`: a plain row repeats its production with
 touching machines, while a row with links leaves a gap column after each machine
-that has a `PlannedLink` and touches everywhere else. The arrangement search
+that has a `PlannedLink` and touches everywhere else. `assignRowBelts` gives every belt group its
+side: a product faces the consumer that placed the row, an input faces its producer, and a full
+side pairs a capacity-safe input into a mixed lane before one crosses to the other side. The
+arrangement search
 rejects a band that would need a belt input for a solid material it produces; a
 hand-built plan can still reach `rowShape` with a partial link, and there the
 input lane is kept. Only belted productions feed belts and sinks, so a band's

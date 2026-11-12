@@ -13,7 +13,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.north
@@ -87,21 +86,16 @@ class BlueprintLayoutTest {
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            // every inserter takes from the tile it faces, which is always north here: the lane
-            // above for an input, the machine above for an output
+            // every inserter reaches a belt or machine on one of its two sides; a south-facing
+            // input inserter is as valid as a north-facing output inserter
             { assertTrue(inserters.isNotEmpty()) },
             {
                 assertEquals(
                     emptyList(),
-                    inserters.filterNot { it.direction == NORTH },
-                    inserters.toString(),
-                )
-            },
-            {
-                assertEquals(
-                    emptyList(),
                     inserters.filter {
-                        it.area.topLeft.north(if (it.long) 2 else 1) !in occupied
+                        val reach = if (it.long) 2 else 1
+                        val pos = it.area.topLeft
+                        pos.north(reach) !in occupied && pos.south(reach) !in occupied
                     },
                     "inserter takes from nothing",
                 )
@@ -370,12 +364,20 @@ class BlueprintLayoutTest {
         val smeltMachine =
             layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
 
-        // compaction may shorten a lane, so pick a lane belt instead of a fixed end coordinate
+        // compaction may shorten a lane, so pick a lane belt instead of a fixed end coordinate;
+        // the producer/consumer side decides whether it sits above or below the machine
         fun laneBelt(machine: MachineEntity, material: Material): BeltEntity? {
-            val row = machine.area.topLeft.y - 2
+            val rows =
+                setOf(
+                    machine.area.topLeft.y - 2,
+                    machine.area.topLeft.y - 3,
+                    machine.area.bottomRight.y + 2,
+                    machine.area.bottomRight.y + 3,
+                )
             return layout.entities
                 .filterIsInstance<BeltEntity>()
-                .filter { it.material == material && it.area.topLeft.y == row }
+                .filter { it.material == material && it.area.topLeft.y in rows }
+                .filter { it.direction == EAST || it.direction == WEST }
                 .filter {
                     it.area.topLeft.x in
                         (machine.area.xRange.first - 1)..(machine.area.bottomRight.x + 1)
@@ -411,10 +413,16 @@ class BlueprintLayoutTest {
         val layout = Layout(basePlan)
         val smeltMachine =
             layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
-        val laneRow = smeltMachine.area.topLeft.y - 2
+        val laneRows =
+            setOf(
+                smeltMachine.area.topLeft.y - 2,
+                smeltMachine.area.topLeft.y - 3,
+                smeltMachine.area.bottomRight.y + 2,
+                smeltMachine.area.bottomRight.y + 3,
+            )
         val lane =
             layout.entities.filterIsInstance<BeltEntity>().filter {
-                it.material == ironOre && it.area.topLeft.y == laneRow
+                it.material == ironOre && it.area.topLeft.y in laneRows
             }
 
         // compaction must not pull the factory west of the import lane, which would leave the

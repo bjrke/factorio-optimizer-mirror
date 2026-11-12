@@ -7,6 +7,42 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-11 — A row faces its consumer; small producer branches distribute
+
+**Decision.** Row order is no longer depth-sorted. `RowTopology` builds the producer graph from
+each row's external solid inputs and roots it at the target. A target with three or more direct
+producers distributes them across both sides when the largest branch is 3-4 rows: the largest goes
+north, the next south, the next north, and so on, with the product south. A two-branch target keeps
+the plan-order split (before the target north, after south). Every other target keeps the compact
+one-sided order: the target sits at the opposite end, the product moves to the empty side and the
+branches are ordered largest-first, so the largest branch is nearest the target. Every deeper branch
+stays contiguous on the side it was placed. A product belt faces the consumer that placed the row
+and an input belt faces its producer. Each side holds two belt rows; a full side first pairs a
+capacity-safe overflowing input into a mixed lane, and only then moves it to the other side.
+`RowPlanner` computes the order and planned `outletX` before placement, so a producer south of its
+consumer still has a defined east outlet.
+
+**Guardrail.** Never reintroduce a depth-only order or place a row before its branch side is known.
+Do not distribute a large branch set: a branch above four rows strands shared producers, disables
+compaction and doubles the layout. Keep the largest branch nearest the target and the product on
+the empty side when the branches stay one-sided. Keep the row topology pure in `RowTopology` and
+the belt-side allocation in `RowBeltPlacement`; graph nodes are plan-row positions (never a map
+keyed by a `PlannedRow`), so structurally equal rows stay distinct occurrences. The placement order
+is `planner.units` and the lane direction reads `planner.outletX`, not `placedRows`. Keep the
+two-rows-per-side cap and the capacity-safe condition on an overflow pair. A row with no
+producer/consumer row keeps the legacy rate-ranked layout, so single-row plans do not churn.
+Evidence: `aTargetSitsBetweenItsProducerBranches`,
+`aTargetDistributesSmallProducerBranchesAcrossBothSides`,
+`theLargestProducerBranchSitsNearestTheTarget`,
+`aFullSidePairsTwoInputsIntoAMixedBelt`,
+`theReportedProductionScienceUrlPutsModulesNorth`,
+`theReportedUtilityScienceUrlPutsRobotFramesNorth`; production-science is 40x81 with the module
+branch north, utility-science is 54x131 with the robot-frame branch first, logistic-science is
+22x43, advanced-circuit is 40x41 and rocket-silo is 48x119.
+
+**See.** `blueprint/planning/row/{RowTopology,RowPlanner,RowBeltPlacement,RowPlacer}.kt`;
+`knowledge/architecture.md` §Blueprint layout; `BlueprintLayoutIntegrationTest`.
+
 ## 2026-11-11 — A route box is three tiles, and a wider search is a failure
 
 **Decision.** `RouteSearch` looks at most three tiles past everything placed on the north, south and

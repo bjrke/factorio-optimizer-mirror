@@ -5,53 +5,38 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.core.model.LineSide
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 
-/** One row to place, ordered by how deep it sits from the sources. */
-internal data class RowUnit(val row: PlannedRow, val depth: Int) {
-    /** What the row is built from, so two rows with the same depth keep a stable order. */
-    val label: String
-        get() = row.productions.map { it.recipe.name }.sorted().joinToString("+")
-}
+/** One row to place, north to south, with the side its own producers sit on. */
+internal data class RowUnit(val index: Int, val row: PlannedRow, val side: LineSide?)
 
 /**
- * The plan-level decisions a layout needs before it places anything: how deep every row sits from
- * the sources and the row order. Also the pure sizing helpers (`inserterPattern`) the row placer
- * uses, so no geometry leaks in.
+ * The plan-level decisions a layout needs before it places anything: the row order, the side every
+ * belt should face, and the planned outlet columns. Also the pure sizing helpers
+ * (`inserterPattern`) the row placer uses, so no geometry leaks in.
  */
 internal class RowPlanner(
-    private val plan: BlueprintPlan,
+    plan: BlueprintPlan,
     private val logistics: LogisticsCalculator,
 ) {
 
-    /** The rows to place, top to bottom: the deepest consumers first, then by name. */
-    val units: List<RowUnit> =
-        plan.rows
-            .map { row -> RowUnit(row, row.productions.maxOf { depthOf(it, emptyList()) }) }
-            .sortedWith(compareBy({ it.depth }, { it.label }))
+    private val topology = RowTopology(plan, logistics)
 
-    /**
-     * The depth of [planned]: how many production steps away from the sources it is, used to order
-     * the rows. A recipe already on [path] contributes zero instead of recursing forever, and a
-     * path visits every recipe once, so the walk stays within the plan's recipe cap.
-     */
-    private fun depthOf(planned: FactoryProduction, path: List<Recipe>): Int {
-        if (planned.recipe in path) return 0
-        val next = path + planned.recipe
-        val producers =
-            planned.recipe.ingredients.keys.mapNotNull { material ->
-                plan.rows
-                    .firstNotNullOfOrNull { row ->
-                        row.productions.firstOrNull {
-                            it != planned && material in it.recipe.result.keys
-                        }
-                    }
-                    ?.let { material to it }
-            }
-        return if (producers.isEmpty()) 0
-        else 1 + producers.maxOf { (_, producer) -> depthOf(producer, next) }
-    }
+    /** The rows to place, north to south, in the target-centred topology order. */
+    val units: List<RowUnit> = topology.units
+
+    fun isTopologyAware(unit: RowUnit) = topology.isTopologyAware(unit.index)
+
+    fun preferredInputSide(unit: RowUnit, material: Material) =
+        topology.preferredInputSide(unit.index, material)
+
+    fun preferredOutputSide(unit: RowUnit, material: Material) =
+        topology.preferredOutputSide(unit.index, material)
+
+    /** The planned east outlet of [material]'s producer, before any row is placed. */
+    fun outletX(material: Material) = topology.outletX(material)
 
     fun footprint(production: FactoryProduction) = blueprintMachineFootprint(production.factory)
 

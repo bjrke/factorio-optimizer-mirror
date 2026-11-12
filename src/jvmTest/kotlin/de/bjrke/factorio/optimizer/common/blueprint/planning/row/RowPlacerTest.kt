@@ -12,12 +12,17 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.battery
+import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrame
+import de.bjrke.factorio.optimizer.common.fixtures.flyingRobotFrameRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -29,12 +34,15 @@ import de.bjrke.factorio.optimizer.common.fixtures.splitterRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -318,6 +326,55 @@ class RowPlacerTest {
         assertEquals(
             listOf(ironPlate, pipe, steelPlate),
             row.belts.filter { it.io == Io.INPUT }.map { it.material }.toList(),
+        )
+    }
+
+    @Test
+    fun aFullSidePairsTwoInputsIntoAMixedBelt() {
+        val steelPlateRecipe =
+            Recipe(
+                name = "steel-plate",
+                ingredients = mapOf(ironPlate to 5.0),
+                result = mapOf(steelPlate to 1.0),
+                time = 1.0,
+                categories = setOf(Category.CRAFTING),
+            )
+        val target =
+            PlannedRow.copies(planned(flyingRobotFrameRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val circuit =
+            PlannedRow.copies(planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val battery = PlannedRow.copies(planned(batteryRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val electricEngine =
+            PlannedRow.copies(planned(electricEngineUnitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val steel = PlannedRow.copies(planned(steelPlateRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val plan =
+            BlueprintPlan(
+                target = flyingRobotFrame,
+                rows = listOf(target, circuit, battery, electricEngine, steel),
+                sources = emptyList(),
+                label = "flying-robot-frame",
+            )
+
+        val targetRow = place(plan).single { it.plannedRow == target }
+        val inputs = targetRow.belts.filter { it.io == Io.INPUT }
+        val mixed = inputs.filter { it.isMixed }
+
+        assertAll(
+            {
+                assertEquals(
+                    4,
+                    inputs.flatMap { it.materials }.toSet().size,
+                    "every target input keeps a lane",
+                )
+            },
+            { assertNotNull(mixed.firstOrNull(), "no mixed belt") },
+            {
+                assertEquals(
+                    emptyList(),
+                    mixed.filter { it.materials.size != 2 },
+                    "a mixed belt carries exactly two materials",
+                )
+            },
         )
     }
 

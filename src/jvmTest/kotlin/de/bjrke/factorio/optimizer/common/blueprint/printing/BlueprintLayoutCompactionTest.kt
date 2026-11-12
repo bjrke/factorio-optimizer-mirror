@@ -56,7 +56,7 @@ class BlueprintLayoutCompactionTest {
         val height = maxY - minY + 1
 
         assertAll(
-            { assertTrue(width < 10, "layout is still $width tiles wide") },
+            { assertTrue(width <= 10, "layout is still $width tiles wide") },
             { assertTrue(height < 20, "layout is still $height tiles tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },

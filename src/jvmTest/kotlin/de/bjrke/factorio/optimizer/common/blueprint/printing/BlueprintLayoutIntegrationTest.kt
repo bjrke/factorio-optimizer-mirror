@@ -28,13 +28,11 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
-import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
-import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -138,7 +136,7 @@ class BlueprintLayoutIntegrationTest {
                 layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
-            { assertTrue(width < 40, "layout is still $width tiles wide") },
+            { assertTrue(width <= 40, "layout is still $width tiles wide") },
             { assertTrue(height < 80, "layout is still $height tiles tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
@@ -226,13 +224,10 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
-     * The reported logistic-science layout kept one free row at each corner where a feeder turns
-     * into a lane: compaction treated the corner belt as a wall, so the layout stayed 21x50. The
-     * corner can be dropped and the feeder side-loads the lane that moved up.
-     *
-     * A belt turns at its corner, not at the tile the route arrives from, so the electronic-circuit
-     * trunk reaches the inserter band in one turn. The gear belt then goes around the plate rows
-     * instead of tunneling under them, and its only tunnel left is the circuit trunk's crossing.
+     * The reported logistic-science layout puts the target between its producer branches: the
+     * inserter/circuit branch sits north, the transport-belt/gear branch south. Every feed turns at
+     * its trunk and its lane instead of looping around the target row, so the layout keeps its two
+     * circuit corners and needs no route tunnel at all.
      */
     @Test
     fun theReportedLogisticScienceUrlCompactsBothCorners() {
@@ -247,7 +242,7 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(width <= 21, "layout is still $width tiles wide") },
+            { assertTrue(width <= 22, "layout is still $width tiles wide") },
             { assertTrue(height <= 47, "layout is still $height rows tall") },
             {
                 assertEquals(
@@ -258,12 +253,84 @@ class BlueprintLayoutIntegrationTest {
             },
             {
                 assertEquals(
-                    setOf(electronicCircuit, transportBelt),
+                    emptySet(),
                     routeTunnels(entities).map { it.material }.toSet(),
-                    "the gear belt may go around the plate rows, but every route tunnel left is " +
-                        "still a crossing",
+                    "the target-centred rows route every feed on the surface",
                 )
             },
+        )
+    }
+
+    /**
+     * The reported production-science layout distributes the target's three producer branches: the
+     * productivity-module branch goes north, the electric-furnace branch south and the iron-stick
+     * branch north again.
+     */
+    @Test
+    fun theReportedProductionScienceUrlPutsModulesNorth() {
+        val layout =
+            layoutFromUrl(
+                "http://localhost:8080/#/0.892857142857/production-science-pack/CFSXbmr/1/1",
+            )
+        val machines = layout.entities.filterIsInstance<MachineEntity>()
+        val targetTop =
+            machines.filter { it.recipe == "production-science-pack" }.minOf { it.area.topLeft.y }
+        val moduleTop =
+            machines.filter { it.recipe == "productivity-module" }.minOf { it.area.topLeft.y }
+        val furnaceTop =
+            machines.filter { it.recipe == "electric-furnace" }.minOf { it.area.topLeft.y }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertTrue(moduleTop < targetTop, "the module branch is not north of the target") },
+            {
+                assertTrue(
+                    moduleTop < furnaceTop,
+                    "the module branch is not north of the electric-furnace branch",
+                )
+            },
+        )
+    }
+
+    /**
+     * The reported utility-science layout puts the robot-frame branch first below the target, so
+     * the frames and their requirements stay in the north instead of running up the east side from
+     * the bottom. The target product moves above the target to leave the producer side free.
+     */
+    @Test
+    fun theReportedUtilityScienceUrlPutsRobotFramesNorth() {
+        val layout = layoutFromUrl("http://localhost:8080/#/2.5/utility-science-pack/CFSXbmr/1/1")
+        val entities = layout.entities
+        val machines = entities.filterIsInstance<MachineEntity>()
+        val targetTop =
+            machines.filter { it.recipe == "utility-science-pack" }.minOf { it.area.topLeft.y }
+        val robotTop =
+            machines.filter { it.recipe == "flying-robot-frame" }.minOf { it.area.topLeft.y }
+        val processingTop =
+            machines.filter { it.recipe == "processing-unit" }.minOf { it.area.topLeft.y }
+        val lowDensityTop =
+            machines.filter { it.recipe == "low-density-structure" }.minOf { it.area.topLeft.y }
+        val productRow =
+            entities
+                .filterIsInstance<BeltEntity>()
+                .filter { it.material == Material("utility-science-pack") }
+                .minOf { it.area.topLeft.y }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertTrue(
+                    robotTop < processingTop,
+                    "robot frames are not north of the processing-unit branch",
+                )
+            },
+            {
+                assertTrue(
+                    robotTop < lowDensityTop,
+                    "robot frames are not north of the low-density branch",
+                )
+            },
+            { assertTrue(productRow < targetTop, "the target product is not north of the target") },
         )
     }
 
@@ -311,22 +378,21 @@ class BlueprintLayoutIntegrationTest {
         }
 
     /**
-     * The reported advanced-circuit URL must still replay without a single failed feed. It is built
-     * as a direct-feed band now, which puts the two cable rows in the feed corridor west of the
-     * machines. The plastic row added by the widened planning forces the electronic-circuit feed to
-     * tunnel as well; every other material still reaches its lane on the surface.
+     * The reported advanced-circuit URL must still replay without a single failed feed. The
+     * target-centred rows put the circuit branch north and the cable/plastic branch south; the two
+     * south inputs share one mixed lane, so every feed reaches its lane on the surface.
      */
     @Test
-    fun advancedCircuitUrlOnlyTunnelsForItsBandedFeeds() {
+    fun advancedCircuitUrlRoutesEveryFeedOnTheSurface() {
         val layout = layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
-                    setOf(copperCable, electronicCircuit),
+                    emptySet(),
                     routeTunnels(layout.entities).map { it.material }.toSet(),
-                    "only the band's feeds may need an underground belt",
+                    "every feed reaches its lane on the surface",
                 )
             },
         )

@@ -8,16 +8,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltGroup
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineDirection
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.packRowBelts
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
-import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.FAR_BOTTOM
-import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.FAR_TOP
-import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.NEAR_BOTTOM
-import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.NEAR_TOP
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Dimension
@@ -74,32 +69,32 @@ internal class RowPlacer(
 
     fun placeAll() {
         var y = 0
-        for ((plannedRow) in planner.units) {
-            val row = placeRow(plannedRow, y)
+        for (unit in planner.units) {
+            val row = placeRow(unit, y)
             placedRows += row
             y = row.belts.map { it.y }.plus(row.factoryBottom).max() + ROW_GAP
         }
     }
 
-    enum class FixedBeltLocation(val side: LineSide, val yfun: (Int, Int) -> Int) {
-        NEAR_TOP(LineSide.NORTH, { top, _ -> top - 2 }),
-        NEAR_BOTTOM(LineSide.SOUTH, { _, bottom -> bottom + 2 }),
-        FAR_TOP(LineSide.NORTH, { top, _ -> top - 3 }),
-        FAR_BOTTOM(LineSide.SOUTH, { _, bottom -> bottom + 3 }),
+    enum class FixedBeltLocation(
+        val side: LineSide,
+        /** Whether a mixed lane's T merge sits above this belt row. */
+        val above: Boolean,
+        val yfun: (Int, Int) -> Int,
+    ) {
+        NEAR_TOP(LineSide.NORTH, false, { top, _ -> top - 2 }),
+        NEAR_BOTTOM(LineSide.SOUTH, true, { _, bottom -> bottom + 2 }),
+        FAR_TOP(LineSide.NORTH, true, { top, _ -> top - 3 }),
+        FAR_BOTTOM(LineSide.SOUTH, false, { _, bottom -> bottom + 3 }),
     }
-
-    /** The row's solid input and output rates, the two maps every belt decision reads. */
-    private class RowRates(
-        val inputs: Map<Material, Double>,
-        val outputs: Map<Material, Double>,
-    )
 
     private fun rowShape(
         size: Dimension,
         bandTop: Int,
-        plannedRow: PlannedRow,
+        unit: RowUnit,
         machines: List<PlacedMachine>,
     ): RowLanes {
+        val plannedRow = unit.row
         val linked = plannedRow.links.mapTo(mutableSetOf()) { it.material }
         val outputs = rowOutputs(machines.map { it.production }, logistics).minus(linked)
         // A link only internalizes the consumers it actually reaches. A material another machine
@@ -119,34 +114,24 @@ internal class RowPlacer(
                     groups.drop(MAX_ROW_BELTS).flatMap { it.materials }.joinToString { it.name }
         }
 
-        val firstOutput = groups.indexOfFirst { group -> group.materials.any { it in outputs } }
-        val beltLocations =
-            when (firstOutput) {
-                0 -> listOf(NEAR_BOTTOM, NEAR_TOP, FAR_TOP, FAR_BOTTOM)
-                2 -> listOf(NEAR_TOP, NEAR_BOTTOM, FAR_BOTTOM, FAR_TOP)
-                else -> listOf(NEAR_TOP, NEAR_BOTTOM, FAR_TOP, FAR_BOTTOM)
-            }
-
-        val locations = beltLocations.take(MAX_ROW_BELTS)
-        val used = groups.take(locations.size)
-        val topLanes = locations.take(used.size).count { it.side == LineSide.NORTH }
+        val rates = RowRates(inputs, outputs, logistics.oneLaneCapacity())
+        val placements = assignRowBelts(planner, unit, groups, rates)
+        val topLanes = placements.count { it.location.side == LineSide.NORTH }
 
         val factoryTop = bandTop + topLanes + 1
         val factoryBottom = factoryTop + size.height - 1
         val rowRight =
             machines.lastOrNull()?.left?.plus(size.width - 1) ?: (LANE_MARGIN + size.width - 1)
 
-        val rates = RowRates(inputs, outputs)
-        val belts =
-            locations.zip(used).map { (location, group) ->
-                beltFor(
-                    location,
-                    group,
-                    location.yfun(factoryTop, factoryBottom),
-                    rowRight,
-                    rates,
-                )
-            }
+        val belts = placements.map { (location, group) ->
+            beltFor(
+                location,
+                group,
+                location.yfun(factoryTop, factoryBottom),
+                rowRight,
+                rates,
+            )
+        }
 
         return RowLanes(factoryTop = factoryTop, belts = belts)
     }
@@ -170,7 +155,7 @@ internal class RowPlacer(
                     column =
                         if (direction == EAST) LANE_MARGIN - EAST_MERGE_OFFSET
                         else rowRight + WEST_MERGE_OFFSET,
-                    above = mergeAbove(location),
+                    above = location.above,
                     westMaterial =
                         if (direction == EAST) group.materials[0] else group.materials[1],
                     eastMaterial =
@@ -198,21 +183,13 @@ internal class RowPlacer(
             LineSide.SOUTH -> LaneLoad.half(material, left = false)
         }
 
-    /** A far north or near south lane merges above itself; the other two merge below. */
-    private fun mergeAbove(location: FixedBeltLocation) =
-        when (location) {
-            FAR_TOP,
-            NEAR_BOTTOM -> true
-            NEAR_TOP,
-            FAR_BOTTOM -> false
-        }
-
     /**
      * Builds a row: a plain production repeats its machine, while a direct-feed band interleaves
      * machines. A gap with a link gets an extra column for the inserters that move the intermediate
      * between the two machines; every other neighbor pair touches.
      */
-    private fun placeRow(plannedRow: PlannedRow, bandTop: Int): Row {
+    private fun placeRow(unit: RowUnit, bandTop: Int): Row {
+        val plannedRow = unit.row
         val size = planner.footprint(plannedRow.machines.first())
 
         val linkedGaps = plannedRow.links.mapTo(mutableSetOf()) { it.gap }
@@ -225,7 +202,7 @@ internal class RowPlacer(
             }
         }
 
-        val lanes = rowShape(size, bandTop, plannedRow, machines)
+        val lanes = rowShape(size, bandTop, unit, machines)
         val row =
             Row(
                 plannedRow = plannedRow,
@@ -299,7 +276,7 @@ internal class RowPlacer(
      */
     fun laneDirection(material: Material, solids: Iterable<Material>): Direction {
         if (material !in plan.beltMaterials) return EAST
-        val produced = solids.filter { it in plan.beltMaterials }.sortedBy { outletX(it) }
+        val produced = solids.filter { it in plan.beltMaterials }.sortedBy { planner.outletX(it) }
         return if (produced.indexOf(material) < produced.size / 2) EAST else WEST
     }
 
@@ -311,9 +288,4 @@ internal class RowPlacer(
         val producer = plan.producerOf(material) ?: return null
         return placedRows.firstOrNull { row -> row.plannedRow == producer }
     }
-
-    /**
-     * The tile east of the row that puts [material] on a belt, or Far East when it is not placed.
-     */
-    fun outletX(material: Material): Int = producerRow(material)?.right?.plus(1) ?: Int.MAX_VALUE
 }
