@@ -335,8 +335,9 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   frame: both lanes for a plain input, one material per lane for a mix, and only the
   inserter lane for a product. `beltFor` and `placeLanes` place the lane and its T
   merge; the merge sits outside the pair of lane rows (far north above, near north
-  below, near south above, far south below), at `row.left - 2` for an east-fed lane
-  and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the pure
+  below, near south above, far south below), at `LANE_MARGIN - EAST_MERGE_OFFSET`
+  (three columns west of the row, so its turn clears a fluid lane on the turn row)
+  for an east-fed lane and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the pure
   packing budget (`packRowBelts`, `beltRowBudget`): only the minimum pairs needed are formed,
   inputs whose rate fits one lane pair first, and same-direction pairs win before a
   cross-direction pair runs east. An over-capacity input only pairs when the row would otherwise
@@ -352,7 +353,8 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   `blueprint/planning/row/RowFluidLane.kt` assigns the recipe's fluids to the machine ports in
   `prototypeFluidPorts` order — inputs before outputs, each in recipe order — and
   decides which side that puts a lane on, the lane row (two rows beyond the row's
-  outermost belt or mixed-belt merge/turn tile) and its depth: a side places one
+  outermost belt; a mixed belt's merge and turn are not part of the outline, the
+  merge offset keeps them west of the lane head) and its depth: a side places one
   lane per fluid, each two rows further out than the last.
   `blueprint/planning/row/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
   horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds

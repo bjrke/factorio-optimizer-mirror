@@ -103,15 +103,19 @@ An entry belongs here only with evidence, and should say how to recognize it.
   outermost belt lands **on the far belt row**, `board.isFree` fails on the belt
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
-- **A mixed input belt's merge and turn tiles are part of the row outline.** A
-  mixed lane's merge sits one row outside the belt and its turn tile two rows
-  outside, at the row's west/east edge. `RowFluidLane.laneRow` chose the lane row
-  from the belts alone, so the acid lane of the reported utility-science battery
-  row landed on the merge row; its marker block west of the lane head collided
-  with the gear belt's merge, `sourceEnd` found no room, the lane was dropped and
-  the batteries got no acid. Include every mixed belt's `mergeRow`/`turnRow` in
-  the outline before applying the two-row gap. Evidence:
-  `aMixedBeltMergePushesTheLaneBeyondItsTurnTile`,
+- **A fluid lane may use a mixed belt's turn row, but must clear the merge columns.**
+  A mixed lane's merge sits one row outside the belt and its turn tile two rows
+  outside, at the row's west/east edge; the lane row is read from the belts alone
+  (`RowFluidLane.laneRow`), so the lane can land on the turn row. An east-fed merge
+  now starts at `LANE_MARGIN - EAST_MERGE_OFFSET`, which puts the turn and approach
+  tiles west of the machine column where the lane head starts. The reported
+  utility-science battery row's acid lane was dropped when the lane row ran
+  through the gear belt's merge and its marker block collided with the merge.
+  Do not shrink `EAST_MERGE_OFFSET` without re-checking the lane head: the lane
+  must stay east of `merge.turnColumn`. A three-tile marker block reaches further
+  west than the lane head, so a plan using the constant-combinator fluid source can
+  still fall back to the routed feed on such a row. Evidence:
+  `aMixedBeltTurnRowKeepsTheLaneHeadClear`,
   `theReportedUtilityScienceUrlCompacts`.
 - **A wide band forces belt crossings, and a multi-link band longer than nine machines can leave
   inserters outside pole coverage.** `GROUP_MAX_MACHINES = 10`
@@ -248,7 +252,15 @@ An entry belongs here only with evidence, and should say how to recognize it.
   fusion-reactor URL the entrance at `(67,82)` "side-loaded" the plastic belt at
   `(68,82)`; the game keeps them independent. Do not re-add the entrance to
   `checkAhead`, and skip it in the side-load neighbor loop: it dives instead of
-  feeding the tile it faces. Evidence: `aBuriedEntranceDoesNotFeedTheBeltAboveItsRun`,
+  feeding the tile it faces. The router needs the same rule:
+  `BeltRouteRules.sideLoaded` casts any `ConveyorEntity`, which includes
+  `UndergroundBeltEntity` (`BeltLikeEntity`), so a buried LDS entrance below the
+  product connector's feed tile refused the whole product route
+  (`utility-science-pack to … (no route)`) although the tile was free. An
+  underground **output** does surface and pour onto the next tile, so only an
+  input end is exempt. Evidence: `aBuriedEntranceDoesNotFeedTheBeltAboveItsRun`,
+  `aBuriedEntranceDoesNotBlockARouteOverItsRun`,
+  `theReportedUtilityScienceUrlKeepsTheProductRowClear`,
   `theReportedFusionReactorUrlCompacts`.
 - **A splitter only takes items on its back, and a belt that pours into a route
   tile closes a circle.** The reported fusion-reactor layout inserted a circuit

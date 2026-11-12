@@ -80,18 +80,14 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
      * [depth] of n puts the lane 2n rows further out than the first lane of that side.
      *
      * A mixed input belt's merge and turn tiles stand one and two rows outside its lane, at the
-     * row's edge. They are part of the row's outline too: a lane row chosen from the belts alone
-     * would run through them, and the marker block west of the head would collide with the merge.
+     * row's edge, but they are not part of the outline: the lane may sit on the turn row because an
+     * east-fed merge starts west of the machine column (see `EAST_MERGE_OFFSET`), so its turn and
+     * approach tiles stay west of the lane head.
      */
     fun laneRow(row: Row, side: LineSide, depth: Int = 0): Int {
         val depthDist = 2 + 2 * depth
         val belts = sequence {
-            for (belt in row.belts) {
-                yield(belt.y)
-                val merge = belt.merge ?: continue
-                yield(merge.mergeRow(belt.y))
-                yield(merge.turnRow(belt.y))
-            }
+            for (belt in row.belts) yield(belt.y)
             yield(row.factoryTop - 2)
             yield(row.factoryBottom + 2)
         }

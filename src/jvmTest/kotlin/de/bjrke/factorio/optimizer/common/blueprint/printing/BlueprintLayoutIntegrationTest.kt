@@ -405,6 +405,11 @@ class BlueprintLayoutIntegrationTest {
      * imports before the produced deliveries makes this the default, and the trimmer can then move
      * all markers to one column close to the factory edge. (Uranium-238 is produced by the planned
      * centrifuging row now, so it is no longer an import.)
+     *
+     * The mixed merge's straight feeder sets the common column: its run ends one tile west of the
+     * merge at `LANE_MARGIN - EAST_MERGE_OFFSET`, which is the westmost feed end. Moving the merge
+     * a column west (for the compact fluid lane) therefore moves the column and this prefix with
+     * it; the markers still share one column and every feed stays straight.
      */
     @Test
     fun reportedUraniumRoundsUrlKeepsItsCopperImportStraight() {
@@ -453,7 +458,7 @@ class BlueprintLayoutIntegrationTest {
             },
             {
                 assertTrue(
-                    machineLeft - copperChest.area.topLeft.x <= 6,
+                    machineLeft - copperChest.area.topLeft.x <= 8,
                     "the import prefix was not trimmed",
                 )
             },
@@ -532,8 +537,10 @@ class BlueprintLayoutIntegrationTest {
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             // the 5-belt firearm/piercing/uranium band is now split into a nuclear/uranium band
             // and a firearm/piercing band, so the widest row is the nine-machine uranium band;
-            // the old 23- and 36-tile guards only held while that was one belted row
-            { assertTrue(width <= 43, "layout is still $width tiles wide") },
+            // the old 23- and 36-tile guards only held while that was one belted row. The mixed
+            // merge's straight feeder sets the import column, so the compact merge costs one
+            // column here (see reportedUraniumRoundsUrlKeepsItsCopperImportStraight)
+            { assertTrue(width <= 44, "layout is still $width tiles wide") },
             {
                 assertTrue(
                     height <= 40,

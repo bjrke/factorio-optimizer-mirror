@@ -2,8 +2,10 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.directionBetween
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
@@ -15,6 +17,10 @@ import de.bjrke.factorio.optimizer.common.core.model.neighbors
  * [routable], so a tile it may use never side-loads a foreign belt; judging that by the arrival
  * direction wrongly rejected corners
  * (`LayoutRouterTest.aCornerMayTurnOverAForeignBeltItDoesNotFeed`).
+ *
+ * A buried entrance dives instead of feeding the tile it faces, so it is not a side-load either;
+ * `LayoutValidation*` uses the same rule. Its output end does surface and pour onto the next tile,
+ * so only an input end is exempt.
  */
 internal class BeltRouteRules(private val board: LayoutBoard) {
 
@@ -32,11 +38,13 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
             !facesReservedFeed(coordinate, facing, sink.feed, material)
     }
 
-    /** True when a belt next to [coordinate] pours its load into that tile. */
+    /** True when a surface belt next to [coordinate] pours its load into that tile. */
     private fun sideLoaded(coordinate: Coordinate): Boolean =
         coordinate.neighbors.any { neighbor ->
-            val belt = board.entityAt(neighbor) as? ConveyorEntity
-            belt != null && belt.direction == directionBetween(neighbor, coordinate)
+            val belt = board.entityAt(neighbor) as? ConveyorEntity ?: return@any false
+            // a buried entrance does not feed the tile above its run
+            if (belt is UndergroundBeltEntity && belt.io == Io.INPUT) return@any false
+            belt.direction == directionBetween(neighbor, coordinate)
         }
 
     /**

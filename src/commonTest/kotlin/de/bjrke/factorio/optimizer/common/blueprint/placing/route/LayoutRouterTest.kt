@@ -3,13 +3,16 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.route
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
+import de.bjrke.factorio.optimizer.common.blueprint.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.blueprint.placing.routing.BeltRouteRules
 import de.bjrke.factorio.optimizer.common.blueprint.placing.routing.Sink
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.test.assertTableOf
@@ -80,6 +83,31 @@ class LayoutRouterTest {
             listOf(Coordinate(5, 1), Coordinate(5, 2), Coordinate(4, 2), Coordinate(3, 2)),
             route,
         )
+    }
+
+    /**
+     * A buried entrance dives instead of feeding the tile it faces, so it must not keep a route off
+     * that tile. In the reported utility-science layout the product belt crosses the low-density
+     * lane's entrance column; treating the entrance as a side-load left the product row
+     * unconnected. An underground *output* does surface and pour onto the next tile, so it stays a
+     * side-load.
+     */
+    @Test
+    fun aBuriedEntranceDoesNotBlockARouteOverItsRun() {
+        val board = board()
+        board.placeEnd(copperPlate, Coordinate(3, 3), NORTH, Io.INPUT)
+        val sink = Sink(Coordinate(4, 2), Coordinate(3, 2), EAST)
+
+        val route =
+            LayoutRouter(board)
+                .findRoute(
+                    Coordinate(1, 2),
+                    EAST,
+                    sink.feed,
+                    BeltRouteRules(board).allowed(ironPlate, sink),
+                )
+
+        assertEquals(listOf(Coordinate(2, 2), Coordinate(3, 2)), route)
     }
 
     /**

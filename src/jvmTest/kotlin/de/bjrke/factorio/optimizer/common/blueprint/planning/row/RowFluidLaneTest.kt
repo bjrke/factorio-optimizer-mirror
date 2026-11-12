@@ -10,28 +10,42 @@ import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
+import de.bjrke.factorio.optimizer.common.core.model.LineSide.NORTH
 import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class RowFluidLaneTest {
 
     /**
-     * A mixed input belt's merge and turn tiles stand one and two rows outside its lane. The fluid
-     * lane must clear them too: in the reported utility-science plan the acid lane's marker block
-     * collided with the gear belt's merge, so the lane was dropped and the batteries got no acid.
+     * The lane row is read from the belts alone, so it may sit on a mixed belt's turn row. The
+     * east-fed merge starts west of the machine column ([EAST_MERGE_OFFSET]), so the lane head and
+     * the merge's turn tile do not meet. In the reported utility-science plan the acid lane's
+     * marker block collided with the gear belt's merge and the lane was dropped, leaving the
+     * batteries dry.
      */
     @Test
-    fun aMixedBeltMergePushesTheLaneBeyondItsTurnTile() {
+    fun aMixedBeltTurnRowKeepsTheLaneHeadClear() {
         val production = planned(batteryRecipe, Factory.CHEMICAL_PLANT)
+        val merge =
+            BeltMerge(
+                column = LANE_MARGIN - EAST_MERGE_OFFSET,
+                above = true,
+                westMaterial = coal,
+                eastMaterial = copperPlate,
+                direction = EAST,
+            )
         val row =
             Row(
                 plannedRow = PlannedRow.copies(production, 1),
-                machines = listOf(PlacedMachine(production, 40)),
-                box = Area(Coordinate(40, 20), Dimension(3, 3)),
+                machines = listOf(PlacedMachine(production, LANE_MARGIN)),
+                box = Area(Coordinate(LANE_MARGIN, 20), Dimension(3, 3)),
                 lanes =
                     RowLanes(
                         factoryTop = 20,
@@ -43,20 +57,21 @@ class RowFluidLaneTest {
                                     direction = EAST,
                                     io = Io.INPUT,
                                     side = LineSide.NORTH,
-                                    merge =
-                                        BeltMerge(
-                                            column = 39,
-                                            above = true,
-                                            westMaterial = coal,
-                                            eastMaterial = copperPlate,
-                                            direction = EAST,
-                                        ),
+                                    merge = merge,
                                 ),
                             ),
                     ),
             )
+        val lane = RowFluidLane(logistics)
+        val laneRow = lane.laneRow(row, NORTH)
+        val acid = lane.fluids(row, NORTH).single { it.material == sulfuricAcid }
+        val head = FluidLane.of(laneRow, acid.ports, NORTH).head
 
-        // merge at 16, turn at 15; the lane goes two rows beyond the outline, not the belt
-        assertEquals(13, RowFluidLane(logistics).laneRow(row, LineSide.NORTH))
+        assertAll(
+            // two rows beyond the belt, i.e. the turn row, not two rows beyond the turn
+            { assertEquals(15, laneRow) },
+            { assertEquals(merge.turnRow(17), laneRow) },
+            { assertTrue(head.x > merge.turnColumn, "the lane head $head sits on the turn tile") },
+        )
     }
 }

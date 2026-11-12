@@ -37,8 +37,12 @@ internal const val LANE_MARGIN = 10
 /** Free rows between two recipe rows, so their belts can be routed between them. */
 private const val ROW_GAP = 17
 
-/** How far west of the row an east-fed mixed lane starts its T merge. */
-private const val EAST_MERGE_OFFSET = 2
+/**
+ * How far west of the row an east-fed mixed lane starts its T merge. A fluid lane may sit on the
+ * merge's turn row, so the turn column must stay west of the machine column where the lane head
+ * starts; three columns leave both the merge and its U-turn clear of it.
+ */
+internal const val EAST_MERGE_OFFSET = 3
 
 /** How far east of the row a west-fed mixed lane starts its T merge, clear of the product end. */
 private const val WEST_MERGE_OFFSET = 8
