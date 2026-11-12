@@ -130,10 +130,15 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   user's responsibility; an agent that pushes can bind a feature branch to
   `origin/main`.
 - Commit after the work is done (no explicit request needed). Headline ≤ 50
-  chars; body wrapped at 72 chars, explaining why and recording findings that do
-  not belong in `knowledge/`.
-- **Squash only via `/squash`** (`.opencode/commands/squash.md`); never do the
-  git steps by hand. If asked to squash, tell the user to run `/squash`.
+  chars, imperative, American English, no `!<MR>` suffix; body wrapped at 72
+  chars, explaining why and recording findings that do not belong in
+  `knowledge/`.
+- Keep the message to the essentials: only summarize, with no novel-length
+  recap, no file-by-file recap, no repetition of `knowledge/` or documentation,
+  and no claims about tests or checks the diff does not show.
+- **Squash only via `/squash`** (`.opencode/plugins/squash.js`, a plugin command
+  that runs with no agent turn); never do the git steps by hand. If asked to
+  squash, tell the user to run `/squash`.
 
 ## Generated data — do not hand-edit
 

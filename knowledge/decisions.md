@@ -7,6 +7,25 @@ the guardrail that must survive; mechanics belong in `architecture.md` or
 entry under ~20 lines and prepend a new one. A change that supersedes an entry
 rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-12 — `/squash` is a plugin command that writes its own message
+
+**Decision.** `/squash` is a plugin command (`.opencode/plugins/squash.js`). Its `execute` runs
+`squash-start.sh`, generates the message with a transient `session.generate` call in a child session
+(with an empty history), commits through `squash-finish.sh`, and posts the Former HEAD and the new
+commit's `git show --stat` with `session.prompt` and `resume: false`. The parent conversation is not
+part of the child's context. The scripts resolve against the plugin's location; every git call runs
+in the session's directory. The parent session is never woken, so no agent turn follows.
+
+**Guardrail.** Keep `/squash` out of the model loop: no agent prompt and no follow-up turn in the
+parent session, and the message generation runs in a disposable child session so the conversation
+cannot leak into it and no tools run. `session.prompt` wakes the session unless `resume` is false,
+so the result must pass `resume: false`. A user message is used instead of a synthetic one because
+the TUI renders user text but shows a synthetic message as a one-line notice. `squash-finish.sh`
+restores the former HEAD when the message is missing or the commit fails.
+
+**See.** `.opencode/plugins/squash.js`, `.opencode/scripts/squash-{start,finish}.sh`;
+`conventions.md` §Git.
+
 ## 2026-11-11 — A row faces its consumer; small producer branches distribute
 
 **Decision.** Row order is no longer depth-sorted: `RowTopology` roots the producer graph at the

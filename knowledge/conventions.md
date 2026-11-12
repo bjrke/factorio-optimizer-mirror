@@ -238,12 +238,21 @@ up.
 
 ## Git
 
-- Commit rules (headline length, body wrapping, no `!<MR>` suffix) are in
+- Commit rules (headline length, body wrapping, no `!<MR>` suffix, no
+  novel-length recap, no repetition of `knowledge/` or documentation) are in
   `AGENTS.md` §Git workflow.
-- `/squash` resets to `origin/main`, stages the branch's net changes with a squash
-  merge (restoring the former HEAD on failure), and writes the message from
-  `git diff --cached -w origin/main`. The result is one commit containing only the
-  branch's changes.
+- `/squash` is a plugin command, not a prompt: it resets to `origin/main`, stages
+  the branch's net changes with a squash merge (restoring the former HEAD on
+  failure), writes the commit message from the staged diff with a transient
+  `session.generate` call in a child session (no history, so the parent
+  conversation is not part of its context), and posts the Former HEAD and the
+  new commit's `git show --stat` as a user message that carries `resume: false`.
+  `session.prompt` wakes the session unless told otherwise, so without that flag
+  the squash would trigger an agent turn. The message is visible because the TUI
+  renders user text, unlike a synthetic message, which it shows as a one-line
+  notice. The scripts resolve against the plugin's location, but every git call
+  runs in the session's directory, so a session moved to a worktree squashes its
+  own checkout. The result is one commit containing only the branch's changes.
 
 ## Knowledge promotion
 
