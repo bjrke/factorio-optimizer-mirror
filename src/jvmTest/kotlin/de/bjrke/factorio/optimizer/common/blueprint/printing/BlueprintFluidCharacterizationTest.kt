@@ -212,7 +212,7 @@ class BlueprintFluidCharacterizationTest {
         // C = a constant combinator, ^ = a product inserter, + = a pole.
         val expected =
             """
-            layout 14x8
+            layout 16x8
                  1         2
             -3 oCo-oo-oo-
             -2    o  o  o
@@ -221,7 +221,7 @@ class BlueprintFluidCharacterizationTest {
             1    111111111
             2    111111111
             3     ^ +^  ^
-            4    bbbbbbb(C)
+            4    bbbbbbbbbb(C)
 
             legend
               1 = chemical-plant: solid-fuel-from-petroleum-gas

@@ -69,6 +69,9 @@ internal class LayoutBoard(
     /** The underground runs passing under the placed tiles. */
     internal val tunnels = Tunnels()
 
+    /** The row sections a feed owns; see [reserveRow]. */
+    internal val rowReservations = RowReservations()
+
     /** Everything placed so far, in placement order. */
     val placed = mutableListOf<LayoutEntity>()
 
@@ -89,7 +92,8 @@ internal class LayoutBoard(
 
     fun isFree(coordinate: Coordinate) = grid[coordinate]?.entity == null
 
-    fun isReserved(coordinate: Coordinate) = grid[coordinate]?.reserved == true
+    fun isReserved(coordinate: Coordinate) =
+        grid[coordinate]?.reserved == true || rowReservations.isReserved(coordinate)
 
     /** Marks [coordinate] as needed by a feed or source of [material]. */
     fun reserve(coordinate: Coordinate, material: Material, approach: Boolean = false) {
@@ -104,7 +108,8 @@ internal class LayoutBoard(
     }
 
     /** The material of the feed that reserved [coordinate], if any. */
-    fun reservedMaterialAt(coordinate: Coordinate) = grid[coordinate]?.reservedFor
+    fun reservedMaterialAt(coordinate: Coordinate) =
+        grid[coordinate]?.reservedFor ?: rowReservations.materialAt(coordinate)
 
     /** The fluid a machine-edge pipe reserved for [coordinate], if any. */
     fun edgeFluidAt(coordinate: Coordinate) = grid[coordinate]?.edgeFluid
@@ -143,3 +148,29 @@ internal class LayoutBoard(
         rebuildTunnels()
     }
 }
+
+/**
+ * Row sections a feed owns. A route may not run on them, so a crossing has to tunnel under; the
+ * west side of the row stays free for a route to go around.
+ */
+internal class RowReservations {
+    private data class Section(val fromX: Int, val material: Material)
+
+    private val sections = mutableMapOf<Int, Section>()
+
+    fun reserve(y: Int, fromX: Int, material: Material) {
+        sections[y] = Section(fromX, material)
+    }
+
+    fun isReserved(coordinate: Coordinate) =
+        sections[coordinate.y]?.let { coordinate.x >= it.fromX } == true
+
+    fun materialAt(coordinate: Coordinate) =
+        sections[coordinate.y]?.takeIf { coordinate.x >= it.fromX }?.material
+
+    fun clear() = sections.clear()
+}
+
+/** Reserves [y] from [fromX] east for [material], so only a tunnel may cross it there. */
+internal fun LayoutBoard.reserveRow(y: Int, fromX: Int, material: Material) =
+    rowReservations.reserve(y, fromX, material)

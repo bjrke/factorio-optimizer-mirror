@@ -36,6 +36,9 @@ internal fun LayoutBoard.endName(material: Material) =
 internal fun LayoutBoard.hasTunnel(coordinate: Coordinate, step: Coordinate, type: String) =
     tunnels.has(coordinate, step, type)
 
+/** Whether any underground run passes under [coordinate]. */
+internal fun LayoutBoard.hasTunnelUnder(coordinate: Coordinate) = tunnels.anyAt(coordinate)
+
 /** Records the underground run from [from] to [to] on every tile it passes under. */
 internal fun LayoutBoard.markTunnel(from: Coordinate, to: Coordinate, type: String) =
     tunnels.mark(from, to, type)

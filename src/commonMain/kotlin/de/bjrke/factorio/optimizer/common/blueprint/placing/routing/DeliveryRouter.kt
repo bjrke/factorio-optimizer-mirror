@@ -1,10 +1,12 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
-import de.bjrke.factorio.optimizer.common.blueprint.layout.placeMarker
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeSurface
+import de.bjrke.factorio.optimizer.common.blueprint.layout.reserveRow
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
@@ -14,17 +16,9 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.model.east
-import de.bjrke.factorio.optimizer.common.core.model.west
-
-/** Belt tiles laid east of the last row before the target's connector may start. */
-private const val OUTPUT_BELT_LEAD = 3
 
 /** How often one delivery is routed again after a path wanted two facings on one belt tile. */
 private const val ROUTE_ATTEMPTS = 4
-
-/** How many columns east of a blocked belt a free marker spot is searched for. */
-private const val MARKER_SEARCH_COLUMNS = 12
 
 /**
  * Routes the solid belts of the layout: the target's output belt, the sink of every row input, the
@@ -98,13 +92,19 @@ internal class DeliveryRouter(
         start: Coordinate,
         direction: Direction,
         sink: Sink,
+        load: LaneLoad? = null,
     ): Boolean {
         if (!board.isFree(start)) {
             failures += "${material.name} from $start (start blocked)"
             return false
         }
         if (start == sink.feed) {
-            board.placeSurface(material, sink.feed, sink.heading ?: direction)
+            val heading = sink.heading ?: direction
+            if (load != null && !board.isFluid(material)) {
+                board.placeBelt(sink.feed, load, heading)
+            } else {
+                board.placeSurface(material, sink.feed, heading)
+            }
             return true
         }
         // a route can come back onto a tile it already used and want another facing there; that
@@ -123,7 +123,7 @@ internal class DeliveryRouter(
                 add(start)
                 addAll(segment)
             }
-            val conflicts = placePath(board, material, nodes, sink.heading)
+            val conflicts = placePath(board, material, nodes, sink.heading, load)
             if (conflicts.isEmpty()) {
                 networks.record(material, nodes, sink)
                 return true
@@ -138,48 +138,61 @@ internal class DeliveryRouter(
         return false
     }
 
-    /** Extends the target's output belt and ends it in the selected solid connector. */
+    /** Reserves the product row east of its placed belt, before any route runs. */
+    fun reserveTargetOutput() {
+        val targetMaterial = plan.target
+        if (board.isFluid(targetMaterial)) return
+        val row = rowPlacer.producerRow(targetMaterial)
+        val outputBelt =
+            row?.belts?.firstOrNull { it.io == Io.OUTPUT && it.material == targetMaterial }
+                ?: return
+        board.reserveRow(outputBelt.y, row.right + 1, targetMaterial)
+    }
+
+    /**
+     * Places the target's output connector east of everything and connects it to the product belt.
+     * The other feeds are already routed, so the connector no longer widens their search area; the
+     * product belt is the only route left and may tunnel under a crossing belt.
+     */
     fun placeTargetOutput() {
         val targetMaterial = plan.target
         // a fluid target leaves through the pipe output FluidFeeder places
         if (board.isFluid(targetMaterial)) return
-        val row = rowPlacer.producerRow(targetMaterial)
-        if (row == null) {
-            failures += "${targetMaterial.name} has no producer row"
-            return
+        val endBelt =
+            board.placed
+                .filterIsInstance<BeltEntity>()
+                .filter { it.material == targetMaterial }
+                .maxByOrNull { it.area.bottomRight.x }
+                ?: run {
+                    failures += "${targetMaterial.name} has no output belt on its row"
+                    return
+                }
+        val rowY = endBelt.area.topLeft.y
+        // the connector's feed tile must be free for the connecting belt
+        var east = board.maxX + 1
+        while (!board.isFree(Coordinate(east - 1, rowY))) east++
+        // the product row is no longer a routing wall once the other feeds are fixed
+        board.rowReservations.clear()
+        connector.placeSolidConnector(targetMaterial, east, rowY, input = false)
+        val start = endBelt.area.bottomRight.x + 1
+        // a loader at [east] takes directly from the belt at [east] - 1; only the tiles before
+        // its feed tile need a route
+        if (start < east) {
+            deliver(
+                targetMaterial,
+                Coordinate(start, rowY),
+                EAST,
+                Sink(Coordinate(east, rowY), Coordinate(east - 1, rowY), EAST),
+                load = endBelt.load,
+            )
         }
-        val outputBelt =
-            row.belts.firstOrNull { it.io == Io.OUTPUT && it.material == targetMaterial }
-        if (outputBelt == null) {
-            failures += "${targetMaterial.name} has no output belt on its row"
-            return
-        }
-        var coordinate = Coordinate(row.right + 1, outputBelt.y)
-
-        while (coordinate.x <= row.right + OUTPUT_BELT_LEAD && board.isFree(coordinate)) {
-            board.placeBelt(coordinate, outputBelt.load, EAST)
-            coordinate = coordinate.east()
-        }
-        val fits = (0 until connector.width).all { board.isFree(coordinate.east(it)) }
-        if (fits) {
-            // the output label sits above the product line, just like an imported input
-            connector.placeSolidConnector(targetMaterial, coordinate.x, coordinate.y, input = false)
-        } else {
-            val spot = markerSpot(coordinate.west())
-            board.placeMarker(spot, Signal(targetMaterial))
-        }
-    }
-
-    /** A free tile beside the belt at [where], so a marker never blocks the belt. */
-    private fun markerSpot(where: Coordinate): Coordinate {
-        val (anchorX, beltRow) = where
-
-        for (dx in 0..MARKER_SEARCH_COLUMNS) {
-            for (dy in listOf(-1, 1)) {
-                val tile = Coordinate(anchorX + dx, beltRow + dy)
-                if (board.isFree(tile)) return tile
+        val connectorEnd = east + connector.width
+        val eastOfConnector =
+            board.placed.filterIsInstance<ConveyorEntity>().filter {
+                it.area.topLeft.x >= connectorEnd
             }
+        if (eastOfConnector.isNotEmpty()) {
+            failures += "${targetMaterial.name} has a belt east of its output connector"
         }
-        return where.west()
     }
 }

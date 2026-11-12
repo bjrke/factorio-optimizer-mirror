@@ -27,6 +27,9 @@ internal class Tunnels {
     fun has(coordinate: Coordinate, step: Coordinate, type: String): Boolean =
         Key(axisOf(step), type) in under[coordinate].orEmpty()
 
+    /** Whether any run passes under [coordinate]. */
+    fun anyAt(coordinate: Coordinate): Boolean = under[coordinate]?.isNotEmpty() == true
+
     /** Records the run from [from] to [to] on every tile it passes under. */
     fun mark(from: Coordinate, to: Coordinate, type: String) {
         val delta = to - from

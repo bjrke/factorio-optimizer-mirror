@@ -89,7 +89,7 @@ internal class RowLayout(
         if (!initialized && plan.rows.isNotEmpty()) {
             initialized = true
             rowPlacer.placeAll()
-            deliveryRouter.placeTargetOutput()
+            deliveryRouter.reserveTargetOutput()
             // prepare every source before routing anything, so a long early route cannot occupy a
             // marker or producer outlet that a later delivery needs
             val deliveries = deliveryRouter.prepareDeliveries()
@@ -107,6 +107,8 @@ internal class RowLayout(
             importTrimmer.trim()
             stretchUndergroundRuns()
             compactionPass.compact()
+            // the product connector goes last so compaction cannot drag it back over the routes
+            deliveryRouter.placeTargetOutput()
             PowerPlacer(board, imports.poleWestBound).place()
             // compaction accepts a corridor only when the whole layout validates, so an earlier
             // error silently turns the pass off; surface it instead of shipping a broken layout

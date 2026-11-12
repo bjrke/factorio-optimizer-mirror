@@ -2,7 +2,9 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.special
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.endName
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.markTunnels
+import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeSurface
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -26,7 +28,8 @@ internal data class TunnelOutputRole(override val direction: Direction) : PathRo
 /**
  * Draws the transport entities of [material] along [nodes]; a jump becomes an underground run. A
  * tile carries one entity, so each gets its final role from [roles] before anything is placed. A
- * fluid material routes as pipes.
+ * fluid material routes as pipes. A solid [load] replaces the full belt on every surface tile, so a
+ * product lane keeps its half load.
  *
  * Returns the tiles a belt route uses twice; nothing is placed then and the caller has to route
  * again. A belt tile carries one entity with one facing, so a revisit silently drops the first
@@ -38,13 +41,19 @@ internal fun placePath(
     material: Material,
     nodes: List<Coordinate>,
     finalHeading: Direction? = null,
+    load: LaneLoad? = null,
 ): Set<Coordinate> {
     val revisited = pathConflicts(board, material, nodes)
     if (revisited.isNotEmpty()) return revisited
     for ((tile, role) in roles(nodes, finalHeading)) {
         if (!board.isFree(tile)) continue
         when (role) {
-            is SurfaceRole -> board.placeSurface(material, tile, role.direction)
+            is SurfaceRole ->
+                if (load != null && !board.isFluid(material)) {
+                    board.placeBelt(tile, load, role.direction)
+                } else {
+                    board.placeSurface(material, tile, role.direction)
+                }
             is TunnelInputRole -> board.placeEnd(material, tile, role.direction, Io.INPUT)
             is TunnelOutputRole -> board.placeEnd(material, tile, role.direction, Io.OUTPUT)
         }

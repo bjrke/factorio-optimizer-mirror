@@ -233,11 +233,12 @@ edges).
 optimizer's `OptimizationResult`; `blueprint/RowLayout.kt` turns a
 `BlueprintPlan` plus a `LogisticsCalculator` into a `Blueprint`
 (`blueprint/printing/model/Blueprint.kt`). `RowLayout(plan, logistics, beltEnd).blueprint()`
-runs the ordered passes — recipe rows, target output, import preparation,
+runs the ordered passes — recipe rows, the product-row reservation, import preparation,
 fluid lanes and source markers, solid import deliveries, the routed fluid
 fallback, produced solid deliveries, the drain/feed lane link, the fluid target
-output, trim import prefixes, stretch underground runs, compaction, poles (which
-place their wires) — and returns a `Blueprint` whose `entities` are numbered by
+output, trim import prefixes, stretch underground runs, compaction, the solid
+target output connector, poles (which place their wires) — and returns a
+`Blueprint` whose `entities` are numbered by
 list position and whose `wires` are the chest-connector wires from
 `blueprint/printing/output/ChestWires.kt`. The order is load-bearing: fluid lanes go
 before solid belts, solid imports go before produced deliveries, the lane link
@@ -263,7 +264,8 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 `rowPlacer`, `router`) instead of repeating those collaborators:
 
 - `blueprint/layout/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
-  the reserve/place/remove primitives. Single-tile entity placement lives in
+  the reserve/place/remove primitives, including the `reserveRow` section that makes a
+  product row a wall for surface routes (a crossing tunnels under it). Single-tile entity placement lives in
   `LayoutPlacement.kt`; `LayoutTunnels.kt` owns the surface tile, the underground
   end and the tunnel, plus `tunnelPlan(from, to)` — the one calculation of a link's
   tiles (surface tiles and run ends, at the material's reach) — which `placeTunnelPlan`
@@ -383,7 +385,9 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 - `blueprint/placing/routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). Only a
   straight run decides the column; a mixed feed that turns before its merge stays
-  inline instead of dragging every marker west. A **fluid**
+  inline instead of dragging every marker west. `connectorClear` walks that column
+  west until the connector replaces only its own marker and straight feed belts, so
+  a foreign entity or a tunnel span never ends up under a loader. A **fluid**
   lane marker moves into that same column; `blueprint/placing/routing/FluidFeedLinker.kt` joins its
   lane head with pipe-to-ground runs along the lane row (`FluidFeed` in
   `blueprint/planning/plan/ImportExtension.kt`). Without solid imports the column is the westmost
@@ -410,7 +414,10 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   their connector width/offset, and the chest circuit wires.
 - `blueprint/placing/routing/DeliveryRouter.kt` — routes the solid imports first and the produced
   deliveries afterwards, and places the target's output connector (reporting a target without a
-  product belt instead of silently skipping it);
+  product belt instead of silently skipping it); `reserveTargetOutput` reserves the product row
+  from the placed belt east before any route, and `placeTargetOutput` runs after compaction,
+  puts the connector at `maxX + 1`, and routes the product belt last with its half lane (a
+  crossing belt is tunneled under). A belt still east of the finished connector is a failure;
   `DeliveryPreparation` reserves the sinks and sources (imports first) and each sink's approach
   tile for its material; a mixed
   input belt contributes two sinks (its straight feeder and its U-turn feeder) and

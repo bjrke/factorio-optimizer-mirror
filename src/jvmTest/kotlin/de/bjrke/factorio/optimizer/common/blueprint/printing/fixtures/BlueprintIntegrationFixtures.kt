@@ -4,9 +4,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.TransportEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
@@ -17,7 +19,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.isInputPort
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.isOutputPort
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -31,6 +35,7 @@ import de.bjrke.factorio.optimizer.common.optimize.Optimizer
 import de.bjrke.factorio.optimizer.jvm.parseArgs
 import java.util.*
 import java.util.zip.Inflater
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 /** Plans, logistics and blueprint decoding for the JVM integration suites, keyed by target name. */
@@ -172,6 +177,29 @@ data class Layout(
         entities.filterIsInstance<BeltEntity>().associate { it.area.topLeft to it.load }
     }
 
+    /** Every tile an underground belt passes under, matched to its own output end. */
+    val tunnelSpans by lazy {
+        val underground = entities.filterIsInstance<UndergroundBeltEntity>()
+        val spans = mutableSetOf<Coordinate>()
+        for (input in underground.filter { it.io == Io.INPUT }) {
+            val step = input.direction.step
+            val output =
+                (2..11)
+                    .map { reach -> input.area.topLeft + step * reach }
+                    .firstOrNull { tile ->
+                        underground.any { candidate ->
+                            candidate.io == Io.OUTPUT &&
+                                candidate.area.topLeft == tile &&
+                                candidate.material == input.material &&
+                                candidate.direction == input.direction
+                        }
+                    } ?: continue
+            val distance = input.area.topLeft.manhattanDist(output)
+            for (offset in 1 until distance) spans += input.area.topLeft + step * offset
+        }
+        spans
+    }
+
     /**
      * Every pipe or pipe-to-ground of the layout that stands on a machine's *port* tile, mapped to
      * its fluid. A route can run along a lane next to a machine without feeding it, so a pipe only
@@ -212,4 +240,11 @@ data class Layout(
                 .firstOrNull { machine.area.topLeft + it.tile == tile }
                 ?.let { factory to it }
         }
+}
+
+/** A loader is two tiles long, so neither tile may sit above a tunnel span. */
+internal fun assertNoLoaderOverTunnel(layout: Layout) {
+    val loaders = layout.entities.filterIsInstance<LoaderEntity>()
+    val over = loaders.filter { loader -> loader.area.any { it in layout.tunnelSpans } }
+    assertEquals(emptyList(), over, "loaders cover a tunnel span")
 }

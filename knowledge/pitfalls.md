@@ -21,6 +21,23 @@ An entry belongs here only with evidence, and should say how to recognize it.
   returns `null` from `lastStraightEast` for it, and only the straight feeds choose the common
   column. Treating the old `start.x - 1` fallback as a real end drags every marker west and the
   layout looks untrimmed.
+- **A trimmed import connector may only replace its own marker and its straight feed belts.**
+  `ImportTrimmer.connectorClear` walks the common column west until every connector tile is free,
+  a feed belt of that material, or one of the marker's own tiles; a foreign entity or a tunnel
+  span keeps the column further west, and an unsafe column falls back to the inline marker.
+  Without the check a marker moved onto a tunnel span leaves a loader above the run (the reported
+  utility-science URL's copper-cable tunnel under the coal import). Evidence:
+  `theReportedUtilityScienceUrlKeepsTheProductRowClear`, `realCheatBlueprintsAreValid`
+  (`assertNoLoaderOverTunnel`).
+- **The target product row is a routing wall from the placed output belt east, but the
+  connector itself must not exist while the other feeds route.** `reserveTargetOutput` only
+  calls `LayoutBoard.reserveRow`, so a produced feed may still go around the row's west side
+  but must tunnel to cross it. The connector is placed after compaction at `board.maxX + 1`,
+  then the product belt is routed last (with the half-lane load) and may tunnel under a
+  crossing belt. Placing the connector before routing widens the route-search area and pushes
+  a feed like the utility-science LDS belt east of the marker; leaving a belt east of the
+  finished connector is reported in `failures`. Evidence:
+  `theReportedUtilityScienceUrlKeepsTheProductRowClear`.
 - **A half output belt may feed a full trunk, but not enter a tunnel or a route side.** Compare
   `materials` for a straight continuation and for a seam splice; use exact full loads for
   `UndergroundStretcher.swallowable`, `BeltRouteRules` and the tunnel-end checks. A mixed belt is

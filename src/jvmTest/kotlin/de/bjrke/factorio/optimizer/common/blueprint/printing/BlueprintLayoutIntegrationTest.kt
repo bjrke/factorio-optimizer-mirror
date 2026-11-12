@@ -17,6 +17,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoDanglingInserter
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoLoaderOverTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoMergingBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoOverlap
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertOneBeltSourcePerMaterial
@@ -90,6 +91,7 @@ class BlueprintLayoutIntegrationTest {
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
                 { assertNoOverlap(layout.blueprint.entities) },
+                { assertNoLoaderOverTunnel(layout) },
             )
         }
 
@@ -136,7 +138,7 @@ class BlueprintLayoutIntegrationTest {
                 layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
-            { assertTrue(width <= 40, "layout is still $width tiles wide") },
+            { assertTrue(width <= 42, "layout is still $width tiles wide") },
             { assertTrue(height < 80, "layout is still $height tiles tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
@@ -162,7 +164,7 @@ class BlueprintLayoutIntegrationTest {
                 layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
-            { assertTrue(width <= 50, "layout is still $width tiles wide") },
+            { assertTrue(width <= 52, "layout is still $width tiles wide") },
             { assertTrue(height <= 95, "layout is still $height rows tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
@@ -216,7 +218,7 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(width <= 50, "layout is still $width tiles wide") },
+            { assertTrue(width <= 52, "layout is still $width tiles wide") },
             { assertTrue(height <= 125, "layout is still $height rows tall") },
             { assertNoPlannedMaterialIsImported(layout.plan) },
             { assertContains(layout.plan.beltMaterials, Material("rocket-silo")) },
@@ -242,7 +244,7 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(width <= 22, "layout is still $width tiles wide") },
+            { assertTrue(width <= 23, "layout is still $width tiles wide") },
             { assertTrue(height <= 47, "layout is still $height rows tall") },
             {
                 assertEquals(
@@ -531,7 +533,7 @@ class BlueprintLayoutIntegrationTest {
             // the 5-belt firearm/piercing/uranium band is now split into a nuclear/uranium band
             // and a firearm/piercing band, so the widest row is the nine-machine uranium band;
             // the old 23- and 36-tile guards only held while that was one belted row
-            { assertTrue(width <= 42, "layout is still $width tiles wide") },
+            { assertTrue(width <= 43, "layout is still $width tiles wide") },
             {
                 assertTrue(
                     height <= 40,

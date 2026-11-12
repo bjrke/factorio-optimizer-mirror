@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.FLUID_SOURCE_WIDTH
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.hasTunnelUnder
 import de.bjrke.factorio.optimizer.common.blueprint.layout.rebuildTunnels
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
@@ -41,9 +42,14 @@ internal class ImportTrimmer(
             }
         val common = straight.minOfOrNull { (_, end) -> end - width }
         val trimmable = straight.map { it.first }
-        val trimmedColumn = common?.takeIf {
-            it > connector.left && trimSolid(trimmable, it, width)
+        // a connector may only replace its own marker and the straight feed belts; any other
+        // entity or a tunnel span keeps the whole column where it is
+        val safeCommon = common?.let { start ->
+            (start downTo connector.left + 1).firstOrNull { column ->
+                trimmable.all { feed -> connectorClear(column, feed) }
+            }
         }
+        val trimmedColumn = safeCommon?.takeIf { trimSolid(trimmable, it, width) }
         val column = trimmedColumn ?: fallbackColumn()
         // a chest marker is powered, so its poles may sit in the import extension
         if (!beltEnd.isChest) {
@@ -78,6 +84,25 @@ internal class ImportTrimmer(
         if (validateLayout(board.placed).isEmpty()) return true
         board.replaceAll(saved)
         return false
+    }
+
+    /**
+     * Whether [feed]'s connector can sit at [column]: every tile is free, a straight feed belt the
+     * trim removes, or part of the feed's own marker, and no tunnel passes under it.
+     */
+    private fun connectorClear(column: Int, feed: ImportFeed): Boolean {
+        val ownMarker = connector.left until connector.left + connector.width
+        return (column until column + connector.width).all { x ->
+            val tile = Coordinate(x, feed.row)
+            val entity = board.entityAt(tile)
+            val removable =
+                x in ownMarker ||
+                    entity == null ||
+                    (entity is BeltEntity &&
+                        entity.material == feed.material &&
+                        entity.direction == EAST)
+            removable && !board.hasTunnelUnder(tile)
+        }
     }
 
     /**
