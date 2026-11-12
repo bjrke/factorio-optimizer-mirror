@@ -83,7 +83,10 @@ up.
   suites read entities and failures back through `RowLayout.layoutDump()` (the
   CLI's `--layout` also uses it) or through the `Layout` fixture that wraps both
   read-backs. No production type widens its visibility beyond `RowLayout`'s
-  `internal` or keeps a wrapper only tests call.
+  `internal` or keeps a wrapper only tests call. Do not reintroduce top-level
+  `fromPlaced`/`blueprintLayoutDump` wrappers, and do not rebuild a layout after it
+  has built (`RowLayout`'s `build()` is idempotent); a new layout fact is a property
+  on the `Layout` fixture, not a second dump function.
 
 ## Spelling and naming
 
@@ -115,10 +118,9 @@ up.
 
 ## Testing
 
-- Every behavior change or new logic gets tests **without being asked**, in the
-  matching source set (`commonMain`/`jsMain`/`jvmMain` →
-  `commonTest`/`jsTest`/`jvmTest`); a missing test means the change is incomplete.
-  Exception: pure formatting/docs. Use `kotlin.test`.
+- A behavior change needs tests in the matching source set
+  (`commonMain`/`jsMain`/`jvmMain` → `commonTest`/`jsTest`/`jvmTest`);
+  `AGENTS.md` states the rule. Use `kotlin.test`.
 - Every test that builds the blueprint `Layout` fixture (`Layout(...)` or
   `layoutFromUrl(...)`) asserts `assertEquals(emptyList(), layout.failures)` in
   that test. A layout can still satisfy a geometry assertion while leaving a feed
@@ -127,8 +129,8 @@ up.
   are non-empty.
 - Use the shared material and recipe fixtures before defining a local recipe:
   `common/fixtures/MaterialFixtures.kt` and `common/fixtures/RecipeFixtures.kt`
-  hold real game recipes (`smeltRecipe`, `makeCopperCable`,
-  `makeElectricEngineUnit`, …) with the `data.raw` amounts and times. A synthetic
+  hold real game recipes (`ironPlateSmeltingRecipe`, `copperCableRecipe`,
+  `electricEngineUnitRecipe`, …) with the `data.raw` amounts and times. A synthetic
   recipe is fine for a contrived rate, a cycle no vanilla recipe has, or a minimal
   fluid-row geometry; say why in a comment. `blueprint/printing/fixtures/FluidRowFixtures.kt`
   keeps `water-boil` as that geometry double: a real fluid-to-solid recipe adds
@@ -184,12 +186,10 @@ up.
   `utility-science-pack`.
 - `commonTest` runs on JVM **and** JS: keep it platform-neutral; target specifics
   go in `src/jvmTest` / `src/jsTest`.
-- Run Gradle only when the change reaches the build. `./gradlew check` runs
-  `spotlessCheck`, Detekt, `jvmTest` and `jsBrowserTest` (headless Chrome), so it is
-  needed only when the branch touches `src/**` (code or resources),
-  `build.gradle.kts`, `buildSrc/**`, `gradle/**` or `settings.gradle.kts`: iterate
-  with `./gradlew jvmTest`, finish with `./gradlew spotlessApply check` — a single
-  invocation, one Gradle process.
+- The Gradle-run rule is in `AGENTS.md` §Testing. `./gradlew check` runs
+  `spotlessCheck`, Detekt, `jvmTest` and `jsBrowserTest` (headless Chrome), so
+  iterate with `./gradlew jvmTest` and finish with `./gradlew spotlessApply check`
+  — one invocation, one Gradle process.
 - **A suite that is too heavy for the JS browser belongs in `jvmTest`.** `commonTest`
   runs on both JVM and JS, so a suite there costs a Chrome execution in
   `jsBrowserTest` on every pipeline. The heavy layout and blueprint suites
@@ -211,20 +211,14 @@ up.
   materials): the JVM test compilation sees the `commonTest` source set as a friend
   module, so both `internal` and public declarations keep compiling — verified by
   moving the suites and rerunning `compileTestKotlinJvm`.
-- A docs-only or tooling-only branch runs **no** Gradle task: `knowledge/**`,
-  `AGENTS.md` and other `*.md` are not build inputs, and `.opencode/**` is agent
-  tooling. `spotlessApply` would be a no-op there anyway. A branch that mixes code
-  and docs follows the code rule.
 - Build logic (`buildSrc/**`) has **no** test suite; the root `check` drives buildSrc
   only up to `jar`, so a buildSrc test would not run from `check` — wire it in
   separately (`./gradlew -p buildSrc test`) if one is ever added. Such tests are plain
   `kotlin.test` — the `de.bjrke.test` helpers are app-only. `tasks.test {
   useJUnitPlatform() }` makes `kotlin("test")` resolve to `kotlin-test-junit5`,
   which already brings `junit-jupiter-engine`; never declare the engine explicitly.
-- **Never test agent tooling from the app suites.** Everything outside the
-  application — `AGENTS.md`, `knowledge/`, `.opencode/`, `tmp/` — is not part of
-  the build; `./gradlew check` covers the app only. Plugins can be syntax-checked
-  with `node --check`.
+- **Never test agent tooling from the app suites.** `AGENTS.md` §Testing defines
+  what the build covers; `./gradlew check` covers the app only.
 
 ## Component tests (jsTest)
 
@@ -244,10 +238,8 @@ up.
 
 ## Git
 
-- Commit after the work is done (no explicit request needed). Headline ≤ 50 chars;
-  body wrapped at 72 chars, explaining why and recording findings that do not
-  belong in `knowledge/`. No `!<MR>` suffix: GitLab appends the MR number when it
-  merges.
+- Commit rules (headline length, body wrapping, no `!<MR>` suffix) are in
+  `AGENTS.md` §Git workflow.
 - `/squash` resets to `origin/main`, stages the branch's net changes with a squash
   merge (restoring the former HEAD on failure), and writes the message from
   `git diff --cached -w origin/main`. The result is one commit containing only the

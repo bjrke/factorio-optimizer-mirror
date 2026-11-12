@@ -15,6 +15,19 @@ state — notes go stale.
 prompt (commands, sandbox policy, Git workflow, knowledge rules). Everything an
 agent does not need on every turn lives here instead.
 
+## Where a fact lives
+
+Every fact has one home; other files cross-reference it instead of restating it.
+
+- `architecture.md` — where it lives, how data flows, the load-bearing order.
+- `decisions.md` — what must stay true and why (decision + guardrail).
+- `pitfalls.md` — how to recognize a failure, its cause, its fix and evidence.
+- `conventions.md` — how to do the work.
+
+Promote a finding to the file that owns it, then delete the duplicate. A
+decision keeps the constraint and its rationale; the mechanism is architecture,
+the symptom is pitfalls.
+
 ## Compaction
 
 OpenCode compacts the session automatically when the context fills
@@ -22,7 +35,9 @@ OpenCode compacts the session automatically when the context fills
 the summarizer to keep verified state, decisions and the next action, and to drop
 transcripts. Run `/handoff` deliberately before a pause to promote reusable
 findings into `knowledge/` and state the same points. There is no agent-initiated
-compaction and no handoff file.
+compaction, no handoff file, no `knowledge/tasks/`, no task IDs and no checkpoints:
+`knowledge/` holds the durable record and commit messages hold the per-change
+detail.
 
 ## History
 

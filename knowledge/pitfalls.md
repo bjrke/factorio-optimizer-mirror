@@ -28,13 +28,12 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `aRunLeavesAHalfBeltLane`.
 - **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed,
   prefers the ones whose rate fits a lane, and never pairs a fluid or an output; `bandBeltFits(plan)`
-  must read the arranged machine rates, not `bandBeltMaterials(...).size`. Pairing an over-capacity
-  input is allowed once the row would otherwise drop a belt row or its product: half a lane is still
-  better than no belt (the rocket-silo row has five solid inputs and one product on four rows). A row
-  that still needs more disjoint pairs than its inputs can form has to report a failure; silently
-  dropping a belt leaves a machine unfed. Evidence: `aSixInputRowMixesThreeInputPairs`,
+  must read the arranged machine rates, not `bandBeltMaterials(...).size`. A row that still needs
+  more disjoint pairs than its inputs can form reports a failure; silently dropping a belt leaves a
+  machine unfed. Evidence: `aSixInputRowMixesThreeInputPairs`,
   `producedInputsPairOnBothFeedSides`, `anOverCapacityInputPairsBeforeTheRowLosesABelt`,
-  `aRowThatCannotFitReportsTheMissingMaterials`, `wideLayoutIsStable`.
+  `aRowThatCannotFitReportsTheMissingMaterials`, `wideLayoutIsStable`. See `decisions.md`
+  (2026-11-10).
 
 ## Layout and fluids
 
@@ -47,7 +46,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   the south edge (180° placement), and the electromagnetic plant's input boxes face north/south
   (90° clockwise). A pipe on the wrong box shows up as a fluid that never arrives while the
   machine's other fluid works. Evidence: the four reported URLs in
-  `BlueprintFluidPortLayoutTest`.
+  `BlueprintFluidPortLayoutTest`. See `decisions.md` (2026-10-27).
 - **Never merge a row's fluid lanes by material alone.** A fluid can be both an
   input and an output of the same machine (vanilla `coal-liquefaction` takes and
   gives heavy oil), and the input and output ports usually sit on opposite edges.
@@ -104,18 +103,12 @@ An entry belongs here only with evidence, and should say how to recognize it.
   to reach past it, and a belt that crosses
   another belt can only tunnel. Evidence: the reported `advanced-circuit` URL's
   copper-cable feed tunnels where its cable row joins a band
-  (`advancedCircuitUrlOnlyTunnelsForItsBandedFeeds` locks that in). Since plastic is
+  (`advancedCircuitUrlRoutesEveryFeedOnTheSurface` locks that in). Since plastic is
   planned, its extra row also forces the electronic-circuit feed to tunnel; on a plan
   without that row the lane tail beside the machines blocks the straight column and
-  the router turns east one column and comes back on the surface.
-  The route costs make that work: a bend costs more than a straight tile (`turnCost = 6`
-  against `surfaceCost = 4`) and a tunnel entry costs seven surface tiles
-  (`tunnelEntry = 28`), so a route runs straight, rounds the end of a belt row instead
-  of diving under it, and still tunnels a long crossing. The reported
-  logistic-science gear belt used to dive under both plate rows and the circuit row
-  (two tunnels); with those costs it rounds the plate rows and the circuit trunk is the
-  only route tunnel left. Line breaking a band too wide is a deferred follow-up, not
-  a bug in the router.
+  the router turns east one column and comes back on the surface. Line breaking a band
+  too wide is a deferred follow-up, not a bug in the router. See `decisions.md`
+  (2026-11-11) for the route costs.
 - **A belt tile faces the tile it turns into, so a route must not judge its arrival
   direction.** `BeltRouteRules` used to reject a tile that would side-load a foreign
   belt in the direction it arrived from; at a corner that is not the belt's facing, so
@@ -126,6 +119,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `aCornerMayTurnOverAForeignBeltItDoesNotFeed`). The reserved-feed approach check in
   the same class still reads the arrival direction: the advanced-circuit layout needs
   it to tunnel its circuit feed, so do not "fix" it without re-pinning that layout.
+  See `decisions.md` (2026-11-11).
 - **`LANE_MARGIN` offsets the blueprint, it does not widen it.** The machine rows start at column
   `LANE_MARGIN`, but `ImportTrimmer` moves every connector to the furthest west column that still has
   a straight east feed and deletes the prefix, so the finished layout begins at the connector:
@@ -139,25 +133,23 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `LayoutRouter.routeWide` retries with `WIDE_ROUTE_MARGIN` (24) and still appends
   `route … needed the wide search box` to `failures`, so a layout that depends on the room fails every
   suite that asserts `failures` empty. Recognize it by that message; fix it by re-routing, not by
-  widening the compact box without re-pinning the layouts.
+  widening the compact box without re-pinning the layouts. See `decisions.md` (2026-11-11).
 - **Recipe cycles are excluded by the optimizer, not by `buildable`.**
   `game/prototype/RecipePolicy.kt` lists `fish-breeding`, `nutrients-from-fish` and
   `kovarex-enrichment-process` in `unplannedRecipes` and discards them even when one produces the
-  target, so a plan can never contain a cycle. `buildable` deliberately does not re-check the set;
-  uranium-235 is built by `uranium-processing`, and centrifuging and the simple chemistry recipes
-  (plastic, sulfur, battery, ...) are otherwise planned. `FeedNode.traverse()` keeps a
+  target, so a plan can never contain a cycle. `FeedNode.traverse()` keeps a
   visited-node set so a shared producer is expanded once; it does **not** filter the
   closing edge of a cycle (the edge is yielded before the visited check), so an unforeseen
   cycle would still reach `maximalGroups`.
   Evidence: `bannedRecipesAreNeverPlanned`, `nutrientsAreNotBredFromFish` and
-  `uranium235IsBuiltByProcessingNotKovarex`. Do not
-  reintroduce path-local cycle state; a future cycle needs a name in `unplannedRecipes`.
+  `uranium235IsBuiltByProcessingNotKovarex`. See `decisions.md` (2026-11-08).
 - **One imported fluid can span more than one pipe network.** `FluidLaneFeed` lays a lane
   per row and each lane gets its own inline source, so a plan that feeds the same fluid to
   two distant rows (the `utility-science-pack` plan's battery row and its processing-unit
   band both take sulfuric acid) has two disconnected networks. Both are fed; do not assert
   that one fluid is one network. `fluidNetworkProblems` instead requires every network to
-  reach a source. Evidence: `realFluidNetworksAreConnected` (`utility-science-pack`).
+  reach a source. Evidence: `realBlueprintsHaveValidPlumbingAndConnectedNetworks`
+  (`utility-science-pack`).
 - **A row has four solid belt locations, so a fifth solid lane only fits as a mixed belt.**
   `RowPlacer.rowShape` ranks inputs and outputs together and zips them onto two top
   and two bottom locations (near/far each), at most `MAX_ROW_BELTS`; every input
@@ -168,7 +160,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   row`); a plain recipe such as `flying-robot-frame` (four solid inputs plus a
   product) fits through one mixed belt. Recognize a genuine routing failure by
   `foreign side-load into …` while the row still has a free input lane, not by
-  compaction rejecting every corridor.
+  compaction rejecting every corridor. See `decisions.md` (2026-11-10).
 - **The underground stretcher must not swallow a belt an inserter takes from or drops
   onto.** Only fluid ports were protected, so a run could grow under the last lane
   tiles of a row and leave an inserter facing nothing; `inserterTiles` now protects
@@ -207,12 +199,10 @@ An entry belongs here only with evidence, and should say how to recognize it.
   empty, a foreign belt, or a belt not facing into the run — and by a route that was
   valid before compaction. Evidence: the reported uranium-rounds URL had
   `(38,42) EAST -> (39,42) SOUTH -> (39,43) INPUT SOUTH` before compaction and
-  `(38,17) EAST | (39,17) INPUT SOUTH` after it. `validateLayout` now rejects it;
-  do not weaken that back to an occupancy check, and do not exempt a route end just
-  because some import connector is adjacent (another import's loader can sit
-  beside it). A post-stretch failure must also rule out that seam and continue, not
-  abort the pass: the `0.3` uranium variant kept a 13-tile straight piercing belt
-  until the retry was added.
+  `(38,17) EAST | (39,17) INPUT SOUTH` after it. `validateLayout` now rejects it. A
+  post-stretch failure must also rule out that seam and continue, not abort the pass:
+  the `0.3` uranium variant kept a 13-tile straight piercing belt until the retry was
+  added. See `decisions.md` (2026-10-26).
 - **A corner belt is removable when the belt behind it feeds it straight into a
   perpendicular same-material lane.** The splice rule only accepted a belt with the
   same direction and material on both sides, so the last belt of a feeder before its
@@ -251,11 +241,10 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `BeltRouteRules.sideLoaded` rejects any belt pouring into a route tile, not only
   a foreign one. `validateBeltFlow` (`LayoutValidationFlow.kt`) reports `splitter
   at … has no input` and `<material> belt loops back at …`; the circle report
-  names one tile per circle and ignores a belt merely downstream of it. Do not
-  treat a splitter as a belt tile a belt may turn into. Evidence:
+  names one tile per circle and ignores a belt merely downstream of it. Evidence:
   `aSplitterWithoutABeltOnItsBackIsReported`,
   `aBeltCircleIsReportedOnceAtItsFirstTile`,
-  `theReportedFusionReactorUrlCompacts`.
+  `theReportedFusionReactorUrlCompacts`. See `decisions.md` (2026-11-11).
 - **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
   corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
   error anywhere rejects every candidate and the pass returns after its first
@@ -275,25 +264,25 @@ An entry belongs here only with evidence, and should say how to recognize it.
   landing, `PathPlacer.pathConflicts` rejects any belt path that uses a tile twice (nothing is
   placed), and `DeliveryRouter` re-searches with those tiles blocked. Pipes are exempt: a pipe tile
   is a junction. Evidence: `aPipeRouteDoesNotDoubleBackOntoItsLanding`,
-  `aBeltPathThatRevisitsATileIsRejected`, `theReportedRocketSiloUrlCompacts`.
+  `aBeltPathThatRevisitsATileIsRejected`, `theReportedRocketSiloUrlCompacts`. See
+  `decisions.md` (2026-11-11).
 - **A feed's approach tile is part of the feed.** A sink reserves its feed tile, but its belt
   takes its items from the tile behind (`feed - heading.step`); when a produced trunk already
   ran south on that tile, the copper-cable lane could never be fed (`copper-cable to … (no
   route)`). `DeliveryPreparation` reserves the approach tile for the feed's material,
   `BeltRouteRules` admits it for that material only and refuses a foreign belt that would pour
   into it. Evidence: `aForeignRouteMayNotTakeTheApproachTileOfAFeed`,
-  `theReportedRocketSiloUrlCompacts`.
+  `theReportedRocketSiloUrlCompacts`. See `decisions.md` (2026-11-11).
 - **An underground run's far end must be matched by material, not by position.**
   Two runs can tunnel in the same column, so a test that looks for "the next
   underground belt in this direction" finds a *foreign* one and reports a phantom
   violation. `realBlueprintsAreValid` did exactly that for
   `advanced-circuit` ("input (38,22) can still grow back") after the band reshaped
   the layout; the layout's own `undergroundOutputOf` compares the material, and the
-  test now does too. Match material (or `blueprintTransportMaterials`' map)
-  whenever you search along a run.
+  test now does too. Match material whenever you search along a run.
 - **`poleWestBound` keeps poles out of the import extension.** The pole pass
   (`bestPoleSpot`, `freeNear`) places a pole only at `x >= poleWestBound`, which
-  `importSource`, `trimImportPrefixes` and the compaction shift raise to the import
+  `importSource`, `ImportTrimmer.trim()` and the compaction shift raise to the import
   connector's east edge. A chest marker's inserters sit *inside* that zone, so the
   bound must be skipped when `beltEnd.isChest` at **every** site
   (`DeliveryPreparation`, `ImportTrimmer`, `CompactionPass`) or
@@ -301,8 +290,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
 - **A chest needs ground; a space platform allows only the label.**
   `BeltEnd.allowedOn(Surface.SPACE)` is false for every chest. The UI disables those
   radio options and both entry points (`BeltEnd.fromSelection`, the CLI) clamp a
-  chest code to `constant-combinator`; do not special-case the label again
-  elsewhere.
+  chest code to `constant-combinator`. See `decisions.md` (2026-10-18).
 - **A blueprint does not rebuild circuit wires — store them in `wires`.** The
   top-level `blueprint.wires` array lists `[entity, connector, entity, connector]`
   quadruples; the game draws nothing from proximity. A chest-connector inserter
@@ -319,32 +307,31 @@ An entry belongs here only with evidence, and should say how to recognize it.
   advanced circuit, the processing unit and the flying robot frame. Internalizing
   it into one of them leaves the other two with a placed but unfed input belt.
   `FeedCandidates.internalizesSharedOutput` rejects that growth, and
-  `FeedLink.candidateScore` penalizes outside consumers and producer overfeed;
-  the belted pass must pass the main `consumerScope`. Test the guard on the group
-  **without** the candidate: once the candidate is in the group its producer
-  counts as internal and the guard always returns false, so the swap path must
-  pass `group.filterNot { it == weakest }`. Evidence:
+  `FeedLink.candidateScore` penalizes outside consumers and producer overfeed.
+  Test the guard on the group **without** the candidate: once the candidate is in
+  the group its producer counts as internal and the guard always returns false, so
+  the swap path must pass `group.filterNot { it == weakest }`. Evidence:
   `theReportedUtilityScienceUrlsKeepCircuitAsABandOutput`,
-  `aSharedProductCannotBeInternalizedWhileAnotherConsumerNeedsIt`.
-- **A band must not need a belt for a material it produces.**
-  `BandSearch.hasInBandBeltInput` rejects a window where a solid the band makes
-  is consumed by an in-band machine without an incoming link; otherwise the row
-  needs an extra belt for a resource it already produces. Growth may pass
-  through a partial arrangement (`arrange(..., requireComplete = false)`) so a
-  later link can complete it; only the finished group is checked. `RowPlacer`
-  keeps a partial input lane as a guard for hand-built plans. Evidence: the
-  reported chemical-science URL keeps cable entirely out of the band;
+  `aSharedProductCannotBeInternalizedWhileAnotherConsumerNeedsIt`. See
+  `decisions.md` (2026-11-11).
+- **A band must not need a belt for a material it produces.** The symptom is a row
+  that belts a material its own machines make; `BandSearch.hasInBandBeltInput`
+  rejects that finished window. Growth may pass through a partial arrangement
+  (`arrange(..., requireComplete = false)`) so a later link can complete it; only
+  the finished group is checked. Evidence: the reported chemical-science URL keeps
+  cable entirely out of the band;
   `theReportedChemicalScienceUrlKeepsCableOutOfTheBand`,
-  `aCircuitChainWithSharedConsumersBuildsTheTargetOnce`.
+  `aCircuitChainWithSharedConsumersBuildsTheTargetOnce`. See `decisions.md`
+  (2026-11-11).
 - **A recipe result is not automatically a source.** `plannedSources` must read
   `beltMaterials` plus the **consuming machine's** link, not the row's whole link
   set: a link only covers the machine it reaches, so a partially linked material
-  still imports the rate of the machines that take it from a belt. Share
-  `PlannedRow.internalInputs`/`fullyInternalInputs` with `RowPlacer`; an
+  still imports the rate of the machines that take it from a belt. An
   internal-only result is not produced for another row. `DeliveryPreparation`
   reports a sink with no producer row so a missing feed cannot stay silent.
   Evidence: `aMaterialOnlyLinkedInsideABandIsASourceForAnotherRow`,
-  `aPartialLinkStillImportsTheMaterialItsOtherMachinesNeed`.
+  `aPartialLinkStillImportsTheMaterialItsOtherMachinesNeed`. See `decisions.md`
+  (2026-11-06, 2026-11-11).
 - **`MAX_BAND_RECIPES` is a recipe cap, not the window length.** `arrangeBest`
   must search count vectors to `maxBandMachines(links.size)`; using
   `MAX_BAND_RECIPES` there silently caps a multi-link band at eight machines.
@@ -353,12 +340,12 @@ An entry belongs here only with evidence, and should say how to recognize it.
   internalizes and can reject a feasible group. The reported utility-science
   four-recipe chain sums to ten plan machines but nine propagated ones.
   Evidence: `theGrowthBudgetUsesPropagatedNeedsInsteadOfThePlanMachineCounts`.
+  See `decisions.md` (2026-11-09, 2026-11-11).
 - **A belted row can be re-banded, but only as a copy.** `DirectFeed.beltedBands`
   copies the belted `FactoryProduction` with `amount = machines` and plans at
   scale 1; the copies must differ by `amount`, or `nodeCache` and the `assigned`
-  set treat them as the main band's production. The belted band's internal
-  material still stays off the belt; only its output is a source. Evidence:
-  `theReportedUtilityScienceUrlsBandTheirBeltedCableAndCircuit`.
+  set treat them as the main band's production. Evidence:
+  `theReportedUtilityScienceUrlCompacts`. See `decisions.md` (2026-11-11).
 - **A production belongs to exactly one band.** The seed loop only picks an
   unassigned link, but the pool keeps links that touch a production another seed
   already assigned, and `growGroup` could add one. The same
@@ -366,10 +353,11 @@ An entry belongs here only with evidence, and should say how to recognize it.
   band internalized battery/electric-engine/engine/pipe, the second imported
   them, and the reported utility-science plan imported battery,
   electric-engine-unit, LDS and processing-unit while building them. Skip a
-  growth candidate whose productions include an assigned one outside the group;
-  the second consumer gets a belted row instead. Evidence:
-  `assertNoPlannedMaterialIsImported` on `theReportedUtilityScienceUrlCompacts`,
-  `theReportedUtilityScienceUrlsKeepCircuitAsABandOutput`.
+  growth candidate whose productions include an assigned one outside the group.
+  Evidence: `assertNoPlannedMaterialIsImported` on
+  `theReportedUtilityScienceUrlCompacts`,
+  `theReportedUtilityScienceUrlsKeepCircuitAsABandOutput`. See `decisions.md`
+  (2026-11-09).
 - **The target production must be seeded into `DirectFeedContext.included`.** Deriving
   `included` only from the materials with a single buildable producer (`producers.values`)
   drops a target that is not in the per-material producer index, so the plan has no target row
@@ -388,10 +376,10 @@ An entry belongs here only with evidence, and should say how to recognize it.
   links every in-plan producer, so a solid with two producers is direct-fed from whichever link
   the walk sees first; `maximalGroups` drops the others. `DirectFeedContext.producers` excludes
   `stone` on every surface, and `Optimizer` plans one solid-fuel recipe per surface: light oil
-  elsewhere, heavy oil on Fulgora and ammonia on Aquilo. Keep these policies explicit; do not infer
-  them from recipe result order or reintroduce a single-producer link filter. Evidence:
+  elsewhere, heavy oil on Fulgora and ammonia on Aquilo. Evidence:
   `vulcanusStoneIsImported`, `rocketFuelUsesTheLightOilSolidFuelRecipe`,
-  `solidFuelUsesTheSurfaceRecipe` and `aquiloSolidFuelUsesAmmonia`.
+  `solidFuelUsesTheSurfaceRecipe` and `aquiloSolidFuelUsesAmmonia`. See
+  `decisions.md` (2026-11-07).
 - **A multi-output recipe drains only through its machine's horizontal fluid ports.**
   `buildable` accepts one solid result plus any number of fluid results, so `quantum-processor`
   (one item plus `fluoroketone-hot`) is built for targets such as `railgun`. The electromagnetic
@@ -465,9 +453,8 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `blueprint.inspection.**`); a bare `pkg` matches nothing; `pkg.*` is a regex
   whose dots are wildcards. `DependencyRules` no longer ships in any 2.0.0-alpha.6
   rules jar; a custom rule needing real resolution must implement
-  `dev.detekt.api.RequiresAnalysisApi`. `ForbiddenImport` stays empty on purpose:
-  the intended edges are the table in `architecture.md`, guarded by the compiler
-  (`internal`) and review (see `decisions.md`, 2026-10-22).
+  `dev.detekt.api.RequiresAnalysisApi`. `ForbiddenImport` stays empty on purpose;
+  the edges are the table in `architecture.md` (see `decisions.md`, 2026-10-22).
 - **A cold or stale Gradle daemon can fail build-script compilation with
   `Unresolved reference 'de'`.** After the daemon was stopped, `./gradlew` reported
   the `de.bjrke.factorio.optimizer.buildlogic.*` imports in `build.gradle.kts` as
@@ -493,9 +480,8 @@ An entry belongs here only with evidence, and should say how to recognize it.
   buildSrc only through `:classes`/`:jar`, so `buildSrc/src/test` is dead unless
   invoked. `tasks.named("jar") { dependsOn(tasks.test) }` fails with a circular
   dependency (`test → testClasses → compileTestKotlin → jar`), and a root
-  `GradleBuild` task fails with "build name 'buildSrc' … reserved name". buildSrc
-  carries no tests today; wire a CI line plus `./gradlew -p buildSrc test` locally
-  if one is added.
+  `GradleBuild` task fails with "build name 'buildSrc' … reserved name". See
+  `conventions.md` §Testing.
 - **A JFR recording is per forked JVM and needs an existing output directory.**
   `-XX:StartFlightRecording=filename=…/jvmTest-%p.jfr` expands `%p` to the PID but
   does not create `…/profiles/jvmTest`, so `jvmTestProfile` creates it in
@@ -503,8 +489,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   JFR also truncates stacks at 64 frames by default;
   `-XX:FlightRecorderOptions=stackdepth=1024` is required for deep Kotlin call
   chains, and `jfr view`/JMC show the caller chain only from the stored depth.
-  Because recordings are per JVM, `maxParallelForks > 1` would produce several
-  files instead of one merged profile.
+  See `decisions.md` (2026-11-10).
 - **`spotlessApply` after staging leaves the reformat unstaged.** It reorders the
   project imports, so run it before `git add`, or amend after it.
 - **A one-line collection assertion becomes a multi-line block and can push a

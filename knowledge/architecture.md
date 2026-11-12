@@ -19,8 +19,8 @@ CLI (JVM) from one shared core.
     `Area`, `Dimension`, `Direction`, `Io`), `TileGeometry.kt` (distance and
     compass helpers), `Material.kt`, `IconLayer.kt`. A leaf: it imports no other
     project package.
-  - `core/util` — `MinHeap`, `connectedComponents`, and `MathUtils` (`countVectors`,
-    `greatestCommonDivisor`).
+  - `core/util` — `MinHeap`, `connectedComponents`, `ArrayDeque.drain`, and
+    `MathUtils` (`countVectors`, `greatestCommonDivisor`).
   - `game/prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (belt/inserter/pump stats and `LogisticsConfig`),
@@ -72,7 +72,8 @@ CLI (JVM) from one shared core.
       `LogisticsCalculator` (the layout's belt/inserter rates)); `row` — the row
       planner (`RowPlanner`, `RowTopology`, `RowPlacer`, `RowBeltPlacement`, `Row`
       and the inserter/interface placers) with the shared `LayoutStage`; `band` — the
-      direct-feed band (`DirectFeed`, `DirectFeedModel`, `BandSearch`).
+      direct-feed band (`DirectFeed`, `DirectFeedModel`, `BandSearch`,
+      `FeedCandidates`, `FeedLink`, `RecipeFilter`).
     - `blueprint/placing` — placing the entities and their connections:`route`
       (the weighted A* shared by belts and pipes — `LayoutRouter`,
       `RouteSearch`, `RouteProfile`), `routing` (implicit delivery — `Delivery*`,
@@ -117,7 +118,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 `expect`/`actual` pairs with the common declaration, both in
 `common.production`).
 
-Package sizes (files, verified 2026-11-04). **Files** are the budget: past 10 is a
+Package sizes (files, verified 2026-11-12). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
 removed, so review keeps it (see `decisions.md`, 2026-10-22). There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
@@ -126,7 +127,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | package | files |
 | --- | --- |
 | core.model | 4 |
-| core.util | 3 |
+| core.util | 4 |
 | game.prototype | 6 |
 | game.production | 10 |
 | game.selection | 3 |
@@ -135,11 +136,11 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint | 1 |
 | blueprint.layout | 9 |
 | blueprint.layout.entity | 5 |
-| blueprint.layout.validation | 4 |
+| blueprint.layout.validation | 5 |
 | blueprint.planning | 2 |
 | blueprint.planning.plan | 5 |
 | blueprint.planning.row | 11 |
-| blueprint.planning.band | 5 |
+| blueprint.planning.band | 6 |
 | blueprint.placing.route | 3 |
 | blueprint.placing.routing | 7 |
 | blueprint.placing.plumbing | 2 |
@@ -430,106 +431,60 @@ layout test fixtures instead of a per-suite breadth-first walk.
 `greatestCommonDivisor` the band search uses.
 
 `blueprint/planning/band/DirectFeed.kt` (pure, commonMain) decides which recipes a plan builds as
-a **direct-feed band**: a solid material whose producer and consumer can share
-one interleaved row is inserted machine to machine, and `BlueprintPlan.rows`
-(`PlannedRow`/`PlannedLink`) is the single source of truth for it. A band is a
-`PlannedRow` whose `links` are non-empty and whose `machines` hold one
-`FactoryProduction` per machine; a plain row repeats its one production once per
-machine and has no links. The search is a graph walk from the target:
-`DirectFeedModel.FeedNode` is one production; its lazy `ingredients` are the
-links to the producers of its inputs and its lazy `consumers` are the links that
-take its product, so a production may have several consumers. `FeedLink` is the
-edge (producer node, consumer node, material), and `FeedNode.traverse()` walks
-the ingredients once, keeping a visited node set, so a shared production is not
-expanded twice. Real solid recipe cycles are filtered out by `unplannedRecipes`,
-so the walk keeps no cycle-specific state. `DirectFeedContext` owns the target,
-the included productions, the scale, the logistics, the per-material producer
-index (with `stone` always excluded) and the lazy node lookup (`nodeOf`); a
-material with several in-plan producers must be kept out by an explicit recipe
-policy, not by picking one link. `Optimizer` keeps one solid-fuel recipe per
-surface (light oil elsewhere, heavy oil on Fulgora, ammonia on Aquilo). The
-context also carries a `consumerScope` (the main plan's productions), so the
-belted pass sees a shared product's consumers even when they live in the main
-band.
+a **direct-feed band**: a solid material whose producer and consumer can share one interleaved row
+is inserted machine to machine. `BlueprintPlan.rows` (`PlannedRow`/`PlannedLink`) is the single
+source of truth: a band is a `PlannedRow` whose `links` are non-empty and whose `machines` hold one
+`FactoryProduction` per machine; a plain row repeats its one production once per machine and has no
+links.
 
-`FeedLink.kt` holds the edge, its `candidateScore` and the two orders grouping
-uses: `linkComparator` (score, then fewer solid ingredients, then `name`) ranks
-links for the seed and growth walk, while the canonical `linkNameComparator` /
-`linkKey` is the order the arrangement cache keys a link set by. The score counts
-belt volume saved, bulk gain (copper cable's two outputs from one input), few
-solid ingredients, partly-used machines, the pair's remaining solid belt lanes
-and the preferred cycle, and subtracts one penalty per included consumer of the
-producer's product outside the pair plus the producer overfeed. A shared product
-therefore stays a band output instead of being internalized into one consumer.
-`FeedCandidates.kt` grows each group maximally from the
-best remaining seed, retries links after every growth, tries one bounded swap,
-and merges groups that meet. Growth only adds a link whose productions are
-unassigned or already in the group, so a production belongs to exactly one band;
-a material a second band also needs gets a belted row instead of being imported.
-`internalizesSharedOutput` rejects a growth link
-that would turn a terminal output with consumers outside the group into an
-internal link; the belted pass inherits the main scope through `consumerScope`. It returns each finished group's already arranged
-`BandPlan`, so `DirectFeed.build` does not arrange a group a second time. Growth
-may pass through an over-belt group so an added producer can internalize an
-ingredient, but the finished group must fit `MAX_ROW_BELTS = 4` belt rows
-(`bandBeltFits(plan)` over `beltRowBudget`); a group whose arranged machines still need more rows
-than its inputs can pair is dropped, its links return to the pool and another seed is tried.
-Inputs whose rate fits one lane pair first; an over-capacity pair is accepted only for a group
-that would otherwise not fit, at the smaller lane rate.
-`bandBeltMayFit`/`bandBeltRows` are the capacity-blind pre-filter and ranking used
-during growth, while `bandBeltFits(plan)` reads the arranged machine rates.
-`groupMayFit` ranks with the propagated `groupNeeds`, not each recipe's plan
-machine count, which overstates a group that internalizes links. `arrangeBest`
-searches count vectors up to `maxBandMachines(links.size)`; `MAX_BAND_RECIPES`
-is only the recipe-count ceiling.
-`BandSearch.kt` arranges a group into the
-shortest window that satisfies the **plan rates**:
-`groupNeeds` starts from each terminal production's `amount * scale` and
-propagates fractional needs upstream, and `FeedWindow` distributes each link's
-demand over the built consumer machines. Overfeed is allowed, underfeed is not,
-and a repeated window may build extra copies to make a worse ratio balance.
-`arrange` keeps the best plan and passes its machine count as an upper bound to
-`window`, so no longer window is built once a shorter one exists; it walks the
-cycles with a DFS that cuts a branch as soon as an uncovered link can no longer
-become adjacent, counting the cycle's wrap boundary. `BandPlan` caches its ratio
+The search is a graph walk from the target. `DirectFeedModel.FeedNode` is one production; its lazy
+`ingredients` are the links to the producers of its inputs and its lazy `consumers` the links that
+take its product, so a production may have several consumers. `FeedLink` is the edge (producer,
+consumer, material); `FeedNode.traverse()` walks the ingredients once with a visited set, so a
+shared production is not expanded twice. `DirectFeedContext` owns the target, the included
+productions, the scale, the logistics, the per-material producer index (with `stone` always
+excluded), the lazy `nodeOf` lookup and the `consumerScope` (the main plan's productions, so the
+belted pass sees a shared product's consumers). `FeedLink.kt` holds the edge, its `candidateScore`
+and the two orders: `linkComparator` ranks links for the seed/growth walk, while the canonical
+`linkNameComparator` / `linkKey` is the order the arrangement cache keys a link set by.
+`FeedCandidates.kt` grows each group maximally from the best remaining seed, retries links after
+every growth, tries one bounded swap and merges groups that meet; a production belongs to exactly
+one band. `BandSearch.kt` arranges a group into the shortest window that satisfies the plan rates:
+`groupNeeds` propagates fractional needs upstream, `FeedWindow` distributes each link's demand over
+the built consumer machines, and `arrange` keeps the best plan and passes its machine count as an
+upper bound to `window`; it walks the cycles with a DFS that cuts a branch as soon as an uncovered
+link can no longer become adjacent, counting the cycle's wrap boundary. `BandPlan` caches its ratio
 penalty, and `FeedWindow` uses arrays instead of maps/sets.
-`cycleFit`/`cyclePenalty` only rank patterns (`p:q` with `p + q` at most 6);
-they never reject a link. A band is bounded by `GROUP_MAX_MACHINES = 10` (9
-when it has more than one link, so the row stays powerable) and
-`MAX_BAND_RECIPES = 8`; every production belongs to at most one band in one
-pass. After the
-main bands, `DirectFeed.build` runs the same search over the belted rows: it
-copies them as whole-machine `FactoryProduction` values, plans them at scale 1,
-and replaces the plain rows with the finished bands. A recipe may therefore sit in
-the main band and in a belted band as two independent productions, but each value
-belongs to one row. `RowPlacer`
-places every row through one `placeRow`: a plain row repeats its production with
-touching machines, while a row with links leaves a gap column after each machine
-that has a `PlannedLink` and touches everywhere else. `assignRowBelts` gives every belt group its
-side: a product faces the consumer that placed the row, an input faces its producer, and a full
-side pairs a capacity-safe input into a mixed lane before one crosses to the other side. The
-arrangement search
-rejects a band that would need a belt input for a solid material it produces; a
-hand-built plan can still reach `rowShape` with a partial link, and there the
-input lane is kept. Only belted productions feed belts and sinks, so a band's
-internal material never gets a belt and a band
-producer's surplus cannot leave the row; the belted row therefore still covers
-every consumer outside the links. `belted` sizes a row by the recipe's single
-non-fluid result (`beltOutputPerMachine`), so a multi-output recipe the plan
-labelled with one of its fluids is still sized by its solid; the row
-still gets **fluid lanes** for its machines' fluid ports, including a machine
-that takes or gives a fluid while its solid link comes from a neighbor; only the
-link material must be solid (see `decisions.md`, 2026-11-02). See `decisions.md`
-(2026-11-09) for the rate-based/maximal grouping rules,
-(2026-10-24) for why the row is the occurrence, and (2026-11-07) for the
-production-node/feed-link split, the global stone exclusion and the surface-specific
-solid-fuel policy. `plannedSources` covers a solid only when a row exports it
-(`beltMaterials`) or a link reaches the consuming machine
-(`PlannedRow.internalInputs`); a link that reaches only some machines leaves the
-others importing the material, an internal-only recipe result is not a source for
-another row, and a sink with no producer row is a layout failure. `RowPlacer`
-uses the same `internalInputs` through `fullyInternalInputs` to decide whether a
-link material still needs an input lane.
+
+A band is bounded by `GROUP_MAX_MACHINES = 10` (9 when it has more than one link, so the row stays
+powerable) and `MAX_BAND_RECIPES = 8`; a finished group must fit `MAX_ROW_BELTS = 4` belt rows
+(`bandBeltFits(plan)` over `beltRowBudget`). `bandBeltMayFit`/`bandBeltRows` are the capacity-blind
+pre-filter and ranking used during growth, while `bandBeltFits(plan)` reads the arranged machine
+rates. After the main bands, `DirectFeed.build` runs the same search over the belted rows: it copies
+them as whole-machine `FactoryProduction` values, plans them at scale 1, and replaces the plain rows
+with the finished bands. A recipe may therefore sit in the main band and in a belted band as two
+independent productions, but each value belongs to one row.
+
+`RowPlacer` places every row through one `placeRow`: a plain row repeats its production with
+touching machines, while a row with links leaves a gap column after each machine that has a
+`PlannedLink` and touches everywhere else. `assignRowBelts` gives every belt group its side: a
+product faces the consumer that placed the row, an input faces its producer, and a full side pairs
+a capacity-safe input into a mixed lane before one crosses to the other side. Only belted
+productions feed belts and sinks, so a band's internal material never gets a belt and a band
+producer's surplus cannot leave the row; the belted row therefore still covers every consumer
+outside the links. `belted` sizes a row by the recipe's single non-fluid result
+(`beltOutputPerMachine`), so a multi-output recipe the plan labelled with one of its fluids is still
+sized by its solid; the row still gets **fluid lanes** for its machines' fluid ports, including a
+machine that takes or gives a fluid while its solid link comes from a neighbor; only the link
+material must be solid. `plannedSources` covers a solid only when a row exports it (`beltMaterials`)
+or a link reaches the consuming machine (`PlannedRow.internalInputs`); a link that reaches only some
+machines leaves the others importing the material, an internal-only recipe result is not a source
+for another row, and a sink with no producer row is a layout failure. `RowPlacer` uses the same
+`internalInputs` through `fullyInternalInputs` to decide whether a link material still needs an
+input lane.
+
+The grouping, shared-product, stone/solid-fuel and fluid-link rules and their guardrails are in
+`decisions.md` (2026-11-09, 2026-11-07, 2026-11-06, 2026-11-02, 2026-10-24).
 
 A solid belt's end is a `BeltEnd` (`blueprint/layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
