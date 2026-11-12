@@ -7,7 +7,7 @@ up somewhere other than the file that documents the rule. Everything else lives 
 mechanism and the reason for a value belong in the KDoc of the constant, function or class it
 governs, because that is what the next editor reads; the workflow belongs in `conventions.md`, the
 shape of the pipeline in `architecture.md`, and the measurements, reported URLs and before/after
-sizes in the commit message.
+sizes in the KDoc of the choice they justify.
 
 An entry states the constraint, one sentence of why and the guardrail that must survive, then
 points at the owning symbol instead of restating it. No constant values, no layout dimensions, no

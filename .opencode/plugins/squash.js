@@ -23,11 +23,8 @@ const MAX_DIFF = 200_000;
 const MESSAGE_PROMPT = `Write the commit message for a squash merge whose net change is the staged change below.
 
 Rules:
+- Follow the commit-message rules in AGENTS.md §Git workflow; they are already part of your instructions.
 - Use only the change below: you cannot read the repository or any conversation.
-- Headline at most 50 characters, imperative mood, American English, no trailing period, no !<MR> suffix.
-- One blank line, then a body wrapped at 72 characters that explains why the change was made.
-- Keep the body to the essentials: no novel-length recap, no file-by-file recap, no repetition of documentation or knowledge notes, only summarize.
-- Do not claim tests or checks the diff does not show.
 - Do not mention the squash.
 - Describe the net change as a whole, not the individual commits.
 - If the patch is truncated, use the complete file list to cover the whole change.

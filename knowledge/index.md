@@ -37,12 +37,12 @@ the summarizer to keep verified state, decisions and the next action, and to dro
 transcripts. Run `/handoff` deliberately before a pause to promote reusable
 findings into `knowledge/` and state the same points. There is no agent-initiated
 compaction, no handoff file, no `knowledge/tasks/`, no task IDs and no checkpoints:
-`knowledge/` holds the durable record and commit messages hold the per-change
-detail.
+`knowledge/` holds the durable record and the commit message holds the change
+history.
 
 ## History
 
-Per-change history lives in commit messages; rationale that outlives a change is
-promoted into the files above, and a decision that no longer applies is deleted
-from `decisions.md` rather than kept as history. Use `git log` and `git blame` to
-trace it.
+Commit messages hold the change history; rationale lives in the KDoc it governs
+and is promoted into the files above when it outlives the change. A decision that
+no longer applies is deleted from `decisions.md` rather than kept as history. Use
+`git log` and `git blame` to trace the change itself.

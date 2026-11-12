@@ -261,7 +261,6 @@ Promote a finding into `knowledge/` only when it is reusable, stable and verifie
 
 - reusable across changes, likely to prevent repeated investigation, a stable
   architectural/behavioral fact, a verified convention, or a consequential decision.
-- Put per-change detail in the commit message, not in `knowledge/`.
 - Try the code first: the reason for a value, order or shape belongs in the KDoc of
   the constant, function or class it governs, where the next editor reads it.
   `decisions.md` is only for a constraint that no single owner file can carry.
