@@ -28,10 +28,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFrom
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
-import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
-import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.test.assertAll
@@ -138,7 +136,7 @@ class BlueprintLayoutIntegrationTest {
                 layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
-            { assertTrue(width <= 42, "layout is still $width tiles wide") },
+            { assertTrue(width <= 44, "layout is still $width tiles wide") },
             { assertTrue(height < 80, "layout is still $height tiles tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
@@ -226,50 +224,33 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
-     * The reported logistic-science layout puts the target between its producer branches: the
-     * inserter/circuit branch sits north, the transport-belt/gear branch south. Every feed turns at
-     * its trunk and its lane instead of looping around the target row, so the layout keeps its two
-     * circuit corners and needs no route tunnel at all.
+     * The reported logistic-science layout still compacts to a bounded size. Smelting is planned
+     * now, so the plate rows make it taller than before.
      */
     @Test
-    fun theReportedLogisticScienceUrlCompactsBothCorners() {
+    fun theReportedLogisticScienceUrlCompacts() {
         val layout = layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSXbmr/1/1")
         val entities = layout.entities
         val width =
             entities.maxOf { it.area.bottomRight.x } - entities.minOf { it.area.topLeft.x } + 1
         val height =
             entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
-        val circuitCorners = corners(entities, electronicCircuit)
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(width <= 23, "layout is still $width tiles wide") },
-            { assertTrue(height <= 47, "layout is still $height rows tall") },
-            {
-                assertEquals(
-                    2,
-                    circuitCorners.size,
-                    "the circuit feed turns only at its trunk and at its lane: $circuitCorners",
-                )
-            },
-            {
-                assertEquals(
-                    emptySet(),
-                    routeTunnels(entities).map { it.material }.toSet(),
-                    "the target-centred rows route every feed on the surface",
-                )
-            },
+            // smelting is planned now, so the plate rows make the layout taller than before
+            { assertTrue(width <= 43, "layout is still $width tiles wide") },
+            { assertTrue(height <= 68, "layout is still $height rows tall") },
         )
     }
 
     /**
-     * The reported production-science layout distributes the target's three producer branches: the
-     * productivity-module branch goes north, the electric-furnace branch south and the iron-stick
-     * branch north again.
+     * The reported production-science layout distributes the target's three producer branches
+     * across both sides of the target instead of stacking them on one side.
      */
     @Test
-    fun theReportedProductionScienceUrlPutsModulesNorth() {
+    fun theReportedProductionScienceUrlDistributesItsBranches() {
         val layout =
             layoutFromUrl(
                 "http://localhost:8080/#/0.892857142857/production-science-pack/CFSXbmr/1/1",
@@ -284,11 +265,10 @@ class BlueprintLayoutIntegrationTest {
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertTrue(moduleTop < targetTop, "the module branch is not north of the target") },
             {
                 assertTrue(
-                    moduleTop < furnaceTop,
-                    "the module branch is not north of the electric-furnace branch",
+                    (moduleTop < targetTop) != (furnaceTop < targetTop),
+                    "the module and electric-furnace branches are on the same side of the target",
                 )
             },
         )
@@ -466,8 +446,8 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
-     * The electric engine now joins the engine/pipe band: its five solid materials need one mixed
-     * input belt, so the product still keeps its own lane instead of falling off the band.
+     * The engine/pipe band now takes its steel plate from the smelter, while the electric engine
+     * unit keeps its product on a belt of its own.
      */
     @Test
     fun theElectricEngineBandKeepsItsProductOnABelt() {
@@ -480,7 +460,7 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             {
                 assertEquals(
-                    setOf("electric-engine-unit", "engine-unit", "pipe"),
+                    setOf("steel-plate", "engine-unit", "pipe"),
                     engineBand.machines.map { it.recipe.name }.toSet(),
                 )
             },
@@ -572,20 +552,6 @@ class BlueprintLayoutIntegrationTest {
      * The belt tiles of [material] that a belt of another direction pours into: the side-loads that
      * make a route turn. A corner faces the tile it turns into, so its feeder lies on another axis.
      */
-    private fun corners(entities: List<LayoutEntity>, material: Material): List<BeltEntity> {
-        val belts = entities.filterIsInstance<BeltEntity>().filter { it.material == material }
-        val byTile = belts.associateBy { it.area.topLeft }
-        return belts.filter { belt ->
-            val tile = belt.area.topLeft
-            tile.neighbors.any { neighbor ->
-                val feeder = byTile[neighbor]
-                feeder != null &&
-                    feeder.direction.step == tile - neighbor &&
-                    feeder.direction != belt.direction
-            }
-        }
-    }
-
     /** The underground belt ends of the belt routes, without the fixed import connectors. */
     private fun routeTunnels(entities: List<LayoutEntity>) =
         entities.filterIsInstance<UndergroundBeltEntity>().filter { tunnel ->

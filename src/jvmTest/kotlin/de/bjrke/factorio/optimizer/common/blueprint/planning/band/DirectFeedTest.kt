@@ -342,10 +342,11 @@ class DirectFeedTest {
                     feed.bands.single().machines.mapTo(mutableSetOf()) { it.recipe },
                 )
             },
-            // the smelter does not fit into that band, so the band is just gear and belt
+            // the smelter is planned now, but its ratio does not fit the gear/belt band, so it
+            // stays a row of its own
             {
                 assertEquals(
-                    setOf(ironGearWheelRecipe, transportBeltRecipe),
+                    setOf(ironPlateSmeltingRecipe, ironGearWheelRecipe, transportBeltRecipe),
                     feed.recipes.toSet(),
                 )
             },

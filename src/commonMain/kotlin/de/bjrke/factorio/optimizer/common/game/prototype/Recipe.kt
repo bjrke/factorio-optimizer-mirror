@@ -16,7 +16,11 @@ data class ParsedRecipe(
     val logistics: Logistics = Logistics(),
     /** The surface these recipes were filtered for; selects surface-specific recipes. */
     val surface: Surface = Surface.NAUVIS,
-)
+) {
+
+    /** The cached transitive usage counts and ordering of [recipes]. */
+    val usage: RecipeUsage by lazy { RecipeUsage(recipes) }
+}
 
 /** The crafting-relevant stats of a machine prototype. */
 data class MachineStats(

@@ -15,10 +15,10 @@ import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.prototype.validIntermediateLimit
 import de.bjrke.factorio.optimizer.common.game.selection.EMPTY_SELECTION
 import de.bjrke.factorio.optimizer.common.game.selection.Selection
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromSelection
-import de.bjrke.factorio.optimizer.common.game.selection.forSurface
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.game.selection.selectionString
 import de.bjrke.factorio.optimizer.common.game.selection.spaceAgeIn
@@ -30,6 +30,7 @@ import de.bjrke.factorio.optimizer.js.component.blueprintCopyButton
 import de.bjrke.factorio.optimizer.js.component.blueprintPanel
 import de.bjrke.factorio.optimizer.js.component.blueprintPreview
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
+import de.bjrke.factorio.optimizer.js.component.urlIntermediateLimitInput
 import de.bjrke.factorio.optimizer.js.component.urlLogisticsSelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
 import de.bjrke.factorio.optimizer.js.component.urlOptimizationResultPresenter
@@ -69,10 +70,17 @@ class FactorioOptimizerProps {
     var factories = factoryConfig.fromUrl(selection)
     var surface =
         if (spaceAgeEnabled) surfaceFromUrl(selection) ?: Surface.NAUVIS else Surface.NAUVIS
+    var intermediateLimit = validIntermediateLimit(params[ParamName("intermediates")])
 
-    val parsedRecipes = RecipeLoader.forActiveMods(spaceAgeEnabled).forSurface(surface)
+    val parsedRecipes = RecipeLoader.forSurface(spaceAgeEnabled, surface)
 
-    val optimizationResult: OptimizationResult = Optimizer(parsedRecipes, factories)[target]
+    // the limit is part of the optimizer's configuration, so a limit change drops its result cache;
+    // a target change reuses it
+    val optimizer =
+        useMemo("${selection.orEmpty()}/$intermediateLimit") {
+            Optimizer(parsedRecipes, factories, intermediateLimit)
+        }
+    val optimizationResult: OptimizationResult = optimizer[target]
 
     val logisticsConfig = LogisticsConfig(parsedRecipes.logistics, spaceAgeEnabled)
     var belt = logisticsConfig.belt(selection)
@@ -115,7 +123,7 @@ class FactorioOptimizerProps {
         // the segment is never empty so the route always matches; '-' marks the all-defaults choice
         val selectionSegment = encodedSelection.ifEmpty { EMPTY_SELECTION }
         return "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/$selectionSegment" +
-            "/$beltStack/$inserterStack"
+            "/$beltStack/$inserterStack/$intermediateLimit"
     }
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
@@ -146,6 +154,7 @@ val RouterBasedParams =
                 div { urlPlanetSelector(props) }
                 div { urlFactorySelector(props) }
                 div { urlLogisticsSelector(props) }
+                div { urlIntermediateLimitInput(props) }
                 div { urlSpaceAgeToggle(props) }
                 blueprintCopyButton {
                     outcome = preview.outcome
@@ -185,6 +194,20 @@ fun main() {
                     getParentRoute = { rootRoute },
                     path =
                         RoutePath(
+                            $$"/$normalizeTarget/$target/$selection/$beltStack/$inserterStack/$intermediates",
+                        ),
+                    component = RouterBasedParams,
+                ),
+            )
+
+        // a URL from before the intermediate limit has no sixth segment; it still decodes to the
+        // default limit
+        val legacyRoute =
+            createRoute(
+                RouteOptions(
+                    getParentRoute = { rootRoute },
+                    path =
+                        RoutePath(
                             $$"/$normalizeTarget/$target/$selection/$beltStack/$inserterStack",
                         ),
                     component = RouterBasedParams,
@@ -200,7 +223,7 @@ fun main() {
                 ),
             )
 
-        rootRoute.addChildren(arrayOf(indexRoute, catchAllRoute))
+        rootRoute.addChildren(arrayOf(indexRoute, legacyRoute, catchAllRoute))
 
         val appRouter =
             createRouter(

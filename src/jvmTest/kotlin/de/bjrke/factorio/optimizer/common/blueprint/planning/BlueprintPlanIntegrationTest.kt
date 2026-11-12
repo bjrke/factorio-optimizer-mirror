@@ -62,9 +62,16 @@ class BlueprintPlanIntegrationTest {
             },
             {
                 assertContains(
+                    recipeNames,
+                    "copper-plate",
+                    "copper plate should be built by the smelter",
+                )
+            },
+            {
+                assertContainsNot(
                     sourceMaterials,
                     copperPlate,
-                    "copper plate should be imported instead",
+                    "copper plate should not be imported",
                 )
             },
             { assertContains(sourceMaterials, petroleum, "plastic's fluid input is imported") },
@@ -242,8 +249,10 @@ class BlueprintPlanIntegrationTest {
     @Test
     fun theReportedUtilityScienceUrlsKeepCircuitAsABandOutput() =
         assertTableOf(
-            "http://localhost:8080/#/1/utility-science-pack/CFSXbmr/1/1",
-            "http://localhost:8080/#/0.66666/processing-unit/CFSXbmr/1/1",
+            // the shared-product rule needs the circuit chain built, so this case keeps the
+            // intermediate limit high instead of exercising the default limit
+            "http://localhost:8080/#/1/utility-science-pack/CFSXbmr/1/1/50",
+            "http://localhost:8080/#/0.66666/processing-unit/CFSXbmr/1/1/50",
         ) { url ->
             val layout = layoutFromUrl(url)
             val plan = layout.plan
@@ -334,7 +343,7 @@ class BlueprintPlanIntegrationTest {
             // cable + EC and gear + inserter are the direct-feed bands; the inserter band's output
             // already feeds the science row, so no second EC or inserter factory is built, and the
             // foundry takes a single belt-fed gear machine instead of one per whole consumer
-            // machine
+            // machine. Smelting is planned now, so the plate rows are built too.
             {
                 assertEquals(
                     mapOf(
@@ -344,6 +353,8 @@ class BlueprintPlanIntegrationTest {
                         "inserter" to 1,
                         "transport-belt" to 1,
                         "logistic-science-pack" to 9,
+                        "copper-plate" to 3,
+                        "iron-plate" to 9,
                     ),
                     machines,
                 )

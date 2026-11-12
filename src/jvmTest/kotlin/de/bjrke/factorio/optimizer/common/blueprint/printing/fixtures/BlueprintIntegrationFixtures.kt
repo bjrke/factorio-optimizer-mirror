@@ -27,8 +27,8 @@ import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
-import de.bjrke.factorio.optimizer.common.game.selection.forSurface
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
@@ -47,16 +47,21 @@ val chestMarkers =
         BeltEnd.STEEL_CHEST,
     )
 
+/**
+ * The layout suites pin geometry, not the intermediate limit, so they plan the full production
+ * graph. The limit's effect on the optimizer is covered by the optimizer suites and the URL tests.
+ */
 fun optimize(target: String, surface: Surface = Surface.NAUVIS) =
     Optimizer(
-        RecipeLoader.forActiveMods().forSurface(surface),
+        RecipeLoader.forSurface(true, surface),
         FactoryConfig().defaults,
+        MAX_INTERMEDIATE_LIMIT,
     )[Material(target)]
 
 /** Resolves a pasted web-UI URL exactly like the CLI, so a reported layout can be replayed. */
 internal fun layoutFromUrl(url: String): Layout {
     val cli = parseArgs(arrayOf(url))
-    val parsedRecipes = RecipeLoader.forActiveMods(cli.spaceAge).forSurface(cli.surface)
+    val parsedRecipes = RecipeLoader.forSurface(cli.spaceAge, cli.surface)
     val factoryConfig = FactoryConfig(cli.spaceAge)
     val factories =
         cli.factories
@@ -88,7 +93,7 @@ internal fun layoutFromUrl(url: String): Layout {
             ),
         )
 
-    val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
+    val result = Optimizer(parsedRecipes, factories, cli.intermediates)[Material(cli.material)]
     return Layout(result, logistics, cli.normalizeTarget, cli.beltEnd)
 }
 

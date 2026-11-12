@@ -120,11 +120,11 @@ private fun backProblem(
     val back = input.area.topLeft - direction.step
     if (back in protected) return null
     val beyond = byTile[back - direction.step]
-    // the new end must still join a surface belt, not the next run's underground end
+    // the new end must still join a surface belt, not the next run's underground end, and the
+    // belt past the swallowed tile must keep feeding the run
     val grows =
         byTile[back]?.plainBelt(direction, input.material) == true &&
-            beyond != null &&
-            !beyond.name.endsWith("underground-belt")
+            beyond?.plainBelt(direction, input.material) == true
     return if (grows) "input ${input.area.topLeft} can still grow back" else null
 }
 
@@ -139,8 +139,7 @@ private fun forwardProblem(
     val beyond = byTile[forward + direction.step]
     val grows =
         byTile[forward]?.plainBelt(direction, output.material) == true &&
-            beyond != null &&
-            !beyond.name.endsWith("underground-belt")
+            beyond?.plainBelt(direction, output.material) == true
     return if (grows) "output ${output.area.topLeft} can still grow forward" else null
 }
 

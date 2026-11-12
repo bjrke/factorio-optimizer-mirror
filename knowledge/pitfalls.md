@@ -235,7 +235,7 @@ An entry belongs here only with evidence, and should say how to recognize it.
   itself in the corridor (it is not removable), so the corner is always at the
   corridor's far or near edge and the shift lands the lane next to the feeder.
   Evidence: `aCornerBeltIsDroppedAndItsFeederSideLoadsTheLane`,
-  `theReportedLogisticScienceUrlCompactsBothCorners`.
+  `theReportedLogisticScienceUrlCompacts`.
 - **A grown underground run must leave a belt of its own material beyond the tile it swallows.**
   `UndergroundStretcher.RunGrowth` grows a run by swallowing plain same-material belts, so a moved
   entrance is fed by the belt past the swallowed one and a moved exit pours into the lane past it.
@@ -334,6 +334,12 @@ An entry belongs here only with evidence, and should say how to recognize it.
 
 ## Blueprint planning
 
+- **A cycle that contains the target must not make the target importable.** `importableMaterials`
+  allows a cycle member to be imported so the LP stays feasible, but the target must be built when
+  a recipe produces it. Otherwise the LP imports the target, `Optimizer` reports a `freeSource`
+  recipe, and `blueprintPlan` says "no buildable factory". The intermediate limit changes the LP
+  row order, which exposed this for `light-oil` on Fulgora. Evidence:
+  `theLightOilChemicalPlantFeedsWaterFromTheNorthLane`. See `Optimizer.importableMaterials`.
 - **A shared product stays the band's output.** `electronic-circuit` feeds the
   advanced circuit, the processing unit and the flying robot frame. Internalizing
   it into one of them leaves the other two with a placed but unfed input belt.

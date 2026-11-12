@@ -2,8 +2,11 @@ package de.bjrke.factorio.optimizer.common.optimize
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.DEFAULT_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
+import de.bjrke.factorio.optimizer.common.game.prototype.MIN_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
@@ -25,13 +28,26 @@ private const val IMPORT_DISPLAY_EPSILON = 1e-4
  * byproducts of multi-output recipes, which is how e.g. Fulgora actually works: scrap recycling
  * yields gears, batteries and processing units, and all of them are recycled into the demanded
  * intermediates.
+ *
+ * [maxIntermediates] bounds how many produced materials besides the target the plan may build. The
+ * least-used materials are kept, so a hub such as an ore or a plate becomes an import first; the
+ * target is always built and never counts.
  */
 class Optimizer(
     private val parsedRecipe: ParsedRecipe,
     factories: Set<Factory> = FactoryConfig().defaults,
+    maxIntermediates: Int = DEFAULT_INTERMEDIATE_LIMIT,
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()
     private val machine = MachineCatalog(parsedRecipe, factories)
+
+    /**
+     * How many produced materials besides the target the plan may build. The least-used materials
+     * are kept, so a hub such as an ore or a plate becomes an import first; the target is always
+     * built and never counts.
+     */
+    private val maxIntermediates =
+        maxIntermediates.coerceIn(MIN_INTERMEDIATE_LIMIT, MAX_INTERMEDIATE_LIMIT)
 
     /**
      * One solid-fuel recipe per surface: light oil elsewhere, heavy oil on Fulgora and ammonia on
@@ -63,16 +79,15 @@ class Optimizer(
     }
 
     /**
-     * Every material reachable from [target] by following the allowed recipes through to their
-     * inputs. Only [allowedRecipes] are considered, so forbidden forward recipes do not pull in
-     * their inputs.
+     * Every material reachable from [target] by following [recipes] through to their inputs. Only
+     * the given recipes are considered, so forbidden forward recipes do not pull in their inputs.
      */
-    private fun reachableMaterials(target: Material): List<Material> {
+    private fun reachableMaterials(target: Material, recipes: List<Recipe>): List<Material> {
         val materials = mutableSetOf(target)
         var changed = true
         while (changed) {
             changed = false
-            for (recipe in allowedRecipes) {
+            for (recipe in recipes) {
                 if (recipe.result.keys.none { it in materials }) continue
                 for (ingredient in recipe.ingredients.keys) {
                     if (materials.add(ingredient)) changed = true
@@ -83,12 +98,38 @@ class Optimizer(
     }
 
     /**
+     * Drops the recipes of the most-used produced materials until at most [maxIntermediates]
+     * remain. The target is always kept. A material used by many recipes is a hub (ores, plates)
+     * and becomes an import first; the least-used materials near the target are built.
+     */
+    private fun limitProducedMaterials(
+        target: Material,
+        materials: List<Material>,
+        recipes: List<Recipe>,
+    ): List<Recipe> {
+        val produced =
+            materials.filterTo(mutableSetOf()) { material ->
+                material != target && recipes.any { material in it.result.keys }
+            }
+        if (produced.size <= maxIntermediates) return recipes
+        val kept =
+            parsedRecipe.usage.order
+                .asSequence()
+                .filter { it in produced }
+                .take(maxIntermediates)
+                .toSet()
+        return recipes.filter { recipe -> recipe.result.keys.any { it == target || it in kept } }
+    }
+
+    /**
      * The materials that may be imported: those no recipe produces, plus any material caught in a
      * production cycle (a filled/empty barrel pair, for example) which would otherwise make the
      * program infeasible. Materials downstream of a cycle stay producible once a cycle member may
-     * be imported.
+     * be imported. The target is the exception: when a recipe produces it, it must be built, or the
+     * LP would import the whole plan and leave no target factory.
      */
     private fun importableMaterials(
+        target: Material,
         materials: List<Material>,
         recipes: List<Recipe>,
     ): List<Material> {
@@ -110,7 +151,11 @@ class Optimizer(
                 start in seen
             }
         return materials.filter { material ->
-            recipes.none { material in it.result.keys } || material in inCycle
+            val produced = recipes.any { material in it.result.keys }
+            // the target must be built when a recipe produces it: importing it would make the
+            // whole plan empty, and a cycle that contains the target must be broken by producing
+            // it. A target no recipe produces is still a free source.
+            if (material == target) !produced else !produced || material in inCycle
         }
     }
 
@@ -121,26 +166,32 @@ class Optimizer(
      * simplex would otherwise leave in the basis).
      */
     private fun compute(target: Material): OptimizationResult {
-        val materials = reachableMaterials(target)
+        val reachable = reachableMaterials(target, allowedRecipes)
         val recipes = allowedRecipes.filter {
+            it.result.keys.any { material -> material in reachable }
+        }
+        val limitedRecipes = limitProducedMaterials(target, reachable, recipes)
+        val materials = reachableMaterials(target, limitedRecipes)
+        val finalRecipes = limitedRecipes.filter {
             it.result.keys.any { material -> material in materials }
         }
 
         // An import is only allowed for materials no recipe produces (and for recipe cycles that
         // have no base input): a producible material must be built, because importing a finished
         // composite is always "cheaper" in raw units and would otherwise import the whole target.
-        val importMaterials = importableMaterials(materials, recipes)
+        val importMaterials = importableMaterials(target, materials, finalRecipes)
         val solution =
-            solve(target, materials, recipes, importMaterials)
+            solve(target, materials, finalRecipes, importMaterials)
                 ?: error("no feasible production plan for ${target.name}")
 
         return OptimizationResult(
             target = target,
             recipe =
-                recipes
+                finalRecipes
                     .filter { target in it.result.keys }
-                    .maxByOrNull { solution[recipes.indexOf(it)] } ?: freeSource(target),
-            factories = factoryProductions(target, materials, recipes, importMaterials, solution),
+                    .maxByOrNull { solution[finalRecipes.indexOf(it)] } ?: freeSource(target),
+            factories =
+                factoryProductions(target, materials, finalRecipes, importMaterials, solution),
             logistics = parsedRecipe.logistics,
         )
     }

@@ -31,8 +31,9 @@ import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
-import de.bjrke.factorio.optimizer.common.game.selection.forSurface
+import de.bjrke.factorio.optimizer.common.game.prototype.forSurface
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -139,7 +140,11 @@ class OptimizerSurfaceTest {
     fun fulgoraScrapRecyclingConsumesWhatTheDrillProduces() {
         // Regression: the recycler's display used the curated Factory speed (1.0) instead of the
         // dump's crafting speed (0.5), so its scrap input showed twice the drill's scrap output.
-        val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.FULGORA))
+        val optimizer =
+            Optimizer(
+                RecipeLoader.forActiveMods().forSurface(Surface.FULGORA),
+                maxIntermediates = MAX_INTERMEDIATE_LIMIT,
+            )
 
         val result = optimizer[Material(ALL_SCIENCE_PACKS)]
         val drill = result.factories.values.single { it.recipe.name == "scrap" }

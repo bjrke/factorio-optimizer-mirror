@@ -12,13 +12,13 @@ class FactorioUrlTest {
     @Test
     fun parsesEveryFormAUserMightPaste() =
         assertTableOf(
-            "http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1",
-            "localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1",
-            "#/4.5/advanced-circuit/CFSXbmr/1/1",
-            "https://example.com/some/page#/4.5/advanced-circuit/CFSXbmr/1/1",
+            "http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10",
+            "localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10",
+            "#/4.5/advanced-circuit/CFSXbmr/1/1/10",
+            "https://example.com/some/page#/4.5/advanced-circuit/CFSXbmr/1/1/10",
         ) { text ->
             assertEquals(
-                FactorioUrl(4.5, "advanced-circuit", "CFSXbmr", "1", "1"),
+                FactorioUrl(4.5, "advanced-circuit", "CFSXbmr", "1", "1", "10"),
                 parseFactorioUrl(text),
                 text,
             )
@@ -32,16 +32,23 @@ class FactorioUrlTest {
             "http://localhost:8080/#/4.5/advanced-circuit?foo=bar",
         ) { text ->
             assertEquals(
-                FactorioUrl(4.5, "advanced-circuit", null, null, null),
+                FactorioUrl(4.5, "advanced-circuit", null, null, null, null),
                 parseFactorioUrl(text),
                 text,
             )
         }
 
     @Test
+    fun aUrlWithoutTheIntermediateLimitStillParses() =
+        assertEquals(
+            FactorioUrl(4.5, "advanced-circuit", "CFSXbmr", "1", "1", null),
+            parseFactorioUrl("#/4.5/advanced-circuit/CFSXbmr/1/1"),
+        )
+
+    @Test
     fun anInvalidNormalizeTargetFallsBackToTheDefault() =
         assertEquals(
-            FactorioUrl(DEFAULT_NORMALIZE_TARGET, "advanced-circuit", "S", "1", "1"),
+            FactorioUrl(DEFAULT_NORMALIZE_TARGET, "advanced-circuit", "S", "1", "1", null),
             parseFactorioUrl("#/not-a-number/advanced-circuit/S/1/1"),
         )
 

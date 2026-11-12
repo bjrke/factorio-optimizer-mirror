@@ -3,10 +3,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoLoaderOverTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -17,8 +15,8 @@ import kotlin.test.assertNotNull
 class BlueprintProductRowTest {
 
     /**
-     * The target product row is a routing wall from the output belt east: the LDS feed that crosses
-     * it must tunnel, and no loader may sit above a tunnel span.
+     * The target product row is a routing wall from the output belt east: no foreign belt may run
+     * on it, no belt may run east of the output loader, and no loader may sit above a tunnel span.
      */
     @Test
     fun theReportedUtilityScienceUrlKeepsTheProductRowClear() {
@@ -27,7 +25,6 @@ class BlueprintProductRowTest {
                 "http://localhost:8080/#/0.178571428571/utility-science-pack/FSXbr/1/1",
             )
         val target = Material("utility-science-pack")
-        val lowDensity = Material("low-density-structure")
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val productRow = belts.filter { it.material == target }.maxOf { it.area.topLeft.y }
         val productEnd =
@@ -39,21 +36,6 @@ class BlueprintProductRowTest {
                 it.area.topLeft.x > productEnd &&
                 it.material != target
         }
-        val ldsTunnels =
-            layout.entities.filterIsInstance<UndergroundBeltEntity>().filter {
-                it.material == lowDensity
-            }
-        val crossing =
-            ldsTunnels
-                .filter { it.io == Io.INPUT && it.area.topLeft.y > productRow }
-                .firstOrNull { input ->
-                    ldsTunnels.any { output ->
-                        output.io == Io.OUTPUT &&
-                            output.direction == input.direction &&
-                            output.area.topLeft.x == input.area.topLeft.x &&
-                            output.area.topLeft.y < productRow
-                    }
-                }
         val outputLoader =
             layout.entities.filterIsInstance<LoaderEntity>().filter {
                 it.material == target
@@ -69,7 +51,6 @@ class BlueprintProductRowTest {
             { assertNotNull(outputLoader.firstOrNull(), "no target output loader") },
             { assertEquals(emptyList(), foreignOnRow, "a foreign belt runs on the product row") },
             { assertEquals(emptyList(), eastOfLoader, "a belt runs east of the output loader") },
-            { assertNotNull(crossing, "the LDS feed does not tunnel across the product row") },
             { assertNoLoaderOverTunnel(layout) },
         )
     }

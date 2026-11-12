@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.fixtures.electrolyte
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
 import de.bjrke.factorio.optimizer.common.fixtures.holmiumSolution
+import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.sulfur
@@ -60,7 +61,7 @@ class BlueprintFluidPortLayoutTest {
     @Test
     fun theSulfuricChemicalPlantFeedsItsSolidInputs() {
         // sulfur is direct-fed in the band; the acid machine still takes iron plate from the row
-        // above, and neither solid inserter blocks the chemical plant's fluid ports
+        // above, and the smelter's ore import sits beside it without blocking the fluid ports
         val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/sulfuric-acid/FSXmr/1/1")
         val inserters = layout.entities.filterIsInstance<InserterEntity>()
 
@@ -69,8 +70,9 @@ class BlueprintFluidPortLayoutTest {
             {
                 assertEquals(
                     mapOf(
-                        Coordinate(LANE_MARGIN + 3, 2) to sulfur,
-                        Coordinate(LANE_MARGIN + 5, 1) to ironPlate,
+                        Coordinate(LANE_MARGIN + 1, 1) to ironOre,
+                        Coordinate(LANE_MARGIN + 3, 2) to ironPlate,
+                        Coordinate(LANE_MARGIN + 7, 2) to sulfur,
                     ),
                     inserters.associateBy({ it.area.topLeft }, { it.material }),
                 )

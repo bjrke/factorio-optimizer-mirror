@@ -15,11 +15,11 @@ import kotlin.math.roundToInt
  *
  * Only the production the target needs is built: the target recipe and every other recipe that
  * alone supplies one of the plan's materials, even when several recipes take that material. Every
- * other input — place-dependent recipes (mining/pumping/harvesting), oil processing, classic
- * smelters, recycling, crushing, spoiling, recipes that would need a mixed output belt, and the
- * cycles the optimizer discards — becomes an import; the remaining simple chemistry, organic,
- * cryogenic and centrifuging recipes are built. Each recipe is built with exactly the machine count
- * the optimizer sized for the requested rate.
+ * other input — place-dependent recipes (mining/pumping/harvesting), oil processing, recycling,
+ * crushing, spoiling, recipes that would need a mixed output belt, and the cycles the optimizer
+ * discards — becomes an import; the remaining simple chemistry, organic, cryogenic, centrifuging
+ * and smelting recipes are built. Each recipe is built with exactly the machine count the optimizer
+ * sized for the requested rate.
  */
 fun blueprintPlan(
     result: OptimizationResult,

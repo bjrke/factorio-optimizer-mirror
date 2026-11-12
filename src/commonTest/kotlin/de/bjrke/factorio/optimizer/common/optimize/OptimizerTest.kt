@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.calciteMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.castingSteelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
@@ -21,11 +22,15 @@ import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCellRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -225,5 +230,80 @@ class OptimizerTest {
         val smelting = result.factories.values.single { it.recipe.name == "iron-plate" }
         // gear (2 plates) and pipe (1 plate each, 2 per engine) consume 4 plates/s in total
         assertEquals(6.4, smelting.amount, TOLERANCE)
+    }
+
+    @Test
+    fun theLimitKeepsTheLeastUsedIntermediates() {
+        val ore = Material("ore")
+        val plate = Material("plate")
+        val gear = Material("gear")
+        val pipe = Material("pipe")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(
+                    recipe("smelt", mapOf(ore to 1.0), mapOf(plate to 1.0)),
+                    recipe("gear", mapOf(plate to 1.0), mapOf(gear to 1.0)),
+                    recipe("pipe", mapOf(plate to 1.0), mapOf(pipe to 1.0)),
+                    recipe("target", mapOf(gear to 1.0, pipe to 1.0), mapOf(target to 1.0)),
+                ),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                maxIntermediates = 1,
+            )[target]
+        val built =
+            result.factories.values
+                .filter { it.factory != Factory.NO_FACTORY }
+                .map { it.recipe.name }
+                .toSet()
+        val imported = result.factories.values.map { it.material }
+
+        assertAll(
+            // gear is the least-used produced material (tied with ore and pipe, name order wins)
+            { assertContains(built, "gear") },
+            { assertContainsNot(built, "smelt") },
+            { assertContainsNot(built, "pipe") },
+            // the dropped materials become imports
+            { assertContains(imported, plate) },
+            { assertContains(imported, pipe) },
+        )
+    }
+
+    @Test
+    fun aTargetInACycleIsBuiltNotImported() {
+        val target = Material("target")
+        val byproduct = Material("byproduct")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(
+                    recipe("forward", mapOf(target to 1.0), mapOf(byproduct to 1.0)),
+                    recipe("back", mapOf(byproduct to 1.0), mapOf(target to 1.0)),
+                ),
+            )
+        val result =
+            Optimizer(parsed, setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY))[target]
+
+        assertAll(
+            // the cycle member may be imported, but the target itself must be produced
+            { assertEquals("back", result.recipe.name) },
+            { assertContains(result.factories.values.map { it.recipe.name }, "back") },
+        )
     }
 }

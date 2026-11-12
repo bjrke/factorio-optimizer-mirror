@@ -14,6 +14,21 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-12 — The intermediate limit keeps the least-used materials
+
+**Decision.** `Optimizer` takes a `maxIntermediates` limit and keeps the least-used produced
+materials from `ParsedRecipe.usage`; the rest become imports before the LP is solved. The usage
+index is computed once per surface-filtered recipe set and cached on `ParsedRecipe`, and the limit
+is part of the optimizer's configuration, so its result cache is per limit.
+
+**Guardrail.** The target is always built and never counts toward the limit; when a recipe produces
+it, it must not be importable even if it sits in a cycle, or the LP imports the whole plan. The
+limit is a size heuristic, not a hard guarantee: a multi-output recipe can still produce an
+excluded material as a byproduct.
+
+**See.** `game/prototype/RecipeUsage.kt`, `optimize/Optimizer.kt`,
+`blueprint/planning/band/RecipeFilter.kt`.
+
 ## 2026-11-11 — A band keeps a shared product on the belt
 
 **Decision.** Growth may not internalize a product that leaves a band over a belt while another

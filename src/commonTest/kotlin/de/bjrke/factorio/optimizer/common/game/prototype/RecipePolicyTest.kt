@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.game.prototype
 import de.bjrke.factorio.optimizer.common.blueprint.planning.band.buildable
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
-import de.bjrke.factorio.optimizer.common.game.selection.forSurface
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTable

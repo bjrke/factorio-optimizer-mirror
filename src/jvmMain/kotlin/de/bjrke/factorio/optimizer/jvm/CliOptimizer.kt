@@ -16,12 +16,12 @@ import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARG
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.production.superRound
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.DEFAULT_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
-import de.bjrke.factorio.optimizer.common.game.selection.forSurface
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -66,13 +66,15 @@ data class CliArgs(
     val fullBelt: Boolean? = null,
     val beltStack: String? = null,
     val inserterStack: String? = null,
+    /** How many produced materials besides the target the plan may build. */
+    val intermediates: Int = DEFAULT_INTERMEDIATE_LIMIT,
     /** The requested [Output]s; empty means the default listing. */
     val outputs: Set<Output> = emptySet(),
 )
 
 fun main(args: Array<String>) {
     val cli = parseArgs(args)
-    val parsedRecipes = RecipeLoader.forActiveMods(cli.spaceAge).forSurface(cli.surface)
+    val parsedRecipes = RecipeLoader.forSurface(cli.spaceAge, cli.surface)
     val factoryConfig = FactoryConfig(cli.spaceAge)
     val factories =
         cli.factories
@@ -105,7 +107,7 @@ fun main(args: Array<String>) {
             ),
         )
 
-    val result = Optimizer(parsedRecipes, factories)[Material(cli.material)]
+    val result = Optimizer(parsedRecipes, factories, cli.intermediates)[Material(cli.material)]
 
     val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
     val blueprintOutputs = Output.order.filter { it.blueprint && it in outputs }
@@ -147,6 +149,7 @@ internal fun settingsText(
       beltLanes: ${logistics.lanes}
       beltStack: ${logistics.beltStack}
       inserterStack: ${logistics.inserterStack}
+      intermediates: ${cli.intermediates}
       factories: ${factories.map { it.identifier }.sorted().joinToString(", ")}
     """
         .trimIndent()

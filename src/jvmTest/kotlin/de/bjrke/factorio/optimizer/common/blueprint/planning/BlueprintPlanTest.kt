@@ -138,20 +138,20 @@ class BlueprintPlanTest {
                 ),
             )
 
-        // the drill is place-dependent and the smelter is left out; both become imports
+        // the drill is place-dependent and becomes an import; the smelter is built
         assertAll(
-            { assertEquals(listOf(gear), planned.recipes.map { it.material }) },
-            { assertEquals(listOf(ironPlate), planned.sources.map { it.material }) },
+            { assertEquals(setOf(gear, ironPlate), planned.recipes.map { it.material }.toSet()) },
+            { assertEquals(listOf(ironOre), planned.sources.map { it.material }) },
         )
     }
 
     @Test
-    fun aFoundryRecipeIsKeptWhileAFurnaceRecipeIsNot() {
+    fun aFoundryRecipeAndAFurnaceRecipeAreBothKept() {
         val foundry = castingIronRecipe
         val furnace = ironPlateSmeltingRecipe
         val craft = ironGearWheelRecipe
 
-        val keptPlan =
+        val foundryPlan =
             testBlueprintPlan(
                 result(
                     gear,
@@ -163,7 +163,7 @@ class BlueprintPlanTest {
                 ),
                 logistics,
             )
-        val excludedPlan =
+        val furnacePlan =
             plan(
                 gear,
                 craft,
@@ -174,9 +174,9 @@ class BlueprintPlanTest {
             )
 
         assertAll(
-            { assertContains(keptPlan.recipes.map { it.factory }, Factory.FOUNDRY) },
-            // the furnace plan has only the gear recipe left; the plate is imported
-            { assertEquals(listOf(ironPlate), excludedPlan.sources.map { it.material }) },
+            { assertContains(foundryPlan.recipes.map { it.factory }, Factory.FOUNDRY) },
+            { assertContains(furnacePlan.recipes.map { it.factory }, Factory.STEEL_FURNACE) },
+            { assertEquals(listOf(ironOre), furnacePlan.sources.map { it.material }) },
         )
     }
 

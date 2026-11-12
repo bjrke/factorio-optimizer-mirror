@@ -3,13 +3,14 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing.output
 import de.bjrke.factorio.optimizer.common.game.production.normalizeTargetFromUrl
 
 /**
- * The five path segments of a Factorio-Optimizer web URL, decoded far enough that the CLI can run
+ * The six path segments of a Factorio-Optimizer web URL, decoded far enough that the CLI can run
  * the same selection the browser had:
  *
- * `http://localhost:8080/#/<normalizeTarget>/<target>/<selection>/<beltStack>/<inserterStack>`
+ * `http://localhost:8080/#/<normalizeTarget>/<target>/<selection>/<beltStack>/<inserterStack>/<intermediates>`
  *
  * The selection string is kept raw; [surfaceFromUrl], [FactoryConfig.fromUrl] and
- * [LogisticsConfig.belt]/[inserter]/[beltLanes] decode it the same way the web UI does.
+ * [LogisticsConfig.belt]/[inserter]/[beltLanes] decode it the same way the web UI does. The
+ * intermediate limit is kept raw too, so the caller can clamp it with `validIntermediateLimit`.
  */
 data class FactorioUrl(
     val normalizeTarget: Double,
@@ -17,6 +18,7 @@ data class FactorioUrl(
     val selection: String?,
     val beltStack: String?,
     val inserterStack: String?,
+    val intermediates: String?,
 )
 
 /**
@@ -30,7 +32,7 @@ fun parseFactorioUrl(text: String): FactorioUrl? {
     // everything after a `?` is a query, not part of the path
     val fragment = text.substring(hash + 1).substringBefore('?')
     val segments = fragment.trim('/').split('/').filter { it.isNotEmpty() }
-    // normalizeTarget and target are required; selection and the stack sizes default when absent
+    // normalizeTarget and target are required; the later segments default when absent
     if (segments.size < 2) return null
     return FactorioUrl(
         normalizeTarget = normalizeTargetFromUrl(segments[0]),
@@ -38,5 +40,6 @@ fun parseFactorioUrl(text: String): FactorioUrl? {
         selection = segments.getOrNull(2),
         beltStack = segments.getOrNull(3),
         inserterStack = segments.getOrNull(4),
+        intermediates = segments.getOrNull(5),
     )
 }

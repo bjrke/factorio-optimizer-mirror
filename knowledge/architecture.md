@@ -25,15 +25,18 @@ CLI (JVM) from one shared core.
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (belt/inserter/pump stats and `LogisticsConfig`),
     `Surface.kt` (`Surface`, `SurfaceProperty/Condition`, the surface rules as
-    `Surface.accepts*` extensions) and `RecipePolicy.kt` (the optimizer's explicit
-    recipe exclusions, `unplannedRecipes`).
+    `Surface.accepts*` extensions), `SurfaceRecipes.kt` (`ParsedRecipe.forSurface`),
+    `RecipeUsage.kt` (the cached transitive usage counts, the least-used-first
+    order and the intermediate-limit constants) and `RecipePolicy.kt` (the
+    optimizer's explicit recipe exclusions, `unplannedRecipes`).
   - `game/selection` — the URL/CLI codecs: `Selection.kt`
     (`Selection`, `SelectionFlag`, `selectionString`, `spaceAgeIn`,
     `fullBeltIn`), `BeltEndSelection.kt` (`beltEndFromSelection/-Identifier`),
-    `SurfaceSelection.kt` (`surfaceFromUrl/-Planet`, `forSurface`). Only the
-    entry points (UI, CLI) and the tests use it; the layout never sees a URL.
+    `SurfaceSelection.kt` (`surfaceFromUrl/-Planet`). Only the entry points (UI,
+    CLI) and the tests use it; the layout never sees a URL.
   - `game/production` — reads the prototype dump: `recipeParser.kt` orchestrates
-    it, `RecipeLoader` (the cached per-mods parse), `prototypeDump.kt` (the
+    it, `RecipeLoader` (the cached per-mods parse and the cached
+    `forSurface(spaceAge, surface)` view), `prototypeDump.kt` (the
     `loadPrototypeDump` `expect` declaration), `RecipePrototype.kt`,
     `JsonFields.kt`, `resourceRecipes.kt`, `customRecipes.kt`
     (`ALL_SCIENCE_PACKS`), `spoilageRecipes.kt`, `utils.kt` (normalization) and
@@ -43,7 +46,9 @@ CLI (JVM) from one shared core.
     in and returns an `OptimizationResult` (from `model`); it never loads the
     dump or builds a blueprint. Its output models now live in `model`, so the
     blueprint planner can consume an optimizer result without depending on the
-    optimizer itself.
+    optimizer itself. `Optimizer` takes a `maxIntermediates` limit: it keeps the
+    least-used produced materials (from `ParsedRecipe.usage`) and turns the rest
+    into imports before solving the LP, so the result cache is per limit.
   - `model` — the shared result models: `OptimizationResult`, `FactoryProduction`
     (per-machine production) and `factoryProductionComparator`. They sit above
     the rulebook (`game/prototype`) and are consumed by both the optimizer and
@@ -73,7 +78,8 @@ CLI (JVM) from one shared core.
       planner (`RowPlanner`, `RowTopology`, `RowPlacer`, `RowBeltPlacement`, `Row`
       and the inserter/interface placers) with the shared `LayoutStage`; `band` — the
       direct-feed band (`DirectFeed`, `DirectFeedModel`, `BandSearch`,
-      `FeedCandidates`, `FeedLink`, `RecipeFilter`).
+      `FeedCandidates`, `FeedLink`, `RecipeFilter`). `RecipeFilter` plans smelting;
+      the optimizer's intermediate limit decides which smelting products are built.
     - `blueprint/placing` — placing the entities and their connections:`route`
       (the weighted A* shared by belts and pipes — `LayoutRouter`,
       `RouteSearch`, `RouteProfile`), `routing` (implicit delivery — `Delivery*`,
@@ -128,7 +134,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | --- | --- |
 | core.model | 4 |
 | core.util | 4 |
-| game.prototype | 6 |
+| game.prototype | 8 |
 | game.production | 10 |
 | game.selection | 3 |
 | model | 1 |

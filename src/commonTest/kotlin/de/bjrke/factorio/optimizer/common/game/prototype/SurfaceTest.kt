@@ -18,7 +18,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.tungstenOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.woodHarvestingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.yumakoHarvestingRecipe
-import de.bjrke.factorio.optimizer.common.game.selection.forSurface
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromPlanet
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 import de.bjrke.test.assertAll

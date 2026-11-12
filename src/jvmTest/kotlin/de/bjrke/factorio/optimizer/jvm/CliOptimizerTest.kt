@@ -86,11 +86,35 @@ class CliOptimizerTest {
             { assertEquals("CFSXbmr", args.selection) },
             { assertEquals("1", args.beltStack) },
             { assertEquals("1", args.inserterStack) },
+            { assertEquals(10, args.intermediates) },
             // CFSXbmr contains S (Space Age) and X (the infinity chest)
             { assertTrue(args.spaceAge) },
             { assertEquals(BeltEnd.INFINITY_CHEST, args.beltEnd) },
         )
     }
+
+    @Test
+    fun theIntermediateLimitComesFromTheUrlOrTheFlag() =
+        assertAll(
+            {
+                assertEquals(
+                    7,
+                    parseArgs(arrayOf("#/4.5/advanced-circuit/CFSXbmr/1/1/7")).intermediates,
+                )
+            },
+            { assertEquals(5, parseArgs(arrayOf("--intermediates=5")).intermediates) },
+            // the flag wins over the URL
+            {
+                assertEquals(
+                    3,
+                    parseArgs(arrayOf("#/4.5/advanced-circuit/CFSXbmr/1/1/7", "--intermediates=3"))
+                        .intermediates,
+                )
+            },
+            // out-of-range values clamp to the selectable range
+            { assertEquals(50, parseArgs(arrayOf("--intermediates=99")).intermediates) },
+            { assertEquals(1, parseArgs(arrayOf("--intermediates=0")).intermediates) },
+        )
 
     @Test
     fun beltEndIsParsedByIdentifierOrCode() =
@@ -232,6 +256,7 @@ class CliOptimizerTest {
                     "  inserter: stack-inserter",
                     "  beltLanes: 2",
                     "  beltStack: 4",
+                    "  intermediates: 10",
                     "  factories: assembling-machine-3, foundry",
                 ) { expected ->
                     assertContains(text, expected, message = text)

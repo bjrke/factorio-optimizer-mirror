@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.prototype.validIntermediateLimit
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromIdentifier
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromSelection
 import de.bjrke.factorio.optimizer.common.game.selection.spaceAgeIn
@@ -19,13 +20,14 @@ import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 /**
  * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),
  * `--planet=<surface>`, `--factory=<machine>` (repeatable), `--belt=<tier>`, `--inserter=<tier>`,
- * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--normalize=<x>`,
- * `--belt-end=<marker>` and its alias `--cheats` (the infinity chest) are understood; `--settings`,
- * `--listing`, `--layout`, `--json` and `--blueprint` choose the [Output]s.
- * Belt/inserter/machine/marker values are identifiers (`express-transport-belt`, `foundry`,
- * `buffer-chest`) or a single-letter code. Any argument may be replaced by a pasted web UI URL,
- * e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1`, whose segments fill in the
- * material, selection, normalize target and stack sizes. Explicit flags override it.
+ * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--intermediates=<n>`,
+ * `--normalize=<x>`, `--belt-end=<marker>` and its alias `--cheats` (the infinity chest) are
+ * understood; `--settings`, `--listing`, `--layout`, `--json` and `--blueprint` choose the
+ * [Output]s. Belt/inserter/machine/marker values are identifiers (`express-transport-belt`,
+ * `foundry`, `buffer-chest`) or a single-letter code. Any argument may be replaced by a pasted web
+ * UI URL, e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10`, whose segments fill
+ * in the material, selection, normalize target, stack sizes and intermediate limit. Explicit flags
+ * override it.
  */
 fun parseArgs(args: Array<String>): CliArgs {
     val url = args.firstNotNullOfOrNull { parseFactorioUrl(it) }
@@ -46,6 +48,10 @@ fun parseArgs(args: Array<String>): CliArgs {
         fullBelt = if (args.any { it == "--full-belt" }) true else null,
         beltStack = args.valueOption("belt-stack") ?: url?.beltStack,
         inserterStack = args.valueOption("inserter-stack") ?: url?.inserterStack,
+        intermediates =
+            validIntermediateLimit(
+                args.valueOption("intermediates") ?: url?.intermediates,
+            ),
         outputs = resolveOutputs(args),
     )
 }
