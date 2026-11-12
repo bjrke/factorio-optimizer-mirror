@@ -23,7 +23,7 @@ up.
   `break`/`continue` statements, and destructuring may bind four names. Import the
   project's own packages by name, never with a wildcard, so every cross-package
   edge is visible in the file's header and review can compare it with the table
-  in `architecture.md` (see `decisions.md`, 2026-10-22). `de.bjrke.test.*`,
+  in `architecture.md`. `de.bjrke.test.*`,
   `kotlin.test.*`, `kotlinx.serialization.json.*` and third-party wildcards stay
   allowed.
   There are **no committed Detekt baselines**, so every finding fails `check`
@@ -35,13 +35,14 @@ up.
   split by responsibility into separate files or classes instead of collecting
   a dozen writers in one file.
 - Package boundaries are the other half of that rule: a package is a domain with a
-  stated surface (see `decisions.md`, 2026-10-22). A cross-package reference is an
+  stated surface. A cross-package reference is an
   explicit import of the names actually used. The allowed edges are the table in
   `architecture.md` ("Package dependencies"); they are enforced by the compiler
   (`internal` marks a symbol used outside its package) and by review, not by a test
   — `ForbiddenImport` cannot express them (one flat list, see `pitfalls.md`). A new
   package or a new edge means adding or changing a row on purpose — never widening
-  one to silence a failure.
+  one to silence a failure. A guard that has to prove itself by injecting the
+  violation it rejects belongs at the Gradle/build level, not in an app suite.
   A package that outgrows 10 files is cut along its responsibilities (15 is the
   ceiling); review keeps that budget, no task does. There is no line budget; class
   length is capped by `LargeClass` (500).
@@ -261,6 +262,9 @@ Promote a finding into `knowledge/` only when it is reusable, stable and verifie
 - reusable across changes, likely to prevent repeated investigation, a stable
   architectural/behavioral fact, a verified convention, or a consequential decision.
 - Put per-change detail in the commit message, not in `knowledge/`.
+- Try the code first: the reason for a value, order or shape belongs in the KDoc of
+  the constant, function or class it governs, where the next editor reads it.
+  `decisions.md` is only for a constraint that no single owner file can carry.
 - Mark uncertain items as hypotheses until verified. Cite the evidence (file path,
   test name, command) where practical.
 - Prefer updating the existing authoritative file over adding a new one; check for

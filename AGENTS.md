@@ -27,8 +27,9 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   go stale.
 - Promote reusable, stable, verified findings into `knowledge/`: architecture
   facts into `architecture.md`, conventions into `conventions.md`, traps and
-  diagnostic dead ends into `pitfalls.md`, consequential choices into
-  `decisions.md`. Leave per-change detail in the commit message.
+  diagnostic dead ends into `pitfalls.md`, and only a constraint no single owner
+  file can carry into `decisions.md` — the reason for a value belongs in the KDoc
+  of the constant it governs. Leave per-change detail in the commit message.
 - Before `/compact`, a handoff or a pause, run `/handoff` (or state the same
   points yourself). The compaction plugin uses the newest assistant reply's
   `## Handoff state` block as the summary, so that reply must be the last thing

@@ -9,7 +9,7 @@ state — notes go stale.
 | `knowledge/architecture.md` | you need the module map, data flow, key files, or how generated data is produced |
 | `knowledge/conventions.md` | before writing or changing tests or non-trivial code, or when a workflow question comes up |
 | `knowledge/pitfalls.md` | a result is surprising, a build/test misbehaves, or before trusting a "known" behavior |
-| `knowledge/decisions.md` | before changing an established approach, or to understand why something is the way it is |
+| `knowledge/decisions.md` | a constraint spans files, or you need why something is the way it is |
 
 `AGENTS.md` at the repository root holds the rules that must apply to **every**
 prompt (commands, sandbox policy, Git workflow, knowledge rules). Everything an
@@ -20,7 +20,8 @@ agent does not need on every turn lives here instead.
 Every fact has one home; other files cross-reference it instead of restating it.
 
 - `architecture.md` — where it lives, how data flows, the load-bearing order.
-- `decisions.md` — what must stay true and why (decision + guardrail).
+- `decisions.md` — the constraints no single owner file can carry, and why (decision
+  + guardrail); every mechanism it names lives in that symbol's KDoc.
 - `pitfalls.md` — how to recognize a failure, its cause, its fix and evidence.
 - `conventions.md` — how to do the work.
 

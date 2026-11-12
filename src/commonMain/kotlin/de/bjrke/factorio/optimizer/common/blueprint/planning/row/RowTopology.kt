@@ -23,6 +23,13 @@ private const val MAX_DISTRIBUTED_BRANCH_ROWS = 4
  * result is the north-to-south [units] order plus the preferred side of every belt: an input faces
  * its producer and a product faces the consumer that placed the row.
  *
+ * The target's direct producers are split in plan order when it has exactly two branches. Three or
+ * more branches are distributed across both sides, largest first and alternating, only when the
+ * largest branch is [MIN_DISTRIBUTED_BRANCH_ROWS] to [MAX_DISTRIBUTED_BRANCH_ROWS] rows deep; every
+ * other target stays compact and one-sided, largest branch nearest. A larger branch set is never
+ * distributed: it strands the producers the branches share, disables compaction and doubles the
+ * layout.
+ *
  * Nodes are the row **positions** in `BlueprintPlan.rows`, never row values: two structurally equal
  * rows are two occurrences and must not collapse into one graph node.
  */

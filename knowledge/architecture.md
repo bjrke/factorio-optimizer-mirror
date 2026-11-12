@@ -14,7 +14,7 @@ CLI (JVM) from one shared core.
 
 - `src/commonMain` — shared logic, one package per domain. The dependency direction
   is one-way, from the vocabulary up to the artifact. The exact edges each package
-  may use are listed under "Package dependencies" (see `decisions.md`, 2026-10-22):
+  may use are listed under "Package dependencies":
   - `core/model` — the grid vocabulary and nothing else: `Tile.kt` (`Coordinate`,
     `Area`, `Dimension`, `Direction`, `Io`), `TileGeometry.kt` (distance and
     compass helpers), `Material.kt`, `IconLayer.kt`. A leaf: it imports no other
@@ -120,7 +120,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 
 Package sizes (files, verified 2026-11-12). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
-removed, so review keeps it (see `decisions.md`, 2026-10-22). There is no line
+removed, so review keeps it. There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 `find src/commonMain/…/<package> -maxdepth 1 -name '*.kt' | wc -l`.
 
@@ -160,9 +160,10 @@ Each package imports the others by name (no project wildcards; the
 `WildcardImport` rule in `config/detekt/detekt.yml` allows only `de.bjrke.test.*`
 from this repository), and a symbol no other package needs is `internal`: the
 compiler then rejects a cross-package use. That is the whole enforcement: **no test
-checks these edges** — a hand-written guard test does not belong in the app suites
-(see `decisions.md`, 2026-10-22). The table below is the intent; keep a change to it
-deliberate and reviewable, never widen a row to make an existing edge legal.
+checks these edges** — a guard that needs to prove itself by injecting the
+violation belongs at the build level, not in the app suites. The table below is
+the intent; keep a change to it deliberate and reviewable, never widen a row to
+make an existing edge legal.
 
 The arrows point one way from the vocabulary up to the artifact (leaf
 dependencies at the bottom, the assembly root at the top):
@@ -378,7 +379,7 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   A fluid target whose output port is on a side edge is routed to a marker by the
   same path (`connectTargetOutput`), not left as a stub. The lane/marker pass runs
   after `RowPlacer.placeAll()`, so the belts and inserters a shaft buries itself
-  under already stand (see `decisions.md`, 2026-10-26).
+  under already stand.
 - `blueprint/placing/routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). Only a
   straight run decides the column; a mixed feed that turns before its merge stays
@@ -483,8 +484,10 @@ for another row, and a sink with no producer row is a layout failure. `RowPlacer
 `internalInputs` through `fullyInternalInputs` to decide whether a link material still needs an
 input lane.
 
-The grouping, shared-product, stone/solid-fuel and fluid-link rules and their guardrails are in
-`decisions.md` (2026-11-09, 2026-11-07, 2026-11-06, 2026-11-02, 2026-10-24).
+The grouping, stone/solid-fuel and fluid-link rules and their guardrails are in
+the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
+`game/prototype/RecipePolicy.kt`; the shared-product rule is in `decisions.md`
+(2026-11-11).
 
 A solid belt's end is a `BeltEnd` (`blueprint/layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
@@ -496,7 +499,7 @@ blueprint envelope (`label`, `icons`, `entities`, top-level `wires`);
 `request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
 `infinity_settings` and `neighbours` fields. An infinity pipe writes
 `infinity_settings` only as a source; a sink is unfiltered and writes none, so
-the game deletes whatever reaches it. See `decisions.md` (2026-10-18) for the
+the game deletes whatever reaches it. See `BeltEndConnector.kt` for the
 geometry and `pitfalls.md` for the wire and pole traps.
 
 The layout tests are grouped by scenario (`BlueprintLayoutTest`,
@@ -540,7 +543,9 @@ up to date, so a stale profile cannot be mistaken for a fresh one.
 
 The report is CPU only: self time per method from `jdk.ExecutionSample`. The
 recording also carries `jdk.ThreadPark`, `jdk.ThreadSleep` and monitor events
-with stacks, so blocking time can be inspected without a re-run.
+with stacks, so blocking time can be inspected without a re-run. One profiler
+only: a second sampler or a generated report is not added, and a wall-clock
+question is answered from this recording.
 
 There is no report generator and no text artifact: the JDK's own tooling reads
 the recording. Open the `.jfr` in IntelliJ's JFR viewer (`File | Open`), JDK

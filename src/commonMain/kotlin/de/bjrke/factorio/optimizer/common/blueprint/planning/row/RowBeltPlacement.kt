@@ -27,8 +27,9 @@ internal data class BeltPlacement(val location: FixedBeltLocation, val group: Be
 /**
  * Assigns every belt group a row beside the machines. A topology-aware row puts a product on the
  * side of its consumer and an input on the side of its producer; each side holds at most two rows,
- * so an overflowing group shares a lane or moves to the other side. A row without producer/consumer
- * rows keeps the rate-ranked layout that stands for a single-row plan.
+ * so an overflowing group first shares a lane with a pair that still fits and moves to the other
+ * side only when no pair does. A row without producer/consumer rows keeps the rate-ranked layout
+ * that stands for a single-row plan.
  */
 internal fun assignRowBelts(
     planner: RowPlanner,
