@@ -1,4 +1,4 @@
-// The dialog props are read below; light-mode detekt cannot see external interface members.
+// The panel props are read below; light-mode detekt cannot see external interface members.
 @file:Suppress("UnusedParameter")
 
 package de.bjrke.factorio.optimizer.js.component
@@ -15,20 +15,15 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintStr
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import emotion.react.css
-import react.ChildrenBuilder
 import react.FC
 import react.Key
 import react.Props
-import react.dom.aria.AriaRole
 import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
-import react.dom.html.ReactHTML.textarea
 import react.dom.svg.ReactSVG.foreignObject
 import react.dom.svg.ReactSVG.svg
-import react.useState
 import web.cssom.ClassName
 import web.cssom.Display
 import web.cssom.Position
@@ -169,93 +164,82 @@ internal val blueprintView =
         }
     }
 
-external interface BlueprintDialogProps : Props {
-    var label: String
+/** The blueprint a plan produces, or null when the plan cannot be built. */
+internal data class BlueprintPreview(
+    val outcome: BlueprintPlanResult,
+    val blueprint: Blueprint?,
+)
 
-    // read by the dialog below; light-mode detekt cannot see external interface members
-    var text: String
-    var blueprint: Blueprint
-    var onClose: () -> Unit
+/**
+ * Plans and lays out the blueprint for [result] once, so the always-visible panel does not rerun
+ * the layout on every render. The URL fully determines the inputs, so callers memoize on it.
+ */
+internal fun blueprintPreview(
+    result: OptimizationResult,
+    logistics: LogisticsCalculator,
+    normalizeTarget: Double,
+    beltEnd: BeltEnd,
+): BlueprintPreview {
+    val outcome = blueprintPlan(result, logistics, normalizeTarget)
+    return BlueprintPreview(
+        outcome,
+        (outcome as? BlueprintPlanResult.Planned)?.let {
+            RowLayout(it.plan, logistics, beltEnd).blueprint()
+        },
+    )
 }
 
-internal val blueprintDialog =
-    FC<BlueprintDialogProps>("blueprintDialog") { props ->
-        div {
-            className = ClassName("blueprint-overlay")
-            role = AriaRole.dialog
-            onClick = { props.onClose() }
-            div {
-                className = ClassName("blueprint-dialog")
-                onClick = { it.stopPropagation() }
-                div {
-                    className = ClassName("blueprint-toolbar")
-                    span {
-                        className = ClassName("blueprint-label")
-                        +props.label
-                    }
-                    button {
-                        onClick = { copyToClipboard(props.text) }
-                        +"Copy"
-                    }
-                    button {
-                        onClick = { props.onClose() }
-                        +"Close"
-                    }
-                }
-                textarea {
-                    className = ClassName("blueprint-string")
-                    readOnly = true
-                    value = props.text
-                }
-                div {
-                    className = ClassName("blueprint-preview")
-                    blueprintView { blueprint = props.blueprint }
-                }
-            }
-        }
-    }
-
-external interface BlueprintButtonProps : Props {
+external interface BlueprintPanelProps : Props {
     var outcome: BlueprintPlanResult
-    var logistics: LogisticsCalculator
-    var beltEnd: BeltEnd
+    var blueprint: Blueprint?
 }
 
-internal const val BUTTON_TEXT = "Blueprint(beta)"
-
-internal val blueprintButton =
-    FC<BlueprintButtonProps>("blueprintButton") { props ->
-        val (open, setOpen) = useState(false)
-        when (val outcome = props.outcome) {
-            is BlueprintPlanResult.Unavailable ->
-                button {
-                    disabled = true
-                    title = outcome.reason
-                    +BUTTON_TEXT
-                }
-            is BlueprintPlanResult.Planned -> {
-                button {
-                    onClick = { setOpen(true) }
-                    +BUTTON_TEXT
-                }
-                if (open) {
-                    val blueprint =
-                        RowLayout(outcome.plan, props.logistics, props.beltEnd).blueprint()
-                    blueprintDialog {
-                        label = outcome.plan.label
-                        text = blueprintString(blueprint.toJson())
-                        this.blueprint = blueprint
-                        onClose = { setOpen(false) }
+/**
+ * The blueprint next to the optimizer result, or the reason the plan cannot be built. The preview
+ * scales the plan down to the panel.
+ */
+internal val blueprintPanel =
+    FC<BlueprintPanelProps>("blueprintPanel") { props ->
+        val blueprint = props.blueprint
+        div {
+            className = ClassName("blueprint-panel")
+            when (val outcome = props.outcome) {
+                is BlueprintPlanResult.Planned ->
+                    if (blueprint != null) {
+                        div {
+                            className = ClassName("blueprint-preview")
+                            blueprintView { this.blueprint = blueprint }
+                        }
                     }
-                }
+                is BlueprintPlanResult.Unavailable ->
+                    div {
+                        className = ClassName("blueprint-unavailable")
+                        +outcome.reason
+                    }
             }
         }
     }
 
-fun ChildrenBuilder.urlBlueprintButton(props: FactorioOptimizerProps) {
-    blueprintButton {
-        outcome = blueprintPlan(props.optimizationResult, props.logistics, props.normalizeTarget)
-        logistics = props.logistics
-        beltEnd = props.beltEnd
-    }
+external interface BlueprintCopyButtonProps : Props {
+    var outcome: BlueprintPlanResult
+    var blueprint: Blueprint?
 }
+
+/**
+ * Copies the blueprint string. It sits in the header next to the selectors, so the panel itself
+ * only shows the preview; an unavailable plan disables it and explains why on hover.
+ */
+internal val blueprintCopyButton =
+    FC<BlueprintCopyButtonProps>("blueprintCopyButton") { props ->
+        val blueprint = props.blueprint
+        button {
+            disabled = blueprint == null
+            title =
+                when (val outcome = props.outcome) {
+                    is BlueprintPlanResult.Planned -> "Copy blueprint string"
+                    is BlueprintPlanResult.Unavailable -> outcome.reason
+                }
+            onClick = { blueprint?.let { copyToClipboard(blueprintString(it.toJson())) } }
+            +"Copy"
+        }
+    }

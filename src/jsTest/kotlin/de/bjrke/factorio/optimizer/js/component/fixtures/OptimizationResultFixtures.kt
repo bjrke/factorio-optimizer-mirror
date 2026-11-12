@@ -41,7 +41,7 @@ internal fun production(entry: Triple<Recipe, Material, Factory>) =
         level = 0,
     )
 
-/** Two recipe blocks rendered side by side so their widths can be compared. */
+/** Two recipe blocks so their widths and stacking can be compared. */
 internal fun twoProductions(
     first: Triple<Recipe, Material, Factory>,
     second: Triple<Recipe, Material, Factory>,

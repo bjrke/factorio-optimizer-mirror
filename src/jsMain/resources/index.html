@@ -51,7 +51,9 @@
             padding-left: 8px;
         }
         .app-header > div { display: contents; }
-        .app-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+        .app-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: row; }
+        /* the result keeps one factory column; the blueprint takes the rest of the width */
+        .app-result { flex: 0 0 auto; min-width: 0; min-height: 0; overflow-y: auto; }
         .footer {
             flex-shrink: 0;
             display: flex; align-items: center; flex-wrap: wrap; gap: .35rem;
@@ -71,23 +73,20 @@
         }
         .license-dialog pre { margin: 0; white-space: pre-wrap; font: inherit; }
         .license-close { float: right; }
-        /* The blueprint dialog fills the app area (everything above the footer); the preview inside
-           scales the plan down to whatever room is left. */
-        .blueprint-overlay {
-            position: absolute; inset: 0; z-index: 100;
-            display: flex; align-items: stretch; justify-content: stretch;
-            background: rgba(0, 0, 0, .5);
+        /* The blueprint panel sits next to the result; the preview scales the plan down to the room
+           the panel leaves. On narrow screens the panel moves below the result. */
+        .blueprint-panel {
+            flex: 1 1 auto; min-width: 18rem; min-height: 0;
+            box-sizing: border-box; display: flex; flex-direction: column;
+            padding: .5rem;
         }
-        .blueprint-dialog {
-            flex: 1 1 auto; min-width: 0; min-height: 0;
-            box-sizing: border-box; display: flex; flex-direction: column; gap: .5rem;
-            padding: .75rem;
-            background: var(--dropdown-bg); color: var(--fg);
-        }
-        .blueprint-toolbar { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
-        .blueprint-label { margin-right: auto; font-weight: bold; }
-        .blueprint-string { width: 100%; height: 4rem; box-sizing: border-box; font: inherit; }
         .blueprint-preview { flex: 1 1 auto; min-height: 0; display: flex; overflow: hidden; }
+        .blueprint-unavailable { color: var(--muted); }
+        @media (max-width: 80rem) {
+            .app-content { flex-direction: column; }
+            .app-result { flex: 1 1 auto; }
+            .blueprint-panel { flex: 0 0 40%; min-width: 0; }
+        }
         .material-selector { position: relative; display: inline-block; margin-right: 2px; }
         .material-selector-input {
             width: 16rem; height: 2.5rem; box-sizing: border-box;

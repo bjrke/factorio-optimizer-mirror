@@ -111,6 +111,25 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
     }
 
     @Test
+    fun factoryBlocksStackInOneColumn() {
+        val rendered =
+            renderResult(
+                twoProductions(
+                    Triple(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
+                    Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                ),
+            )
+        // wide enough to fit both blocks side by side if they were still inline
+        js("(function (el) { el.style.width = '2000px'; })")(rendered.container)
+
+        val blocks = rendered.container.querySelectorAll(":scope > div")
+        val tops = (0 until blocks.length).map { blocks.item(it)!!.getBoundingClientRect().top }
+
+        assertEquals(2, tops.size)
+        assertTrue(tops[1] > tops[0], "factory blocks should stack in one column")
+    }
+
+    @Test
     fun recipesWithAndWithoutIngredientsHaveTheSameWidth() {
         val rendered =
             renderResult(

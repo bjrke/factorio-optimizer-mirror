@@ -26,7 +26,9 @@ import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
 import de.bjrke.factorio.optimizer.js.component.appFooter
-import de.bjrke.factorio.optimizer.js.component.urlBlueprintButton
+import de.bjrke.factorio.optimizer.js.component.blueprintCopyButton
+import de.bjrke.factorio.optimizer.js.component.blueprintPanel
+import de.bjrke.factorio.optimizer.js.component.blueprintPreview
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlLogisticsSelector
 import de.bjrke.factorio.optimizer.js.component.urlMaterialSelector
@@ -38,6 +40,7 @@ import react.Props
 import react.create
 import react.dom.client.createRoot
 import react.dom.html.ReactHTML.div
+import react.useMemo
 import tanstack.history.createHashHistory
 import tanstack.react.router.RouteOptions
 import tanstack.react.router.RouterOptions
@@ -90,6 +93,10 @@ class FactorioOptimizerProps {
             ),
         )
 
+    /** The URL the current settings produce; it fully determines the blueprint. */
+    val urlKey: String
+        get() = createNewUrl()
+
     private fun createNewUrl(): String {
         val encodedSelection =
             selectionString(
@@ -121,6 +128,16 @@ class FactorioOptimizerProps {
 val RouterBasedParams =
     FC<Props> {
         val props = FactorioOptimizerProps()
+        // the URL fully determines the blueprint, so a render that keeps it reuses the layout
+        val preview =
+            useMemo(props.urlKey) {
+                blueprintPreview(
+                    props.optimizationResult,
+                    props.logistics,
+                    props.normalizeTarget,
+                    props.beltEnd,
+                )
+            }
         div {
             className = ClassName("app-layout")
             div {
@@ -129,12 +146,22 @@ val RouterBasedParams =
                 div { urlPlanetSelector(props) }
                 div { urlFactorySelector(props) }
                 div { urlLogisticsSelector(props) }
-                div { urlBlueprintButton(props) }
                 div { urlSpaceAgeToggle(props) }
+                blueprintCopyButton {
+                    outcome = preview.outcome
+                    blueprint = preview.blueprint
+                }
             }
             div {
                 className = ClassName("app-content")
-                urlOptimizationResultPresenter(props)
+                div {
+                    className = ClassName("app-result")
+                    urlOptimizationResultPresenter(props)
+                }
+                blueprintPanel {
+                    outcome = preview.outcome
+                    blueprint = preview.blueprint
+                }
             }
         }
     }

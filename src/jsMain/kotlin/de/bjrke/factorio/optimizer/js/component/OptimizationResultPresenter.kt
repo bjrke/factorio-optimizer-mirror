@@ -258,8 +258,9 @@ internal val optimizationResult =
             factoryProduction ->
             div {
                 css {
-                    display = Display.inlineBlock
-                    verticalAlign = VerticalAlign.middle
+                    // one factory per row, so the result stays a single column next to the
+                    // blueprint
+                    display = Display.block
                     padding = 0.5.rem
                     // the material hue tints the block (keeping its identity) but is mixed with
                     // the themed panel so it stays muted in dark mode

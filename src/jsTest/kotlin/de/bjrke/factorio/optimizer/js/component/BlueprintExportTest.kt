@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
+import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
@@ -17,11 +19,11 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
-import de.bjrke.test.fireEvent
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
@@ -31,7 +33,6 @@ import kotlin.test.assertTrue
 import react.create
 import web.dom.Element
 import web.html.HTMLButtonElement
-import web.html.HTMLTextAreaElement
 
 private val plan =
     BlueprintPlan(
@@ -58,11 +59,24 @@ class BlueprintExportTest : ComponentTest() {
 
     private val logistics = calculator()
 
-    private fun render(outcome: BlueprintPlanResult) =
+    private fun blueprintOf(outcome: BlueprintPlanResult) =
+        (outcome as? BlueprintPlanResult.Planned)?.let {
+            RowLayout(it.plan, logistics).blueprint()
+        }
+
+    private fun renderPanel(outcome: BlueprintPlanResult) =
         render(
-            blueprintButton.create {
+            blueprintPanel.create {
                 this.outcome = outcome
-                this.logistics = this@BlueprintExportTest.logistics
+                this.blueprint = blueprintOf(outcome)
+            },
+        )
+
+    private fun renderCopyButton(outcome: BlueprintPlanResult) =
+        render(
+            blueprintCopyButton.create {
+                this.outcome = outcome
+                this.blueprint = blueprintOf(outcome)
             },
         )
 
@@ -259,19 +273,38 @@ class BlueprintExportTest : ComponentTest() {
     }
 
     @Test
-    fun theDialogCoversTheAppAreaAboveTheFooter() {
-        render(BlueprintPlanResult.Planned(plan))
-        fireEvent.click(screen.getByText(BUTTON_TEXT))
+    fun thePanelShowsTheBlueprintWithoutOpeningAnything() {
+        val result = renderPanel(BlueprintPlanResult.Planned(plan))
 
-        val overlay = screen.getByRole("dialog")
-        assertEquals("blueprint-overlay", overlay.getAttribute("class"))
+        assertAll(
+            { assertNotNull(result.image(Factory.ASSEMBLING_MACHINE_3.identifier)) },
+            { assertEquals(null, screen.queryByText(plan.label)) },
+        )
     }
 
     @Test
-    fun anUnavailablePlanDisablesTheButton() {
-        render(BlueprintPlanResult.Unavailable("too big"))
+    fun anUnavailablePlanShowsItsReasonInsteadOfAPreview() {
+        renderPanel(BlueprintPlanResult.Unavailable("too big"))
 
-        val button = screen.getByText(BUTTON_TEXT) as HTMLButtonElement
+        assertNotNull(screen.getByText("too big"))
+    }
+
+    @Test
+    fun theCopyButtonIsEnabledForAPlan() {
+        renderCopyButton(BlueprintPlanResult.Planned(plan))
+
+        val button = screen.getByText("Copy") as HTMLButtonElement
+        assertAll(
+            { assertTrue(!button.disabled) },
+            { assertEquals("Copy blueprint string", button.title) },
+        )
+    }
+
+    @Test
+    fun anUnavailablePlanDisablesTheCopyButton() {
+        renderCopyButton(BlueprintPlanResult.Unavailable("too big"))
+
+        val button = screen.getByText("Copy") as HTMLButtonElement
         assertAll(
             { assertTrue(button.disabled) },
             { assertEquals("too big", button.title) },
@@ -279,27 +312,29 @@ class BlueprintExportTest : ComponentTest() {
     }
 
     @Test
-    fun openingTheDialogShowsACopyableBlueprintAndRendersIt() {
-        render(BlueprintPlanResult.Planned(plan))
+    fun thePreviewIsBuiltFromThePlan() {
+        val result =
+            OptimizationResult(
+                target = gear,
+                recipe = ironGearWheelRecipe,
+                factories =
+                    mapOf(
+                        ironGearWheelRecipe to
+                            FactoryProduction(
+                                gear,
+                                ironGearWheelRecipe,
+                                Factory.ASSEMBLING_MACHINE_3,
+                                1.0,
+                                0,
+                            ),
+                    ),
+            )
 
-        fireEvent.click(screen.getByText(BUTTON_TEXT))
+        val preview = blueprintPreview(result, logistics, 1.0, BeltEnd.CONSTANT_COMBINATOR)
 
-        val textarea = screen.getByRole("textbox") as HTMLTextAreaElement
         assertAll(
-            { assertTrue(textarea.readOnly) },
-            { assertTrue(textarea.value.startsWith("0"), textarea.value.take(8)) },
-            { assertTrue(textarea.value.length > 20) },
-            { assertNotNull(screen.queryByTitle(Factory.ASSEMBLING_MACHINE_3.identifier)) },
+            { assertTrue(preview.outcome is BlueprintPlanResult.Planned) },
+            { assertNotNull(preview.blueprint) },
         )
-    }
-
-    @Test
-    fun theDialogClosesAgain() {
-        render(BlueprintPlanResult.Planned(plan))
-        fireEvent.click(screen.getByText(BUTTON_TEXT))
-
-        fireEvent.click(screen.getByText("Close"))
-
-        assertEquals(null, screen.queryByRole("textbox"))
     }
 }
