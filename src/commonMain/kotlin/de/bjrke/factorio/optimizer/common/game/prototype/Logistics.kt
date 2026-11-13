@@ -71,15 +71,21 @@ enum class BeltTier(val code: Char?, val identifier: String, val spaceAgeOnly: B
 /**
  * An inserter tier. The rotation speed and stack capacity come from the dump; a tier without a
  * prototype is not selectable.
+ *
+ * [selectable] separates the tiers a user can pick from the prototypes the dump must still know: a
+ * burner inserter burns fuel and is slower than the yellow inserter, so it never fits an electric
+ * layout, and the long-handed inserter is slower than the yellow one and is only placed by the row
+ * layout, to reach a second belt lane.
  */
 enum class InserterTier(
     val code: Char?,
     val identifier: String,
     val spaceAgeOnly: Boolean = false,
+    val selectable: Boolean = true,
 ) {
-    BURNER_INSERTER('w', "burner-inserter"),
+    BURNER_INSERTER('w', "burner-inserter", selectable = false),
     INSERTER('i', "inserter"),
-    LONG_HANDED_INSERTER('l', "long-handed-inserter"),
+    LONG_HANDED_INSERTER('l', "long-handed-inserter", selectable = false),
     // the fast inserter is the default, so it carries no code
     FAST_INSERTER(null, "fast-inserter"),
     BULK_INSERTER('y', "bulk-inserter"),
@@ -104,9 +110,10 @@ data class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = tru
             (!it.spaceAgeOnly || spaceAge) && it.identifier in logistics.belts
         }
 
+    /** The pickable inserter tiers: every [InserterTier.selectable] prototype the dump provides. */
     val availableInserters =
         InserterTier.entries.filter {
-            (!it.spaceAgeOnly || spaceAge) && it.identifier in logistics.inserters
+            it.selectable && (!it.spaceAgeOnly || spaceAge) && it.identifier in logistics.inserters
         }
 
     /** The red belt by default, or the fastest available tier if it is missing from the dump. */

@@ -25,7 +25,7 @@ The first non-flag argument is the **material** to optimize (default
 | `--planet=<s>` | which surface | `nauvis`, `vulcanus`, `gleba`, `fulgora`, `aquilo`, `space-platform-surface` |
 | `--factory=<m>` | switch on a machine (repeatable) | its identifier, e.g. `assembling-machine-2`, `foundry`, `big-mining-drill`, `recycler` |
 | `--belt=<t>` | belt tier | `transport-belt`, `fast-transport-belt` (default), `express-transport-belt`, `turbo-transport-belt` |
-| `--inserter=<t>` | inserter tier | `burner-inserter`, `inserter`, `long-handed-inserter`, `fast-inserter` (default), `bulk-inserter`, `stack-inserter` |
+| `--inserter=<t>` | inserter tier | `inserter`, `fast-inserter` (default), `bulk-inserter`, `stack-inserter` |
 | `--full-belt` | use **both** belt lanes (a full belt) instead of one | (flag) |
 | `--belt-stack=<n>` | items per belt slot with the stack inserter | 1..4 |
 | `--inserter-stack=<n>` | items per inserter hand | up to the tier's size |

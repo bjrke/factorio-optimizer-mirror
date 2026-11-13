@@ -322,6 +322,11 @@ An entry belongs here only with evidence, and should say how to recognize it.
   `BeltEnd.allowedOn(Surface.SPACE)` is false for every chest. The UI disables those
   radio options and both entry points (`BeltEnd.fromSelection`, the CLI) clamp a
   chest code to `constant-combinator`. See `BeltEnd.allowedOn`.
+- **`InserterTier.entries` is not the picker.** The burner and long-handed
+  inserters are kept for the dump and the row layout's far-lane inserter but are
+  `selectable = false`, so `LogisticsConfig.availableInserters` is the only list the
+  UI, the URL decoder and `--inserter=` may use. Their codes still decode and then
+  clamp to the default tier.
 - **A blueprint does not rebuild circuit wires — store them in `wires`.** The
   top-level `blueprint.wires` array lists `[entity, connector, entity, connector]`
   quadruples; the game draws nothing from proximity. A chest-connector inserter

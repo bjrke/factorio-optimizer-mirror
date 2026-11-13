@@ -38,6 +38,31 @@ class LogisticsSelectionTest {
     }
 
     @Test
+    fun burnerAndLongHandedInsertersCannotBeSelected() =
+        assertAll(
+            {
+                assertEquals(
+                    listOf(
+                        InserterTier.INSERTER,
+                        InserterTier.FAST_INSERTER,
+                        InserterTier.BULK_INSERTER,
+                        InserterTier.STACK_INSERTER,
+                    ),
+                    testLogisticsConfig.availableInserters,
+                )
+            },
+            {
+                // an old URL or --inserter= naming one falls back to the default tier
+                assertTableOf("w", "l") { selection ->
+                    assertEquals(
+                        testLogisticsConfig.defaultInserter,
+                        testLogisticsConfig.inserter(selection),
+                    )
+                }
+            },
+        )
+
+    @Test
     fun beltLanesDefaultToHalfAndTheFullBeltFlagSelectsBoth() {
         assertTableOf(
             null to 1,

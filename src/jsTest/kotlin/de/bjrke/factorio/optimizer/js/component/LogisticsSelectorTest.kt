@@ -78,6 +78,31 @@ class LogisticsSelectorTest : ComponentTest() {
     }
 
     @Test
+    fun thePickerOffersNoBurnerOrLongHandedInserter() {
+        renderSelector()
+
+        assertAll(
+            {
+                assertNull(
+                    screen.queryByRole(
+                        "radio",
+                        named(InserterTier.BURNER_INSERTER.identifier),
+                    ),
+                )
+            },
+            {
+                assertNull(
+                    screen.queryByRole(
+                        "radio",
+                        named(InserterTier.LONG_HANDED_INSERTER.identifier),
+                    ),
+                )
+            },
+            { assertNotNull(screen.queryByRole("radio", named(InserterTier.INSERTER.identifier))) },
+        )
+    }
+
+    @Test
     fun changingTheBeltStackReportsIt() {
         renderSelector()
 
