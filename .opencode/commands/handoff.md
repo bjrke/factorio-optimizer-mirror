@@ -4,11 +4,12 @@ description: Summarize the session and promote durable findings before compactio
 
 Before the context is compacted, or the session is handed off or paused:
 
-1. Promote any reusable, stable, verified finding into `knowledge/` (see
-   `knowledge/conventions.md`) and remove contradictions.
+1. Promote any reusable, stable, verified finding into the `knowledge/` file that
+   owns its area (see `knowledge/index.md` §Where a fact lives) and remove
+   contradictions.
    - When you touch `decisions.md`: prepend, keep the entry under ~20 lines, and
-     state only the current decision and guardrail — mechanics belong in
-     `architecture.md`/`pitfalls.md`, pre-change history in the commit message.
+     state only the current decision and guardrail — mechanics belong in the area
+     file or the symbol's KDoc, pre-change history in the commit message.
    - Rewrite or delete the entry a change supersedes; never add a "supersedes"
      note.
    - Run `grep -nE 'Supersedes|is gone|first attempt|originally|had grown|shrank'`

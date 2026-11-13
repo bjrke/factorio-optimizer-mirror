@@ -6,9 +6,13 @@ state — notes go stale.
 
 | Load | When |
 | --- | --- |
-| `knowledge/architecture.md` | you need the module map, data flow, key files, or how generated data is produced |
-| `knowledge/conventions.md` | before writing or changing tests or non-trivial code, or when a workflow question comes up |
-| `knowledge/pitfalls.md` | a result is surprising, a build/test misbehaves, or before trusting a "known" behavior |
+| `knowledge/code.md` | you need the module map, the package dependency table, the package budgets, or are moving a file |
+| `knowledge/layout.md` | you change the blueprint pipeline, a route, compaction, poles, belt ends or the blueprint output |
+| `knowledge/lanes-fluids.md` | you change belt lanes, mixed rows, import trimming, fluid ports or fluid lanes |
+| `knowledge/planning.md` | you change the optimizer, selection, imports, direct feed or the band search |
+| `knowledge/build.md` | a build or test task misbehaves, or you regenerate game data or profile |
+| `knowledge/testing.md` | before writing or changing tests: suites, fixtures, source sets, jsTest |
+| `knowledge/conventions.md` | you write or restructure code, or need the Git and knowledge-promotion rules |
 | `knowledge/decisions.md` | a constraint spans files, or you need why something is the way it is |
 
 `AGENTS.md` at the repository root holds the rules that must apply to **every**
@@ -17,17 +21,24 @@ agent does not need on every turn lives here instead.
 
 ## Where a fact lives
 
-Every fact has one home; other files cross-reference it instead of restating it.
+Every fact has one home, chosen by area; other files cross-reference it instead of
+restating it. A trap goes into the `## Traps` section of the file that owns the
+area.
 
-- `architecture.md` — where it lives, how data flows, the load-bearing order.
-- `decisions.md` — the constraints no single owner file can carry, and why (decision
-  + guardrail); every mechanism it names lives in that symbol's KDoc.
-- `pitfalls.md` — how to recognize a failure, its cause, its fix and evidence.
-- `conventions.md` — how to do the work.
+- `code.md` — where the code lives and which package may import which.
+- `layout.md` — the pipeline, the grid, routing, compaction and the output.
+- `lanes-fluids.md` — how a row's belts and fluid lanes are shaped.
+- `planning.md` — how the optimizer chooses recipes and builds bands.
+- `build.md` — the Gradle build, generated data, profiling and the JDK.
+- `testing.md` — how tests are placed, built and asserted.
+- `conventions.md` — how the work is done: code shape, Detekt rules, naming,
+  refactors, Git.
+- `decisions.md` — the constraints no single owner file can carry, and why
+  (decision + guardrail); every mechanism it names lives in that symbol's KDoc.
 
-Promote a finding to the file that owns it, then delete the duplicate. A
-decision keeps the constraint and its rationale; the mechanism is architecture,
-the symptom is pitfalls.
+Promote a finding to the file that owns it, then delete the duplicate. A decision
+keeps the constraint and its rationale; the mechanism is the code, the symptom is
+a trap.
 
 ## Compaction
 

@@ -6,7 +6,7 @@ An entry here holds a constraint that **no single owner file can carry**: violat
 up somewhere other than the file that documents the rule. Everything else lives where it acts. The
 mechanism and the reason for a value belong in the KDoc of the constant, function or class it
 governs, because that is what the next editor reads; the workflow belongs in `conventions.md`, the
-shape of the pipeline in `architecture.md`, and the measurements, reported URLs and before/after
+shape of the pipeline in `layout.md`, and the measurements, reported URLs and before/after
 sizes in the KDoc of the choice they justify.
 
 An entry states the constraint, one sentence of why and the guardrail that must survive, then

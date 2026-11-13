@@ -197,7 +197,7 @@ internal class FeedNode(
      * consumers is expanded only the first time, so the walk terminates. Cyclic edges are not
      * filtered here; the optimizer's `unplannedRecipes` keeps real solid cycles out of the plan, so
      * the visited set is only a safety net. A future planned cycle needs an explicit policy (see
-     * `pitfalls.md`).
+     * `knowledge/planning.md`).
      */
     fun traverse() = sequence {
         val visited = mutableSetOf<FeedNode>()

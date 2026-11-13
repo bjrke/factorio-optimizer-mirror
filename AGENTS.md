@@ -25,19 +25,20 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 - Start by reading `knowledge/index.md`, then only the files it points to for this
   work. Verify their claims against the current code, tests and Git state — notes
   go stale.
-- Promote reusable, stable, verified findings into `knowledge/`: architecture
-  facts into `architecture.md`, conventions into `conventions.md`, traps and
-  diagnostic dead ends into `pitfalls.md`, and only a constraint no single owner
-  file can carry into `decisions.md`. Put the reason for a value, order or shape
-  in the KDoc it governs — the symbol, or the package KDoc when it spans a
-  package.
+- Promote reusable, stable, verified findings into the `knowledge/` file that owns
+  the area: `code.md` (map and package edges), `layout.md` or `lanes-fluids.md`
+  (blueprint geometry), `planning.md`, `build.md`, `testing.md`, or
+  `conventions.md` (how the work is done). A trap goes into that file's `## Traps`
+  section; only a constraint no single owner file can carry goes into
+  `decisions.md`. Put the reason for a value, order or shape in the KDoc it
+  governs — the symbol, or the package KDoc when it spans a package.
 - Before `/compact`, a handoff or a pause, run `/handoff` (or state the same
   points yourself). The compaction plugin uses the newest assistant reply's
   `## Handoff state` block as the summary, so that reply must be the last thing
   before `/compact` and must carry the verified state, decisions and next action.
   Without the block the plugin only steers the summarizer; the agent never
   compacts on its own.
-- Writing or changing tests? Read `knowledge/conventions.md` first.
+- Writing or changing tests? Read `knowledge/testing.md` first.
 
 ## Testing
 
@@ -55,7 +56,7 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   test means the change is incomplete.
 - The full rules — the `de.bjrke.test` assertion helpers, collection/emptiness
   checks, table-driven cases, source-set choice and the `jsTest` component-test
-  harness — live in `knowledge/conventions.md`. Read it before writing or changing
+  harness — live in `knowledge/testing.md`. Read it before writing or changing
   tests.
 
 ## Sandbox environment (`sbx run opencode`)
@@ -109,13 +110,13 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 
 - JDK 25 is required; a local install must exist or the build fails with a
   cryptic error (just the installed version string). Details and the CI image are
-  in `knowledge/architecture.md`.
+  in `knowledge/build.md`.
 
 ## Code layout
 
 - `commonMain` holds shared logic; `jsMain` the React UI; `jvmMain` the CLI;
   `commonTest`/`jsTest`/`jvmTest` the tests. `commonMain` must stay
-  platform-neutral. Full map: `knowledge/architecture.md`.
+  platform-neutral. Full map: `knowledge/code.md`.
 - Prefer read-only collection construction: `map`/`flatMap` plus
   `toList`/`toSet`/`toMap` for transformations, and
   `buildMap`/`buildSet`/`buildList` for incremental construction. Avoid
@@ -149,4 +150,4 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 - Do not hand-edit `src/commonMain/resources/prototypes/*.json` or
   `src/jsMain/resources/icons/*.png`. Regenerate them with
   `./gradlew dumpPrototypes` / `./gradlew updateImages`; details and caveats are in
-  `knowledge/architecture.md`.
+  `knowledge/build.md`.

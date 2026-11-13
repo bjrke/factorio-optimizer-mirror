@@ -154,6 +154,6 @@ for flame graphs and per-thread timelines.
 ## Repo map
 
 - `build.gradle.kts` — the `jvmTestProfile` task and its JFR flags.
-- `knowledge/architecture.md` §Profiling — how the recording is produced.
+- `knowledge/build.md` §Profiling — how the recording is produced.
 - `knowledge/decisions.md` — why JFR and CPU-only.
-- `knowledge/pitfalls.md` — JFR recording traps (output directory, stack depth).
+- `knowledge/build.md` §Traps — JFR recording traps (output directory, stack depth).
