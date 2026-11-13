@@ -63,11 +63,11 @@ class Optimizer(
      */
     private val unplannedRecipes = unplannedRecipes(parsedRecipe.surface)
 
-    /** Recipes that run on this surface with one of the selected machines. */
+    /** Recipes that run on this surface with one of the selected machines, fuelled where needed. */
     private val enabledRecipes: List<Recipe> =
-        parsedRecipe.recipes.filter {
-            it.name !in unplannedRecipes && machine.findFactory(it) != null
-        }
+        parsedRecipe.recipes
+            .filter { it.name !in unplannedRecipes && machine.findFactory(it) != null }
+            .map(machine::fuelled)
 
     /**
      * Materials a recycling recipe yields. Crafting them would model production that does not

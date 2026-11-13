@@ -97,6 +97,7 @@ class BlueprintLayoutCompactionTest {
                 rowInputs(listOf(production), layout.logistics),
                 rowOutputs(listOf(production), layout.logistics),
                 layout.logistics.oneLaneCapacity(),
+                allowOverCapacityPairs = true,
             )
 
         assertAll(

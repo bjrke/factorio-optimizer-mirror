@@ -29,6 +29,15 @@ data class FactorySpec(
     val baseOnly: Boolean = false,
     val outputsDirectly: Boolean = false,
     val stacksOnBelt: Boolean = false,
+    /**
+     * Whether the machine burns fuel to run a recipe, so the optimizer adds the surface's fuel to
+     * its recipes. Only the furnaces are modelled: the burner mining drill burns fuel too, but it
+     * is an early-game machine that feeds a furnace directly and is never laid out (a mining drill
+     * source is imported), so its fuel stays out of the plan.
+     */
+    val burner: Boolean = false,
+    /** Curated fallback for [MachineStats.energyUsage] when no dump was parsed. */
+    val energyUsage: Double = 0.0,
 )
 
 /**
@@ -64,8 +73,18 @@ enum class Factory(
     CENTRIFUGE(null, "centrifuge", setOf(Category.CENTRIFUGING)),
     // the rocket silo only builds space science in the base game, so it is always on there
     ROCKET_SILO(null, "rocket-silo", setOf(Category.ROCKET_BUILDING), FactorySpec(baseOnly = true)),
-    STONE_FURNACE('f', "stone-furnace", smelterCategories),
-    STEEL_FURNACE('s', "steel-furnace", smelterCategories, FactorySpec(speed = 2.0)),
+    STONE_FURNACE(
+        'f',
+        "stone-furnace",
+        smelterCategories,
+        FactorySpec(burner = true, energyUsage = 90_000.0),
+    ),
+    STEEL_FURNACE(
+        's',
+        "steel-furnace",
+        smelterCategories,
+        FactorySpec(speed = 2.0, burner = true, energyUsage = 90_000.0),
+    ),
     ELECTRIC_FURNACE(null, "electric-furnace", smelterCategories, FactorySpec(speed = 2.0)),
     BIOCHAMBER(
         'b',
@@ -167,6 +186,12 @@ enum class Factory(
 
     val stacksOnBelt: Boolean
         get() = spec.stacksOnBelt
+
+    val burner: Boolean
+        get() = spec.burner
+
+    val energyUsage: Double
+        get() = spec.energyUsage
 
     companion object {
         internal val factoriesByCode =

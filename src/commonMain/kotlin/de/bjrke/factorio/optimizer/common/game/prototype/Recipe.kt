@@ -14,6 +14,8 @@ data class ParsedRecipe(
     val machineStats: Map<String, MachineStats> = emptyMap(),
     /** Belt/inserter/pump throughput and the set of fluid materials, derived from the dump. */
     val logistics: Logistics = Logistics(),
+    /** The energy a burnable item releases, keyed by its material, derived from the dump. */
+    val fuelValues: Map<Material, Double> = emptyMap(),
     /** The surface these recipes were filtered for; selects surface-specific recipes. */
     val surface: Surface = Surface.NAUVIS,
 ) {
@@ -27,6 +29,10 @@ data class MachineStats(
     val categories: Set<Category>,
     val speed: Double,
     val productivity: Double,
+    /**
+     * The machine's energy use in watts at crafting speed 1; a burner furnace burns fuel for it.
+     */
+    val energyUsage: Double = 0.0,
 )
 
 /** A recipe: its inputs, outputs, crafting time and the machine categories that can run it. */

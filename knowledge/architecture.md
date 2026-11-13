@@ -28,7 +28,8 @@ CLI (JVM) from one shared core.
     `Surface.accepts*` extensions), `SurfaceRecipes.kt` (`ParsedRecipe.forSurface`),
     `RecipeUsage.kt` (the cached transitive usage counts, the least-used-first
     order and the intermediate-limit constants) and `RecipePolicy.kt` (the
-    optimizer's explicit recipe exclusions, `unplannedRecipes`).
+    optimizer's explicit recipe exclusions, `unplannedRecipes`, and the one
+    burning fuel per surface, `burnerFuel`).
   - `game/selection` — the URL/CLI codecs: `Selection.kt`
     (`Selection`, `SelectionFlag`, `selectionString`, `spaceAgeIn`,
     `fullBeltIn`), `BeltEndSelection.kt` (`beltEndFromSelection/-Identifier`),
@@ -41,18 +42,22 @@ CLI (JVM) from one shared core.
     `loadPrototypeDump` `expect` declaration), `RecipePrototype.kt`,
     `JsonFields.kt`, `resourceRecipes.kt`, `customRecipes.kt`
     (`ALL_SCIENCE_PACKS`), `spoilageRecipes.kt`, `utils.kt` (normalization) and
-    `prototypeStats.kt` (`machineStats`/`logisticsStats`).
+    `prototypeStats.kt` (`machineStats`/`logisticsStats`, including the machine
+    energy use); `recipeParser.kt` also reads the `fuelValues` of burnable items.
   - `optimize` — the optimizer: `Optimizer.kt` and `MachineCatalog.kt`
     (machine choice and rates) and `LinearProgram.kt`. It takes a `ParsedRecipe`
     in and returns an `OptimizationResult` (from `model`); it never loads the
-    dump or builds a blueprint. Its output models now live in `model`, so the
-    blueprint planner can consume an optimizer result without depending on the
-    optimizer itself. `Optimizer` takes a `maxIntermediates` limit: it keeps the
-    least-used produced materials (from `ParsedRecipe.usage`) and turns the rest
-    into imports before solving the LP, so the result cache is per limit. It also
-    takes `excludedMaterials`: every recipe producing one is dropped before
-    reachability and the LP, so the material is imported and the plan neither
-    calculates nor lays out its production. The target is never excluded.
+    dump or builds a blueprint. `MachineCatalog.fuelled` adds the surface's
+    burning fuel to a burner furnace's recipe, so the fuel is an ordinary solid
+    the plan pays for and the blueprint feeds. Its output models now live in
+    `model`, so the blueprint planner can consume an optimizer result without
+    depending on the optimizer itself. `Optimizer` takes a `maxIntermediates`
+    limit: it keeps the least-used produced materials (from `ParsedRecipe.usage`)
+    and turns the rest into imports before solving the LP, so the result cache is
+    per limit. It also takes `excludedMaterials`: every recipe producing one is
+    dropped before reachability and the LP, so the material is imported and the
+    plan neither calculates nor lays out its production. The target is never
+    excluded.
   - `model` — the shared result models: `OptimizationResult`, `FactoryProduction`
     (per-machine production) and `factoryProductionComparator`. They sit above
     the rulebook (`game/prototype`) and are consumed by both the optimizer and
@@ -149,7 +154,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.layout.entity | 5 |
 | blueprint.layout.validation | 5 |
 | blueprint.planning | 2 |
-| blueprint.planning.plan | 5 |
+| blueprint.planning.plan | 6 |
 | blueprint.planning.row | 11 |
 | blueprint.planning.band | 6 |
 | blueprint.placing.route | 3 |
@@ -348,11 +353,12 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   merge; the merge sits outside the pair of lane rows (far north above, near north
   below, near south above, far south below), at `LANE_MARGIN - EAST_MERGE_OFFSET`
   (three columns west of the row, so its turn clears a fluid lane on the turn row)
-  for an east-fed lane and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the pure
-  packing budget (`packRowBelts`, `beltRowBudget`): only the minimum pairs needed are formed,
-  inputs whose rate fits one lane pair first, and same-direction pairs win before a
-  cross-direction pair runs east. An over-capacity input only pairs when the row would otherwise
-  drop a belt row (or its product), and then accepts the smaller lane rate. A `PlacedMachine`
+  for an east-fed lane and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the
+  greedy packing (`packRowBelts`, `beltRowBudget`): every capacity-safe input pairs, lowest rate
+  first, one material per lane. An import anchors its pair to east so it stays straight; two
+  produced feeds from opposite directions stay separate. An over-capacity input only pairs for a
+  single-recipe row that would otherwise drop a belt row (or its product), and then accepts the
+  smaller lane rate. A `PlacedMachine`
   carries its own `production`; `producerRow(material)` scans `placedRows` for the row whose
   `plannedRow` equals `BlueprintPlan.producerOf(material)`.
   `MachineInserterPlacer` places the machine-edge inserters and
@@ -482,7 +488,8 @@ A band is bounded by `GROUP_MAX_MACHINES = 10` (9 when it has more than one link
 powerable) and `MAX_BAND_RECIPES = 8`; a finished group must fit `MAX_ROW_BELTS = 4` belt rows
 (`bandBeltFits(plan)` over `beltRowBudget`). `bandBeltMayFit`/`bandBeltRows` are the capacity-blind
 pre-filter and ranking used during growth, while `bandBeltFits(plan)` reads the arranged machine
-rates. After the main bands, `DirectFeed.build` runs the same search over the belted rows: it copies
+rates. A multi-recipe band counts only capacity-safe pairs there, so one that would need the
+single-recipe over-capacity rescue is rejected and its recipes become their own rows. After the main bands, `DirectFeed.build` runs the same search over the belted rows: it copies
 them as whole-machine `FactoryProduction` values, plans them at scale 1, and replaces the plain rows
 with the finished bands. A recipe may therefore sit in the main band and in a belted band as two
 independent productions, but each value belongs to one row.

@@ -159,7 +159,7 @@ class RowPlacerTest {
     }
 
     @Test
-    fun theNearLaneCarriesTheMostConsumedIngredient() {
+    fun bothInputsShareOneFeedBelt() {
         val plan =
             BlueprintPlan(
                 target = electronicCircuit,
@@ -182,25 +182,13 @@ class RowPlacerTest {
             )
 
         val row = place(plan).single()
+        val input = row.belts.single { it.io == Io.INPUT }
 
         assertAll(
-            {
-                assertEquals(
-                    listOf(copperCable, ironPlate),
-                    row.belts.filter { it.io == Io.INPUT }.map { it.material }.toList(),
-                    "order of belts doesn't reflect the expected priority of materials",
-                )
-            },
-            {
-                assertEquals(
-                    mapOf(
-                        copperCable to row.factoryTop - 2,
-                        ironPlate to row.factoryBottom + 2,
-                        electronicCircuit to row.factoryBottom + 3,
-                    ),
-                    row.belts.associateBy({ it.material }, { it.y }),
-                )
-            },
+            { assertEquals(setOf(copperCable, ironPlate), input.materials) },
+            { assertEquals(LineSide.NORTH, input.side) },
+            { assertEquals(row.factoryTop - 2, input.y) },
+            { assertEquals(row.factoryBottom + 2, row.belts.single { it.io == Io.OUTPUT }.y) },
         )
     }
 
@@ -278,10 +266,17 @@ class RowPlacerTest {
             )
 
         val row = place(plan).single()
+        val inputs = row.belts.filter { it.io == Io.INPUT }
 
-        assertEquals(
-            listOf(ironPlate, electronicCircuit, gear),
-            row.belts.filter { it.io == Io.INPUT }.map { it.material }.toList(),
+        assertAll(
+            // the busiest input keeps a full belt; the two slower ones share a lane pair
+            { assertEquals(setOf(ironPlate), inputs.single { it.materials.size == 1 }.materials) },
+            {
+                assertEquals(
+                    setOf(gear, electronicCircuit),
+                    inputs.single { it.materials.size == 2 }.materials,
+                )
+            },
         )
     }
 
@@ -322,10 +317,16 @@ class RowPlacerTest {
             )
 
         val row = place(plan).single()
+        val inputs = row.belts.filter { it.io == Io.INPUT }
 
-        assertEquals(
-            listOf(ironPlate, pipe, steelPlate),
-            row.belts.filter { it.io == Io.INPUT }.map { it.material }.toList(),
+        assertAll(
+            { assertEquals(setOf(ironPlate), inputs.single { it.materials.size == 1 }.materials) },
+            {
+                assertEquals(
+                    setOf(pipe, steelPlate),
+                    inputs.single { it.materials.size == 2 }.materials,
+                )
+            },
         )
     }
 

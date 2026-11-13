@@ -62,8 +62,19 @@ fun parsePrototypes(json: String, customRecipes: Iterable<Recipe> = emptyList())
         recipes = recipes,
         machineStats = machineStats(root),
         logistics = logisticsStats(root),
+        fuelValues = fuelValues(root),
     )
 }
+
+/** The energy every burnable item releases, from `data.raw.item.fuel_value`. */
+private fun fuelValues(root: JsonObject) =
+    root
+        .table("item")
+        .filterValueIsInstance<JsonObject>()
+        .mapNotNull { (name, element) ->
+            element.energyValue("fuel_value")?.let { Material(name) to it }
+        }
+        .toMap()
 
 /** `scrap` and everything the scrap-recycling recipe yields. */
 private fun Map<String, Recipe>.scrapReach() = buildSet {

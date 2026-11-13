@@ -13,7 +13,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.west
@@ -36,7 +35,6 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -196,26 +194,24 @@ class BlueprintImportTest {
                 label = "advanced-circuit",
             )
         val layout = Layout(plan)
-        val machine =
-            layout.entities.filterIsInstance<MachineEntity>().single {
-                it.recipe == "advanced-circuit"
-            }
-        val laneRow = machine.area.topLeft.y - 3
-        val lane =
-            layout.entities.filterIsInstance<BeltEntity>().filter {
-                it.material == plasticBar && it.area.topLeft.y == laneRow
-            }
         val marker =
             layout.entities.filterIsInstance<MarkerEntity>().single {
                 it.signal.material == plasticBar
             }
-        // the connector's own tiles sit between the label column and the feed, so the lane must run
-        // unbroken from the feed tile on: a hole would mean compaction cut a belt out of it
+        val laneRow = marker.area.topLeft.y
+        val lane =
+            layout.entities.filterIsInstance<BeltEntity>().filter {
+                plasticBar in it.load.materials && it.area.topLeft.y == laneRow
+            }
+        // a mixed input's marker may sit on the merge row rather than a lane row; what matters is
+        // that its own feed tile still runs unbroken from the connector: a hole would mean
+        // compaction cut a belt out of it
         val byColumn = lane.map { it.area.topLeft.x }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertTrue(lane.isNotEmpty(), "no plastic belt at the marker row") },
             {
                 assertEquals(
                     byColumn.max() - byColumn.min() + 1,
@@ -223,18 +219,11 @@ class BlueprintImportTest {
                     "the lane runs unbroken from the connector to its end",
                 )
             },
-            {
-                assertEquals(
-                    laneRow,
-                    marker.area.topLeft.y,
-                    "the marker row is the lane row: ${marker.area.topLeft}",
-                )
-            },
         )
     }
 
     @Test
-    fun aProducedLaneIsFedFacingIntoTheLane() {
+    fun aProducedInputSharesTheTargetLane() {
         val produced =
             BlueprintPlan(
                 target = electronicCircuit,
@@ -258,9 +247,8 @@ class BlueprintImportTest {
             )
 
         val layout = Layout(produced)
-        val entities = layout.entities
         val machineArea =
-            entities
+            layout.entities
                 .filterIsInstance<MachineEntity>()
                 .single { it.recipe == "electronic-circuit" }
                 .area
@@ -271,21 +259,15 @@ class BlueprintImportTest {
                 machineArea.bottomRight.y + 2,
                 machineArea.bottomRight.y + 3,
             )
+        val mixed =
+            layout.entities.filterIsInstance<BeltEntity>().filter {
+                it.area.topLeft.y in laneRows && it.load.materials == setOf(copperCable, ironPlate)
+            }
 
-        // a produced lane runs west into the machine; compaction may shorten it, so take the
-        // eastmost remaining lane belt rather than a fixed coordinate
-        val feed =
-            assertNotNull(
-                entities
-                    .filterIsInstance<BeltEntity>()
-                    .filter { it.material == copperCable && it.area.topLeft.y in laneRows }
-                    .filter { it.direction == EAST || it.direction == WEST }
-                    .maxByOrNull { it.area.topLeft.x },
-                "no feed at the produced lane",
-            )
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(WEST, feed.direction, "the feed does not face the lane") },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertTrue(mixed.isNotEmpty(), "the produced copper cable has no lane") },
         )
     }
 }

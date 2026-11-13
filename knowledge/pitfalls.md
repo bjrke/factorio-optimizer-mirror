@@ -117,6 +117,21 @@ An entry belongs here only with evidence, and should say how to recognize it.
   still fall back to the routed feed on such a row. Evidence:
   `aMixedBeltTurnRowKeepsTheLaneHeadClear`,
   `theReportedUtilityScienceUrlCompacts`.
+- **A burner furnace's fuel belt fills the inserter row and leaves the small pole no tile.** A
+  stone furnace row with coal and ore on two belt rows packs both machine columns with inserters
+  (a short one for the near belt, a long one for the far belt). A small pole then has no free tile
+  in its 5x5 supply area, so the reported copper-plate URL shipped 14 unpowered input inserters.
+  Merging fuel and ore onto one belt (one material per lane) leaves a single short inserter and a
+  free column for the pole. `packRowBelts` now pairs every capacity-safe input, and an import
+  anchors its pair east so it stays straight. Evidence:
+  `theReportedCopperPlateUrlPowersEveryInserter`,
+  `anEarlyStoneFurnaceSharesTheOreBeltWithItsFuel`.
+- **Two produced feeds from opposite directions must not share a belt.** An import anchors a pair
+  to east and stays straight, so it may pair across directions; two produced feeds may not,
+  because one would have to cross the row to reach a merge at the other end. A cross-direction
+  produced pair moved a utility-science feed and its turn onto the acid lane's row, leaving
+  `sulfuric-acid … (no pipe route)`; `packRowBelts` now leaves those two on separate belts.
+  Evidence: `realBlueprintsAreValid` for `utility-science-pack`.
 - **A wide band forces belt crossings, and a multi-link band longer than nine machines can leave
   inserters outside pole coverage.** `GROUP_MAX_MACHINES = 10`
   (`blueprint/planning/band/DirectFeedModel.kt`) is a pair's ceiling; a band with more than one link

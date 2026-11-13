@@ -126,15 +126,18 @@ internal fun DirectFeedContext.bandBeltMayFit(links: List<FeedLink>) =
     bandBeltRows(links) <= MAX_ROW_BELTS
 
 /**
- * Whether the arranged [plan] fits the row's four belt rows. This is the precise check: the machine
- * rates decide which inputs pair without losing throughput and which only share a belt because the
- * row would otherwise have to drop a belt row.
+ * Whether the arranged [plan] fits the row's four belt rows. This is the precise check: every
+ * capacity-safe input pair shares a belt, so the machine rates decide which inputs pair without
+ * losing throughput. Only a one-recipe plan may also pair an over-capacity input as a last resort;
+ * a band with several recipes must fit without one, so a group that does not is rejected here and
+ * its recipes are built as their own rows.
  */
 internal fun DirectFeedContext.bandBeltFits(plan: BandPlan): Boolean {
     val internal = plan.feeds.mapTo(mutableSetOf()) { it.link.material }
     val inputs = rowInputs(plan.machines, logistics).minus(internal)
     val outputs = rowOutputs(plan.machines, logistics).minus(internal)
-    return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity()).fits
+    val singleRecipe = plan.machines.map { it.recipe }.distinct().size == 1
+    return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity(), singleRecipe).fits
 }
 
 /** One machine-to-machine insertion an arrangement realizes. */

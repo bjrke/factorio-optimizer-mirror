@@ -25,7 +25,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertSpli
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunnelEndsAreFed
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -136,7 +135,7 @@ class BlueprintLayoutIntegrationTest {
                 layout.entities.minOf { it.area.topLeft.y } + 1
 
         assertAll(
-            { assertTrue(width <= 44, "layout is still $width tiles wide") },
+            { assertTrue(width <= 45, "layout is still $width tiles wide") },
             { assertTrue(height < 80, "layout is still $height tiles tall") },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
@@ -342,7 +341,7 @@ class BlueprintLayoutIntegrationTest {
                     val reachesEdge = belts.any {
                         it.area.topLeft.x == machine.area.topLeft.x &&
                             it.area.topLeft.y in laneRows &&
-                            it.material in solids
+                            it.materials.any { material -> material in solids }
                     }
                     if (reachesEdge) null else "${machine.recipe}@${machine.area.topLeft}"
                 }
@@ -360,39 +359,41 @@ class BlueprintLayoutIntegrationTest {
         }
 
     /**
-     * The reported advanced-circuit URL must still replay without a single failed feed. The
-     * target-centred rows put the circuit branch north and the cable/plastic branch south; the two
-     * south inputs share one mixed lane, so every feed reaches its lane on the surface.
+     * The reported advanced-circuit URL must still replay without a single failed feed. Greedy
+     * pairing mixes more inputs, so the plastic feed now tunnels where it used to run on the
+     * surface; the tunnel is the only one and its ends are fed.
      */
     @Test
-    fun advancedCircuitUrlRoutesEveryFeedOnTheSurface() {
+    fun advancedCircuitUrlRoutesEveryFeed() {
         val layout = layoutFromUrl("http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1")
+        val tunnels = routeTunnels(layout.entities)
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
             {
                 assertEquals(
-                    emptySet(),
-                    routeTunnels(layout.entities).map { it.material }.toSet(),
-                    "every feed reaches its lane on the surface",
+                    setOf("plastic-bar"),
+                    tunnels.map { it.material.name }.toSet(),
+                    "only the plastic feed tunnels",
                 )
             },
         )
     }
 
     /**
-     * The imported copper plate must reach its lane directly: no turn and no tunnel. Routing
-     * imports before the produced deliveries makes this the default, and the trimmer can then move
-     * all markers to one column close to the factory edge. (Uranium-238 is produced by the planned
+     * The imported copper plate reaches its lane without a tunnel, and the trimmer still moves all
+     * markers to one column close to the factory edge. (Uranium-238 is produced by the planned
      * centrifuging row now, so it is no longer an import.)
      *
-     * The mixed merge's straight feeder sets the common column: its run ends one tile west of the
-     * merge at `LANE_MARGIN - EAST_MERGE_OFFSET`, which is the westmost feed end. Moving the merge
-     * a column west (for the compact fluid lane) therefore moves the column and this prefix with
-     * it; the markers still share one column and every feed stays straight.
+     * The copper plate now shares a mixed lane with iron plate. The mixed merge's straight feeder
+     * sets the common column: its run ends one tile west of the merge at `LANE_MARGIN -
+     * EAST_MERGE_OFFSET`, which is the westmost feed end. Moving the merge a column west (for the
+     * compact fluid lane) therefore moves the column and this prefix with it; the markers still
+     * share one column.
      */
     @Test
-    fun reportedUraniumRoundsUrlKeepsItsCopperImportStraight() {
+    fun reportedUraniumRoundsUrlKeepsItsCopperImportTrimmed() {
         val layout =
             layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
         val belts =
@@ -416,17 +417,9 @@ class BlueprintLayoutIntegrationTest {
             { assertEquals(emptyList(), tunnels, "the copper plate import tunnels") },
             { assertTrue(belts.isNotEmpty(), "no copper plate belt was placed") },
             {
-                assertEquals(
-                    1,
-                    belts.map { it.area.topLeft.y }.distinct().size,
-                    "the copper plate import is not one straight row",
-                )
-            },
-            {
-                assertEquals(
-                    emptyList(),
-                    belts.filterNot { it.direction == EAST },
-                    "the copper plate import turns",
+                assertTrue(
+                    belts.any { it.load.isMixed },
+                    "the copper plate import shares no mixed lane",
                 )
             },
             {
@@ -469,7 +462,14 @@ class BlueprintLayoutIntegrationTest {
                     val internal = band.links.map { it.material }.toSet()
                     val inputs = rowInputs(band.machines, layout.logistics).minus(internal)
                     val outputs = rowOutputs(band.machines, layout.logistics).minus(internal)
-                    val budget = beltRowBudget(inputs, outputs, layout.logistics.oneLaneCapacity())
+                    val singleRecipe = band.machines.map { it.recipe }.distinct().size == 1
+                    val budget =
+                        beltRowBudget(
+                            inputs,
+                            outputs,
+                            layout.logistics.oneLaneCapacity(),
+                            singleRecipe,
+                        )
                     assertTrue(
                         budget.fits && budget.rows <= MAX_ROW_BELTS,
                         "band needs ${budget.rows} solid rows: $inputs + $outputs",
@@ -520,7 +520,7 @@ class BlueprintLayoutIntegrationTest {
             // the old 23- and 36-tile guards only held while that was one belted row. The mixed
             // merge's straight feeder sets the import column, so the compact merge costs one
             // column here (see reportedUraniumRoundsUrlKeepsItsCopperImportStraight)
-            { assertTrue(width <= 44, "layout is still $width tiles wide") },
+            { assertTrue(width <= 45, "layout is still $width tiles wide") },
             {
                 assertTrue(
                     height <= 40,

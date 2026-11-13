@@ -1,11 +1,15 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
+import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.game.prototype.MachineStats
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,6 +56,51 @@ class RecipeParserStatsTest {
         ) { (name, expected) ->
             assertEquals(expected, stats.getValue(name))
         }
+    }
+
+    @Test
+    fun parseMachineEnergyUsage() {
+        val stats =
+            parsePrototypes(
+                    """
+                    {
+                      "furnace": {
+                        "stone-furnace": {"crafting_categories": ["smelting"], "crafting_speed": 1, "energy_usage": "90kW"},
+                        "electric-furnace": {"crafting_categories": ["smelting"], "crafting_speed": 2, "energy_usage": "180kW"}
+                      }
+                    }
+                    """,
+                )
+                .machineStats
+
+        assertTableOf("stone-furnace" to 90_000.0, "electric-furnace" to 180_000.0) {
+            (name, expected) ->
+            assertEquals(expected, stats.getValue(name).energyUsage)
+        }
+    }
+
+    /** `fuel_value` is an energy and `energy_usage` a power, so one SI parser reads both. */
+    @Test
+    fun parseFuelValues() {
+        val values =
+            parsePrototypes(
+                    """
+                    {
+                      "item": {
+                        "coal": {"fuel_value": "4MJ"},
+                        "uranium-fuel-cell": {"fuel_value": "8GJ"},
+                        "iron-plate": {}
+                      }
+                    }
+                    """,
+                )
+                .fuelValues
+
+        assertAll(
+            { assertEquals(4_000_000.0, values.getValue(coal)) },
+            { assertEquals(8_000_000_000.0, values.getValue(Material("uranium-fuel-cell"))) },
+            { assertContainsNot(values, ironPlate, "an item without a fuel value is no fuel") },
+        )
     }
 
     @Test

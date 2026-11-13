@@ -2,6 +2,10 @@ package de.bjrke.factorio.optimizer.common.game.prototype
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.band.buildable
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.fixtures.carbon
+import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
+import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -77,6 +81,22 @@ class RecipePolicyTest {
         val banned = unplannedRecipes(Surface.SPACE)
         assertEquals(allSolidFuel, banned intersect allSolidFuel)
     }
+
+    /** The one fuel the burner furnaces burn: mined coal, else what the surface builds itself. */
+    @Test
+    fun everySurfaceBurnsTheFuelItBuildsItself() =
+        assertTable(
+            listOf(
+                Surface.NAUVIS to coal,
+                Surface.VULCANUS to coal,
+                Surface.FULGORA to solidFuel,
+                Surface.AQUILO to solidFuel,
+                Surface.GLEBA to rocketFuel,
+                Surface.SPACE to carbon,
+            ),
+        ) { (surface, expected) ->
+            assertEquals(expected, burnerFuel(surface))
+        }
 
     @Test
     fun theCyclesAreBannedOnEverySurface() =

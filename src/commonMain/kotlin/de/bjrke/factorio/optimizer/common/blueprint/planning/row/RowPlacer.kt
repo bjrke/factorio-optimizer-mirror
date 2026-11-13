@@ -5,9 +5,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltGroup
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltPackRequest
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.RowBeltRates
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineDirection
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.packRowBelts
@@ -51,11 +53,13 @@ private const val WEST_MERGE_OFFSET = 8
  * Places the machine rows once: a plain production as a row of copies, a direct-feed band as one
  * row of interleaved machines. Owns the placement order the later delivery and fluid stages read.
  *
- * A row that would need more than [MAX_ROW_BELTS] solid belt rows pairs its lowest-rate eligible
- * inputs two per belt; each pair is fed by a T merge west or east of the row and carries one
- * material per lane. Inputs whose rate fits one lane pair first, so a fast input only shares a belt
- * when the row would otherwise drop a row (or its product). Rows that already fit keep their
- * single-material belts.
+ * Capacity-safe inputs pair greedily, one material per lane, fed by a T merge west or east of the
+ * row. Pairing a row that already fits still saves a belt row, the far-lane long inserter and often
+ * a free machine column for a pole. An import anchors its pair west to east; two produced feeds
+ * from opposite directions stay separate so neither has to cross the row. A single-recipe row that
+ * would otherwise need more than [MAX_ROW_BELTS] solid rows may also pair over-capacity inputs as a
+ * last resort; a multi-recipe band may not, so the band search rejects it and builds the recipes as
+ * their own rows.
  */
 internal class RowPlacer(
     private val board: LayoutBoard,
@@ -106,11 +110,19 @@ internal class RowPlacer(
         val inputs =
             rowInputs(machines.map { it.production }, logistics)
                 .minus(plannedRow.fullyInternalInputs)
-        val solids =
-            (inputs.entries + outputs.entries).sortedByDescending { it.value }.map { it.key }
         val directions =
             (inputs.keys - outputs.keys).associateWith { laneDirection(it, inputs.keys) }
-        val packing = packRowBelts(solids, inputs, outputs, directions, logistics.oneLaneCapacity())
+        val imports = inputs.keys - plan.beltMaterials
+        val laneCapacity = logistics.oneLaneCapacity()
+        val packing =
+            packRowBelts(
+                BeltPackRequest(
+                    rates = RowBeltRates(inputs, outputs, laneCapacity),
+                    directions = directions,
+                    imports = imports,
+                    allowOverCapacityPairs = plannedRow.productions.size == 1,
+                ),
+            )
         val groups = packing.groups
         if (!packing.fits) {
             failures +=

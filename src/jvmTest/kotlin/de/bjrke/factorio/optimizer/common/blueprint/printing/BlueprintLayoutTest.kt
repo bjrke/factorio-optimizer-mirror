@@ -44,6 +44,7 @@ import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -193,7 +194,7 @@ class BlueprintLayoutTest {
     }
 
     @Test
-    fun aRecipeWithTwoInputsUsesALongInserter() {
+    fun aRecipeWithTwoInputsSharesOneBelt() {
         val twoPlan =
             BlueprintPlan(
                 target = electronicCircuit,
@@ -215,19 +216,24 @@ class BlueprintLayoutTest {
                 label = "electronic-circuit",
             )
 
-        // the second input sits on the far lane, which only a long inserter reaches
+        // both inputs share one belt, one per lane, so no far-lane long inserter is needed
         val layout = Layout(twoPlan)
         val names = layout.blueprint.entities.map { it.name }
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertContains(names, "long-handed-inserter") },
+            { assertFalse(names.contains("long-handed-inserter")) },
+            {
+                assertTrue(
+                    layout.beltLoads.values.any { it.materials == setOf(ironPlate, copperCable) },
+                )
+            },
         )
     }
 
     @Test
-    fun aFluidPortDoesNotCostTheLongInserter() {
+    fun aFluidPortDoesNotCostTheInputInserter() {
         // an assembler with two solid inputs and a fluid port on its top edge: the port takes the
-        // middle column, so the pattern's long inserter has to move to the machine's last column.
+        // middle column, and the merged belt needs only one short inserter on the last column.
         val twoPlan =
             BlueprintPlan(
                 target = concrete,
@@ -253,12 +259,12 @@ class BlueprintLayoutTest {
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(2, inputs.size, inputs.toString()) },
-            { assertNotNull(inputs.firstOrNull { it.long }, inputs.toString()) },
+            { assertEquals(1, inputs.size, inputs.toString()) },
+            { assertFalse(inputs.single().long) },
+            { assertEquals(2, inputs.single().area.topLeft.x - machine.area.topLeft.x) },
             {
-                assertEquals(
-                    setOf(0, 2),
-                    inputs.map { it.area.topLeft.x - machine.area.topLeft.x }.toSet(),
+                assertTrue(
+                    layout.beltLoads.values.any { it.materials == setOf(stoneBrick, ironOre) },
                 )
             },
         )

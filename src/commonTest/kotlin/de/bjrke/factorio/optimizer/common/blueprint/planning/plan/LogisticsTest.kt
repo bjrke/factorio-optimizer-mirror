@@ -39,6 +39,19 @@ class LogisticsTest {
             )
         }
 
+    /**
+     * A mixed belt gives each material one lane, so the full-belt choice cannot change the limit.
+     */
+    @Test
+    fun oneLaneCapacityIsIndependentOfBeltLanes() =
+        assertEquals(
+            calculator(LogisticsCalculatorSelection(BeltTier.TRANSPORT_BELT, lanes = 1))
+                .oneLaneCapacity(),
+            calculator(LogisticsCalculatorSelection(BeltTier.TRANSPORT_BELT, lanes = 2))
+                .oneLaneCapacity(),
+            TOLERANCE,
+        )
+
     @Test
     fun inserterThroughputPerTierAndStacking() =
         assertTableOf(

@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesWired
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
@@ -52,6 +53,21 @@ class BlueprintPowerIntegrationTest {
                     entities.filter { it.name == PowerPole.MEDIUM_ELECTRIC_POLE.identifier },
                 )
             },
+        )
+    }
+
+    /**
+     * The reported early furnace URL: the merged fuel/ore belt leaves a column for the small pole.
+     */
+    @Test
+    fun theReportedCopperPlateUrlPowersEveryInserter() {
+        val layout = layoutFromUrl("http://localhost:8080/#/7.5/copper-plate/1CEFSXbfirt/1/1/10/-")
+        val entities = layout.blueprint.entities
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertPolesCoverAndConnect(entities, PowerPole.SMALL_ELECTRIC_POLE) },
+            { assertPolesWired(entities, PowerPole.SMALL_ELECTRIC_POLE) },
         )
     }
 

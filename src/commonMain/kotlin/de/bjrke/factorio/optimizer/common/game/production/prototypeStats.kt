@@ -85,8 +85,8 @@ internal fun logisticsStats(root: JsonObject): Logistics {
 }
 
 /**
- * Machine crafting categories, speed and built-in productivity, derived from the crafting machines
- * in the dump. Mining drills use `resource_categories`/`mining_speed` instead of
+ * Machine crafting categories, speed, built-in productivity and energy use, derived from the
+ * crafting machines in the dump. Mining drills use `resource_categories`/`mining_speed` instead of
  * `crafting_categories`/`crafting_speed`.
  */
 fun machineStats(root: JsonObject) = buildMap {
@@ -108,6 +108,7 @@ fun machineStats(root: JsonObject) = buildMap {
                                 .table("effect_receiver")
                                 .table("base_effect")
                                 .number("productivity") ?: 0.0,
+                        energyUsage = element.energyValue("energy_usage") ?: 0.0,
                     ),
                 )
             }
