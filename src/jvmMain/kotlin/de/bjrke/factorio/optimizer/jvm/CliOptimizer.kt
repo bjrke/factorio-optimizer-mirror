@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
@@ -122,17 +123,37 @@ fun main(args: Array<String>) {
     val sections = mutableListOf<() -> Unit>()
     if (Output.SETTINGS in outputs) sections += { println(settingsText(cli, factories, logistics)) }
     if (Output.LISTING in outputs) sections += { printListing(result, logistics) }
+    sections.addBlueprintSections(outcome, blueprintOutputs, logistics, cli, factories)
+    sections.forEach { it() }
+}
+
+/** Appends the requested blueprint outputs, or the reason the plan cannot be built. */
+private fun MutableList<() -> Unit>.addBlueprintSections(
+    outcome: BlueprintPlanResult?,
+    blueprintOutputs: List<Output>,
+    logistics: LogisticsCalculator,
+    cli: CliArgs,
+    factories: Set<Factory>,
+) {
     when (outcome) {
         null -> {}
-        is BlueprintPlanResult.Unavailable -> sections += {
+        is BlueprintPlanResult.Unavailable ->
+            add {
                 println("No blueprint available: ${outcome.reason}")
             }
         is BlueprintPlanResult.Planned ->
             for (output in blueprintOutputs) {
-                sections += { emitBlueprint(output, outcome.plan, logistics, cli.beltEnd) }
+                add {
+                    emitBlueprint(
+                        output,
+                        outcome.plan,
+                        logistics,
+                        cli.beltEnd,
+                        PowerPole.forSelection(cli.surface, factories),
+                    )
+                }
             }
     }
-    sections.forEach { it() }
 }
 
 /** The resolved configuration, so a pasted URL (or the defaults) can be read back at a glance. */
@@ -165,8 +186,11 @@ private fun emitBlueprint(
     plan: BlueprintPlan,
     logistics: LogisticsCalculator,
     beltEnd: BeltEnd,
+    powerPole: PowerPole,
 ) {
-    blueprintGenerator(output)?.let { println(it(RowLayout(plan, logistics, beltEnd))) }
+    blueprintGenerator(output)?.let {
+        println(it(RowLayout(plan, logistics, beltEnd, powerPole)))
+    }
 }
 
 private fun blueprintGenerator(output: Output) =

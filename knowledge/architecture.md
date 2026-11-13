@@ -66,7 +66,8 @@ CLI (JVM) from one shared core.
       primitives), `LayoutPlacement` (single-tile entity-kind helpers),
       `LayoutTunnels` (the surface/end/tunnel placement and the tunnel-link
       plan), `LayoutUnderground`, `Tunnels`, `LayoutIndex` (the read-only tile
-      index), `BeltEnd` (how a belt is terminated). `entity` holds the entity
+      index), `BeltEnd` (how a belt is terminated), `PowerPole` (the pole's
+      supply radius and wire reach, and which pole a selection uses). `entity` holds the entity
       hierarchy (`LayoutEntity`, `LayoutTransportEntities`,
       `LayoutEntityStations`, `LayoutSettings`); `validation` holds the invariant
       checks (`LayoutValidation*.kt`). This tree must never mention the
@@ -128,7 +129,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 `expect`/`actual` pairs with the common declaration, both in
 `common.production`).
 
-Package sizes (files, verified 2026-11-12). **Files** are the budget: past 10 is a
+Package sizes (files, verified 2026-11-13). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
 removed, so review keeps it. There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
@@ -144,7 +145,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | model | 1 |
 | optimize | 3 |
 | blueprint | 1 |
-| blueprint.layout | 9 |
+| blueprint.layout | 10 |
 | blueprint.layout.entity | 5 |
 | blueprint.layout.validation | 5 |
 | blueprint.planning | 2 |
@@ -421,7 +422,8 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
   `CorridorShift` (in `LayoutCompaction.kt`) cuts one corridor and moves the far
   side.
 - `blueprint/placing/special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
-  final geometry.
+  final geometry. The pole comes from `PowerPole.forSelection`: none in space, the small pole for
+  an early-game assembling machine 1 on Nauvis, the medium pole otherwise.
 - `blueprint/placing/special/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
 - `blueprint/placing/routing/DeliveryRouter.kt` — routes the solid imports first and the produced

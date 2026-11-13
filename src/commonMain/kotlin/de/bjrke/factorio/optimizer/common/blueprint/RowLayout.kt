@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.placing.compaction.CompactionPass
 import de.bjrke.factorio.optimizer.common.blueprint.placing.compaction.UndergroundStretcher
@@ -31,6 +32,7 @@ internal class RowLayout(
     // constructor parameters instead of fields.
     logistics: LogisticsCalculator,
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
+    private val powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ) {
     private val board =
         LayoutBoard(
@@ -38,6 +40,7 @@ internal class RowLayout(
                 belt = logistics.belt.identifier,
                 inserter = logistics.inserter.identifier,
                 longInserter = InserterTier.LONG_HANDED_INSERTER.identifier,
+                pole = powerPole.identifier,
             ),
             undergroundRange =
                 when {
@@ -109,7 +112,7 @@ internal class RowLayout(
             compactionPass.compact()
             // the product connector goes last so compaction cannot drag it back over the routes
             deliveryRouter.placeTargetOutput()
-            PowerPlacer(board, imports.poleWestBound).place()
+            PowerPlacer(board, imports.poleWestBound, powerPole).place()
             // compaction accepts a corridor only when the whole layout validates, so an earlier
             // error silently turns the pass off; surface it instead of shipping a broken layout
             failures += validateLayout(board.placed.toList())

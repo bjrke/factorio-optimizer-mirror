@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
@@ -51,10 +52,14 @@ val chestMarkers =
  * The layout suites pin geometry, not the intermediate limit, so they plan the full production
  * graph. The limit's effect on the optimizer is covered by the optimizer suites and the URL tests.
  */
-fun optimize(target: String, surface: Surface = Surface.NAUVIS) =
+fun optimize(
+    target: String,
+    surface: Surface = Surface.NAUVIS,
+    factories: Set<Factory> = FactoryConfig().defaults,
+) =
     Optimizer(
         RecipeLoader.forSurface(true, surface),
-        FactoryConfig().defaults,
+        factories,
         MAX_INTERMEDIATE_LIMIT,
     )[Material(target)]
 
@@ -96,7 +101,13 @@ internal fun layoutFromUrl(url: String): Layout {
     val result =
         Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[
             Material(cli.material)]
-    return Layout(result, logistics, cli.normalizeTarget, cli.beltEnd)
+    return Layout(
+        result,
+        logistics,
+        cli.normalizeTarget,
+        cli.beltEnd,
+        PowerPole.forSelection(cli.surface, factories),
+    )
 }
 
 fun testBlueprintPlan(
@@ -120,6 +131,7 @@ data class Layout(
     val logistics: LogisticsCalculator =
         de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics,
     val beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
+    val powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ) {
 
     constructor(
@@ -127,16 +139,23 @@ data class Layout(
         logistics: LogisticsCalculator = LogisticsCalculator(result.logistics),
         scale: Double,
         beltEnd: BeltEnd,
-    ) : this(testBlueprintPlan(result, logistics, scale), logistics, beltEnd)
+        powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
+    ) : this(testBlueprintPlan(result, logistics, scale), logistics, beltEnd, powerPole)
 
     constructor(
         target: String,
         scale: Double = 1.0,
         beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
         surface: Surface = Surface.NAUVIS,
-    ) : this(result = optimize(target, surface), scale = scale, beltEnd = beltEnd)
+        factories: Set<Factory> = FactoryConfig().defaults,
+    ) : this(
+        result = optimize(target, surface, factories),
+        scale = scale,
+        beltEnd = beltEnd,
+        powerPole = PowerPole.forSelection(surface, factories),
+    )
 
-    private val rowLayout by lazy { RowLayout(plan, logistics, beltEnd) }
+    private val rowLayout by lazy { RowLayout(plan, logistics, beltEnd, powerPole) }
 
     internal val dump by lazy { rowLayout.layoutDump() }
 

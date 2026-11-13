@@ -9,7 +9,6 @@ internal const val INFINITY_CHEST = "infinity-chest"
 internal const val INFINITY_PIPE = "infinity-pipe"
 internal const val PIPE = "pipe"
 internal const val PIPE_TO_GROUND = "pipe-to-ground"
-internal const val POLE = "medium-electric-pole"
 
 /** The name of an underground run cannot exceed the prototype's `max_underground_distance`. */
 internal const val PIPE_UNDERGROUND_RANGE = 10
@@ -27,7 +26,7 @@ internal data class LayoutNames(
     val marker: String = MARKER,
     val infinityChest: String = INFINITY_CHEST,
     val infinityPipe: String = INFINITY_PIPE,
-    val pole: String = POLE,
+    val pole: String = PowerPole.MEDIUM_ELECTRIC_POLE.identifier,
 )
 
 /**

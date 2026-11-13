@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
@@ -21,25 +22,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** Invariants of the power and fluid networks: pole coverage and wiring, pipe connectivity. */
-private const val SUPPLY_RADIUS = 3
-private const val WIRE_REACH = 9
-private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
 private const val PIPE_REACH = 10
 
 /** Every machine tile must sit in a pole's supply area, and the poles must form one network. */
-fun assertPolesCoverAndConnect(entities: List<BlueprintEntity>) {
+fun assertPolesCoverAndConnect(
+    entities: List<BlueprintEntity>,
+    pole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
+) {
     val poles =
-        entities
-            .asSequence()
-            .filter { it.name == "medium-electric-pole" }
-            .map { it.area.topLeft }
-            .toList()
-    val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(SUPPLY_RADIUS) }
+        entities.asSequence().filter { it.name == pole.identifier }.map { it.area.topLeft }.toList()
+    val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(pole.supplyRadius) }
     val unpowered = entities.filter {
         it.isPowered() && (it.area intersect coveredByPoles).isEmpty()
     }
+    val reachSq = pole.wireReach * pole.wireReach
     val components =
-        connectedComponents(poles) { pole -> poles.filter { it.distanceSq(pole) <= WIRE_REACH_SQ } }
+        connectedComponents(poles) { center -> poles.filter { it.distanceSq(center) <= reachSq } }
 
     assertAll(
         { assertEquals(emptyList(), unpowered) },
@@ -150,8 +148,11 @@ private fun mouthOf(pipe: PipeToGroundEntity) =
     if (pipe.io == Io.INPUT) pipe.direction.opposite() else pipe.direction
 
 /** A blueprint does not rebuild pole wires, so each pole must list the poles it is wired to. */
-fun assertPolesWired(entities: List<BlueprintEntity>) {
-    val poles = entities.withIndex().filter { it.value.name == "medium-electric-pole" }
+fun assertPolesWired(
+    entities: List<BlueprintEntity>,
+    pole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
+) {
+    val poles = entities.withIndex().filter { it.value.name == pole.identifier }
     val numbers = poles.map { it.index + 1 }.toSet()
     val seen = mutableSetOf<Int>()
     var components = 0

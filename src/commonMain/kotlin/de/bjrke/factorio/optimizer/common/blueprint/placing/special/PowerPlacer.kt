@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.special
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placePole
 import de.bjrke.factorio.optimizer.common.core.model.Area
@@ -12,22 +13,23 @@ import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.sqrt
 
-/** Medium poles supply a 7x7 area (radius 3) and reach 9 tiles of wire. */
-private const val SUPPLY_RADIUS = 3
-
-private const val WIRE_REACH = 9
-private const val WIRE_REACH_SQ = WIRE_REACH * WIRE_REACH
-
 /** Bound on the pole-connection rounds, so a gap that cannot be bridged terminates. */
 private const val MAX_POLE_CONNECT_ATTEMPTS = 40
 
 /**
- * Covers every powered entity with a medium pole and wires the poles into one network. Poles stay
- * east of [westBound], which keeps them out of the import extension.
+ * Covers every powered entity with the configured [pole] and wires the poles into one network.
+ * Poles stay east of [westBound], which keeps them out of the import extension; [PowerPole.NONE]
+ * places nothing because a space platform powers its machines without poles.
  */
-internal class PowerPlacer(private val board: LayoutBoard, private val westBound: Int) {
+internal class PowerPlacer(
+    private val board: LayoutBoard,
+    private val westBound: Int,
+    private val pole: PowerPole,
+) {
+    private val wireReachSq = pole.wireReach * pole.wireReach
 
     fun place() {
+        if (pole == PowerPole.NONE) return
         placePoles()
         wirePoles()
     }
@@ -48,7 +50,7 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
                 val spot = bestPoleSpot(area, covered, poles) ?: continue
                 poles += spot
                 board.placePole(spot)
-                covered.addAll(spot.area().grow(SUPPLY_RADIUS))
+                covered.addAll(spot.area().grow(pole.supplyRadius))
             }
         }
         connectPoles(poles)
@@ -61,14 +63,14 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
         poles: MutableSet<Coordinate>,
     ): Coordinate? {
         val tilesWhichWouldCover =
-            tile.grow(SUPPLY_RADIUS).filter { board.isFree(it) && it.x >= westBound }
+            tile.grow(pole.supplyRadius).filter { board.isFree(it) && it.x >= westBound }
         val tilesInReachOfOtherPoles = tilesWhichWouldCover.filter { pos ->
-            poles.any { pos.distanceSq(it) <= WIRE_REACH_SQ }
+            poles.any { pos.distanceSq(it) <= wireReachSq }
         }
         val possibleTiles = tilesInReachOfOtherPoles.ifEmpty { tilesWhichWouldCover }
 
         return possibleTiles.maxByOrNull {
-            it.area().grow(SUPPLY_RADIUS).sumOf { other ->
+            it.area().grow(pole.supplyRadius).sumOf { other ->
                 when {
                     other in covered -> 0
                     board.entityAt(other)?.isPowered == true -> 2
@@ -81,8 +83,8 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
     /** Adds poles until every pole can reach another, so the whole set is one wire network. */
     private fun connectPoles(poles: MutableSet<Coordinate>) {
         val components =
-            connectedComponents(poles) { pole ->
-                    poles.filter { it.distanceSq(pole) <= WIRE_REACH_SQ }
+            connectedComponents(poles) { center ->
+                    poles.filter { it.distanceSq(center) <= wireReachSq }
                 }
                 .mapTo(mutableListOf()) { it.toMutableSet() }
         repeat(MAX_POLE_CONNECT_ATTEMPTS) {
@@ -127,8 +129,10 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
         components: List<MutableSet<Coordinate>>,
     ): Boolean {
         var added = false
-        for (step in 1 until bridge.steps) {
-            val fraction = step.toDouble() / bridge.steps
+        val steps =
+            ceil(sqrt(bridge.distanceSq.toDouble()) / (pole.wireReach - 1)).toInt().coerceAtLeast(1)
+        for (step in 1 until steps) {
+            val fraction = step.toDouble() / steps
             val x = round(bridge.from.x + (bridge.to.x - bridge.from.x) * fraction).toInt()
             val y = round(bridge.from.y + (bridge.to.y - bridge.from.y) * fraction).toInt()
             val spot = freeNear(Coordinate(x, y)) ?: continue
@@ -140,7 +144,7 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
         return added
     }
 
-    /** The two poles a bridge joins, and how many wire-reach steps the connection needs. */
+    /** The two poles a bridge joins. */
     private data class Bridge(
         val from: Coordinate,
         val to: Coordinate,
@@ -148,7 +152,6 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
         val toIndex: Int,
     ) {
         val distanceSq = from.distanceSq(to)
-        val steps = ceil(sqrt(distanceSq.toDouble()) / (WIRE_REACH - 1)).toInt().coerceAtLeast(1)
     }
 
     /** The nearest free tile within one tile of ([c]), if any. */
@@ -174,7 +177,7 @@ internal class PowerPlacer(private val board: LayoutBoard, private val westBound
             for (j in i + 1 until poles.size) {
                 val a = poles[i]
                 val b = poles[j]
-                if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= WIRE_REACH_SQ) {
+                if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= wireReachSq) {
                     val first = board.placed[a.index] as PoleEntity
                     val second = board.placed[b.index] as PoleEntity
                     board.placed[a.index] =

@@ -103,7 +103,7 @@ internal fun LayoutBoard.placeInfinityPipeSink(coordinate: Coordinate, fluid: Ma
     place(InfinityPipeEntity(coordinate.area(), names.infinityPipe, fluid))
 }
 
-/** Places a medium electric pole (always one tile). */
+/** Places the configured electric pole (always one tile). */
 internal fun LayoutBoard.placePole(coordinate: Coordinate) {
     place(PoleEntity(coordinate.area(), names.pole))
 }

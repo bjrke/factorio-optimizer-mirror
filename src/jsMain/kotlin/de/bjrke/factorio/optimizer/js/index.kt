@@ -4,6 +4,7 @@
 package de.bjrke.factorio.optimizer.js
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.core.model.Material
@@ -150,6 +151,7 @@ val RouterBasedParams =
                     props.logistics,
                     props.normalizeTarget,
                     props.beltEnd,
+                    PowerPole.forSelection(props.surface, props.factories),
                 )
             }
         div {

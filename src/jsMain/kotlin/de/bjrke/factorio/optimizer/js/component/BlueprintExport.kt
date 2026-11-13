@@ -5,6 +5,7 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
@@ -179,12 +180,13 @@ internal fun blueprintPreview(
     logistics: LogisticsCalculator,
     normalizeTarget: Double,
     beltEnd: BeltEnd,
+    powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ): BlueprintPreview {
     val outcome = blueprintPlan(result, logistics, normalizeTarget)
     return BlueprintPreview(
         outcome,
         (outcome as? BlueprintPlanResult.Planned)?.let {
-            RowLayout(it.plan, logistics, beltEnd).blueprint()
+            RowLayout(it.plan, logistics, beltEnd, powerPole).blueprint()
         },
     )
 }

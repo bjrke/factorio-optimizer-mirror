@@ -1,8 +1,12 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesWired
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -30,4 +34,40 @@ class BlueprintPowerIntegrationTest {
                 { assertPolesWired(entities) },
             )
         }
+
+    @Test
+    fun assemblingMachine1UsesSmallPoles() {
+        val factories =
+            FactoryConfig().defaults - Factory.ASSEMBLING_MACHINE_3 + Factory.ASSEMBLING_MACHINE_1
+        val layout = Layout("advanced-circuit", factories = factories)
+        val entities = layout.blueprint.entities
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertPolesCoverAndConnect(entities, PowerPole.SMALL_ELECTRIC_POLE) },
+            { assertPolesWired(entities, PowerPole.SMALL_ELECTRIC_POLE) },
+            {
+                assertEquals(
+                    emptyList(),
+                    entities.filter { it.name == PowerPole.MEDIUM_ELECTRIC_POLE.identifier },
+                )
+            },
+        )
+    }
+
+    @Test
+    fun spacePlatformsHaveNoPoles() {
+        val layout = Layout("space-science-pack", surface = Surface.SPACE)
+        val entities = layout.blueprint.entities
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertEquals(
+                    emptyList(),
+                    entities.filter { it.name.endsWith("electric-pole") },
+                )
+            },
+        )
+    }
 }
