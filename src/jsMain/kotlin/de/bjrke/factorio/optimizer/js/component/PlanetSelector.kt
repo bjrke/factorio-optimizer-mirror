@@ -22,15 +22,17 @@ external interface PlanetSelectorProps : PlanetSelectorStateProps, PlanetSelecto
 
 internal val planetSelector =
     FC<PlanetSelectorProps>("planetSelector") { props ->
-        for (surface in props.availableSurfaces) {
-            selectableIcon(
-                name = surface.identifier,
-                selected = props.selectedSurface == surface,
-                inputType = InputType.radio,
-                groupName = "surface",
-                disabled = !props.enabled,
-                onChange = { props.selectSurface(surface) },
-            )
+        selectionGroup {
+            for (surface in props.availableSurfaces) {
+                selectableIcon(
+                    name = surface.identifier,
+                    selected = props.selectedSurface == surface,
+                    inputType = InputType.radio,
+                    groupName = "surface",
+                    disabled = !props.enabled,
+                    onChange = { props.selectSurface(surface) },
+                )
+            }
         }
     }
 

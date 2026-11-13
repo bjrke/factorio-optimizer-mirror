@@ -49,67 +49,75 @@ external interface LogisticsSelectorProps :
  */
 internal val logisticsSelector =
     FC<LogisticsSelectorProps>("logisticsSelector") { props ->
-        for (belt in props.config.availableBelts) {
-            selectableIcon(
-                name = belt.identifier,
-                selected = props.selectedBelt == belt,
-                inputType = InputType.radio,
-                groupName = "belt",
-                onChange = { props.selectBelt(belt) },
-            )
-        }
-        // factories usually feed a single lane, so a half belt is the default
-        label {
-            title = "belt lanes"
-            css { marginLeft = 0.5.ch }
-            input {
-                type = InputType.checkbox
-                checked = props.beltLanes == BeltTier.MAX_LANES
-                onChange = {
-                    props.selectBeltLanes(if (it.target.checked) BeltTier.MAX_LANES else 1)
-                }
+        // the belt choice together with its lane setting and stacking level
+        selectionGroup {
+            for (belt in props.config.availableBelts) {
+                selectableIcon(
+                    name = belt.identifier,
+                    selected = props.selectedBelt == belt,
+                    inputType = InputType.radio,
+                    groupName = "belt",
+                    onChange = { props.selectBelt(belt) },
+                )
             }
-            +" full belt"
+            // factories usually feed a single lane, so a half belt is the default
+            label {
+                title = "belt lanes"
+                css { marginLeft = 0.5.ch }
+                input {
+                    type = InputType.checkbox
+                    checked = props.beltLanes == BeltTier.MAX_LANES
+                    onChange = {
+                        props.selectBeltLanes(if (it.target.checked) BeltTier.MAX_LANES else 1)
+                    }
+                }
+                +" full belt"
+            }
+            // belt stacking is unlocked by the Space Age stack inserters, so the control sits right
+            // next to them and is hidden without Space Age
+            if (props.config.spaceAge) {
+                stackInput(
+                    title = "belt stack",
+                    value = props.beltStack,
+                    minimum = props.config.beltStackMin(props.selectedInserter),
+                    maximum = props.config.beltStackMax,
+                    onValue = props.selectBeltStack,
+                )
+            }
         }
-        for (inserter in props.config.availableInserters) {
-            selectableIcon(
-                name = inserter.identifier,
-                selected = props.selectedInserter == inserter,
-                inputType = InputType.radio,
-                groupName = "inserter",
-                onChange = { props.selectInserter(inserter) },
-            )
-        }
-        // belt stacking is unlocked by the Space Age stack inserters, so the control sits right
-        // next to them and is hidden without Space Age
-        if (props.config.spaceAge) {
+        // the inserter choice together with its hand capacity
+        selectionGroup {
+            for (inserter in props.config.availableInserters) {
+                selectableIcon(
+                    name = inserter.identifier,
+                    selected = props.selectedInserter == inserter,
+                    inputType = InputType.radio,
+                    groupName = "inserter",
+                    onChange = { props.selectInserter(inserter) },
+                )
+            }
             stackInput(
-                title = "belt stack",
-                value = props.beltStack,
-                minimum = props.config.beltStackMin(props.selectedInserter),
-                maximum = props.config.beltStackMax,
-                onValue = props.selectBeltStack,
+                title = "inserter stack",
+                value = props.inserterStack,
+                // a bulk or stack inserter never carries fewer items than its base hand size
+                minimum = props.config.minStack(props.selectedInserter),
+                maximum = props.config.maxStack(props.selectedInserter),
+                onValue = props.selectInserterStack,
             )
         }
-        stackInput(
-            title = "inserter stack",
-            value = props.inserterStack,
-            // a bulk or stack inserter never carries fewer items than its base hand size
-            minimum = props.config.minStack(props.selectedInserter),
-            maximum = props.config.maxStack(props.selectedInserter),
-            onValue = props.selectInserterStack,
-        )
         // how a solid belt ends: a label, a cheat chest or a chest marker. A space platform has no
         // ground for a chest, so only the constant-combinator label is available there.
-        for (beltEnd in BeltEnd.entries) {
-            selectableIcon(
-                name = beltEnd.identifier,
-                selected = props.beltEnd == beltEnd,
-                inputType = InputType.radio,
-                groupName = "belt-end",
-                disabled = !beltEnd.allowedOn(props.surface),
-                onChange = { props.selectBeltEnd(beltEnd) },
-            )
+        selectionGroup {
+            for (beltEnd in BeltEnd.entries) {
+                selectableIcon(
+                    name = beltEnd.identifier,
+                    selected = props.beltEnd == beltEnd,
+                    inputType = InputType.radio,
+                    groupName = "belt-end",
+                    disabled = !beltEnd.allowedOn(props.surface),
+                    onChange = { props.selectBeltEnd(beltEnd) },
+                )
+            }
         }
     }
 

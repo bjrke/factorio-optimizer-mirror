@@ -225,14 +225,17 @@ external interface BlueprintCopyButtonProps : Props {
 internal val blueprintCopyButton =
     FC<BlueprintCopyButtonProps>("blueprintCopyButton") { props ->
         val blueprint = props.blueprint
-        button {
-            disabled = blueprint == null
-            title =
-                when (val outcome = props.outcome) {
-                    is BlueprintPlanResult.Planned -> "Copy blueprint string"
-                    is BlueprintPlanResult.Unavailable -> outcome.reason
-                }
-            onClick = { blueprint?.let { copyToClipboard(blueprintString(it.toJson())) } }
-            +"Copy"
+        selectionGroup {
+            button {
+                className = ClassName("icon-option icon-button")
+                disabled = blueprint == null
+                title =
+                    when (val outcome = props.outcome) {
+                        is BlueprintPlanResult.Planned -> "Copy blueprint string"
+                        is BlueprintPlanResult.Unavailable -> outcome.reason
+                    }
+                onClick = { blueprint?.let { copyToClipboard(blueprintString(it.toJson())) } }
+                icon("copy-paste-tool") { alt = "Copy blueprint" }
+            }
         }
     }

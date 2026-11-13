@@ -18,13 +18,15 @@ external interface SpaceAgeToggleProps : Props {
 /** Space Age is a plain on/off switch: the logo carries the label via its `alt` text. */
 internal val spaceAgeToggle =
     FC<SpaceAgeToggleProps>("spaceAgeToggle") { props ->
-        selectableIcon(
-            name = "space-age",
-            alt = "Space Age",
-            selected = props.enabled,
-            inputType = InputType.checkbox,
-            onChange = { props.toggle(!props.enabled) },
-        )
+        selectionGroup {
+            selectableIcon(
+                name = "space-age",
+                alt = "Space Age",
+                selected = props.enabled,
+                inputType = InputType.checkbox,
+                onChange = { props.toggle(!props.enabled) },
+            )
+        }
     }
 
 fun ChildrenBuilder.urlSpaceAgeToggle(props: FactorioOptimizerProps) {

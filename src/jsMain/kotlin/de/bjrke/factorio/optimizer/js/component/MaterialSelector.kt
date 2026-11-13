@@ -39,74 +39,78 @@ internal val materialSelector =
             setHighlighted(0)
         }
 
-        div {
-            className = ClassName("material-selector")
-            span {
-                className = ClassName("material-selector-icon")
-                icon(props.material.name)
-            }
-            input {
-                className = ClassName("material-selector-input")
-                value = query
-                placeholder = props.material.name
-                onChange = {
-                    setQuery(it.target.value)
-                    setOpen(true)
-                    setHighlighted(0)
-                }
-                onFocus = { setOpen(true) }
-                onBlur = { setOpen(false) }
-                onKeyDown = { event ->
-                    when (event.key) {
-                        "ArrowDown" -> {
-                            event.preventDefault()
-                            setOpen(true)
-                            setHighlighted {
-                                (it + 1).coerceAtMost(matches.lastIndex.coerceAtLeast(0))
-                            }
-                        }
-                        "ArrowUp" -> {
-                            event.preventDefault()
-                            setHighlighted { (it - 1).coerceAtLeast(0) }
-                        }
-                        "Enter" -> {
-                            event.preventDefault()
-                            matches.getOrNull(highlighted)?.let { select(it) }
-                        }
-                        "Escape" -> {
-                            setQuery("")
-                            setOpen(false)
-                        }
-                    }
-                }
-            }
-            if (open) {
+        selectionGroup {
+            controlBox {
                 div {
-                    className = ClassName("material-selector-dropdown")
-                    if (matches.isEmpty()) {
-                        div {
-                            className = ClassName("material-selector-empty")
-                            +"no matches"
+                    className = ClassName("material-selector")
+                    span {
+                        className = ClassName("material-selector-icon")
+                        icon(props.material.name)
+                    }
+                    input {
+                        className = ClassName("material-selector-input")
+                        value = query
+                        placeholder = props.material.name
+                        onChange = {
+                            setQuery(it.target.value)
+                            setOpen(true)
+                            setHighlighted(0)
+                        }
+                        onFocus = { setOpen(true) }
+                        onBlur = { setOpen(false) }
+                        onKeyDown = { event ->
+                            when (event.key) {
+                                "ArrowDown" -> {
+                                    event.preventDefault()
+                                    setOpen(true)
+                                    setHighlighted {
+                                        (it + 1).coerceAtMost(matches.lastIndex.coerceAtLeast(0))
+                                    }
+                                }
+                                "ArrowUp" -> {
+                                    event.preventDefault()
+                                    setHighlighted { (it - 1).coerceAtLeast(0) }
+                                }
+                                "Enter" -> {
+                                    event.preventDefault()
+                                    matches.getOrNull(highlighted)?.let { select(it) }
+                                }
+                                "Escape" -> {
+                                    setQuery("")
+                                    setOpen(false)
+                                }
+                            }
                         }
                     }
-                    for ((index, material) in matches.withIndex()) {
+                    if (open) {
                         div {
-                            key = Key(material.name)
-                            className =
-                                ClassName(
-                                    if (index == highlighted) {
-                                        "material-selector-option highlighted"
-                                    } else {
-                                        "material-selector-option"
-                                    },
-                                )
-                            onMouseEnter = { setHighlighted(index) }
-                            onMouseDown = {
-                                it.preventDefault()
-                                select(material)
+                            className = ClassName("material-selector-dropdown")
+                            if (matches.isEmpty()) {
+                                div {
+                                    className = ClassName("material-selector-empty")
+                                    +"no matches"
+                                }
                             }
-                            icon(material.name)
-                            +material.name
+                            for ((index, material) in matches.withIndex()) {
+                                div {
+                                    key = Key(material.name)
+                                    className =
+                                        ClassName(
+                                            if (index == highlighted) {
+                                                "material-selector-option highlighted"
+                                            } else {
+                                                "material-selector-option"
+                                            },
+                                        )
+                                    onMouseEnter = { setHighlighted(index) }
+                                    onMouseDown = {
+                                        it.preventDefault()
+                                        select(material)
+                                    }
+                                    icon(material.name)
+                                    +material.name
+                                }
+                            }
                         }
                     }
                 }

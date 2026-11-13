@@ -26,35 +26,41 @@ internal val factorySelector =
         // mutually exclusive groups: a single icon option always stays selected
         for (group in props.config.groups) {
             val groupName = group.joinToString("-") { it.name }
-            for (factory in group) {
-                selectableIcon(
-                    name = factory.identifier,
-                    selected = props.selectedFactories.contains(factory),
-                    inputType = InputType.radio,
-                    groupName = groupName,
-                    onChange = {
-                        props.selectFactory(props.config.add(props.selectedFactories, factory))
-                    },
-                )
+            selectionGroup {
+                for (factory in group) {
+                    selectableIcon(
+                        name = factory.identifier,
+                        selected = props.selectedFactories.contains(factory),
+                        inputType = InputType.radio,
+                        groupName = groupName,
+                        onChange = {
+                            props.selectFactory(props.config.add(props.selectedFactories, factory))
+                        },
+                    )
+                }
             }
         }
         // independently toggled machines
-        for (factory in props.config.singles) {
-            val enabled = props.selectedFactories.contains(factory)
-            selectableIcon(
-                name = factory.identifier,
-                selected = enabled,
-                inputType = InputType.checkbox,
-                onChange = {
-                    props.selectFactory(
-                        if (enabled) {
-                            props.config.remove(props.selectedFactories, factory)
-                        } else {
-                            props.config.add(props.selectedFactories, factory)
+        if (props.config.singles.isNotEmpty()) {
+            selectionGroup {
+                for (factory in props.config.singles) {
+                    val enabled = props.selectedFactories.contains(factory)
+                    selectableIcon(
+                        name = factory.identifier,
+                        selected = enabled,
+                        inputType = InputType.checkbox,
+                        onChange = {
+                            props.selectFactory(
+                                if (enabled) {
+                                    props.config.remove(props.selectedFactories, factory)
+                                } else {
+                                    props.config.add(props.selectedFactories, factory)
+                                },
+                            )
                         },
                     )
-                },
-            )
+                }
+            }
         }
     }
 

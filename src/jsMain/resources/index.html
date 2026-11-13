@@ -50,7 +50,6 @@
             display: flex; align-items: center; flex-shrink: 0; flex-wrap: wrap;
             padding-left: 8px;
         }
-        .app-header > div { display: contents; }
         .app-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: row; }
         /* the result keeps one factory column; the blueprint takes the rest of the width */
         .app-result { flex: 0 0 auto; min-width: 0; min-height: 0; overflow-y: auto; }
@@ -86,9 +85,9 @@
             .app-result { flex: 1 1 auto; }
             .blueprint-panel { flex: 0 0 40%; min-width: 0; }
         }
-        .material-selector { position: relative; display: inline-block; margin-right: 2px; }
+        .material-selector { position: relative; display: inline-block; }
         .material-selector-input {
-            width: 16rem; height: 2.5rem; box-sizing: border-box;
+            width: 16rem; height: 2rem; box-sizing: border-box;
             padding-left: 2.5rem; font: inherit; color: inherit;
             background: var(--bg);
             border: 1px solid var(--input-border); border-radius: 4px;
@@ -114,11 +113,14 @@
         }
         .icon-option {
             display: inline-flex; align-items: center;
-            padding: 6px; margin: 2px; border-radius: 6px; cursor: pointer;
+            padding: 2px; margin: 0; border-radius: 6px; cursor: pointer;
             user-select: none; background: transparent;
         }
         .icon-option.selected { background: var(--highlight); }
         .icon-option.disabled { opacity: .4; cursor: not-allowed; }
+        /* a button that carries an icon instead of text, styled like an icon option */
+        .icon-button { border: 0; font: inherit; color: inherit; }
+        .icon-button:disabled { opacity: .4; cursor: not-allowed; }
         .visually-hidden {
             position: absolute; width: 1px; height: 1px;
             padding: 0; margin: -1px; overflow: hidden;

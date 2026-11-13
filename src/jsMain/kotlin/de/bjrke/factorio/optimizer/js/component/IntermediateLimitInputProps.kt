@@ -12,7 +12,6 @@ import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.span
 import web.cssom.ClassName
 import web.cssom.Display
-import web.cssom.VerticalAlign
 import web.cssom.rem
 import web.html.InputType
 import web.html.number
@@ -28,27 +27,27 @@ external interface IntermediateLimitInputProps : Props {
  */
 internal val intermediateLimitInput =
     FC<IntermediateLimitInputProps>("intermediateLimitInput") { props ->
-        span {
-            className = ClassName("intermediate-limit")
-            css {
-                display = Display.inlineFlex
-                verticalAlign = VerticalAlign.middle
-                marginRight = 0.5.rem
-            }
-            span {
-                css { marginRight = 0.25.rem }
-                icon("signal-item-parameter") { alt = "intermediates" }
-            }
-            input {
-                type = InputType.number
-                min = MIN_INTERMEDIATE_LIMIT.toString()
-                max = MAX_INTERMEDIATE_LIMIT.toString()
-                value = props.value.toString()
-                title = "Maximum intermediate materials built"
-                css { width = 4.rem }
-                onChange = { event ->
-                    event.target.value.toIntOrNull()?.let { value ->
-                        props.change(validIntermediateLimit(value.toString()))
+        selectionGroup {
+            controlBox {
+                span {
+                    className = ClassName("intermediate-limit")
+                    css { display = Display.inlineFlex }
+                    span {
+                        css { marginRight = 0.25.rem }
+                        icon("signal-item-parameter") { alt = "intermediates" }
+                    }
+                    input {
+                        type = InputType.number
+                        min = MIN_INTERMEDIATE_LIMIT.toString()
+                        max = MAX_INTERMEDIATE_LIMIT.toString()
+                        value = props.value.toString()
+                        title = "Maximum intermediate materials built"
+                        css { width = 4.rem }
+                        onChange = { event ->
+                            event.target.value.toIntOrNull()?.let { value ->
+                                props.change(validIntermediateLimit(value.toString()))
+                            }
+                        }
                     }
                 }
             }

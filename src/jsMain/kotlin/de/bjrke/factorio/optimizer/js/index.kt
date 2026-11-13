@@ -166,12 +166,12 @@ val RouterBasedParams =
             className = ClassName("app-layout")
             div {
                 className = ClassName("app-header")
-                div { urlMaterialSelector(props) }
-                div { urlPlanetSelector(props) }
-                div { urlFactorySelector(props) }
-                div { urlLogisticsSelector(props) }
-                div { urlIntermediateLimitInput(props) }
-                div { urlSpaceAgeToggle(props) }
+                urlMaterialSelector(props)
+                urlPlanetSelector(props)
+                urlFactorySelector(props)
+                urlLogisticsSelector(props)
+                urlIntermediateLimitInput(props)
+                urlSpaceAgeToggle(props)
                 blueprintCopyButton {
                     outcome = preview.outcome
                     blueprint = preview.blueprint

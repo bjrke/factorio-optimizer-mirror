@@ -24,6 +24,7 @@ import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
+import de.bjrke.test.named
 import de.bjrke.test.render
 import de.bjrke.test.screen
 import kotlin.test.Test
@@ -296,10 +297,11 @@ class BlueprintExportTest : ComponentTest() {
     fun theCopyButtonIsEnabledForAPlan() {
         renderCopyButton(BlueprintPlanResult.Planned(plan))
 
-        val button = screen.getByText("Copy") as HTMLButtonElement
+        val button = screen.getByRole("button", named("Copy blueprint")) as HTMLButtonElement
         assertAll(
             { assertTrue(!button.disabled) },
             { assertEquals("Copy blueprint string", button.title) },
+            { assertNotNull(button.querySelector("img[src=\"icons/copy-paste-tool.png\"]")) },
         )
     }
 
@@ -307,7 +309,7 @@ class BlueprintExportTest : ComponentTest() {
     fun anUnavailablePlanDisablesTheCopyButton() {
         renderCopyButton(BlueprintPlanResult.Unavailable("too big"))
 
-        val button = screen.getByText("Copy") as HTMLButtonElement
+        val button = screen.getByRole("button", named("Copy blueprint")) as HTMLButtonElement
         assertAll(
             { assertTrue(button.disabled) },
             { assertEquals("too big", button.title) },

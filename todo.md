@@ -1,5 +1,8 @@
 # Todo
 
+Delete an item's whole section as part of the change that implements it; this
+file lists open work only.
+
 - http://localhost:8080/#/1.8/splitter/CFSXbmr/1/1/10/iron-plate and
   http://localhost:8080/#/1.8/splitter/CFSXbmr/1/1/10/copper-ore,iron-plate have different poles 
   because the amount of inserters changes. The reason is probably a different autoscale.
@@ -62,22 +65,6 @@ splitter URL with the foundry where gear-wheel and transport-belt machines share
 with a link, no belt carries the gear wheel, `failures` is empty and `validateLayout` is clean; the
 same URL without the foundry as an unchanged regression case; an inserter case where only a long
 inserter reaches the near belt, with the lane load still correct.
-
-### Group the selection controls and keep each group on one line
-
-Group the web UI's selection controls and stop line breaks inside a group; wrapping may only happen
-between groups.
-
-The selectors build flat sequences of `selectableIcon` labels (`FactorySelector`, `PlanetSelector`,
-`LogisticsSelector`), and the container wraps them anywhere. Render each logical group in its own
-container: a radio group from `FactoryConfig.groups`, the `singles` checkboxes, the surface, the
-belt, the inserter and the belt end. Each group is a nowrap flex row; the outer container is the
-only place that wraps. Keep the native radio `groupName` semantics so keyboard and screen-reader
-behaviour does not regress.
-
-Add a jsTest component test that renders the selectors and asserts every group is one nowrap flex
-row and that neighbouring groups are separate siblings. Do not assert pixel widths: the headless
-Chrome font metrics differ. Keep the existing selector tests green.
 
 ### Plan rocket parts and launches with the Space Age rocket silo
 
