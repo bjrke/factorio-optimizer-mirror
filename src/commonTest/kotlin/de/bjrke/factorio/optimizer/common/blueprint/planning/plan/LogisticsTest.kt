@@ -54,6 +54,40 @@ class LogisticsTest {
         )
 
     @Test
+    fun oneLaneCapacityOnlyUsesTheBeltStackOfAStackingInserter() =
+        assertAll(
+            {
+                // a fast inserter leaves the belt unstacked even when the capacity research allows
+                // 4
+                assertEquals(
+                    calculator(LogisticsCalculatorSelection(beltStack = 1)).oneLaneCapacity(),
+                    calculator(LogisticsCalculatorSelection(beltStack = 4)).oneLaneCapacity(),
+                    TOLERANCE,
+                )
+            },
+            {
+                // the stack inserter builds whole stacks, so its lane carries four times as much
+                assertEquals(
+                    calculator(
+                            LogisticsCalculatorSelection(
+                                inserter = InserterTier.STACK_INSERTER,
+                                beltStack = 4,
+                            ),
+                        )
+                        .oneLaneCapacity(),
+                    calculator(
+                            LogisticsCalculatorSelection(
+                                inserter = InserterTier.STACK_INSERTER,
+                                beltStack = 1,
+                            ),
+                        )
+                        .oneLaneCapacity() * 4,
+                    TOLERANCE,
+                )
+            },
+        )
+
+    @Test
     fun inserterThroughputPerTierAndStacking() =
         assertTableOf(
             Triple(InserterTier.INSERTER, 1, 0.84), // 0.014 turns/tick * 60 * 1

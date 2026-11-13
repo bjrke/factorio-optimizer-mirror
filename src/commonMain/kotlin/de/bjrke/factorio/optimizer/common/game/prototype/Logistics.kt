@@ -173,11 +173,15 @@ data class LogisticsConfig(val logistics: Logistics, val spaceAge: Boolean = tru
 
     /**
      * The highest belt stacking level; belt capacity research raises it to [BeltTier.MAX_STACK].
+     * This is the research cap, not the stack a belt actually carries: only a stack inserter or a
+     * direct-output machine builds stacks (`LogisticsCalculator.beltStackFor`).
      */
     val beltStackMax = if (spaceAge) BeltTier.MAX_STACK else 1
 
     /**
-     * The belt stacking level for [value], clamped to the range the selected [inserter] supports.
+     * The requested belt stacking level for [value], clamped to the range the selected [inserter]
+     * supports. A fast or bulk inserter can request a level above one, but a belt it loads stays
+     * unstacked; only a stack inserter or a direct-output machine realizes the level.
      */
     fun beltStack(value: String?, inserter: InserterTier) =
         (value?.toIntOrNull() ?: 1).coerceIn(beltStackMin(inserter), beltStackMax)

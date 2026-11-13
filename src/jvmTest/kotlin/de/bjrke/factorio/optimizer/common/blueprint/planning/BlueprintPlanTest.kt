@@ -40,6 +40,7 @@ import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -407,6 +408,81 @@ class BlueprintPlanTest {
                 assertEquals(
                     3 * cable.inputPerMachine(copperPlate),
                     planned.sources.single { it.material == copperPlate }.rate,
+                    TOLERANCE,
+                )
+            },
+        )
+    }
+
+    @Test
+    fun aNonStackingInserterCannotUseTheBeltStackForItsProductLane() {
+        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 0.2)
+        val result = result(copperCable, copperCableRecipe, listOf(cable))
+
+        // a stack inserter fills the lane with four items per slot, so 20/s fits
+        val stackInserter =
+            calculator(
+                LogisticsCalculatorSelection(
+                    inserter = InserterTier.STACK_INSERTER,
+                    beltStack = 4,
+                ),
+            )
+        // a fast inserter places single items, so the same lane still carries only 15/s
+        val fastInserter = calculator(LogisticsCalculatorSelection(beltStack = 4))
+
+        assertAll(
+            { assertEquals(20.0, testBlueprintPlan(result, stackInserter, 20.0).scale, TOLERANCE) },
+            { assertEquals(15.0, testBlueprintPlan(result, fastInserter, 20.0).scale, TOLERANCE) },
+        )
+    }
+
+    @Test
+    fun aDirectOutputMachineUsesItsOwnBeltStackingNotTheInserters() {
+        val highOutputMining =
+            Recipe(
+                name = "high-output-mining",
+                ingredients = emptyMap(),
+                result = mapOf(ironOre to 10.0),
+                time = 1.0,
+                categories = setOf(Category.MINING_BASIC_SOLID),
+            )
+        // 5/s per electric mining drill, so 0.2 machines per 1/s
+        val electric = production(highOutputMining, ironOre, Factory.ELECTRIC_MINING_DRILL, 0.2)
+        // 25/s per big mining drill, so 0.04 machines per 1/s
+        val big = production(highOutputMining, ironOre, Factory.BIG_MINING_DRILL, 0.04)
+        val stackInserter =
+            calculator(
+                LogisticsCalculatorSelection(
+                    inserter = InserterTier.STACK_INSERTER,
+                    beltStack = 4,
+                ),
+            )
+
+        assertAll(
+            // the electric drill places single items, so the inserter's stack does not raise its
+            // lane
+            {
+                assertEquals(
+                    15.0,
+                    testBlueprintPlan(
+                            result(ironOre, highOutputMining, listOf(electric)),
+                            stackInserter,
+                            20.0,
+                        )
+                        .scale,
+                    TOLERANCE,
+                )
+            },
+            // the big mining drill stacks its own output, so the requested belt stack applies
+            {
+                assertEquals(
+                    20.0,
+                    testBlueprintPlan(
+                            result(ironOre, highOutputMining, listOf(big)),
+                            stackInserter,
+                            20.0,
+                        )
+                        .scale,
                     TOLERANCE,
                 )
             },

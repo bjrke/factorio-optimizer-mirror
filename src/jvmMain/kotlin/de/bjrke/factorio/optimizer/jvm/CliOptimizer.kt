@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.layoutAscii
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
@@ -259,7 +260,8 @@ private fun printListing(
         // the big mining drill and the recycler drop their product straight onto the belt
         val directOutput = isOutput && factory.outputsDirectly
         val outputStacks = if (directOutput) factory.stacksOnBelt else logistics.rates.stacksOnBelt
-        val stack = if (isOutput && !outputStacks) 1 else logistics.beltStack
+        val stack =
+            if (isOutput) logistics.beltStackFor(outputStacks) else logistics.inserterBeltStack
         val belts = "${superRound(logistics.beltCount(rate, stack))} belts"
         return if (directOutput) belts
         else "$belts + ${superRound(logistics.inserterCount(rate, ontoBelt = isOutput))} inserters"

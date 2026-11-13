@@ -5,7 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.band.directFeed
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
@@ -34,12 +34,14 @@ private const val MAX_CAPACITY_STEPS = 6
  * and smelting recipes are built. Each recipe is built with exactly the machine count the optimizer
  * sized for the requested rate.
  *
- * A solid row's product belt fills one lane only, so no belt can deliver more than
- * [LogisticsCalculator.oneLaneCapacity]. When a delivered rate exceeds it, the plan first forces
- * the material's producer and consumer into one direct-feed band; a material that cannot be
- * direct-fed (the target, or a shared product) makes the whole plan shrink instead, because
- * thinning one row would starve its consumers. [BlueprintPlan.scale] then holds the drawn scale and
- * [BlueprintPlan.label] reports how many copies reach the requested rate.
+ * A solid row's product belt fills one lane only, so no belt can deliver more than one lane's
+ * capacity. A belt is stacked only when its producer stacks it (a stack inserter, or a
+ * direct-output machine such as the big mining drill); a non-stacking inserter leaves its output
+ * unstacked, so the belt capacity research level cannot raise the limit. When a delivered rate
+ * exceeds its lane, the plan first forces the material's producer and consumer into one direct-feed
+ * band; a material that cannot be direct-fed (the target, or a shared product) makes the whole plan
+ * shrink instead, because thinning one row would starve its consumers. [BlueprintPlan.scale] then
+ * holds the drawn scale and [BlueprintPlan.label] reports how many copies reach the requested rate.
  *
  * The rate checked here is the rate the plan must deliver — the target's requested rate and each
  * intermediate's consumer demand — limited by what the built rows can make. A row that makes more
@@ -74,7 +76,6 @@ fun blueprintPlan(
                 "no buildable factory for ${result.target.name}",
             )
 
-    val lane = logistics.oneLaneCapacity()
     var effective = scale
     var forced = emptySet<Material>()
 
@@ -94,7 +95,7 @@ fun blueprintPlan(
         )
 
     repeat(MAX_CAPACITY_STEPS) {
-        val over = feed.overCapacityOutputs(lane)
+        val over = feed.overCapacityOutputs(logistics)
         if (over.isEmpty()) return planned()
 
         // direct feed first, but only a material with one consumer: a shared product cannot be
@@ -106,21 +107,50 @@ fun blueprintPlan(
         if (newForced.isNotEmpty()) {
             forced = forced + newForced
         } else {
-            effective = shrinkToLane(effective, over, lane)
+            effective = shrinkToLane(effective, over)
         }
         feed = directFeed(targetFactory, result.factories, logistics, effective, forced)
     }
     return planned()
 }
 
-/** The solid outputs whose delivered rate exceeds [laneCapacity] at the drawn scale. */
-private fun DirectFeed.overCapacityOutputs(laneCapacity: Double): Map<Material, Double> {
+/**
+ * The solid outputs whose delivered rate exceeds their producer's one-lane capacity at the drawn
+ * scale, mapped to the share of a lane they need. A direct-output machine stacks its own product,
+ * so its lane capacity follows the requested belt stack even when the selected inserter cannot
+ * stack; any other product is stacked only by a stacking inserter.
+ */
+private fun DirectFeed.overCapacityOutputs(
+    logistics: LogisticsCalculator,
+): Map<Material, Double> {
     val onBelt = rows.flatMapTo(mutableSetOf()) { row -> row.beltMaterials }
-    return beltRates.filter { (material, demand) ->
-        material in onBelt &&
-            demand > laneCapacity + CAPACITY_EPSILON &&
-            builtRate(material) > laneCapacity + CAPACITY_EPSILON
+    return buildMap {
+        for ((material, demand) in beltRates) {
+            if (material !in onBelt) continue
+            val capacity = laneCapacity(material, logistics)
+            if (
+                demand > capacity + CAPACITY_EPSILON &&
+                    builtRate(material) > capacity + CAPACITY_EPSILON
+            ) {
+                put(material, demand / capacity)
+            }
+        }
     }
+}
+
+/** The one-lane rate of [material]'s product belt, following its producer's stacking. */
+private fun DirectFeed.laneCapacity(
+    material: Material,
+    logistics: LogisticsCalculator,
+): Double {
+    val producer = rows.firstNotNullOfOrNull { row -> row.producerOf(material) }
+    val stacks =
+        if (producer != null && producer.factory.outputsDirectly) {
+            producer.factory.stacksOnBelt
+        } else {
+            logistics.rates.stacksOnBelt
+        }
+    return logistics.beltThroughput(logistics.beltStackFor(stacks)) / logistics.lanes
 }
 
 /**
@@ -142,16 +172,13 @@ private fun DirectFeed.consumers(material: Material) =
         .size
 
 /**
- * The scale at which the tightest over-capacity delivery just fits one lane. The demand is linear
- * in the scale, so one step is exact; the small step back below a limit that did not move covers a
- * rate that is only floating-point noise above the lane.
+ * The scale at which the tightest over-capacity delivery just fits one lane. [over] holds each
+ * material's needed share of a lane, so the demand is linear in the scale and one step is exact;
+ * the small step back below a limit that did not move covers a rate that is only floating-point
+ * noise above the lane.
  */
-private fun shrinkToLane(
-    scale: Double,
-    over: Map<Material, Double>,
-    laneCapacity: Double,
-): Double {
-    val limit = scale * laneCapacity / over.values.max()
+private fun shrinkToLane(scale: Double, over: Map<Material, Double>): Double {
+    val limit = scale / over.values.max()
     return if (limit < scale) limit else scale * (1.0 - CAPACITY_EPSILON)
 }
 

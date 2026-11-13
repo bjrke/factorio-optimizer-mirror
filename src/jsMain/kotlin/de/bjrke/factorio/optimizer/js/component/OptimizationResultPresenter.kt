@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.superRound
 import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
@@ -262,7 +263,8 @@ private fun ChildrenBuilder.pipeMarker() {
  * themselves, so such an output needs no inserter and always uses the belt stacking. The other
  * drills place single items, and the remaining outputs are loaded by the selected inserter, so belt
  * stacking only applies when that inserter can stack, and the output inserter count uses the slower
- * belt-limited placing rate.
+ * belt-limited placing rate. An input belt is loaded by the selected inserter too, so it is also
+ * unstacked unless that inserter stacks.
  */
 private fun ChildrenBuilder.materialLogistics(
     props: OptimizationResultPresenterProps,
@@ -281,7 +283,8 @@ private fun ChildrenBuilder.materialLogistics(
     val directOutput = isOutput && factory.outputsDirectly
     // a direct output is stacked by the machine itself, any other output by the selected inserter
     val outputStacks = if (directOutput) factory.stacksOnBelt else calculator.rates.stacksOnBelt
-    val stack = if (isOutput && !outputStacks) 1 else calculator.beltStack
+    val stack =
+        if (isOutput) calculator.beltStackFor(outputStacks) else calculator.inserterBeltStack
     logisticsInputIcon(
         props,
         calculator.belt.identifier,

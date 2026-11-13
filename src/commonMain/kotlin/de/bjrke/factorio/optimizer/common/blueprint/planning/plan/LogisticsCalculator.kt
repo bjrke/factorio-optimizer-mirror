@@ -63,6 +63,8 @@ class LogisticsCalculator(
     val selection: LogisticsCalculatorSelection = LogisticsCalculatorSelection(),
 ) {
     val inserterStack = selection.inserterStack
+
+    /** The requested belt stacking level (items per slot) from the URL or CLI. */
     val beltStack = selection.beltStack
     val lanes = selection.lanes
     val inserter = selection.inserter
@@ -87,6 +89,10 @@ class LogisticsCalculator(
             logistics.belts.getValue(belt.identifier).speed,
         )
     }
+
+    /** The items per belt slot a belt loaded by the selected inserter carries. */
+    val inserterBeltStack: Int
+        get() = beltStackFor(rates.stacksOnBelt)
 
     /** How far the selected belt tier may run underground, from its underground prototype. */
     val undergroundRange
@@ -133,3 +139,11 @@ class LogisticsCalculator(
 
     fun pumpCount(rate: Double) = rate / pumpThroughput()
 }
+
+/**
+ * The items per belt slot a belt carries when its source [stacks]: the requested
+ * [LogisticsCalculator.beltStack] for a stack inserter or a direct-output machine, otherwise a
+ * single item per slot. A fast or bulk inserter places single items, so a belt it loads cannot
+ * carry the requested stack even when the belt capacity research allows it.
+ */
+internal fun LogisticsCalculator.beltStackFor(stacks: Boolean) = if (stacks) beltStack else 1

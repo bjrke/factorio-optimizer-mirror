@@ -214,5 +214,10 @@ private fun groupMaterials(
     }
 }
 
-/** The one-lane rate of the selected belt: the most a material may carry when it shares a belt. */
-internal fun LogisticsCalculator.oneLaneCapacity(): Double = beltThroughput(beltStack) / lanes
+/**
+ * The one-lane rate of the selected belt loaded by the selected inserter: the most a material may
+ * carry when it shares a belt. A non-stacking inserter leaves the belt unstacked, so the belt
+ * capacity research level does not raise this limit for it.
+ */
+internal fun LogisticsCalculator.oneLaneCapacity(): Double =
+    beltThroughput(inserterBeltStack) / lanes

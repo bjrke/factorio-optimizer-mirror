@@ -174,18 +174,6 @@ choice.
 `--name=value` must be an exact identifier or a single code character, otherwise exit non-zero with
 a message. Add table-driven tests for every option.
 
-### Resolve belt stacking with a non-stacking inserter
-
-Fix the capacity model when `beltStack > 1` but the selected inserter cannot stack.
-
-`beltStackMax` is 4 in Space Age for every inserter and the UI offers it
-(`LogisticsSelector.kt:85-92`), while `beltThroughput(stack)` (`LogisticsCalculator.kt:105-111`) and
-`oneLaneCapacity()` assume stacked input lanes for the plan and the listing. `placingThroughput()`
-correctly ignores the stack for a fast/bulk inserter, so inputs and outputs of the same plan
-disagree. Either clamp `beltStack` to 1 unless the selected inserter stacks (or a direct-output
-machine does), or document the "pre-stacked input belt" assumption and stop offering >1. Pin both
-sides in a test; `OptimizationResultLogisticsTest` currently pins only the output side.
-
 ### Replace history on text-field edits
 
 Use `replace = true` in `changeUrl`'s `navigate` call (`index.kt:136-140`) for edits that come from

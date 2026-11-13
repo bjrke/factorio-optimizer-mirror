@@ -22,8 +22,10 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   `LaneLoad` (in `layout/entity`) is the belt's two lanes in its own left/right
   frame: both lanes for a plain input, one material per lane for a mix, and only the
   inserter lane for a product. A product belt therefore delivers at most one lane, so
-  `oneLaneCapacity()` bounds an output rate; `blueprintPlan` shrinks the scale rather
-  than laying out an overfilled product belt (`planning.md`). `beltFor` and `placeLanes` place the lane and its T
+  `blueprintPlan` bounds each output by its producer's lane capacity (the selected
+  inserter's `oneLaneCapacity()`, or the requested belt stack for a direct-output
+  machine) and shrinks the scale rather than laying out an overfilled product belt
+  (`planning.md`). `beltFor` and `placeLanes` place the lane and its T
   merge; the merge sits outside the pair of lane rows (far north above, near north
   below, near south above, far south below), at `LANE_MARGIN - EAST_MERGE_OFFSET`
   (three columns west of the row, so its turn clears a fluid lane on the turn row)

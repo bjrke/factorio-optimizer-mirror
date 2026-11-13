@@ -45,7 +45,10 @@ independent productions, but each value belongs to one row.
 A solid row's product belt carries **one lane** (`RowPlacer.productLoad` fills the lane away from
 the inserters). `DirectFeed.beltRates` therefore reports the rate each solid output must deliver at
 the drawn scale — the target's external rate plus every consumer outside a direct link — and
-`blueprintPlan` shrinks the whole plan when that rate exceeds `oneLaneCapacity()`. The rate is
+`blueprintPlan` shrinks the whole plan when that rate exceeds the producer's lane capacity. A
+direct-output machine stacks its own product, so its lane uses the requested belt stack even with a
+non-stacking inserter; any other product is stacked only by a stacking inserter, so the capacity
+research level does not raise its lane. The rate is
 limited by what the built rows can make: a row that cannot even reach the demand is underbuilt (for
 example by `MAX_COPIES`), not over capacity. Before shrinking, a material with exactly one consumer
 is forced into a direct-feed band: `maximalGroups` sorts `forcedMaterials` links ahead of the score
@@ -185,9 +188,17 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
   passes. Keep the `-EPS` form when touching `makeFeasible`, and check the optimizer
   suites (`OptimizerMachineTest`, the blueprint integration suites), not just the LP
   unit test.
+- **A non-stacking inserter leaves its belt unstacked.** `LogisticsCalculator.beltStack` is the
+  requested research level, but `inserterBeltStack` and `oneLaneCapacity()` use it only when the
+  selected inserter has `stacksOnBelt`; a fast or bulk inserter places single items. A direct-output
+  producer (the big mining drill or recycler) stacks its own product, so `BlueprintPlan` gives only
+  that producer's lane the requested stack. Do not apply the raw `beltStack` to a belt an inserter
+  loads, or the plan and the listing disagree (`bothSidesOnlyStackWithAStackingInserter`,
+  `aNonStackingInserterCannotUseTheBeltStackForItsProductLane`).
 - **A product belt carries one lane, and its capacity is judged by demand.** A row's
   `productLoad` fills only the lane away from its inserters, so the product belt can
-  deliver `oneLaneCapacity()`. `blueprintPlan` compares the **demand** (`beltRates`:
+  deliver one lane's capacity (the selected inserter's `oneLaneCapacity()`, or the
+  requested stack for a direct-output producer). `blueprintPlan` compares the **demand** (`beltRates`:
   target rate plus non-linked consumer rate), not `rowOutputs`: an overproducing machine
   is throttled by its belt, so whole-machine output above the lane is not a failure.
   A row that cannot even make the demand is underbuilt (for example by `MAX_COPIES`),

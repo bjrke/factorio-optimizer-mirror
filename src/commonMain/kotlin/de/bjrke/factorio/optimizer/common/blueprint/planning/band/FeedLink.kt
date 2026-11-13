@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import kotlin.math.max
 
@@ -50,13 +51,19 @@ internal data class FeedLink(
         val producerAmount = producer.production.amount * ctx.scale
         val consumerAmount = consumer.production.amount * ctx.scale
 
+        // a direct-output producer stacks its own belt; any other producer is loaded by the
+        // selected inserter
+        val producerFactory = producer.production.factory
+        val producerStacks =
+            if (producerFactory.outputsDirectly) producerFactory.stacksOnBelt
+            else ctx.logistics.rates.stacksOnBelt
         val beltSavings =
             ctx.logistics.beltCount(
                 max(
                     producerAmount * outputPerMachine,
                     consumerAmount * inputPerMachine,
                 ),
-                ctx.logistics.beltStack,
+                ctx.logistics.beltStackFor(producerStacks),
             )
         val beltRequirement = ctx.bandBeltRows(listOf(this))
 

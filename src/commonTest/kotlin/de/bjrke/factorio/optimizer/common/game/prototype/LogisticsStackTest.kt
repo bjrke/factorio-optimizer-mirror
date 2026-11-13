@@ -75,6 +75,23 @@ class LogisticsStackTest {
     }
 
     @Test
+    fun onlyAStackingInserterLoadsAStackedBelt() =
+        assertTableOf(
+            // the requested level only applies to a belt the selected inserter can stack
+            InserterTier.FAST_INSERTER to 1,
+            InserterTier.BULK_INSERTER to 1,
+            InserterTier.STACK_INSERTER to 4,
+        ) { (inserter, expected) ->
+            assertEquals(
+                expected,
+                calculator(
+                        LogisticsCalculatorSelection(inserter = inserter, beltStack = 4),
+                    )
+                    .inserterBeltStack,
+            )
+        }
+
+    @Test
     fun beltCountCanForceAnUnstackedBelt() {
         val calculator =
             calculator(

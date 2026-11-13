@@ -33,7 +33,8 @@ availability.
 
 **Decision.** A row's product belt fills one lane (`RowPlacer.productLoad`), so `blueprintPlan`
 compares each solid delivery (`DirectFeed.beltRates`: the target's requested rate plus its
-non-linked consumers' demand) against `LogisticsCalculator.oneLaneCapacity()`. A material with one
+non-linked consumers' demand) against the producer's one-lane capacity (`oneLaneCapacity()` for an
+inserter-loaded belt, the requested stack for a direct-output machine). A material with one
 consumer is forced into a direct-feed band first; the target and shared products shrink the whole
 plan (`BlueprintPlan.scale`), and `planLabel` reports the covered share.
 

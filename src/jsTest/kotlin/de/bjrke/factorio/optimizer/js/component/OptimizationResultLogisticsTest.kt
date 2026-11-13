@@ -95,7 +95,7 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
     }
 
     @Test
-    fun otherOutputsOnlyStackWithAStackingInserter() {
+    fun bothSidesOnlyStackWithAStackingInserter() {
         val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
         val rendered =
             renderResult(
@@ -116,8 +116,8 @@ class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
         val inputUnstacked = beltInput(0)
         val outputUnstacked = beltInput(1)
 
-        // inputs always use the stacked belt; a non-stacking inserter leaves the output unstacked
-        assertEquals(inputStacked, inputUnstacked, 0.01)
+        // the fast inserter loads both the input and the output belt one item at a time
+        assertEquals(inputUnstacked, inputStacked * 4, 0.01)
         assertEquals(outputUnstacked, outputStacked * 4, 0.01)
     }
 }
