@@ -8,16 +8,27 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Extraction recipes representing raw resources taken from the map. The solid/fluid resources and
  * the offshore pump fluids are derived from the `data.raw` dump (`resource.minable` and the tiles
- * that carry a `fluid`); only the two special extraction mechanics that have no prototype recipe
- * are hardcoded below (harvesting trees and collecting asteroid chunks).
+ * that carry a `fluid`); the special extraction mechanics that have no prototype recipe are
+ * hardcoded below (harvesting fruit and trees, collecting asteroid chunks). Those only exist in
+ * Space Age and are gated on [isSpaceAgeDump] so the base game does not offer materials it cannot
+ * produce.
  */
 fun resourceRecipes(root: JsonObject) = buildList {
     minedResourceRecipes(root)
     offshorePumpFluids(root)
-    harvestedFruit()
-    harvestedWood(root)
-    asteroidCollectionRecipes()
+    if (root.isSpaceAgeDump()) {
+        harvestedFruit()
+        harvestedWood()
+        asteroidCollectionRecipes()
+    }
 }
+
+/**
+ * Only the Space Age dump ships the agricultural tower, the fruit trees and the asteroid collector;
+ * the `tree-seed` recipe marks that dump. The base game has no way to grow wood or fruit or to
+ * collect asteroid chunks, so their extraction recipes must not be offered there.
+ */
+private fun JsonObject.isSpaceAgeDump() = table("recipe").containsKey("tree-seed")
 
 /** `data.raw.resource`: the resource the drill/pumpjack extracts and how long a unit takes. */
 private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {
@@ -100,21 +111,18 @@ private fun MutableList<Recipe>.harvestedFruit() {
 
 /**
  * On Nauvis the agricultural tower plants tree seeds and harvests the grown trees for wood. A tree
- * takes 10 minutes to reach full maturity and yields the 4 wood a hand-mined tree gives. Only Space
- * Age ships the tower, marked by the `tree-seed` recipe being present in the dump; the base game
- * has no way to produce wood, so it must not be offered as producible there.
+ * takes 10 minutes to reach full maturity and yields the 4 wood a hand-mined tree gives.
  */
-private fun MutableList<Recipe>.harvestedWood(root: JsonObject) {
-    if (root.table("recipe").containsKey("tree-seed"))
-        add(
-            Recipe(
-                name = "wood",
-                ingredients = emptyMap(),
-                result = mapOf(Material("wood") to 4.0),
-                time = 600.0,
-                categories = setOf(Category.HARVESTING),
-            ),
-        )
+private fun MutableList<Recipe>.harvestedWood() {
+    add(
+        Recipe(
+            name = "wood",
+            ingredients = emptyMap(),
+            result = mapOf(Material("wood") to 4.0),
+            time = 600.0,
+            categories = setOf(Category.HARVESTING),
+        ),
+    )
 }
 
 /**

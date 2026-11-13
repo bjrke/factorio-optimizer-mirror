@@ -150,13 +150,27 @@ class ResourceRecipesTest {
         )
     }
 
-    /** The base game has no agricultural tower, so no wood recipe; `tree-seed` marks Space Age. */
+    /**
+     * The base game has no agricultural tower or asteroid collector; `tree-seed` marks Space Age.
+     */
     @Test
-    fun woodIsOnlyHarvestedWithTreeSeeding() {
+    fun spaceAgeExtractionRecipesAreGatedOnTheDump() {
         val baseDump = Json.parseToJsonElement("{}") as JsonObject
+        val baseNames = resourceRecipes(baseDump).map(Recipe::name)
+        val spaceAgeOnly = harvestedFruits + listOf("wood", "asteroid-collection")
         assertAll(
-            { assertEquals(emptyList(), resourceRecipes(baseDump).filter { it.name == "wood" }) },
-            { assertContains(recipes, "wood") },
+            {
+                assertEquals(
+                    emptyList(),
+                    baseNames.filter { it in spaceAgeOnly },
+                    "base game dump offers a Space Age extraction recipe",
+                )
+            },
+            {
+                assertTable(spaceAgeOnly) { name ->
+                    assertContains(recipes, name, "space age dump misses an extraction recipe")
+                }
+            },
         )
     }
 

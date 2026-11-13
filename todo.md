@@ -138,13 +138,6 @@ place no pole for the machine body (or strictly fewer poles), the inserters stay
 Each block below is self-contained: copy one as the task prompt. Line numbers refer to
 `main` @ `2cf115a`.
 
-### Gate the synthetic Space Age recipes
-
-Gate `harvestedFruit()` and `asteroidCollectionRecipes()` in `resourceRecipes.kt:14-20` on the Space
-Age dump, the way `harvestedWood` already checks for `tree-seed`. The base-game dump has no yumako,
-jellynut or asteroid chunks, but the material list advertises all six. Add a test that
-`RecipeLoader.forActiveMods(false).materials` contains none of them.
-
 ### Fix the fluid lane / far merge collision
 
 Fix the collision between a far mixed belt's U-turn and the fluid lane's inline source block.

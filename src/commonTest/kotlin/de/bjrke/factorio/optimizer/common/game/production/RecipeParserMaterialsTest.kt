@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.game.production
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertTable
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -120,4 +121,41 @@ class RecipeParserMaterialsTest {
             "wood",
             "wood must be producible by the agricultural tower",
         )
+
+    /**
+     * The base game has no agricultural tower and no asteroid collector, so its dump must not
+     * advertise the fruit, wood or asteroid chunks those mechanics yield as producible.
+     */
+    @Test
+    fun baseGamePrototypeDumpOmitsSpaceAgeExtractionMaterials() {
+        val extractionMaterials =
+            listOf(
+                "yumako",
+                "jellynut",
+                "metallic-asteroid-chunk",
+                "carbonic-asteroid-chunk",
+                "oxide-asteroid-chunk",
+                "promethium-asteroid-chunk",
+            )
+        val baseNames = RecipeLoader.forActiveMods(false).materials.map(Material::name)
+        val spaceAgeNames = RecipeLoader.forActiveMods().materials.map(Material::name)
+        assertAll(
+            {
+                assertEquals(
+                    emptyList(),
+                    baseNames.filter { it in extractionMaterials },
+                    "base game lists a Space Age extraction material",
+                )
+            },
+            {
+                assertTable(extractionMaterials) { name ->
+                    assertContains(
+                        spaceAgeNames,
+                        name,
+                        "space age dump misses an extraction material",
+                    )
+                }
+            },
+        )
+    }
 }
