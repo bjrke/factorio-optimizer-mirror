@@ -28,11 +28,12 @@ private data class RunTile(
 fun assertUndergroundRunsAreStretched(
     entities: List<BlueprintEntity>,
     materials: Map<Coordinate, Material>,
-) = assertRunsStretched(entities.map { it.runTile(materials) })
+    range: Int,
+) = assertRunsStretched(entities.map { it.runTile(materials) }, range)
 
 /** Asserts on the placed entities of a layout dump, which carry their own material. */
-fun assertUndergroundRunsAreStretched(entities: List<LayoutEntity>) =
-    assertRunsStretched(entities.map { it.runTile() })
+fun assertUndergroundRunsAreStretched(entities: List<LayoutEntity>, range: Int) =
+    assertRunsStretched(entities.map { it.runTile() }, range)
 
 private fun BlueprintEntity.runTile(materials: Map<Coordinate, Material>) =
     RunTile(name, area, direction, type, materials[area.topLeft])
@@ -50,14 +51,14 @@ private fun LayoutEntity.runTile() =
  * A run shorter than the belt tier's reach must not still have a belt of its own material to
  * swallow on either end: the stretcher grows it as far as the straight run allows.
  */
-private fun assertRunsStretched(tiles: List<RunTile>) {
+private fun assertRunsStretched(tiles: List<RunTile>, range: Int) {
     val byTile = tiles.associateBy { it.area.topLeft }
     val protected = tiles.inserterTiles()
     val inputs = tiles.filter { it.type == Io.INPUT && it.name.endsWith("underground-belt") }
     val problems =
         inputs
             .filterNot { tiles.isImportConnector(it) }
-            .flatMap { runProblems(it, byTile, protected) }
+            .flatMap { runProblems(it, byTile, protected, range) }
     assertEquals(emptyList(), problems.take(5))
 }
 
@@ -77,9 +78,10 @@ private fun runProblems(
     input: RunTile,
     byTile: Map<Coordinate, RunTile>,
     protected: Set<Coordinate>,
+    range: Int,
 ): List<String> {
     val direction = input.direction
-    val limit = undergroundRange(input.name)
+    val limit = range
     val output = if (direction == null) null else partner(input, byTile, direction.step, limit)
     return if (direction == null || output == null || output.first >= limit) emptyList()
     else
@@ -171,11 +173,3 @@ private fun List<RunTile>.isImportConnector(entity: RunTile): Boolean {
 
 private fun String.isConnectorFurniture() =
     this == "constant-combinator" || endsWith("chest") || endsWith("inserter") || endsWith("loader")
-
-private fun undergroundRange(name: String) =
-    when {
-        name.contains("turbo") -> 11
-        name.contains("express") -> 9
-        name.contains("fast") -> 7
-        else -> 5
-    }

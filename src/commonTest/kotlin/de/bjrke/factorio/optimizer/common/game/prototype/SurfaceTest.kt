@@ -76,6 +76,55 @@ class SurfaceTest {
     }
 
     @Test
+    fun suppliedPropertyValuesOverrideTheSurface() {
+        val stillOneThousand = listOf(pressure(1000, 1000))
+        assertAll(
+            {
+                assertTrue(
+                    Surface.FULGORA.accepts(
+                        stillOneThousand,
+                        mapOf(SurfaceProperty.PRESSURE to 1000),
+                    ),
+                )
+            },
+            {
+                assertFalse(
+                    Surface.FULGORA.accepts(
+                        stillOneThousand,
+                        mapOf(SurfaceProperty.PRESSURE to 800),
+                    ),
+                )
+            },
+        )
+    }
+
+    @Test
+    fun forSurfaceUsesTheParsedProperties() {
+        val nauvisOnly =
+            copperPlateSmeltingRecipe.copy(
+                name = "nauvis-only",
+                surfaceConditions = listOf(pressure(1000, 1000)),
+            )
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes = listOf(nauvisOnly),
+                surfaceProperties =
+                    mapOf(Surface.FULGORA to mapOf(SurfaceProperty.PRESSURE to 800)),
+            )
+
+        assertAll(
+            {
+                assertEquals(
+                    listOf("nauvis-only"),
+                    parsed.forSurface(Surface.NAUVIS).recipes.map { it.name },
+                )
+            },
+            { assertEquals(emptyList(), parsed.forSurface(Surface.FULGORA).recipes) },
+        )
+    }
+
+    @Test
     fun subgroupSelectsPlanet() =
         assertTableOf(
             Triple(Surface.VULCANUS, Subgroup("vulcanus-processes"), true),

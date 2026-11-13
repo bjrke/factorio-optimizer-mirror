@@ -558,7 +558,12 @@ class BlueprintFluidLayoutTest {
         val layout = Layout(fluidPlan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertUndergroundRunsAreStretched(layout.entities) },
+            {
+                assertUndergroundRunsAreStretched(
+                    layout.entities,
+                    layout.logistics.undergroundRange,
+                )
+            },
         )
     }
 }

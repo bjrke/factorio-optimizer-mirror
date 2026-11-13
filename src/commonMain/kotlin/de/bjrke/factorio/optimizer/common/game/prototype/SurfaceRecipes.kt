@@ -8,8 +8,9 @@ package de.bjrke.factorio.optimizer.common.game.prototype
  * surface.
  */
 fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
+    val properties = surfaceProperties[surface] ?: surface.properties
     val kept = recipes.filter {
-        surface.accepts(it.surfaceConditions) &&
+        surface.accepts(it.surfaceConditions, properties) &&
             // the planet-labeled subgroup is only a fallback for recipes without explicit
             // surface conditions: some of those fit several surfaces, e.g. the
             // quantum-processor (low pressure) is also assembled on space platforms

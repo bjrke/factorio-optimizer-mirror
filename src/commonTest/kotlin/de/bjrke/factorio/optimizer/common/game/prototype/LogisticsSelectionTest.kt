@@ -17,7 +17,7 @@ class LogisticsSelectionTest {
     fun prototypesMissingFromTheDumpAreNotUsable() {
         val partial =
             Logistics(
-                belts = mapOf("transport-belt" to 0.03125),
+                belts = mapOf("transport-belt" to BeltStats(speed = 0.03125, undergroundRange = 5)),
                 inserters =
                     mapOf(
                         "inserter" to

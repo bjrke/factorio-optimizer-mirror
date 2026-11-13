@@ -3,22 +3,42 @@ package de.bjrke.factorio.optimizer.common.game.prototype
 import de.bjrke.factorio.optimizer.common.core.model.Material
 
 /**
- * Belt and inserter throughput prototypes parsed from the dump. This is the [MachineStats]
+ * Belt, inserter, pole and pump prototypes parsed from the dump. This is the [MachineStats]
  * counterpart for logistics; there are no fallbacks, a prototype absent from the dump is simply not
  * usable.
  *
- * [belts] maps a belt prototype name to its speed in tiles per tick, [inserters] maps an inserter
- * name to its stats, [pumpRate] is the fastest pump's throughput in fluid per second and [fluids]
- * holds the materials that are fluids (which move in pipes, not on belts).
+ * [belts] maps a belt prototype name to its stats, [inserters] maps an inserter name to its stats,
+ * [poles] maps an electric pole name to its area and reach, [pumpRate] is the fastest pump's
+ * throughput in fluid per second and [fluids] holds the materials that are fluids (which move in
+ * pipes, not on belts).
  */
 data class Logistics(
-    val belts: Map<String, Double> = emptyMap(),
+    val belts: Map<String, BeltStats> = emptyMap(),
     val inserters: Map<String, InserterStats> = emptyMap(),
+    val poles: Map<String, PoleStats> = emptyMap(),
     val pumpRate: Double = 1200.0,
     val fluids: Set<Material> = emptySet(),
     /** The default temperature of each fluid, used to configure an infinity pipe source. */
     val fluidTemperatures: Map<Material, Int> = emptyMap(),
 )
+
+/**
+ * The throughput and reach of one belt prototype.
+ *
+ * [speed] is in tiles per tick. [undergroundRange] is the `max_distance` of the underground belt
+ * the prototype's `related_underground_belt` names, so a modded belt's tunnels are as long as its
+ * own underground counterpart allows instead of a guessed tier.
+ */
+data class BeltStats(val speed: Double, val undergroundRange: Int)
+
+/**
+ * The area and wire reach of one electric pole prototype.
+ *
+ * [supplyRadius] is how many tiles the pole powers in each direction: `supply_area_distance` is the
+ * half-width of the covered square (2.5 for the small pole, whose area is 5x5), so it is rounded
+ * down to whole tiles. [wireReach] is `maximum_wire_distance` in tiles.
+ */
+data class PoleStats(val supplyRadius: Int, val wireReach: Double)
 
 /**
  * Throughput-relevant stats of one inserter prototype.

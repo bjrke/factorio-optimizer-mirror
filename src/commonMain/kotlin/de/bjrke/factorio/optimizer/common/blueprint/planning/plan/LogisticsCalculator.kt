@@ -84,9 +84,17 @@ class LogisticsCalculator(
             inserterStats,
             handSize,
             beltStack,
-            logistics.belts.getValue(belt.identifier),
+            logistics.belts.getValue(belt.identifier).speed,
         )
     }
+
+    /** How far the selected belt tier may run underground, from its underground prototype. */
+    val undergroundRange
+        get() = logistics.belts.getValue(belt.identifier).undergroundRange
+
+    /** The supply area and wire reach of every electric pole prototype, keyed by its name. */
+    val poles
+        get() = logistics.poles
 
     /** Fluids move through pipes and pumps, not on belts. */
     fun isFluid(material: Material) = material in logistics.fluids
@@ -96,7 +104,7 @@ class LogisticsCalculator(
 
     /** Items per second a single belt carries over [lanes] lanes with [stack] items per slot. */
     fun beltThroughput(stack: Int) =
-        logistics.belts.getValue(belt.identifier) *
+        logistics.belts.getValue(belt.identifier).speed *
             TICKS_PER_SECOND *
             BeltTier.ITEMS_PER_LANE *
             lanes *

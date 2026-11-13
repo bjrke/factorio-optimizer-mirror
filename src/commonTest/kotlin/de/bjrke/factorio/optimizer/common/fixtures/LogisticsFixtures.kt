@@ -2,20 +2,27 @@ package de.bjrke.factorio.optimizer.common.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.game.prototype.BeltStats
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 
 /** The prototype stats the real dump provides, plus the calculator the logistics suites build. */
 internal val testLogistics =
     Logistics(
         belts =
             mapOf(
-                "transport-belt" to 0.03125,
-                "fast-transport-belt" to 0.0625,
-                "express-transport-belt" to 0.09375,
-                "turbo-transport-belt" to 0.125,
+                "transport-belt" to BeltStats(speed = 0.03125, undergroundRange = 5),
+                "fast-transport-belt" to BeltStats(speed = 0.0625, undergroundRange = 7),
+                "express-transport-belt" to BeltStats(speed = 0.09375, undergroundRange = 9),
+                "turbo-transport-belt" to BeltStats(speed = 0.125, undergroundRange = 11),
+            ),
+        poles =
+            mapOf(
+                "small-electric-pole" to PoleStats(supplyRadius = 2, wireReach = 7.5),
+                "medium-electric-pole" to PoleStats(supplyRadius = 3, wireReach = 9.0),
             ),
         inserters =
             mapOf(

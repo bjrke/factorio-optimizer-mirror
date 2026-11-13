@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
 import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
+import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.sqrt
@@ -19,17 +20,22 @@ private const val MAX_POLE_CONNECT_ATTEMPTS = 40
 /**
  * Covers every powered entity with the configured [pole] and wires the poles into one network.
  * Poles stay east of [westBound], which keeps them out of the import extension; [PowerPole.NONE]
- * places nothing because a space platform powers its machines without poles.
+ * places nothing because a space platform powers its machines without poles. [stats] are the
+ * prototype's supply area and wire reach and are ignored for [PowerPole.NONE].
  */
 internal class PowerPlacer(
     private val board: LayoutBoard,
     private val westBound: Int,
     private val pole: PowerPole,
+    private val stats: PoleStats?,
 ) {
-    private val wireReachSq = pole.wireReach * pole.wireReach
+    private val supplyRadius = stats?.supplyRadius ?: 0
+    private val wireReach = stats?.wireReach ?: 0.0
+    private val wireReachSq = wireReach * wireReach
 
     fun place() {
         if (pole == PowerPole.NONE) return
+        requireNotNull(stats) { "${pole.identifier} has no electric-pole prototype" }
         placePoles()
         wirePoles()
     }
@@ -50,7 +56,7 @@ internal class PowerPlacer(
                 val spot = bestPoleSpot(area, covered, poles) ?: continue
                 poles += spot
                 board.placePole(spot)
-                covered.addAll(spot.area().grow(pole.supplyRadius))
+                covered.addAll(spot.area().grow(supplyRadius))
             }
         }
         connectPoles(poles)
@@ -63,14 +69,14 @@ internal class PowerPlacer(
         poles: MutableSet<Coordinate>,
     ): Coordinate? {
         val tilesWhichWouldCover =
-            tile.grow(pole.supplyRadius).filter { board.isFree(it) && it.x >= westBound }
+            tile.grow(supplyRadius).filter { board.isFree(it) && it.x >= westBound }
         val tilesInReachOfOtherPoles = tilesWhichWouldCover.filter { pos ->
             poles.any { pos.distanceSq(it) <= wireReachSq }
         }
         val possibleTiles = tilesInReachOfOtherPoles.ifEmpty { tilesWhichWouldCover }
 
         return possibleTiles.maxByOrNull {
-            it.area().grow(pole.supplyRadius).sumOf { other ->
+            it.area().grow(supplyRadius).sumOf { other ->
                 when {
                     other in covered -> 0
                     board.entityAt(other)?.isPowered == true -> 2
@@ -130,7 +136,7 @@ internal class PowerPlacer(
     ): Boolean {
         var added = false
         val steps =
-            ceil(sqrt(bridge.distanceSq.toDouble()) / (pole.wireReach - 1)).toInt().coerceAtLeast(1)
+            ceil(sqrt(bridge.distanceSq.toDouble()) / (wireReach - 1)).toInt().coerceAtLeast(1)
         for (step in 1 until steps) {
             val fraction = step.toDouble() / steps
             val x = round(bridge.from.x + (bridge.to.x - bridge.from.x) * fraction).toInt()

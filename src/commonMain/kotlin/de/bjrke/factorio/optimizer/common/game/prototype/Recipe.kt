@@ -16,6 +16,12 @@ data class ParsedRecipe(
     val logistics: Logistics = Logistics(),
     /** The energy a burnable item releases, keyed by its material, derived from the dump. */
     val fuelValues: Map<Material, Double> = emptyMap(),
+    /**
+     * The physical properties of each surface, derived from the `surface-property` defaults and the
+     * per-planet (or space-platform) overrides in the dump. [Surface] carries curated fallbacks for
+     * synthetic tests that build a [ParsedRecipe] without a dump.
+     */
+    val surfaceProperties: Map<Surface, Map<SurfaceProperty, Int>> = emptyMap(),
     /** The surface these recipes were filtered for; selects surface-specific recipes. */
     val surface: Surface = Surface.NAUVIS,
 ) {

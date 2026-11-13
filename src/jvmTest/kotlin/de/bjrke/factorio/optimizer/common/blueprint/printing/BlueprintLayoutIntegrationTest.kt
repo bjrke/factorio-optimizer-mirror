@@ -71,7 +71,13 @@ class BlueprintLayoutIntegrationTest {
                 { assertTunnelEndsAreFed(entities) },
                 { assertSplittersOnlyFeedSurface(entities) },
                 { assertNoMergingBelts(entities, layout.beltMaterials, layout.beltLoads) },
-                { assertUndergroundRunsAreStretched(entities, layout.beltMaterials) },
+                {
+                    assertUndergroundRunsAreStretched(
+                        entities,
+                        layout.beltMaterials,
+                        layout.logistics.undergroundRange,
+                    )
+                },
                 { assertOneBeltSourcePerMaterial(layout.plan) },
             )
         }

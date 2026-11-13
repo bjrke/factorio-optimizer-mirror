@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.layout
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
-import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,13 +40,4 @@ class PowerPoleTest {
                 PowerPole.forSelection(surface, factories),
             )
         }
-
-    @Test
-    fun smallPolesSupplyAndReachLessThanMediumPoles() =
-        assertAll(
-            { assertEquals(2, PowerPole.SMALL_ELECTRIC_POLE.supplyRadius) },
-            { assertEquals(7.5, PowerPole.SMALL_ELECTRIC_POLE.wireReach) },
-            { assertEquals(3, PowerPole.MEDIUM_ELECTRIC_POLE.supplyRadius) },
-            { assertEquals(9.0, PowerPole.MEDIUM_ELECTRIC_POLE.wireReach) },
-        )
 }

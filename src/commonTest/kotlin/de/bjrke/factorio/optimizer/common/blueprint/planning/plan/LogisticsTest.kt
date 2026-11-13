@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.BeltCase
 import de.bjrke.factorio.optimizer.common.fixtures.beltCountAtOwnStack
 import de.bjrke.factorio.optimizer.common.fixtures.beltThroughputAtOwnStack
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.game.prototype.BeltStats
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
@@ -217,7 +218,7 @@ class LogisticsTest {
     fun throughputComesFromTheDump() {
         val logistics =
             Logistics(
-                belts = mapOf("transport-belt" to 0.05),
+                belts = mapOf("transport-belt" to BeltStats(speed = 0.05, undergroundRange = 5)),
                 inserters =
                     mapOf(
                         "inserter" to

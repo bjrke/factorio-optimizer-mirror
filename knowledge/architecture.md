@@ -23,9 +23,11 @@ CLI (JVM) from one shared core.
     `MathUtils` (`countVectors`, `greatestCommonDivisor`).
   - `game/prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
-    `Logistics.kt` (belt/inserter/pump stats and `LogisticsConfig`),
-    `Surface.kt` (`Surface`, `SurfaceProperty/Condition`, the surface rules as
-    `Surface.accepts*` extensions), `SurfaceRecipes.kt` (`ParsedRecipe.forSurface`),
+    `Logistics.kt` (`BeltStats`/`InserterStats`/`PoleStats`, `Logistics` and
+    `LogisticsConfig`), `Surface.kt` (`Surface`, `SurfaceProperty/Condition`, the
+    surface rules as `Surface.accepts*` extensions; the enum values are the
+    curated fallbacks the dump overrides), `SurfaceRecipes.kt`
+    (`ParsedRecipe.forSurface`),
     `RecipeUsage.kt` (the cached transitive usage counts, the least-used-first
     order and the intermediate-limit constants) and `RecipePolicy.kt` (the
     optimizer's explicit recipe exclusions, `unplannedRecipes`, and the one
@@ -41,9 +43,12 @@ CLI (JVM) from one shared core.
     `forSurface(spaceAge, surface)` view), `prototypeDump.kt` (the
     `loadPrototypeDump` `expect` declaration), `RecipePrototype.kt`,
     `JsonFields.kt`, `resourceRecipes.kt`, `customRecipes.kt`
-    (`ALL_SCIENCE_PACKS`), `spoilageRecipes.kt`, `utils.kt` (normalization) and
-    `prototypeStats.kt` (`machineStats`/`logisticsStats`, including the machine
-    energy use); `recipeParser.kt` also reads the `fuelValues` of burnable items.
+    (`ALL_SCIENCE_PACKS` from `lab.inputs`, plus the base game's rocket-silo
+    launch), `spoilageRecipes.kt`, `utils.kt` (normalization) and
+    `prototypeStats.kt` (`machineStats`/`logisticsStats`: machine energy use,
+    belt speed and underground reach, inserter and pole stats); `recipeParser.kt`
+    also reads the `fuelValues` of burnable items and the per-surface
+    `surfaceProperties`.
   - `optimize` — the optimizer: `Optimizer.kt` and `MachineCatalog.kt`
     (machine choice and rates) and `LinearProgram.kt`. It takes a `ParsedRecipe`
     in and returns an `OptimizationResult` (from `model`); it never loads the
@@ -71,8 +76,9 @@ CLI (JVM) from one shared core.
       primitives), `LayoutPlacement` (single-tile entity-kind helpers),
       `LayoutTunnels` (the surface/end/tunnel placement and the tunnel-link
       plan), `LayoutUnderground`, `Tunnels`, `LayoutIndex` (the read-only tile
-      index), `BeltEnd` (how a belt is terminated), `PowerPole` (the pole's
-      supply radius and wire reach, and which pole a selection uses). `entity` holds the entity
+      index), `BeltEnd` (how a belt is terminated), `PowerPole` (which pole a
+      selection uses; its supply radius and wire reach come from the dump's
+      `electric-pole` prototype through `Logistics.poles`). `entity` holds the entity
       hierarchy (`LayoutEntity`, `LayoutTransportEntities`,
       `LayoutEntityStations`, `LayoutSettings`); `validation` holds the invariant
       checks (`LayoutValidation*.kt`). This tree must never mention the
@@ -550,9 +556,14 @@ baselines, so every finding fails.
   dumps from `factorio --dump-data` for the base game and base + Space Age DLC.
   Regenerate with `./gradlew dumpPrototypes` (needs a Factorio Steam install).
   Because the game resolves the whole data stage, the dump already contains every
-  `data-updates.lua`/`data-final-fixes.lua` change; the parser reads only the
-  prototype types it needs. `RecipeLoader` (`game/production/`) caches parsed results; the UI and
-  CLI use the base dump, or the Space Age dump when Space Age is active.
+  `data-updates.lua`/`data-final-fixes.lua` change; the sanitizer in
+  `buildSrc/` keeps only the prototype categories and fields the parser reads
+  (recipes, machines, belts and their underground reach, inserters, poles, pumps,
+  fluids, labs, surface properties, ...). The raw dumps stay in
+  `build/prototype-dump/`, so after changing the sanitizer `./gradlew
+  sanitizePrototypes` regenerates the resources without Factorio. `RecipeLoader`
+  (`game/production/`) caches parsed results; the UI and CLI use the base dump,
+  or the Space Age dump when Space Age is active.
 - `src/jsMain/resources/icons/*.png` are 64x64 icons cropped from the 120x64
   source sheets of a Linux Factorio Steam install. `./gradlew updateImages` copies
   and optimizes only icons whose top-left 64x64 region changed by more than

@@ -135,7 +135,8 @@ private val prototypeFields =
                 "vector_to_place_result",
                 "mining_area",
             ),
-        "transport-belt" to setOf("type", "name", "speed"),
+        "transport-belt" to setOf("type", "name", "speed", "related_underground_belt"),
+        "underground-belt" to setOf("type", "name", "max_distance"),
         "inserter" to
             setOf(
                 "type",
@@ -147,6 +148,17 @@ private val prototypeFields =
             ),
         "pump" to setOf("type", "name", "pumping_speed"),
         "offshore-pump" to setOf("type", "name", "pumping_speed"),
+        "electric-pole" to
+            setOf(
+                "type",
+                "name",
+                "supply_area_distance",
+                "maximum_wire_distance",
+            ),
+        "lab" to setOf("type", "name", "inputs"),
+        "planet" to setOf("type", "name", "surface_properties"),
+        "surface" to setOf("type", "name", "surface_properties"),
+        "surface-property" to setOf("type", "name", "default_value"),
         "fluid" to
             setOf(
                 "type",

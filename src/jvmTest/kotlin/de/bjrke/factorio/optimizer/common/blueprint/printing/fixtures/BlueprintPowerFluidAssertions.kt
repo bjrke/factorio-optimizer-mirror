@@ -17,6 +17,7 @@ import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.core.model.west
 import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.core.util.drain
+import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 import de.bjrke.test.assertAll
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -28,14 +29,15 @@ private const val PIPE_REACH = 10
 fun assertPolesCoverAndConnect(
     entities: List<BlueprintEntity>,
     pole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
+    stats: PoleStats = logistics.poles.getValue(pole.identifier),
 ) {
     val poles =
         entities.asSequence().filter { it.name == pole.identifier }.map { it.area.topLeft }.toList()
-    val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(pole.supplyRadius) }
+    val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(stats.supplyRadius) }
     val unpowered = entities.filter {
         it.isPowered() && (it.area intersect coveredByPoles).isEmpty()
     }
-    val reachSq = pole.wireReach * pole.wireReach
+    val reachSq = stats.wireReach * stats.wireReach
     val components =
         connectedComponents(poles) { center -> poles.filter { it.distanceSq(center) <= reachSq } }
 

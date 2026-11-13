@@ -70,9 +70,15 @@ fun Surface.accepts(category: Category) =
 /** Extraction recipes (mining, pumping) only exist where their resource spawns. */
 fun Surface.acceptsResource(name: String) = resourceSurfaces[name]?.contains(this) ?: true
 
-fun Surface.accepts(conditions: List<SurfaceCondition>) = conditions.all {
-    it.matches(properties[it.property])
-}
+/**
+ * Whether a recipe whose [conditions] these are can run on this surface, using the surface's
+ * [values]. The default reads the curated [Surface.properties]; the parsed dump overrides them (see
+ * `ParsedRecipe.surfaceProperties`).
+ */
+fun Surface.accepts(
+    conditions: List<SurfaceCondition>,
+    values: Map<SurfaceProperty, Int> = properties,
+) = conditions.all { it.matches(values[it.property]) }
 
 /**
  * Several recipes are not gated by [SurfaceCondition]s but by a planet-labelled subgroup (their
@@ -95,33 +101,76 @@ fun subgroupSurface(subgroup: String) = subgroupSurfaces[subgroup]
 /**
  * A surface (planet or space platform) a factory can be built on. Recipe availability is expressed
  * as [SurfaceCondition]s against the physical properties listed in [properties].
+ *
+ * [properties] are curated fallbacks for a dump without `surface-property`/`planet` data (synthetic
+ * tests); the parsed dump supplies the real values per surface. [prototype] is the `data.raw`
+ * prototype the values come from: the planet of that name, or the space platform's `surface`.
  */
 enum class Surface(
     val code: Char?,
     val identifier: String,
+    val prototype: String,
     val properties: Map<SurfaceProperty, Int>,
 ) {
     // Nauvis is the default surface, so it carries no code
-    NAUVIS(null, "nauvis", mapOf(SurfaceProperty.PRESSURE to 1000, SurfaceProperty.GRAVITY to 10)),
+    NAUVIS(
+        null,
+        "nauvis",
+        "nauvis",
+        mapOf(
+            SurfaceProperty.PRESSURE to 1000,
+            SurfaceProperty.GRAVITY to 10,
+            SurfaceProperty.MAGNETIC_FIELD to 90,
+        ),
+    ),
     VULCANUS(
         'v',
         "vulcanus",
-        mapOf(SurfaceProperty.PRESSURE to 4000, SurfaceProperty.GRAVITY to 40),
+        "vulcanus",
+        mapOf(
+            SurfaceProperty.PRESSURE to 4000,
+            SurfaceProperty.GRAVITY to 40,
+            SurfaceProperty.MAGNETIC_FIELD to 25,
+        ),
     ),
-    GLEBA('g', "gleba", mapOf(SurfaceProperty.PRESSURE to 2000, SurfaceProperty.GRAVITY to 20)),
+    GLEBA(
+        'g',
+        "gleba",
+        "gleba",
+        mapOf(
+            SurfaceProperty.PRESSURE to 2000,
+            SurfaceProperty.GRAVITY to 20,
+            SurfaceProperty.MAGNETIC_FIELD to 25,
+        ),
+    ),
     FULGORA(
         'o',
         "fulgora",
+        "fulgora",
         mapOf(
-            SurfaceProperty.PRESSURE to 1000,
-            SurfaceProperty.GRAVITY to 15,
+            SurfaceProperty.PRESSURE to 800,
+            SurfaceProperty.GRAVITY to 8,
             SurfaceProperty.MAGNETIC_FIELD to 99,
         ),
     ),
-    AQUILO('a', "aquilo", mapOf(SurfaceProperty.PRESSURE to 300, SurfaceProperty.GRAVITY to 10)),
+    AQUILO(
+        'a',
+        "aquilo",
+        "aquilo",
+        mapOf(
+            SurfaceProperty.PRESSURE to 300,
+            SurfaceProperty.GRAVITY to 15,
+            SurfaceProperty.MAGNETIC_FIELD to 10,
+        ),
+    ),
     SPACE(
         'p',
         "space-platform-surface",
-        mapOf(SurfaceProperty.PRESSURE to 0, SurfaceProperty.GRAVITY to 0),
+        "space-platform",
+        mapOf(
+            SurfaceProperty.PRESSURE to 0,
+            SurfaceProperty.GRAVITY to 0,
+            SurfaceProperty.MAGNETIC_FIELD to 0,
+        ),
     ),
 }

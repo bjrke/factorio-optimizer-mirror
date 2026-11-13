@@ -42,16 +42,14 @@ internal class RowLayout(
                 longInserter = InserterTier.LONG_HANDED_INSERTER.identifier,
                 pole = powerPole.identifier,
             ),
-            undergroundRange =
-                when {
-                    logistics.belt.identifier.contains("turbo") -> 11
-                    logistics.belt.identifier.contains("express") -> 9
-                    logistics.belt.identifier.contains("fast") -> 7
-                    else -> 5
-                },
+            undergroundRange = logistics.undergroundRange,
             logistics::isFluid,
             logistics::fluidTemperature,
         )
+
+    /** The pole prototype's area and reach; [PowerPole.NONE] needs none. */
+    private val poleStats =
+        if (powerPole == PowerPole.NONE) null else logistics.poles.getValue(powerPole.identifier)
 
     /**
      * What the layout could not do: an input whose belt did not route, or a route that only exists
@@ -112,7 +110,7 @@ internal class RowLayout(
             compactionPass.compact()
             // the product connector goes last so compaction cannot drag it back over the routes
             deliveryRouter.placeTargetOutput()
-            PowerPlacer(board, imports.poleWestBound, powerPole).place()
+            PowerPlacer(board, imports.poleWestBound, powerPole, poleStats).place()
             // compaction accepts a corridor only when the whole layout validates, so an earlier
             // error silently turns the pass off; surface it instead of shipping a broken layout
             failures += validateLayout(board.placed.toList())

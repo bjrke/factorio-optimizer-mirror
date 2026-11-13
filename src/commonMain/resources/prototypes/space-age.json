@@ -27231,22 +27231,48 @@
         "transport-belt": {
             "type": "transport-belt",
             "name": "transport-belt",
+            "related_underground_belt": "underground-belt",
             "speed": 0.03125
         },
         "fast-transport-belt": {
             "type": "transport-belt",
             "name": "fast-transport-belt",
+            "related_underground_belt": "fast-underground-belt",
             "speed": 0.0625
         },
         "express-transport-belt": {
             "type": "transport-belt",
             "name": "express-transport-belt",
+            "related_underground_belt": "express-underground-belt",
             "speed": 0.09375
         },
         "turbo-transport-belt": {
             "type": "transport-belt",
             "name": "turbo-transport-belt",
+            "related_underground_belt": "turbo-underground-belt",
             "speed": 0.125
+        }
+    },
+    "underground-belt": {
+        "underground-belt": {
+            "type": "underground-belt",
+            "name": "underground-belt",
+            "max_distance": 5
+        },
+        "fast-underground-belt": {
+            "type": "underground-belt",
+            "name": "fast-underground-belt",
+            "max_distance": 7
+        },
+        "express-underground-belt": {
+            "type": "underground-belt",
+            "name": "express-underground-belt",
+            "max_distance": 9
+        },
+        "turbo-underground-belt": {
+            "type": "underground-belt",
+            "name": "turbo-underground-belt",
+            "max_distance": 11
         }
     },
     "inserter": {
@@ -27297,6 +27323,168 @@
             "type": "offshore-pump",
             "name": "offshore-pump",
             "pumping_speed": 20
+        }
+    },
+    "electric-pole": {
+        "small-electric-pole": {
+            "type": "electric-pole",
+            "name": "small-electric-pole",
+            "maximum_wire_distance": 7.5,
+            "supply_area_distance": 2.5
+        },
+        "big-electric-pole": {
+            "type": "electric-pole",
+            "name": "big-electric-pole",
+            "maximum_wire_distance": 32,
+            "supply_area_distance": 2
+        },
+        "medium-electric-pole": {
+            "type": "electric-pole",
+            "name": "medium-electric-pole",
+            "maximum_wire_distance": 9,
+            "supply_area_distance": 3.5
+        },
+        "substation": {
+            "type": "electric-pole",
+            "name": "substation",
+            "maximum_wire_distance": 18,
+            "supply_area_distance": 9
+        }
+    },
+    "lab": {
+        "lab": {
+            "type": "lab",
+            "name": "lab",
+            "inputs": [
+                "automation-science-pack",
+                "logistic-science-pack",
+                "military-science-pack",
+                "chemical-science-pack",
+                "production-science-pack",
+                "utility-science-pack",
+                "space-science-pack",
+                "metallurgic-science-pack",
+                "agricultural-science-pack",
+                "electromagnetic-science-pack",
+                "cryogenic-science-pack",
+                "promethium-science-pack"
+            ]
+        },
+        "biolab": {
+            "type": "lab",
+            "name": "biolab",
+            "inputs": [
+                "automation-science-pack",
+                "logistic-science-pack",
+                "military-science-pack",
+                "chemical-science-pack",
+                "production-science-pack",
+                "utility-science-pack",
+                "space-science-pack",
+                "metallurgic-science-pack",
+                "agricultural-science-pack",
+                "electromagnetic-science-pack",
+                "cryogenic-science-pack",
+                "promethium-science-pack"
+            ]
+        }
+    },
+    "planet": {
+        "nauvis": {
+            "type": "planet",
+            "name": "nauvis",
+            "surface_properties": {
+                "day-night-cycle": 25200
+            }
+        },
+        "vulcanus": {
+            "type": "planet",
+            "name": "vulcanus",
+            "surface_properties": {
+                "day-night-cycle": 5400,
+                "magnetic-field": 25,
+                "solar-power": 400,
+                "pressure": 4000,
+                "gravity": 40
+            }
+        },
+        "gleba": {
+            "type": "planet",
+            "name": "gleba",
+            "surface_properties": {
+                "day-night-cycle": 36000,
+                "magnetic-field": 25,
+                "solar-power": 50,
+                "pressure": 2000,
+                "gravity": 20
+            }
+        },
+        "fulgora": {
+            "type": "planet",
+            "name": "fulgora",
+            "surface_properties": {
+                "day-night-cycle": 10800,
+                "magnetic-field": 99,
+                "solar-power": 20,
+                "pressure": 800,
+                "gravity": 8
+            }
+        },
+        "aquilo": {
+            "type": "planet",
+            "name": "aquilo",
+            "surface_properties": {
+                "day-night-cycle": 72000,
+                "magnetic-field": 10,
+                "solar-power": 1,
+                "robot-energy-usage": 5,
+                "pressure": 300,
+                "gravity": 15
+            }
+        }
+    },
+    "surface": {
+        "space-platform": {
+            "type": "surface",
+            "name": "space-platform",
+            "surface_properties": {
+                "gravity": 0,
+                "pressure": 0,
+                "magnetic-field": 0,
+                "day-night-cycle": 0
+            }
+        }
+    },
+    "surface-property": {
+        "gravity": {
+            "type": "surface-property",
+            "name": "gravity",
+            "default_value": 10
+        },
+        "pressure": {
+            "type": "surface-property",
+            "name": "pressure",
+            "default_value": 1000
+        },
+        "magnetic-field": {
+            "type": "surface-property",
+            "name": "magnetic-field",
+            "default_value": 90
+        },
+        "robot-energy-usage": {
+            "type": "surface-property",
+            "name": "robot-energy-usage",
+            "default_value": 1
+        },
+        "solar-power": {
+            "type": "surface-property",
+            "name": "solar-power",
+            "default_value": 100
+        },
+        "day-night-cycle": {
+            "type": "surface-property",
+            "name": "day-night-cycle",
+            "default_value": 300
         }
     },
     "fluid": {

@@ -12,9 +12,7 @@ object RecipeLoader {
 
     /** Parses the base-game or Space-Age dump, depending on whether Space Age is active. */
     fun forActiveMods(spaceAge: Boolean = true) =
-        cache.getOrPut(spaceAge) {
-            parsePrototypes(loadPrototypeDump(spaceAge), allSciencePacks(spaceAge))
-        }
+        cache.getOrPut(spaceAge) { parsePrototypes(loadPrototypeDump(spaceAge)) }
 
     /**
      * The parsed recipes filtered to [surface], cached so the surface-filtered set and its usage
