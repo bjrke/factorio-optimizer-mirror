@@ -258,11 +258,6 @@ to an x bound for horizontal corridors, currently unreachable because the horizo
 `pinned` tiles (`:42-47`); either pass the pins there and update both axes correctly, or remove the
 branch.
 
-### Guard `superRound` against non-finite input
-
-Make `superRound` (`utils.kt:25-36`) return a finite value or throw for `NaN`/`Infinity` instead of
-looping forever; `NaN` makes the tail recursion never terminate. Add tests for both inputs.
-
 ### Fix the stale file count in the knowledge base
 
 `knowledge/code.md:176` says `blueprint.layout` has 9 files; it has 10 (the table above says 10).
