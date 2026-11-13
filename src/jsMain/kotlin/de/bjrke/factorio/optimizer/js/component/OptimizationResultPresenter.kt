@@ -22,6 +22,7 @@ import web.cssom.Color
 import web.cssom.Display
 import web.cssom.LineStyle
 import web.cssom.VerticalAlign
+import web.cssom.Visibility
 import web.cssom.ch
 import web.cssom.px
 import web.cssom.rem
@@ -119,8 +120,11 @@ private val COLUMN_WIDTH = 24.rem
 
 /**
  * The exclusion checkbox of one production row. A built row offers to exclude its material; an
- * import row only shows a checked box when that material is excluded, so unchecking it builds the
- * material again. The target is never excludable, and a plain import has no box.
+ * import row only unchecks to build the material again. The target is never excludable, and a
+ * material that is already imported has nothing to exclude, so their box is hidden but keeps its
+ * space; the wrapper carries the reason on hover, because a hidden box cannot be hovered. Keeping
+ * the space matters: a missing box would narrow the row's inline group and break the alignment of
+ * the columns.
  */
 private fun ChildrenBuilder.exclusionCheckbox(
     props: OptimizationResultPresenterProps,
@@ -128,17 +132,30 @@ private fun ChildrenBuilder.exclusionCheckbox(
     imported: Boolean,
 ) {
     val excluded = material in props.excludedMaterials
-    val show = if (imported) excluded else material != props.optimizationResult.target
-    if (show) {
+    val target = material == props.optimizationResult.target
+    val enabled = !target && (!imported || excluded)
+    span {
+        title =
+            when {
+                excluded -> "Include ${material.name} in the blueprint"
+                target -> "The target cannot be excluded from the blueprint"
+                imported -> "${material.name} is already imported, so there is nothing to exclude"
+                else -> "Exclude ${material.name} from the blueprint"
+            }
+        css {
+            display = Display.inlineBlock
+            verticalAlign = VerticalAlign.middle
+            marginRight = 0.25.rem
+        }
         input {
             type = InputType.checkbox
             checked = excluded
-            title =
-                if (excluded) "Include ${material.name} in the blueprint"
-                else "Exclude ${material.name} from the blueprint"
+            disabled = !enabled
             css {
+                // the reserved space is the point: an unavailable box stays in the layout but out
+                // of sight, and the wrapper keeps its reason reachable on hover
+                visibility = if (enabled) Visibility.visible else Visibility.hidden
                 verticalAlign = VerticalAlign.middle
-                marginRight = 0.25.rem
             }
             onChange = { event -> props.changeExcluded(material, event.target.checked) }
         }

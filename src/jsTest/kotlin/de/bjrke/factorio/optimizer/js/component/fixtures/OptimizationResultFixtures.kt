@@ -108,6 +108,10 @@ abstract class OptimizationResultTestBase : ComponentTest() {
     protected fun firstBeltInput(): HTMLInputElement =
         screen.getAllByTitle("belts").first() as HTMLInputElement
 
+    /** The exclusion box under [title]; the title sits on its wrapper, which outlives hiding. */
+    protected fun exclusionCheckbox(title: String): HTMLInputElement =
+        screen.getByTitle(title).querySelector("input") as HTMLInputElement
+
     protected fun beltInput(index: Int): Double =
         (screen.getAllByTitle("belts")[index] as HTMLInputElement).value.toDouble()
 

@@ -1,11 +1,14 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
@@ -24,9 +27,8 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import web.html.HTMLInputElement
+import web.dom.Element
 
 /** What the result block renders: the boxes, the material rows, the order and the icons. */
 class OptimizationResultPresenterTest : OptimizationResultTestBase() {
@@ -200,25 +202,41 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
             ),
         )
 
-        val checkbox = screen.getByTitle("Exclude ${ironOre.name} from the blueprint")
-
-        assertEquals(false, (checkbox as HTMLInputElement).checked)
-    }
-
-    @Test
-    fun theTargetRowHasNoExclusionCheckbox() {
-        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
-
-        assertNull(screen.queryByTitle("Exclude ${gear.name} from the blueprint"))
-    }
-
-    @Test
-    fun aPlainImportRowHasNoExclusionCheckbox() {
-        renderResult(resultWithImport())
+        val checkbox = exclusionCheckbox("Exclude ${ironOre.name} from the blueprint")
 
         assertAll(
-            { assertNull(screen.queryByTitle("Exclude ${ironPlate.name} from the blueprint")) },
-            { assertNull(screen.queryByTitle("Include ${ironPlate.name} in the blueprint")) },
+            { assertEquals(false, checkbox.checked) },
+            { assertEquals(false, checkbox.disabled) },
+            { assertEquals("visible", computedStyle(checkbox, "visibility")) },
+        )
+    }
+
+    @Test
+    fun theTargetRowKeepsAHiddenExclusionCheckbox() {
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+
+        val checkbox = exclusionCheckbox("The target cannot be excluded from the blueprint")
+
+        assertAll(
+            { assertTrue(checkbox.disabled) },
+            { assertEquals(false, checkbox.checked) },
+            { assertEquals("hidden", computedStyle(checkbox, "visibility")) },
+        )
+    }
+
+    @Test
+    fun aPlainImportRowKeepsAHiddenExclusionCheckbox() {
+        renderResult(resultWithImport())
+
+        val checkbox =
+            exclusionCheckbox(
+                "${ironPlate.name} is already imported, so there is nothing to exclude",
+            )
+
+        assertAll(
+            { assertTrue(checkbox.disabled) },
+            { assertEquals(false, checkbox.checked) },
+            { assertEquals("hidden", computedStyle(checkbox, "visibility")) },
         )
     }
 
@@ -226,9 +244,9 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
     fun anExcludedImportRowShowsACheckedCheckbox() {
         renderResult(resultWithImport(), excludedMaterials = setOf(ironPlate))
 
-        val checkbox = screen.getByTitle("Include ${ironPlate.name} in the blueprint")
+        val checkbox = exclusionCheckbox("Include ${ironPlate.name} in the blueprint")
 
-        assertEquals(true, (checkbox as HTMLInputElement).checked)
+        assertEquals(true, checkbox.checked)
     }
 
     @Test
@@ -238,8 +256,83 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
             excludedMaterials = setOf(ironPlate),
         )
 
-        val checkbox = screen.getByTitle("Include ${ironPlate.name} in the blueprint")
+        val checkbox = exclusionCheckbox("Include ${ironPlate.name} in the blueprint")
 
-        assertEquals(true, (checkbox as HTMLInputElement).checked)
+        assertEquals(true, checkbox.checked)
+    }
+
+    @Test
+    fun aRowKeepsItsPlaceWhenItsPlanRowTurnsIntoAnImport() {
+        val rendered = renderResult(rowOrderResult(circuitImport = false))
+        assertEquals(
+            listOf(
+                Factory.ASSEMBLING_MACHINE_2.identifier,
+                Factory.ASSEMBLING_MACHINE_1.identifier,
+                Factory.ELECTRIC_FURNACE.identifier,
+            ),
+            factoryOrder(rendered.container),
+        )
+
+        rendered.rerender(resultElement(rowOrderResult(circuitImport = true)))
+
+        // the material keeps its alphabetical slot even though the row is now an import
+        assertEquals(
+            listOf(
+                Factory.NO_FACTORY.identifier,
+                Factory.ASSEMBLING_MACHINE_1.identifier,
+                Factory.ELECTRIC_FURNACE.identifier,
+            ),
+            factoryOrder(rendered.container),
+        )
+    }
+
+    private fun rowOrderResult(circuitImport: Boolean): OptimizationResult {
+        val circuitRecipe = if (circuitImport) circuitImportRecipe else electronicCircuitRecipe
+        val circuitFactory = if (circuitImport) Factory.NO_FACTORY else Factory.ASSEMBLING_MACHINE_2
+        return OptimizationResult(
+            target = gear,
+            recipe = ironGearWheelRecipe,
+            factories =
+                mapOf(
+                    ironGearWheelRecipe to
+                        production(
+                            Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                        ),
+                    ironPlateSmeltingRecipe to
+                        production(
+                            Triple(
+                                ironPlateSmeltingRecipe,
+                                ironPlate,
+                                Factory.ELECTRIC_FURNACE,
+                            ),
+                        ),
+                    circuitRecipe to
+                        production(
+                            Triple(circuitRecipe, electronicCircuit, circuitFactory),
+                        ),
+                ),
+        )
+    }
+
+    private val circuitImportRecipe =
+        Recipe(
+            name = electronicCircuit.name,
+            ingredients = emptyMap(),
+            result = mapOf(electronicCircuit to 1.0),
+            time = 1.0,
+            categories = setOf(Category.IMPORT),
+        )
+
+    /** The row order as the factory icons render it. */
+    private fun factoryOrder(container: Element): List<String?> {
+        val identifiers =
+            listOf(
+                    Factory.ASSEMBLING_MACHINE_1,
+                    Factory.ASSEMBLING_MACHINE_2,
+                    Factory.ELECTRIC_FURNACE,
+                    Factory.NO_FACTORY,
+                )
+                .map { it.identifier }
+        return imageTitles(container).filter { it in identifiers }
     }
 }

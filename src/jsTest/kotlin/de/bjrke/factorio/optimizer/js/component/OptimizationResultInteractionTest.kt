@@ -144,7 +144,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
             ),
         )
 
-        fireEvent.click(screen.getByTitle("Exclude ${ironOre.name} from the blueprint"))
+        fireEvent.click(exclusionCheckbox("Exclude ${ironOre.name} from the blueprint"))
 
         assertEquals(listOf(ironOre to true), changedExclusions)
     }
@@ -153,7 +153,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
     fun uncheckingAnExcludedImportReportsTheMaterial() {
         renderResult(resultWithImport(), excludedMaterials = setOf(ironPlate))
 
-        fireEvent.click(screen.getByTitle("Include ${ironPlate.name} in the blueprint"))
+        fireEvent.click(exclusionCheckbox("Include ${ironPlate.name} in the blueprint"))
 
         assertEquals(listOf(ironPlate to false), changedExclusions)
     }

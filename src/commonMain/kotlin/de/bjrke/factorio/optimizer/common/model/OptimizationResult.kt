@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
-import kotlin.math.max
 
 data class FactoryProduction(
     // the demanded material this recipe entry is labeled with; a recipe producing several needed
@@ -59,10 +58,10 @@ data class OptimizationResult(
     val logistics: Logistics = Logistics(),
 )
 
+/**
+ * Display order: by material, so a plan update (an excluded row that turns into an import, a
+ * factory the optimizer re-picks) never moves a row. The recipe name breaks the tie when several
+ * recipes produce the same material.
+ */
 val factoryProductionComparator =
-    compareBy<FactoryProduction>(
-        { max(it.recipe.ingredients.size, it.recipe.result.size) },
-        { it.level },
-        { it.factory },
-        { it.recipe.name },
-    )
+    compareBy<FactoryProduction>({ it.material.name }, { it.recipe.name })
