@@ -42,6 +42,17 @@ them as whole-machine `FactoryProduction` values, plans them at scale 1, and rep
 with the finished bands. A recipe may therefore sit in the main band and in a belted band as two
 independent productions, but each value belongs to one row.
 
+A solid row's product belt carries **one lane** (`RowPlacer.productLoad` fills the lane away from
+the inserters). `DirectFeed.beltRates` therefore reports the rate each solid output must deliver at
+the drawn scale — the target's external rate plus every consumer outside a direct link — and
+`blueprintPlan` shrinks the whole plan when that rate exceeds `oneLaneCapacity()`. The rate is
+limited by what the built rows can make: a row that cannot even reach the demand is underbuilt (for
+example by `MAX_COPIES`), not over capacity. Before shrinking, a material with exactly one consumer
+is forced into a direct-feed band: `maximalGroups` sorts `forcedMaterials` links ahead of the score
+order, and a forced link that cannot arrange or fit is still dropped. A shared product cannot be
+internalized (`FeedCandidates.internalizesSharedOutput`), so it shrinks instead. `planLabel` reports
+the covered share and how many copies reach the requested rate.
+
 `RowPlacer` places every row through one `placeRow`: a plain row repeats its production with
 touching machines, while a row with links leaves a gap column after each machine that has a
 `PlannedLink` and touches everywhere else. `assignRowBelts` gives every belt group its side: a
@@ -174,3 +185,18 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
   passes. Keep the `-EPS` form when touching `makeFeasible`, and check the optimizer
   suites (`OptimizerMachineTest`, the blueprint integration suites), not just the LP
   unit test.
+- **A product belt carries one lane, and its capacity is judged by demand.** A row's
+  `productLoad` fills only the lane away from its inserters, so the product belt can
+  deliver `oneLaneCapacity()`. `blueprintPlan` compares the **demand** (`beltRates`:
+  target rate plus non-linked consumer rate), not `rowOutputs`: an overproducing machine
+  is throttled by its belt, so whole-machine output above the lane is not a failure.
+  A row that cannot even make the demand is underbuilt (for example by `MAX_COPIES`),
+  not over capacity. When a delivery is over, force a single-consumer link first; a
+  shared product or the target shrinks the whole plan instead of thinning one row.
+  Evidence: `aSolidTargetShrinksToTheProductLane`,
+  `aSingleMachineOverOneLaneDoesNotShrinkBelowItsDemand`,
+  `anOverCapacityIntermediateIsDirectFedInsteadOfShrinking`.
+- **A source rate is already the whole-machine rate.** `plannedSources` sums one entry
+  per built machine, so it must not multiply by the plan scale again; a shrunk plan
+  would otherwise report its imports twice over. Evidence:
+  `aSolidTargetShrinksToTheProductLane` (its copper plate source).

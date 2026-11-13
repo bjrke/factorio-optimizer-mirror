@@ -37,8 +37,9 @@ internal fun plannedMachines(production: FactoryProduction, scale: Double = 1.0)
 
 /**
  * The reduced production plan a blueprint is laid out from: the [rows] to build, the external
- * [sources] they draw from, and the [scale] the whole plan is drawn at. A [scale] below 1 means the
- * layout had to shrink to fit its belts; [label] explains that and how many copies reach full rate.
+ * [sources] they draw from, and the [scale] the whole plan is drawn at. A [scale] the planner had
+ * to reduce to fit the product belts is reported by [label] as the covered share and the copies
+ * that reach the requested rate.
  *
  * A [FactoryProduction] belongs to exactly one row: a row is the occurrence, so the same recipe in
  * two rows is two independent values, not one identity that has to be tracked.

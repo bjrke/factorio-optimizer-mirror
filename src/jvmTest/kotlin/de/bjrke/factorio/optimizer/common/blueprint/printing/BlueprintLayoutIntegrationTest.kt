@@ -31,6 +31,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -97,6 +98,30 @@ class BlueprintLayoutIntegrationTest {
                 { assertNoLoaderOverTunnel(layout) },
             )
         }
+
+    /**
+     * A requested rate above one product lane is drawn at the lane rate: the label reports the
+     * share and the machine count follows the reduced scale.
+     */
+    @Test
+    fun aHighRateSolidTargetIsDrawnAtItsProductLane() {
+        val layout = Layout("copper-cable", scale = 20.0)
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(15.0, layout.plan.scale, TOLERANCE) },
+            {
+                assertEquals(
+                    2,
+                    layout.plan.rows
+                        .single { row -> row.machines.any { it.recipe.name == "copper-cable" } }
+                        .machines
+                        .size,
+                )
+            },
+            { assertEquals("copper-cable (75%, place 2x for full rate)", layout.plan.label) },
+        )
+    }
 
     @Test
     fun theCheatFluidImportIsAnInfinityPipeAtTheFluidsDefaultTemperature() {

@@ -6,24 +6,37 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_COPIES
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.plannedMachines
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
 
-/** The rows a plan builds; a plain row repeats one recipe, a band interleaves several. */
-internal data class DirectFeed(val rows: List<PlannedRow>)
+/**
+ * The rows a plan builds; a plain row repeats one recipe, a band interleaves several.
+ *
+ * [beltRates] is the rate each solid output has to carry over a belt at the drawn scale: the
+ * consumers outside the direct links plus, for the target, its external delivery. It is the rate
+ * the plan must deliver, not what the whole machines could make, because an overproducing machine
+ * is throttled by its product belt.
+ */
+internal data class DirectFeed(
+    val rows: List<PlannedRow>,
+    val beltRates: Map<Material, Double>,
+)
 
 /** Splits the plan into band rows, the target row and the remaining belted rows. */
-internal fun DirectFeedContext.build(): DirectFeed {
-    val bandPlans = maximalGroups()
+internal fun DirectFeedContext.build(forcedMaterials: Set<Material> = emptySet()): DirectFeed {
+    val bandPlans = maximalGroups(forcedMaterials = forcedMaterials)
     val bands = buildBands(bandPlans)
     val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
     val built = bands.flatMap { it.machines }.groupingBy { it }.eachCount()
     val onBelt = onBeltOf(bandPlans)
     val demand = beltDemand(grouped)
     val belted =
-        included.values.sortedBy { it.recipe.name }.mapNotNull { belted(it, demand, onBelt, built) }
-    return DirectFeed(bands + targetRow(built) + beltedBands(belted))
+        included.values
+            .sortedBy { it.recipe.name }
+            .mapNotNull { belted(it, demand.perRecipe, onBelt, built) }
+    return DirectFeed(bands + targetRow(built) + beltedBands(belted), demand.perMaterial)
 }
 
 /**
@@ -106,28 +119,42 @@ private fun DirectFeedContext.beltOutputPerMachine(production: FactoryProduction
 
 /**
  * The rate every belted production still has to cover: each consumer outside the direct links, at
- * the rate the plan was sized for, grouped by the recipe that alone produces the material. A band's
- * internal material never gets a belt.
+ * the rate the plan was sized for, grouped by the recipe that alone produces the material and by
+ * material. The per-material map is the rate the product belt has to deliver; the target's external
+ * delivery is added to it because the target is a sink rather than a consumer. A band's internal
+ * material never gets a belt.
  */
-private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): Map<Recipe, Double> {
+private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): BeltDemand {
     val groupedTriples =
         grouped
             .map {
                 Triple(it.material, it.producer.production.recipe, it.consumer.production.recipe)
             }
             .toSet()
-    return buildMap {
-        for (consumer in included.values) {
-            for (material in consumer.recipe.ingredients.keys) {
-                if (logistics.isFluid(material)) continue
-                val producer = producers[material]?.singleOrNull() ?: continue
-                if (Triple(material, producer.recipe, consumer.recipe) in groupedTriples) continue
-                val rate = consumer.consumption(material) * scale
-                put(producer.recipe, (this[producer.recipe] ?: 0.0) + rate)
-            }
+    val perRecipe = mutableMapOf<Recipe, Double>()
+    val perMaterial = mutableMapOf<Material, Double>()
+    for (consumer in included.values) {
+        for (material in consumer.recipe.ingredients.keys) {
+            if (logistics.isFluid(material)) continue
+            val producer = producers[material]?.singleOrNull() ?: continue
+            if (Triple(material, producer.recipe, consumer.recipe) in groupedTriples) continue
+            val rate = consumer.consumption(material) * scale
+            perRecipe[producer.recipe] = (perRecipe[producer.recipe] ?: 0.0) + rate
+            perMaterial[material] = (perMaterial[material] ?: 0.0) + rate
         }
     }
+    val targetMaterial = target.production.material
+    if (!logistics.isFluid(targetMaterial)) {
+        perMaterial[targetMaterial] = (perMaterial[targetMaterial] ?: 0.0) + scale
+    }
+    return BeltDemand(perRecipe, perMaterial)
 }
+
+/** The belted production rates by recipe and the delivered rates by material. */
+private data class BeltDemand(
+    val perRecipe: Map<Recipe, Double>,
+    val perMaterial: Map<Material, Double>,
+)
 
 /**
  * One belted production per recipe: what the consumers that are not direct-fed still need, at the
@@ -174,12 +201,16 @@ private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>): Lis
  * still need — after what a band's own producers put on a belt — gets one belted production, sized
  * at the rate the plan was drawn for. Anything that does not fit a band keeps its plan machine
  * count and stays belted.
+ *
+ * [forcedMaterials] are the materials whose delivered belt rate exceeds one lane: their links seed
+ * the band search first, so the plan direct-feeds them instead of thinning every row.
  */
 internal fun directFeed(
     targetProduction: FactoryProduction,
     factories: Map<Recipe, FactoryProduction>,
     logistics: LogisticsCalculator,
     scale: Double = 1.0,
+    forcedMaterials: Set<Material> = emptySet(),
 ) =
     DirectFeedContext(
             targetProduction,
@@ -187,4 +218,4 @@ internal fun directFeed(
             logistics,
             scale,
         )
-        .build()
+        .build(forcedMaterials)

@@ -14,6 +14,22 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-13 — A product lane bounds the delivered rate, so the plan thins itself
+
+**Decision.** A row's product belt fills one lane (`RowPlacer.productLoad`), so `blueprintPlan`
+compares each solid delivery (`DirectFeed.beltRates`: the target's requested rate plus its
+non-linked consumers' demand) against `LogisticsCalculator.oneLaneCapacity()`. A material with one
+consumer is forced into a direct-feed band first; the target and shared products shrink the whole
+plan (`BlueprintPlan.scale`), and `planLabel` reports the covered share.
+
+**Guardrail.** Check the rate the plan must deliver, not `rowOutputs`: whole-machine overproduction
+is throttled by the belt, and a row that cannot make the demand is underbuilt, not over capacity.
+Shrink the whole plan, never one row, or its consumers starve. `plannedSources` sums whole machines
+and must not multiply by `scale` a second time.
+
+**See.** `blueprint/planning/BlueprintPlan.kt`, `blueprint/planning/band/DirectFeed.kt`,
+`blueprint/planning/BlueprintSelection.kt`, `blueprint/planning/row/RowPlacer.kt`.
+
 ## 2026-11-12 — Excluded materials are imported, never built
 
 **Decision.** The optimizer takes `excludedMaterials`; every recipe producing one is dropped before
@@ -76,13 +92,15 @@ every surface, one solid-fuel recipe per surface — never by picking one of its
 
 ## 2026-11-06 — Sources follow the placed rows
 
-**Decision.** `BlueprintPlan.sources` comes from `plannedSources(rows, logistics, scale)` — the
-rows actually placed — and a synthetic import is a `Category.IMPORT` recipe, so `buildable`
-decides from the recipe rather than from the machine.
+**Decision.** `BlueprintPlan.sources` comes from `plannedSources(rows, logistics)` — the rows
+actually placed — and a synthetic import is a `Category.IMPORT` recipe, so `buildable` decides from
+the recipe rather than from the machine.
 
-**Guardrail.** Never derive the imports from `DirectFeedContext.included`: it keeps productions
-the planner drops, so the reported imports would disagree with the layout. Keep one definition —
-`plannedSources` for the plan, `sourceMaterials` for `DeliveryPreparation`.
+**Guardrail.** Never derive the imports from `DirectFeedContext.included`: it keeps productions the
+planner drops, so the reported imports would disagree with the layout. Keep one definition —
+`plannedSources` for the plan, `sourceMaterials` for `DeliveryPreparation`. Each row holds one entry
+per whole machine, so the source rate is already at the drawn scale and must not be multiplied by
+`BlueprintPlan.scale` again.
 
 **See.** `blueprint/planning/{BlueprintSelection,plan/BlueprintPlan}.kt`,
 `blueprint/placing/routing/DeliveryPreparation.kt`.

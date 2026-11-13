@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 
@@ -14,15 +15,22 @@ import de.bjrke.factorio.optimizer.common.model.FactoryProduction
  * under the limit; only the finished group is filtered. A seed whose group never fits is dropped
  * and its links return to the pool, so another seed can still use them. Groups that meet later are
  * merged when the merged group arranges and fits.
+ *
+ * A link of a [forcedMaterials] material sorts ahead of the score order, so an output whose belt
+ * lane is too small is direct-fed first. Forcing only changes the seed order: a forced link that
+ * cannot arrange or fit is still dropped like any other seed.
  */
 internal fun DirectFeedContext.maximalGroups(
     candidates: List<FeedLink> = candidateLinks(),
+    forcedMaterials: Set<Material> = emptySet(),
 ): List<BandPlan> {
     val pool = candidates.toMutableList()
     val groups = mutableListOf<MutableList<FeedLink>>()
     val assigned = mutableSetOf<FactoryProduction>()
     val completeCache = mutableMapOf<List<FeedLink>, BandPlan?>()
     val growthCache = mutableMapOf<List<FeedLink>, BandPlan?>()
+    val seedComparator =
+        compareBy<FeedLink> { it.material !in forcedMaterials }.then(linkComparator)
 
     fun arranged(links: List<FeedLink>) = completeCache.getOrPut(linkKey(links)) { arrange(links) }
 
@@ -31,7 +39,7 @@ internal fun DirectFeedContext.maximalGroups(
         growthCache.getOrPut(linkKey(links)) { arrange(links, requireComplete = false) }
 
     while (true) {
-        pool.sortWith(linkComparator)
+        pool.sortWith(seedComparator)
         val seed = pool.indexOfFirst { link -> link.productions().none { it in assigned } }
         if (seed < 0) break
         val seedLink = pool.removeAt(seed)
