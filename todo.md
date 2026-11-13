@@ -174,13 +174,6 @@ choice.
 `--name=value` must be an exact identifier or a single code character, otherwise exit non-zero with
 a message. Add table-driven tests for every option.
 
-### Replace history on text-field edits
-
-Use `replace = true` in `changeUrl`'s `navigate` call (`index.kt:136-140`) for edits that come from
-text fields: typing an amount currently pushes one hash entry per keystroke, so Back must be pressed
-once per character. Keep PUSH for discrete icon clicks if that is wanted. Add a component test that
-asserts the navigate option or the resulting history length.
-
 ### Reset the material picker highlight
 
 Reset `highlighted` when Escape or blur closes the dropdown (`MaterialSelector.kt:57-80`). The

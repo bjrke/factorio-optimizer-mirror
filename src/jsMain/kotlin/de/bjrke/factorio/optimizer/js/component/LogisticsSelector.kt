@@ -146,8 +146,8 @@ fun ChildrenBuilder.urlLogisticsSelector(props: FactorioOptimizerProps) {
         selectBelt = { props.changeUrl { belt = it } }
         selectInserter = { props.changeUrl { inserter = it } }
         selectBeltLanes = { props.changeUrl { beltLanes = it } }
-        selectBeltStack = { props.changeUrl { beltStack = it } }
-        selectInserterStack = { props.changeUrl { inserterStack = it } }
+        selectBeltStack = { props.changeUrl(replace = true) { beltStack = it } }
+        selectInserterStack = { props.changeUrl(replace = true) { inserterStack = it } }
         selectBeltEnd = { props.changeUrl { beltEnd = it } }
     }
 }

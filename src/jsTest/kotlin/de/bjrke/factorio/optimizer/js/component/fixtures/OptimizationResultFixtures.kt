@@ -71,6 +71,7 @@ abstract class OptimizationResultTestBase : ComponentTest() {
         this.excludedMaterials = excludedMaterials
         changeMaterial = { changedMaterials += it }
         changeNormalizeTo = { normalizedTo += it }
+        editNormalizeTo = { normalizedTo += it }
         changeExcluded = { material, exclude -> changedExclusions += material to exclude }
     }
 

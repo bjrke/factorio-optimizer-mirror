@@ -58,6 +58,6 @@ internal val intermediateLimitInput =
 fun ChildrenBuilder.urlIntermediateLimitInput(props: FactorioOptimizerProps) {
     intermediateLimitInput {
         value = props.intermediateLimit
-        change = { props.changeUrl { intermediateLimit = it } }
+        change = { props.changeUrl(replace = true) { intermediateLimit = it } }
     }
 }

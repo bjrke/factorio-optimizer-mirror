@@ -133,9 +133,17 @@ class FactorioOptimizerProps {
             "/$beltStack/$inserterStack/$intermediateLimit/${excludedMaterialsToUrl(excludedMaterials)}"
     }
 
-    fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
+    /**
+     * Navigates to the URL [change] describes. A text-field edit passes [replace] so typing does
+     * not push one history entry per keystroke; a discrete icon click keeps pushing entries.
+     */
+    fun changeUrl(
+        replace: Boolean = false,
+        change: FactorioOptimizerProps.() -> Unit = {},
+    ) {
         navigate {
             to = RoutePath(apply(change).createNewUrl())
+            this.replace = replace
         }
     }
 }

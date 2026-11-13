@@ -44,7 +44,10 @@ external interface OptimizationResultPresenterStateProps : Props {
 
 external interface OptimizationResultPresenterDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
+    /** A click on an amount or icon: pins the amount and pushes one history entry. */
     var changeNormalizeTo: (Double) -> Unit
+    /** An amount typed into a field: replaces its history entry instead of one per keystroke. */
+    var editNormalizeTo: (Double) -> Unit
     /** Adds or removes [Material] from the exclusions; `true` excludes it from the plan. */
     var changeExcluded: (Material, Boolean) -> Unit
 }
@@ -69,7 +72,7 @@ private fun ChildrenBuilder.amountInput(
         value = superRound(amount * props.normalizeTarget).toString()
         onChange = { event ->
             event.target.value.toDoubleOrNull()?.let { value ->
-                validNormalizeTarget(amount / value)?.let { props.changeNormalizeTo(it) }
+                validNormalizeTarget(amount / value)?.let { props.editNormalizeTo(it) }
             }
         }
     }
@@ -226,7 +229,7 @@ private fun ChildrenBuilder.logisticsInputIcon(
         onChange = {
             it.target.value.toDoubleOrNull()?.let { value ->
                 validNormalizeTarget(amount / value)?.let { scale ->
-                    props.changeNormalizeTo(scale)
+                    props.editNormalizeTo(scale)
                 }
             }
         }
@@ -424,6 +427,7 @@ fun ChildrenBuilder.urlOptimizationResultPresenter(props: FactorioOptimizerProps
         excludedMaterials = props.excludedMaterials
         changeMaterial = { props.changeUrl { target = it } }
         changeNormalizeTo = { props.changeUrl { normalizeTarget = 1 / it } }
+        editNormalizeTo = { props.changeUrl(replace = true) { normalizeTarget = 1 / it } }
         changeExcluded = { material, exclude ->
             props.changeUrl {
                 excludedMaterials =
