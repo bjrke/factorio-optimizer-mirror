@@ -1,30 +1,56 @@
 # Gradle keeps its dependency cache in the workspace so GitLab can cache it. The
 # key follows the two files that pin every dependency: the version catalog (Kotlin,
-# detekt, Spotless, kotlinx, the wrappers BOM) and the `Dockerfile` (its image tag
-# pins the Gradle and JDK versions, and so the cache layout). GitLab allows two
-# `key:files` entries, so `build.gradle.kts` and `buildSrc/build.gradle.kts` cannot
-# be listed too; they do not change the resolved artifacts unless the catalog does.
+# detekt, Spotless, kotlinx, the wrappers BOM) and `ci/Dockerfile` (its image tag
+# pins the Gradle and JDK versions, and so the cache layout). `build.gradle.kts`
+# and `buildSrc/build.gradle.kts` are not listed: they do not change the resolved
+# artifacts unless the catalog does.
+#
+# CI keeps every task executing: `-PCI` makes build.gradle.kts opt the application
+# build out of the build cache, and `.gradle/9.8.1` (the task history that drives
+# up-to-date checks) is deliberately not cached. Only `buildSrc` - build logic,
+# never part of the product - and the configuration cache are reused, so the cache
+# carries `buildSrc/build` with its own `.gradle` (task history) and
+# `.gradle/caches/build-cache-1`, plus `.gradle/configuration-cache`. The buildSrc
+# state has to be restored as a unit: rebuilding buildSrc invalidates the
+# configuration cache entry even when the jar is byte-identical.
+#
+# `build/js/node_modules` is cached so the Yarn install only has to validate the
+# restored tree; the zip cache keeps its symlinks. There is no `cache:archive`
+# keyword: GitLab rejects the config with `cache config contains unknown keys:
+# archive`, and the default archive is a zip either way.
 variables:
   GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle
+  # Applies to `buildSrc` too: included builds do not necessarily inherit the root
+  # `gradle.properties`, and `gradle.properties` is where local builds enable it.
   GRADLE_OPTS: "-Dorg.gradle.caching=true"
 
 cache:
   key:
     files:
       - gradle/libs.versions.toml
-      - Dockerfile
+      - ci/Dockerfile
   paths:
     - .gradle/caches/modules-2
     - .gradle/caches/jars-9
     - .gradle/caches/9.8.1/transforms
+    - .gradle/caches/build-cache-1
+    - .gradle/configuration-cache
+    - .gradle/yarn
     - .kotlin
+    - buildSrc/build
+    - buildSrc/.gradle
     - build/js/node_modules
 
 test:
   stage: test
+  # The instance allows only `always` (`allowed_pull_policies`), so the image is
+  # pulled once per pipeline even though it only changes with `ci/Dockerfile`.
   image: $CI_REGISTRY_IMAGE:latest
   script:
-    - gradle --no-daemon check jsBrowserDistribution
+    # `-Pkotlin.incremental.*=false`: a clean build never reuses incremental state,
+    # so only its bookkeeping cost remains. `-Pkotlin.compiler.execution.strategy=in-process`
+    # skips the Kotlin daemon JVM, which a one-build container never amortizes.
+    - gradle --no-daemon -PCI -Pkotlin.incremental=false -Pkotlin.incremental.js=false -Pkotlin.compiler.execution.strategy=in-process check jsBrowserDistribution
     - mv build/dist/js/productionExecutable public
   artifacts:
     when: always

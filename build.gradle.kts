@@ -1,8 +1,8 @@
 import de.bjrke.factorio.optimizer.buildlogic.dumpPrototypes
 import de.bjrke.factorio.optimizer.buildlogic.sanitizePrototypes
 import de.bjrke.factorio.optimizer.buildlogic.updateImages
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import org.gradle.api.Transformer
+import org.gradle.api.provider.MapProperty
 
 plugins {
     kotlin("multiplatform") version libs.versions.kotlin
@@ -16,34 +16,87 @@ version = "1.0"
 
 repositories { mavenCentral() }
 
+/**
+ * Substitutes `${key}` placeholders while the copy runs.
+ *
+ * It reads a [MapProperty] instead of closing over the providers, because a `filter {}` lambda
+ * captures the build script and the configuration cache rejects script object references.
+ */
+class ReplaceValues(private val values: MapProperty<String, String>) :
+    Transformer<String?, String> {
+    override fun transform(line: String): String {
+        var result = line
+        values.get().forEach { (key, value) -> result = result.replace("\${$key}", value) }
+        return result
+    }
+}
+
+// CI starts from a fresh checkout on every pipeline and must not restore task
+// results from an earlier commit, so every compile, test and analysis really
+// runs. Only `buildSrc` (a separate build, unaffected by this block) may use the
+// build cache there. Local builds keep their cache, which is enabled in
+// `gradle.properties` and not disabled by this switch.
+val isCi = providers.gradleProperty("CI").isPresent
+
+tasks.withType<Task>().configureEach { if (isCi) outputs.cacheIf { false } }
+
+/**
+ * `git rev-parse …` as a provider, so it runs when a task needs the value, not while configuring.
+ */
 private fun gitRevParse(vararg args: String) =
     providers
         .exec { commandLine("git", "rev-parse", *args) }
         .standardOutput
         .asText
         .map(String::trim)
+
+/** The commit's timestamp: deterministic per commit, which the configuration cache relies on. */
+private val buildDate =
+    providers
+        .environmentVariable("CI_COMMIT_TIMESTAMP")
+        .orElse(
+            providers
+                .exec { commandLine("git", "show", "-s", "--format=%cI", "HEAD") }
+                .standardOutput
+                .asText
+                .map(String::trim),
+        )
         .orElse("unknown")
-        .get()
+
+private val buildCommit =
+    providers
+        .environmentVariable("CI_COMMIT_SHORT_SHA")
+        .orElse(gitRevParse("--short", "HEAD"))
+        .orElse("unknown")
+
+private val buildBranch =
+    providers
+        .environmentVariable("CI_COMMIT_REF_NAME")
+        .orElse(gitRevParse("--abbrev-ref", "HEAD"))
+        .orElse("unknown")
 
 private val generatedKotlinDir = layout.buildDirectory.dir("generated/commonMain/kotlin")
 private val generatedResourcesDir = layout.buildDirectory.dir("generated/jsMain/resources")
 
+// The values are inputs rather than `expand` arguments, which would be read while
+// configuring: a per-commit `System.getenv` or a frozen `Instant.now` would make
+// the configuration cache useless and leave a stale BuildInfo.kt behind.
+val buildInfo =
+    objects.mapProperty(String::class.java, String::class.java).apply {
+        put("date", buildDate)
+        put("commit", buildCommit)
+        put("branch", buildBranch)
+    }
+
 val generateBuildInfo =
     tasks.register<Copy>("generateBuildInfo") {
         group = "build"
-        description = "Generates BuildInfo.kt (build date, git commit, branch) into commonMain"
+        description = "Generates BuildInfo.kt (commit date, git commit, branch) into commonMain"
         from("buildSrc/templates")
         rename("BuildInfo.kt.template", "BuildInfo.kt")
         into(generatedKotlinDir.map { it.dir("de/bjrke/factorio/optimizer") })
-        expand(
-            mapOf(
-                "date" to Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
-                "commit" to
-                    (System.getenv("CI_COMMIT_SHORT_SHA") ?: gitRevParse("--short", "HEAD")),
-                "branch" to
-                    (System.getenv("CI_COMMIT_REF_NAME") ?: gitRevParse("--abbrev-ref", "HEAD")),
-            ),
-        )
+        inputs.property("values", buildInfo)
+        filter(ReplaceValues(buildInfo))
     }
 
 val generateLicenseResource =
@@ -98,6 +151,8 @@ kotlin {
             resources.srcDir(generateLicenseResource.map { generatedResourcesDir.get().asFile })
             dependencies {
                 implementation(dependencies.platform(libs.kotlin.wrappers.bom))
+                // Minifies the production bundle; see webpack.config.d/02-esbuild-minify.js.
+                implementation(npm("esbuild-loader", "4.5.0"))
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-emotion-react
                 implementation("org.jetbrains.kotlin-wrappers:kotlin-emotion-react")
                 // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-tanstack-react-router

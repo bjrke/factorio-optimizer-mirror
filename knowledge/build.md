@@ -69,8 +69,64 @@ workflow (filtering to `de.bjrke`, allocation/exception views), see
   `updateImages` are the `factorio` group tasks).
 - `.opencode/skills/` — the Factorio blueprint and optimizer skills.
 
+## CI pipeline
+
+`.gitlab-ci.yml` runs `gradle --no-daemon -PCI … check jsBrowserDistribution` on
+every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
+
+- **`-PCI` keeps the build clean.** `build.gradle.kts` reads the `CI` project
+  property and calls `outputs.cacheIf { false }` on every task, so no compile,
+  test, detekt or Spotless result is ever restored from an earlier commit; the
+  build cache only serves `buildSrc` (a separate build, unaffected by that
+  block). `.gradle/9.8.1` (the task history behind up-to-date checks) is
+  deliberately not cached for the same reason.
+- **`buildSrc/build` and `buildSrc/.gradle` are cached as a unit.** Rebuilding
+  buildSrc invalidates the configuration cache entry even when the resulting jar
+  is byte-identical, and a pipeline checkout has neither directory; without both
+  restored, the configuration cache would be discarded on every pipeline. This
+  is the only build output CI restores, and it is build logic, not the product.
+- **The configuration cache is persisted** in `.gradle/configuration-cache` and
+  is reused across commits, so nothing that changes per pipeline may be read
+  while configuring: `generateBuildInfo` declares date/commit/branch as a
+  `MapProperty` input fed by `providers.environmentVariable`/`providers.exec`,
+  which is only read when the copy runs. A configuration-time `System.getenv`,
+  `Instant.now()` or `expand` discards the entry every commit or freezes a stale
+  value.
+- **`BuildInfo.date` is the commit timestamp** (`CI_COMMIT_TIMESTAMP`, falling
+  back to `git show -s --format=%cI`), not the wall-clock build time: it is
+  stable per commit, which is what keeps `generateBuildInfo` up to date locally
+  and the configuration cache valid.
+- **`build/js/node_modules` is cached as part of the zip cache.** GitLab's cache
+  archive, including the fastzip path the shared runners use, stores and
+  restores symlinks, so the restored Yarn install keeps its `.bin` links and
+  only needs validating; no `cache:archive` keyword is needed or accepted (see
+  Traps).
+- **The cache key uses `gradle/libs.versions.toml` and `ci/Dockerfile`.** A key
+  file that does not exist is silently ignored, so the path must stay in sync
+  with the real Dockerfile location.
+- **The production bundle is minified by esbuild** (`esbuild-loader` via
+  `webpack.config.d/02-esbuild-minify.js`), not webpack's Terser default; the
+  dev bundle stays unminified either way. Development builds and `jsBrowserTest`
+  do not load that config path.
+- **CI cannot choose the image pull policy.** The instance's shared runners
+  allow only `always`, and a job-level `pull_policy: if-not-present` fails the
+  job before it starts with `invalid pull policy … not one of the
+  allowed_pull_policies ([always])`. The image is therefore pulled once per
+  pipeline even though it only changes with `ci/Dockerfile`.
+- CI compiles in-process
+  (`-Pkotlin.compiler.execution.strategy=in-process` in `.gitlab-ci.yml`): a
+  pipeline is a single build, so a Kotlin daemon's start-up is never amortized,
+  while locally the daemon is reused and its separate JVM keeps metaspace
+  pressure off the Gradle daemon.
+
 ## Traps
 
+- **`cache: archive` is not a GitLab CI keyword.** Adding `archive: tar` under
+  `cache` fails config validation with `cache config contains unknown keys:
+  archive`, which GitLab shows on the pipeline page before any job starts. The
+  only cache keywords are `key`, `paths`, `untracked`, `when`, `policy`,
+  `unprotect` and `fallback_keys`; the archive is a zip and already keeps
+  symlinks. Verified on 2026-11-13 against the GitLab CI reference (`ci/yaml`).
 - **`detektMainJvm`/`detektTestJvm` report "compiler errors found during analysis"
   although the code compiles.** Verified on 2026-10-24 at `395323f`, both with and
   without working-tree changes: both tasks print `There were 3 compiler errors
@@ -87,6 +143,13 @@ workflow (filtering to `de.bjrke`, allocation/exception views), see
   only the new path; `--rerun-tasks` did not help, `./gradlew --stop` plus a rerun
   did. Recognize it by a `FileNotFoundException` for a jar entry that no longer
   exists — restart the daemon instead of editing code.
+- **A `Copy` filter lambda cannot be used with the configuration cache.** A
+  `filter { line -> … }` that reaches a build-script `val` closes over the script
+  object, and `--configuration-cache-problems=fail` fails the build with
+  `cannot serialize Gradle script object references`. `generateBuildInfo` therefore
+  filters with a named `ReplaceValues` transformer that reads a `MapProperty`
+  (`inputs.property("values", buildInfo)`), which is Configuration Cache-safe and
+  keeps the substitution at execution time. Verified on Gradle 9.8.1.
 - **A cold or stale Gradle daemon can fail build-script compilation with
   `Unresolved reference 'de'`.** After the daemon was stopped, `./gradlew` reported
   the `de.bjrke.factorio.optimizer.buildlogic.*` imports in `build.gradle.kts` as
