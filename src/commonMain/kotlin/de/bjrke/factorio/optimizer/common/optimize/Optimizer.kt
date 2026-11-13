@@ -32,11 +32,17 @@ private const val IMPORT_DISPLAY_EPSILON = 1e-4
  * [maxIntermediates] bounds how many produced materials besides the target the plan may build. The
  * least-used materials are kept, so a hub such as an ore or a plate becomes an import first; the
  * target is always built and never counts.
+ *
+ * [excludedMaterials] are imported instead of built: every recipe that produces one is dropped
+ * before the LP, so the plan neither calculates nor lays out its production. The target is never
+ * excluded, and a recipe that also produces the target keeps running, so an excluded material can
+ * still appear as its byproduct.
  */
 class Optimizer(
     private val parsedRecipe: ParsedRecipe,
     factories: Set<Factory> = FactoryConfig().defaults,
     maxIntermediates: Int = DEFAULT_INTERMEDIATE_LIMIT,
+    private val excludedMaterials: Set<Material> = emptySet(),
 ) {
     private val cache = mutableMapOf<Material, OptimizationResult>()
     private val machine = MachineCatalog(parsedRecipe, factories)
@@ -166,8 +172,17 @@ class Optimizer(
      * simplex would otherwise leave in the basis).
      */
     private fun compute(target: Material): OptimizationResult {
-        val reachable = reachableMaterials(target, allowedRecipes)
-        val recipes = allowedRecipes.filter {
+        // an excluded material is imported: drop its producers, but keep a recipe that produces the
+        // target even when it also produces the excluded material, so the target is always built
+        val excluded = excludedMaterials - target
+        val allowed =
+            if (excluded.isEmpty()) allowedRecipes
+            else
+                allowedRecipes.filter { recipe ->
+                    target in recipe.result.keys || recipe.result.keys.none { it in excluded }
+                }
+        val reachable = reachableMaterials(target, allowed)
+        val recipes = allowed.filter {
             it.result.keys.any { material -> material in reachable }
         }
         val limitedRecipes = limitProducedMaterials(target, reachable, recipes)

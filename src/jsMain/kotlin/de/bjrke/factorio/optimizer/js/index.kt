@@ -19,6 +19,8 @@ import de.bjrke.factorio.optimizer.common.game.prototype.validIntermediateLimit
 import de.bjrke.factorio.optimizer.common.game.selection.EMPTY_SELECTION
 import de.bjrke.factorio.optimizer.common.game.selection.Selection
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromSelection
+import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsFromUrl
+import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsToUrl
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.game.selection.selectionString
 import de.bjrke.factorio.optimizer.common.game.selection.spaceAgeIn
@@ -71,14 +73,18 @@ class FactorioOptimizerProps {
     var surface =
         if (spaceAgeEnabled) surfaceFromUrl(selection) ?: Surface.NAUVIS else Surface.NAUVIS
     var intermediateLimit = validIntermediateLimit(params[ParamName("intermediates")])
+    var excludedMaterials = excludedMaterialsFromUrl(params[ParamName("excluded")])
 
     val parsedRecipes = RecipeLoader.forSurface(spaceAgeEnabled, surface)
 
-    // the limit is part of the optimizer's configuration, so a limit change drops its result cache;
-    // a target change reuses it
+    // the limit and the exclusions are part of the optimizer's configuration, so changing either
+    // drops its result cache; a target change reuses it
     val optimizer =
-        useMemo("${selection.orEmpty()}/$intermediateLimit") {
-            Optimizer(parsedRecipes, factories, intermediateLimit)
+        useMemo(
+            "${selection.orEmpty()}/$intermediateLimit/" +
+                excludedMaterials.map { it.name }.sorted().joinToString(","),
+        ) {
+            Optimizer(parsedRecipes, factories, intermediateLimit, excludedMaterials)
         }
     val optimizationResult: OptimizationResult = optimizer[target]
 
@@ -123,7 +129,7 @@ class FactorioOptimizerProps {
         // the segment is never empty so the route always matches; '-' marks the all-defaults choice
         val selectionSegment = encodedSelection.ifEmpty { EMPTY_SELECTION }
         return "/${normalizeTargetToUrl(normalizeTarget)}/${target.name}/$selectionSegment" +
-            "/$beltStack/$inserterStack/$intermediateLimit"
+            "/$beltStack/$inserterStack/$intermediateLimit/${excludedMaterialsToUrl(excludedMaterials)}"
     }
 
     fun changeUrl(change: FactorioOptimizerProps.() -> Unit = {}) {
@@ -175,20 +181,23 @@ val RouterBasedParams =
         }
     }
 
-fun main() {
-
-    window.onload = EventHandler {
-        val root = document.createElement("div")
-        root.className = ClassName("app-root")
-        document.body.prepend(root)
-
-        document.querySelector("#footer")?.let { footerElement ->
-            createRoot(footerElement).render(appFooter.create())
-        }
-
-        val rootRoute = createRootRoute()
-
+private fun createAppRouter() =
+    createRootRoute().let { rootRoute ->
         val indexRoute =
+            createRoute(
+                RouteOptions(
+                    getParentRoute = { rootRoute },
+                    path =
+                        RoutePath(
+                            $$"/$normalizeTarget/$target/$selection/$beltStack/$inserterStack/$intermediates/$excluded",
+                        ),
+                    component = RouterBasedParams,
+                ),
+            )
+
+        // a URL from before the exclusions has no seventh segment; it still decodes to no
+        // exclusions
+        val legacyExcludedRoute =
             createRoute(
                 RouteOptions(
                     getParentRoute = { rootRoute },
@@ -223,16 +232,28 @@ fun main() {
                 ),
             )
 
-        rootRoute.addChildren(arrayOf(indexRoute, legacyRoute, catchAllRoute))
+        rootRoute.addChildren(arrayOf(indexRoute, legacyExcludedRoute, legacyRoute, catchAllRoute))
 
-        val appRouter =
-            createRouter(
-                RouterOptions(
-                    routeTree = rootRoute,
-                    history = createHashHistory(),
-                ),
-            )
+        createRouter(
+            RouterOptions(
+                routeTree = rootRoute,
+                history = createHashHistory(),
+            ),
+        )
+    }
 
+fun main() {
+
+    window.onload = EventHandler {
+        val root = document.createElement("div")
+        root.className = ClassName("app-root")
+        document.body.prepend(root)
+
+        document.querySelector("#footer")?.let { footerElement ->
+            createRoot(footerElement).render(appFooter.create())
+        }
+
+        val appRouter = createAppRouter()
         val app = FC { RouterProvider { router = appRouter } }
 
         createRoot(root).render(app.create())

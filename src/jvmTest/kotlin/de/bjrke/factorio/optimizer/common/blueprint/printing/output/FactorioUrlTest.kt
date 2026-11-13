@@ -46,6 +46,20 @@ class FactorioUrlTest {
         )
 
     @Test
+    fun theExcludedSegmentIsParsed() =
+        assertEquals(
+            FactorioUrl(4.5, "advanced-circuit", "CFSXbmr", "1", "1", "10", "gear,pipe"),
+            parseFactorioUrl("#/4.5/advanced-circuit/CFSXbmr/1/1/10/gear,pipe"),
+        )
+
+    @Test
+    fun aUrlWithoutTheExcludedSegmentStillParses() =
+        assertEquals(
+            FactorioUrl(4.5, "advanced-circuit", "CFSXbmr", "1", "1", "10", null),
+            parseFactorioUrl("#/4.5/advanced-circuit/CFSXbmr/1/1/10"),
+        )
+
+    @Test
     fun anInvalidNormalizeTargetFallsBackToTheDefault() =
         assertEquals(
             FactorioUrl(DEFAULT_NORMALIZE_TARGET, "advanced-circuit", "S", "1", "1", null),

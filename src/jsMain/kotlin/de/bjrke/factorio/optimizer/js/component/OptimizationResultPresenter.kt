@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.superRound
 import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
@@ -26,6 +27,7 @@ import web.cssom.px
 import web.cssom.rem
 import web.cssom.rgb
 import web.html.InputType
+import web.html.checkbox
 import web.html.number
 import web.mouse.AUXILIARY
 import web.mouse.MouseButton
@@ -34,11 +36,15 @@ external interface OptimizationResultPresenterStateProps : Props {
     var optimizationResult: OptimizationResult
     var logistics: LogisticsCalculator
     var normalizeTarget: Double
+    /** Materials the plan imports instead of building; their import row carries a checked box. */
+    var excludedMaterials: Set<Material>
 }
 
 external interface OptimizationResultPresenterDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
     var changeNormalizeTo: (Double) -> Unit
+    /** Adds or removes [Material] from the exclusions; `true` excludes it from the plan. */
+    var changeExcluded: (Material, Boolean) -> Unit
 }
 
 external interface OptimizationResultPresenterProps :
@@ -110,6 +116,34 @@ private val LOGISTICS_ITEM_WIDTH = 6.75.rem
 
 /** Fixed input/output column width; empty and fluid columns are padded to match. */
 private val COLUMN_WIDTH = 24.rem
+
+/**
+ * The exclusion checkbox of one production row. A built row offers to exclude its material; an
+ * import row only shows a checked box when that material is excluded, so unchecking it builds the
+ * material again. The target is never excludable, and a plain import has no box.
+ */
+private fun ChildrenBuilder.exclusionCheckbox(
+    props: OptimizationResultPresenterProps,
+    material: Material,
+    imported: Boolean,
+) {
+    val excluded = material in props.excludedMaterials
+    val show = if (imported) excluded else material != props.optimizationResult.target
+    if (show) {
+        input {
+            type = InputType.checkbox
+            checked = excluded
+            title =
+                if (excluded) "Include ${material.name} in the blueprint"
+                else "Exclude ${material.name} from the blueprint"
+            css {
+                verticalAlign = VerticalAlign.middle
+                marginRight = 0.25.rem
+            }
+            onChange = { event -> props.changeExcluded(material, event.target.checked) }
+        }
+    }
+}
 
 /**
  * A bordered box around a group of input fields that belong together. [inline] boxes hug their
@@ -290,6 +324,11 @@ internal val optimizationResult =
                 }
 
                 groupBox(inline = true) {
+                    exclusionCheckbox(
+                        props,
+                        factoryProduction.material,
+                        imported = Category.IMPORT in factoryProduction.recipe.categories,
+                    )
                     amountInputIcon(
                         props,
                         factoryProduction.factory.identifier,
@@ -323,6 +362,29 @@ internal val optimizationResult =
                 }
             }
         }
+
+        // an exclusion can outlive the plan that showed it (a target change, or a byproduct that
+        // covers the demand), so keep a checked row for every excluded material without a row
+        val shown = props.optimizationResult.factories.values.mapTo(mutableSetOf()) { it.material }
+        props.excludedMaterials
+            .filterNot { it in shown }
+            .sortedBy { it.name }
+            .forEach { material ->
+                div {
+                    css {
+                        display = Display.block
+                        padding = 0.5.rem
+                    }
+                    groupBox(inline = true) {
+                        exclusionCheckbox(props, material, imported = true)
+                        icon(material.name)
+                        span {
+                            css { marginLeft = 0.25.rem }
+                            +material.name
+                        }
+                    }
+                }
+            }
     }
 
 fun hashColor(s: String, alpha: Double = 1.0): Color {
@@ -339,7 +401,14 @@ fun ChildrenBuilder.urlOptimizationResultPresenter(props: FactorioOptimizerProps
         optimizationResult = props.optimizationResult
         logistics = props.logistics
         normalizeTarget = props.normalizeTarget
+        excludedMaterials = props.excludedMaterials
         changeMaterial = { props.changeUrl { target = it } }
         changeNormalizeTo = { props.changeUrl { normalizeTarget = 1 / it } }
+        changeExcluded = { material, exclude ->
+            props.changeUrl {
+                excludedMaterials =
+                    if (exclude) excludedMaterials + material else excludedMaterials - material
+            }
+        }
     }
 }

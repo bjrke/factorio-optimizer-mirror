@@ -3,14 +3,15 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing.output
 import de.bjrke.factorio.optimizer.common.game.production.normalizeTargetFromUrl
 
 /**
- * The six path segments of a Factorio-Optimizer web URL, decoded far enough that the CLI can run
+ * The seven path segments of a Factorio-Optimizer web URL, decoded far enough that the CLI can run
  * the same selection the browser had:
  *
- * `http://localhost:8080/#/<normalizeTarget>/<target>/<selection>/<beltStack>/<inserterStack>/<intermediates>`
+ * `localhost:8080/#/<normalizeTarget>/<target>/<selection>/<beltStack>/<inserterStack>/<intermediates>/<excluded>`
  *
  * The selection string is kept raw; [surfaceFromUrl], [FactoryConfig.fromUrl] and
  * [LogisticsConfig.belt]/[inserter]/[beltLanes] decode it the same way the web UI does. The
- * intermediate limit is kept raw too, so the caller can clamp it with `validIntermediateLimit`.
+ * intermediate limit is kept raw too, so the caller can clamp it with `validIntermediateLimit`. The
+ * excluded segment is the raw comma-separated material list; `excludedMaterialsFromUrl` decodes it.
  */
 data class FactorioUrl(
     val normalizeTarget: Double,
@@ -19,6 +20,7 @@ data class FactorioUrl(
     val beltStack: String?,
     val inserterStack: String?,
     val intermediates: String?,
+    val excluded: String? = null,
 )
 
 /**
@@ -41,5 +43,6 @@ fun parseFactorioUrl(text: String): FactorioUrl? {
         beltStack = segments.getOrNull(3),
         inserterStack = segments.getOrNull(4),
         intermediates = segments.getOrNull(5),
+        excluded = segments.getOrNull(6),
     )
 }

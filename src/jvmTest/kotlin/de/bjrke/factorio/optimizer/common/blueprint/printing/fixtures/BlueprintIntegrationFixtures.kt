@@ -93,7 +93,9 @@ internal fun layoutFromUrl(url: String): Layout {
             ),
         )
 
-    val result = Optimizer(parsedRecipes, factories, cli.intermediates)[Material(cli.material)]
+    val result =
+        Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[
+            Material(cli.material)]
     return Layout(result, logistics, cli.normalizeTarget, cli.beltEnd)
 }
 

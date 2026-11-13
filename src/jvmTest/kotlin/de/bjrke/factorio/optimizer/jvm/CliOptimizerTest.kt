@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
@@ -114,6 +115,44 @@ class CliOptimizerTest {
             // out-of-range values clamp to the selectable range
             { assertEquals(50, parseArgs(arrayOf("--intermediates=99")).intermediates) },
             { assertEquals(1, parseArgs(arrayOf("--intermediates=0")).intermediates) },
+        )
+
+    @Test
+    fun theExcludedMaterialsComeFromTheUrlOrTheFlags() =
+        assertAll(
+            {
+                assertEquals(
+                    setOf(Material("gear"), Material("pipe")),
+                    parseArgs(arrayOf("#/4.5/advanced-circuit/CFSXbmr/1/1/10/gear,pipe"))
+                        .excludedMaterials,
+                )
+            },
+            {
+                assertEquals(
+                    setOf(Material("gear")),
+                    parseArgs(arrayOf("--exclude=gear")).excludedMaterials,
+                )
+            },
+            {
+                assertEquals(
+                    setOf(Material("gear"), Material("pipe")),
+                    parseArgs(arrayOf("--exclude=gear", "--exclude=pipe")).excludedMaterials,
+                )
+            },
+            // explicit flags replace the URL's list
+            {
+                assertEquals(
+                    setOf(Material("pipe")),
+                    parseArgs(
+                            arrayOf(
+                                "#/4.5/advanced-circuit/CFSXbmr/1/1/10/gear",
+                                "--exclude=pipe",
+                            ),
+                        )
+                        .excludedMaterials,
+                )
+            },
+            { assertEquals(emptySet(), parseArgs(emptyArray()).excludedMaterials) },
         )
 
     @Test
@@ -240,6 +279,7 @@ class CliOptimizerTest {
                         "--inserter=stack-inserter",
                         "--full-belt",
                         "--belt-stack=4",
+                        "--exclude=iron-gear-wheel",
                     ),
                 ),
                 factories = setOf(Factory.ASSEMBLING_MACHINE_3, Factory.FOUNDRY),
@@ -257,6 +297,7 @@ class CliOptimizerTest {
                     "  beltLanes: 2",
                     "  beltStack: 4",
                     "  intermediates: 10",
+                    "  excluded: iron-gear-wheel",
                     "  factories: assembling-machine-3, foundry",
                 ) { expected ->
                     assertContains(text, expected, message = text)

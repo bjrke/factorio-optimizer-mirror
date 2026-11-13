@@ -68,6 +68,8 @@ data class CliArgs(
     val inserterStack: String? = null,
     /** How many produced materials besides the target the plan may build. */
     val intermediates: Int = DEFAULT_INTERMEDIATE_LIMIT,
+    /** Materials imported instead of built; `--exclude` or the URL's excluded segment. */
+    val excludedMaterials: Set<Material> = emptySet(),
     /** The requested [Output]s; empty means the default listing. */
     val outputs: Set<Output> = emptySet(),
 )
@@ -107,7 +109,9 @@ fun main(args: Array<String>) {
             ),
         )
 
-    val result = Optimizer(parsedRecipes, factories, cli.intermediates)[Material(cli.material)]
+    val result =
+        Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[
+            Material(cli.material)]
 
     val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
     val blueprintOutputs = Output.order.filter { it.blueprint && it in outputs }
@@ -150,6 +154,7 @@ internal fun settingsText(
       beltStack: ${logistics.beltStack}
       inserterStack: ${logistics.inserterStack}
       intermediates: ${cli.intermediates}
+      excluded: ${cli.excludedMaterials.map { it.name }.sorted().joinToString(", ")}
       factories: ${factories.map { it.identifier }.sorted().joinToString(", ")}
     """
         .trimIndent()

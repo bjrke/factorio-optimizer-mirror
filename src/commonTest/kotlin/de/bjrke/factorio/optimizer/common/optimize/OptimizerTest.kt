@@ -280,6 +280,219 @@ class OptimizerTest {
     }
 
     @Test
+    fun anExcludedMaterialIsImportedInsteadOfBuilt() {
+        val ore = Material("ore")
+        val plate = Material("plate")
+        val gear = Material("gear")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(
+                    recipe("smelt", mapOf(ore to 1.0), mapOf(plate to 1.0)),
+                    recipe("gear", mapOf(plate to 1.0), mapOf(gear to 1.0)),
+                    recipe("target", mapOf(gear to 1.0), mapOf(target to 1.0)),
+                ),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                excludedMaterials = setOf(plate),
+            )[target]
+        val built =
+            result.factories.values
+                .filter { it.factory != Factory.NO_FACTORY }
+                .map { it.recipe.name }
+                .toSet()
+        val imported =
+            result.factories.values
+                .filter { Category.IMPORT in it.recipe.categories }
+                .map { it.material }
+                .toSet()
+
+        assertAll(
+            { assertContains(built, "gear") },
+            { assertContainsNot(built, "smelt") },
+            { assertContains(imported, plate) },
+        )
+    }
+
+    @Test
+    fun excludingAMaterialDropsEveryProducer() {
+        val ore = Material("ore")
+        val plate = Material("plate")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(
+                    recipe("smelt-a", mapOf(ore to 1.0), mapOf(plate to 1.0)),
+                    recipe("smelt-b", mapOf(ore to 2.0), mapOf(plate to 1.0)),
+                    recipe("target", mapOf(plate to 1.0), mapOf(target to 1.0)),
+                ),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                excludedMaterials = setOf(plate),
+            )[target]
+        val built = result.factories.values.map { it.recipe.name }.toSet()
+
+        assertAll(
+            { assertContainsNot(built, "smelt-a") },
+            { assertContainsNot(built, "smelt-b") },
+            { assertContains(built, "target") },
+        )
+    }
+
+    @Test
+    fun aMultiOutputRecipeProducingAnExcludedMaterialIsDropped() {
+        val ore = Material("ore")
+        val plate = Material("plate")
+        val gear = Material("gear")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(
+                    recipe("combo", mapOf(ore to 1.0), mapOf(plate to 1.0, gear to 1.0)),
+                    recipe("target", mapOf(gear to 1.0), mapOf(target to 1.0)),
+                ),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                excludedMaterials = setOf(plate),
+            )[target]
+        val built = result.factories.values.map { it.recipe.name }.toSet()
+        val imported =
+            result.factories.values
+                .filter { Category.IMPORT in it.recipe.categories }
+                .map { it.material }
+                .toSet()
+
+        assertAll(
+            { assertContainsNot(built, "combo") },
+            { assertContains(imported, gear) },
+        )
+    }
+
+    @Test
+    fun theTargetRecipeSurvivesAnExcludedByproduct() {
+        val ore = Material("ore")
+        val plate = Material("plate")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(recipe("target", mapOf(ore to 1.0), mapOf(target to 1.0, plate to 1.0))),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                excludedMaterials = setOf(plate),
+            )[target]
+
+        assertEquals("target", result.recipe.name)
+        assertContains(result.factories.values.map { it.recipe.name }, "target")
+    }
+
+    @Test
+    fun theTargetCannotBeExcluded() {
+        val ore = Material("ore")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(recipe("target", mapOf(ore to 1.0), mapOf(target to 1.0))),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                excludedMaterials = setOf(target),
+            )[target]
+
+        assertEquals("target", result.recipe.name)
+        assertContains(result.factories.values.map { it.recipe.name }, "target")
+    }
+
+    @Test
+    fun anExcludedMaterialDoesNotCountTowardTheIntermediateLimit() {
+        val ore = Material("ore")
+        val plate = Material("plate")
+        val gear = Material("gear")
+        val target = Material("target")
+        fun recipe(
+            name: String,
+            ingredients: Map<Material, Double>,
+            result: Map<Material, Double>,
+        ) = Recipe(name, ingredients, result, time = 1.0, categories = setOf(Category.CRAFTING))
+
+        val parsed =
+            ParsedRecipe(
+                emptyList(),
+                listOf(
+                    recipe("smelt", mapOf(ore to 1.0), mapOf(plate to 1.0)),
+                    recipe("gear", mapOf(plate to 1.0), mapOf(gear to 1.0)),
+                    recipe("target", mapOf(gear to 1.0, plate to 1.0), mapOf(target to 1.0)),
+                ),
+            )
+        val result =
+            Optimizer(
+                parsed,
+                setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY),
+                maxIntermediates = 1,
+                excludedMaterials = setOf(gear),
+            )[target]
+        val built =
+            result.factories.values
+                .filter { it.factory != Factory.NO_FACTORY }
+                .map { it.recipe.name }
+                .toSet()
+
+        assertAll(
+            // gear is excluded, so the one remaining intermediate slot keeps the plate smelter
+            { assertContains(built, "smelt") },
+            { assertContainsNot(built, "gear") },
+        )
+    }
+
+    @Test
     fun aTargetInACycleIsBuiltNotImported() {
         val target = Material("target")
         val byproduct = Material("byproduct")

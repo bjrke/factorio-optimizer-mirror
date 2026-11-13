@@ -55,6 +55,7 @@ internal fun twoProductions(
 abstract class OptimizationResultTestBase : ComponentTest() {
     protected val normalizedTo = mutableListOf<Double>()
     protected val changedMaterials = mutableListOf<Material>()
+    protected val changedExclusions = mutableListOf<Pair<Material, Boolean>>()
 
     protected val logistics = calculator()
 
@@ -62,19 +63,23 @@ abstract class OptimizationResultTestBase : ComponentTest() {
         result: OptimizationResult,
         calculator: LogisticsCalculator = logistics,
         normalizeTarget: Double = 1.0,
+        excludedMaterials: Set<Material> = emptySet(),
     ) = optimizationResult.create {
         optimizationResult = result
         logistics = calculator
         this.normalizeTarget = normalizeTarget
+        this.excludedMaterials = excludedMaterials
         changeMaterial = { changedMaterials += it }
         changeNormalizeTo = { normalizedTo += it }
+        changeExcluded = { material, exclude -> changedExclusions += material to exclude }
     }
 
     protected fun renderResult(
         result: OptimizationResult,
         calculator: LogisticsCalculator = logistics,
         normalizeTarget: Double = 1.0,
-    ) = render(resultElement(result, calculator, normalizeTarget))
+        excludedMaterials: Set<Material> = emptySet(),
+    ) = render(resultElement(result, calculator, normalizeTarget, excludedMaterials))
 
     protected fun blockWidths(container: Element): List<Double> {
         val blocks = container.querySelectorAll(":scope > div")

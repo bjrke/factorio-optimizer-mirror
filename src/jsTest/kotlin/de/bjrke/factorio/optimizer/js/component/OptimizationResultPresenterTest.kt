@@ -10,16 +10,23 @@ import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
 import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.js.component.fixtures.production
+import de.bjrke.factorio.optimizer.js.component.fixtures.twoProductions
 import de.bjrke.test.assertAll
 import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import web.html.HTMLInputElement
 
 /** What the result block renders: the boxes, the material rows, the order and the icons. */
 class OptimizationResultPresenterTest : OptimizationResultTestBase() {
@@ -159,5 +166,80 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
         assertEquals(1, screen.getAllByTitle("pipe").size)
         assertEquals(1, screen.getAllByTitle("belts").size)
         assertEquals(1, screen.getAllByTitle("inserters").size)
+    }
+
+    private val importRecipe =
+        Recipe(
+            name = ironPlate.name,
+            ingredients = emptyMap(),
+            result = mapOf(ironPlate to 1.0),
+            time = 1.0,
+            categories = setOf(Category.IMPORT),
+        )
+
+    private fun resultWithImport() =
+        OptimizationResult(
+            target = gear,
+            recipe = ironGearWheelRecipe,
+            factories =
+                mapOf(
+                    ironGearWheelRecipe to
+                        production(
+                            Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                        ),
+                    importRecipe to production(Triple(importRecipe, ironPlate, Factory.NO_FACTORY)),
+                ),
+        )
+
+    @Test
+    fun everyBuiltRowOffersAnExclusionCheckbox() {
+        renderResult(
+            twoProductions(
+                Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                Triple(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
+            ),
+        )
+
+        val checkbox = screen.getByTitle("Exclude ${ironOre.name} from the blueprint")
+
+        assertEquals(false, (checkbox as HTMLInputElement).checked)
+    }
+
+    @Test
+    fun theTargetRowHasNoExclusionCheckbox() {
+        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+
+        assertNull(screen.queryByTitle("Exclude ${gear.name} from the blueprint"))
+    }
+
+    @Test
+    fun aPlainImportRowHasNoExclusionCheckbox() {
+        renderResult(resultWithImport())
+
+        assertAll(
+            { assertNull(screen.queryByTitle("Exclude ${ironPlate.name} from the blueprint")) },
+            { assertNull(screen.queryByTitle("Include ${ironPlate.name} in the blueprint")) },
+        )
+    }
+
+    @Test
+    fun anExcludedImportRowShowsACheckedCheckbox() {
+        renderResult(resultWithImport(), excludedMaterials = setOf(ironPlate))
+
+        val checkbox = screen.getByTitle("Include ${ironPlate.name} in the blueprint")
+
+        assertEquals(true, (checkbox as HTMLInputElement).checked)
+    }
+
+    @Test
+    fun anExcludedMaterialWithoutARowKeepsACheckedCheckbox() {
+        renderResult(
+            optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            excludedMaterials = setOf(ironPlate),
+        )
+
+        val checkbox = screen.getByTitle("Include ${ironPlate.name} in the blueprint")
+
+        assertEquals(true, (checkbox as HTMLInputElement).checked)
     }
 }

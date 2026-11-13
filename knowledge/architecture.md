@@ -32,8 +32,9 @@ CLI (JVM) from one shared core.
   - `game/selection` — the URL/CLI codecs: `Selection.kt`
     (`Selection`, `SelectionFlag`, `selectionString`, `spaceAgeIn`,
     `fullBeltIn`), `BeltEndSelection.kt` (`beltEndFromSelection/-Identifier`),
-    `SurfaceSelection.kt` (`surfaceFromUrl/-Planet`). Only the entry points (UI,
-    CLI) and the tests use it; the layout never sees a URL.
+    `SurfaceSelection.kt` (`surfaceFromUrl/-Planet`) and `ExcludedSelection.kt`
+    (`excludedMaterialsFromUrl/-ToUrl`, the material exclusions). Only the entry
+    points (UI, CLI) and the tests use it; the layout never sees a URL.
   - `game/production` — reads the prototype dump: `recipeParser.kt` orchestrates
     it, `RecipeLoader` (the cached per-mods parse and the cached
     `forSurface(spaceAge, surface)` view), `prototypeDump.kt` (the
@@ -48,7 +49,10 @@ CLI (JVM) from one shared core.
     blueprint planner can consume an optimizer result without depending on the
     optimizer itself. `Optimizer` takes a `maxIntermediates` limit: it keeps the
     least-used produced materials (from `ParsedRecipe.usage`) and turns the rest
-    into imports before solving the LP, so the result cache is per limit.
+    into imports before solving the LP, so the result cache is per limit. It also
+    takes `excludedMaterials`: every recipe producing one is dropped before
+    reachability and the LP, so the material is imported and the plan neither
+    calculates nor lays out its production. The target is never excluded.
   - `model` — the shared result models: `OptimizationResult`, `FactoryProduction`
     (per-machine production) and `factoryProductionComparator`. They sit above
     the rulebook (`game/prototype`) and are consumed by both the optimizer and
@@ -136,7 +140,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | core.util | 4 |
 | game.prototype | 8 |
 | game.production | 10 |
-| game.selection | 3 |
+| game.selection | 4 |
 | model | 1 |
 | optimize | 3 |
 | blueprint | 1 |
@@ -200,7 +204,7 @@ other.
 | `core.util` | nothing | every project package |
 | `game.prototype` | `core.model` | `game.production`, `model`, `optimize`, `blueprint` |
 | `game.production` | `core.model`, `game.prototype` | `model`, `optimize`, `blueprint` |
-| `game.selection` | `blueprint.layout`, `game.prototype` | `optimize`, `model`, the dump loader |
+| `game.selection` | `blueprint.layout`, `core.model`, `game.prototype` | `optimize`, `model`, the dump loader |
 | `model` | `core.model`, `game.prototype` | everything above (the shared result models) |
 | `optimize` | `core.model`, `game.prototype`, `model` | `game.production` (the dump loader), `game.selection`, `blueprint` |
 | `blueprint` | `blueprint.layout(+entity,validation)`, the placing stages, `blueprint.planning.{plan,row}`, `blueprint.printing.{model,output,inspection}`, `core.model`, `game.prototype` | `blueprint.json`, `optimize` (the optimizer stays out) |

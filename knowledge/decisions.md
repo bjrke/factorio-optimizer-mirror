@@ -14,6 +14,21 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-12 — Excluded materials are imported, never built
+
+**Decision.** The optimizer takes `excludedMaterials`; every recipe producing one is dropped before
+reachability and the LP, so the material becomes an import and the plan neither calculates nor lays
+out its production. The exclusions travel in the URL's `excluded` segment and the CLI's
+`--exclude`, and the result view offers a checkbox on every built row plus a checked one on the
+import row that replaces an excluded material.
+
+**Guardrail.** The target is never excluded, and a recipe that produces the target keeps running
+even when it also produces an excluded material, so that material can still appear as a byproduct.
+Excluding a material drops all its producers, not just the row that was clicked.
+
+**See.** `optimize/Optimizer.kt`, `game/selection/ExcludedSelection.kt`,
+`js/component/OptimizationResultPresenter.kt`.
+
 ## 2026-11-12 — The intermediate limit keeps the least-used materials
 
 **Decision.** `Optimizer` takes a `maxIntermediates` limit and keeps the least-used produced

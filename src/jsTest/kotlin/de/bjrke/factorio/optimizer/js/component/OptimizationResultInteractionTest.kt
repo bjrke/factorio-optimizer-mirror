@@ -6,9 +6,14 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
 import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.js.component.fixtures.production
+import de.bjrke.factorio.optimizer.js.component.fixtures.twoProductions
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo
 import de.bjrke.test.fireEvent
@@ -105,5 +110,51 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
         fireEvent.click(screen.getAllByTitle(BeltTier.FAST_TRANSPORT_BELT.identifier).first())
 
         assertEquals(firstBeltInput().value.toDouble(), normalizedTo.single(), 0.01)
+    }
+
+    private val importRecipe =
+        Recipe(
+            name = ironPlate.name,
+            ingredients = emptyMap(),
+            result = mapOf(ironPlate to 1.0),
+            time = 1.0,
+            categories = setOf(Category.IMPORT),
+        )
+
+    private fun resultWithImport() =
+        OptimizationResult(
+            target = gear,
+            recipe = ironGearWheelRecipe,
+            factories =
+                mapOf(
+                    ironGearWheelRecipe to
+                        production(
+                            Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                        ),
+                    importRecipe to production(Triple(importRecipe, ironPlate, Factory.NO_FACTORY)),
+                ),
+        )
+
+    @Test
+    fun checkingTheExclusionBoxReportsTheMaterial() {
+        renderResult(
+            twoProductions(
+                Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                Triple(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
+            ),
+        )
+
+        fireEvent.click(screen.getByTitle("Exclude ${ironOre.name} from the blueprint"))
+
+        assertEquals(listOf(ironOre to true), changedExclusions)
+    }
+
+    @Test
+    fun uncheckingAnExcludedImportReportsTheMaterial() {
+        renderResult(resultWithImport(), excludedMaterials = setOf(ironPlate))
+
+        fireEvent.click(screen.getByTitle("Include ${ironPlate.name} in the blueprint"))
+
+        assertEquals(listOf(ironPlate to false), changedExclusions)
     }
 }

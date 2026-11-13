@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.jvm
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.FactorioUrl
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.parseFactorioUrl
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
@@ -13,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.game.prototype.validIntermediateLimit
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromIdentifier
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromSelection
+import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsFromUrl
 import de.bjrke.factorio.optimizer.common.game.selection.spaceAgeIn
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromPlanet
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
@@ -21,13 +23,14 @@ import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
  * Parses the CLI arguments. A positional material, `--base-game` (turns Space Age off),
  * `--planet=<surface>`, `--factory=<machine>` (repeatable), `--belt=<tier>`, `--inserter=<tier>`,
  * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--intermediates=<n>`,
- * `--normalize=<x>`, `--belt-end=<marker>` and its alias `--cheats` (the infinity chest) are
- * understood; `--settings`, `--listing`, `--layout`, `--json` and `--blueprint` choose the
- * [Output]s. Belt/inserter/machine/marker values are identifiers (`express-transport-belt`,
- * `foundry`, `buffer-chest`) or a single-letter code. Any argument may be replaced by a pasted web
- * UI URL, e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10`, whose segments fill
- * in the material, selection, normalize target, stack sizes and intermediate limit. Explicit flags
- * override it.
+ * `--exclude=<material>` (repeatable), `--normalize=<x>`, `--belt-end=<marker>` and its alias
+ * `--cheats` (the infinity chest) are understood; `--settings`, `--listing`, `--layout`, `--json`
+ * and `--blueprint` choose the [Output]s. Belt/inserter/machine/marker values are identifiers
+ * (`express-transport-belt`, `foundry`, `buffer-chest`) or a single-letter code. Any argument may
+ * be replaced by a pasted web UI URL, e.g.
+ * `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10`, whose segments fill in the
+ * material, selection, normalize target, stack sizes, intermediate limit and excluded materials.
+ * Explicit flags override it.
  */
 fun parseArgs(args: Array<String>): CliArgs {
     val url = args.firstNotNullOfOrNull { parseFactorioUrl(it) }
@@ -35,6 +38,8 @@ fun parseArgs(args: Array<String>): CliArgs {
     val positional = args.firstOrNull { !it.startsWith("--") && parseFactorioUrl(it) == null }
     val spaceAge = resolveSpaceAge(args, url)
     val surface = resolveSurface(args, spaceAge, url)
+    // explicit --exclude flags replace the URL's list, so a pasted URL can be narrowed
+    val excluded = args.valueOptions("exclude").filter { it.isNotEmpty() }
     return CliArgs(
         material = positional ?: url?.target ?: ALL_SCIENCE_PACKS,
         spaceAge = spaceAge,
@@ -52,6 +57,9 @@ fun parseArgs(args: Array<String>): CliArgs {
             validIntermediateLimit(
                 args.valueOption("intermediates") ?: url?.intermediates,
             ),
+        excludedMaterials =
+            if (excluded.isEmpty()) excludedMaterialsFromUrl(url?.excluded)
+            else excluded.mapTo(mutableSetOf()) { Material(it) },
         outputs = resolveOutputs(args),
     )
 }
