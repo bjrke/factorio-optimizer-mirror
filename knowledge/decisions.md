@@ -40,8 +40,9 @@ plan (`BlueprintPlan.scale`), and `planLabel` reports the covered share.
 
 **Guardrail.** Check the rate the plan must deliver, not `rowOutputs`: whole-machine overproduction
 is throttled by the belt, and a row that cannot make the demand is underbuilt, not over capacity.
-Shrink the whole plan, never one row, or its consumers starve. `plannedSources` sums whole machines
-and must not multiply by `scale` a second time.
+Shrink the whole plan, never one row, or its consumers starve. A forced band over the machine
+budget shrinks as well, so the same recipe pair keeps its baseline whether the band or its lane is
+the limit. `plannedSources` sums whole machines and must not multiply by `scale` a second time.
 
 **See.** `blueprint/planning/BlueprintPlan.kt`, `blueprint/planning/band/DirectFeed.kt`,
 `blueprint/planning/BlueprintSelection.kt`, `blueprint/planning/row/RowPlacer.kt`.

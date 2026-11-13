@@ -17,9 +17,9 @@ import kotlin.math.roundToInt
 private const val CAPACITY_EPSILON = 1e-9
 
 /**
- * How often the planner may replan while it fits the product belts. Each shrink step is exact for a
- * fixed banding, so the extra steps only cover a band search that chooses differently at the
- * smaller scale.
+ * How often the planner may replan while it fits the product belts and the direct-feed bands. Each
+ * shrink step is exact for a fixed banding, so the extra steps only cover a band search that
+ * chooses differently at the smaller scale.
  */
 private const val MAX_CAPACITY_STEPS = 6
 
@@ -40,7 +40,10 @@ private const val MAX_CAPACITY_STEPS = 6
  * unstacked, so the belt capacity research level cannot raise the limit. When a delivered rate
  * exceeds its lane, the plan first forces the material's producer and consumer into one direct-feed
  * band; a material that cannot be direct-fed (the target, or a shared product) makes the whole plan
- * shrink instead, because thinning one row would starve its consumers. [BlueprintPlan.scale] then
+ * shrink instead, because thinning one row would starve its consumers. A forced band that is over
+ * the machine budget shrinks the plan as well, so the material stays internal instead of falling
+ * back onto a belt — otherwise the same recipe pair would shrink from a different baseline
+ * depending on whether the band or its belt happened to be the limit. [BlueprintPlan.scale] then
  * holds the drawn scale and [BlueprintPlan.label] reports how many copies reach the requested rate.
  *
  * The rate checked here is the rate the plan must deliver — the target's requested rate and each
@@ -95,6 +98,14 @@ fun blueprintPlan(
         )
 
     repeat(MAX_CAPACITY_STEPS) {
+        // A forced band that is too long for the machine budget must shrink first: its material
+        // would otherwise fall back onto a belt, and that belt's lane rate would shrink the plan
+        // from a different baseline than the same plan's direct-fed neighbor.
+        if (feed.bandOverflow.isNotEmpty()) {
+            effective = shrinkTo(effective, feed.bandOverflow)
+            feed = directFeed(targetFactory, result.factories, logistics, effective, forced)
+            return@repeat
+        }
         val over = feed.overCapacityOutputs(logistics)
         if (over.isEmpty()) return planned()
 
@@ -107,7 +118,7 @@ fun blueprintPlan(
         if (newForced.isNotEmpty()) {
             forced = forced + newForced
         } else {
-            effective = shrinkToLane(effective, over)
+            effective = shrinkTo(effective, over)
         }
         feed = directFeed(targetFactory, result.factories, logistics, effective, forced)
     }
@@ -172,12 +183,14 @@ private fun DirectFeed.consumers(material: Material) =
         .size
 
 /**
- * The scale at which the tightest over-capacity delivery just fits one lane. [over] holds each
- * material's needed share of a lane, so the demand is linear in the scale and one step is exact;
- * the small step back below a limit that did not move covers a rate that is only floating-point
- * noise above the lane.
+ * The scale at which the tightest overflow — a lane share or a band's machine share — just fits.
+ * The demand and the machine need are linear in the scale, so one step is exact; the small step
+ * back below a limit that did not move covers a value that is only floating-point noise above it.
  */
-private fun shrinkToLane(scale: Double, over: Map<Material, Double>): Double {
+private fun shrinkTo(
+    scale: Double,
+    over: Map<Material, Double>,
+): Double {
     val limit = scale / over.values.max()
     return if (limit < scale) limit else scale * (1.0 - CAPACITY_EPSILON)
 }

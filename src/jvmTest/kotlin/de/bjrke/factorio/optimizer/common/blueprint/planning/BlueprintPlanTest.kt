@@ -563,6 +563,39 @@ class BlueprintPlanTest {
         )
     }
 
+    /**
+     * A pair whose band needs more than the machine budget must shrink the plan, not fall back onto
+     * a belt for its intermediate: that belt would then shrink the plan from a different baseline.
+     */
+    @Test
+    fun aBandOverTheMachineBudgetShrinksInsteadOfBeltingItsInput() {
+        val circuit =
+            production(
+                electronicCircuitRecipe,
+                electronicCircuit,
+                Factory.ASSEMBLING_MACHINE_3,
+                0.4,
+            )
+        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 1.5)
+
+        val planned =
+            testBlueprintPlan(
+                result(electronicCircuit, electronicCircuitRecipe, listOf(cable, circuit)),
+                logistics,
+                12.0,
+            )
+
+        assertAll(
+            // the propagated need is 5 circuit + 8 cable machines, over the 10-machine budget, so
+            // one exact step draws the pair at 10/13 of the requested scale
+            { assertEquals(120.0 / 13.0, planned.scale, TOLERANCE) },
+            { assertEquals("electronic-circuit (77%, place 2x for full rate)", planned.label) },
+            { assertContainsNot(planned.beltMaterials, copperCable) },
+            { assertContains(planned.rows.flatMap { it.links }.map { it.material }, copperCable) },
+            { assertEquals(10, planned.rows.single().machines.size) },
+        )
+    }
+
     @Test
     fun machineFootprintsMatchThePrototypes() =
         assertTableOf(

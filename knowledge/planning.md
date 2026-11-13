@@ -52,9 +52,11 @@ research level does not raise its lane. The rate is
 limited by what the built rows can make: a row that cannot even reach the demand is underbuilt (for
 example by `MAX_COPIES`), not over capacity. Before shrinking, a material with exactly one consumer
 is forced into a direct-feed band: `maximalGroups` sorts `forcedMaterials` links ahead of the score
-order, and a forced link that cannot arrange or fit is still dropped. A shared product cannot be
-internalized (`FeedCandidates.internalizesSharedOutput`), so it shrinks instead. `planLabel` reports
-the covered share and how many copies reach the requested rate.
+order, and a forced link that cannot arrange or fit is still dropped. A forced band that is over
+`maxBandMachines` shrinks the plan too (`DirectFeed.bandOverflow`), because its material would
+otherwise fall back onto a belt and that belt's lane would scale the plan from a different baseline.
+A shared product cannot be internalized (`FeedCandidates.internalizesSharedOutput`), so it shrinks
+instead. `planLabel` reports the covered share and how many copies reach the requested rate.
 
 `RowPlacer` places every row through one `placeRow`: a plain row repeats its production with
 touching machines, while a row with links leaves a gap column after each machine that has a
@@ -211,6 +213,16 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
   per built machine, so it must not multiply by the plan scale again; a shrunk plan
   would otherwise report its imports twice over. Evidence:
   `aSolidTargetShrinksToTheProductLane` (its copper plate source).
+- **A forced band that outgrows the machine budget shrinks the plan, it does not belt
+  its input.** `maximalGroups` starts a forced link as its own seed and only grows with
+  links that fit, so a forced pair is unbanded by the budget exactly when its propagated
+  need exceeds `maxBandMachines(1)`. Letting the material fall back onto a belt makes
+  that belt's lane shrink the plan from a different baseline: the reported
+  electronic-circuit URL at 36/s drew 1 cable+circuit pair where 30/s drew 2, because the
+  6+6 band no longer fit and belted 72/s of cable over a 7.5/s lane. `DirectFeed.bandOverflow`
+  reports the ratio and `blueprintPlan` shrinks by it before it checks any lane. Evidence:
+  `aBandOverTheMachineBudgetShrinksInsteadOfBeltingItsInput`,
+  `theSameCircuitBandIsDrawnForOneMoreRequestedCopy`.
 - **An import-only target must be refused, not laid out.** The optimizer models a target no
   recipe produces as a `Category.IMPORT` pseudo source. `blueprintPlan` must return
   `BlueprintPlanResult.Unavailable` for it: the target production is seeded into

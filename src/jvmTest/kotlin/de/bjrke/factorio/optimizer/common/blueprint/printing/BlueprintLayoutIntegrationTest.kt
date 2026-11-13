@@ -33,6 +33,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -120,6 +121,34 @@ class BlueprintLayoutIntegrationTest {
                 )
             },
             { assertEquals("copper-cable (75%, place 2x for full rate)", layout.plan.label) },
+        )
+    }
+
+    /**
+     * One more copy of the same recipe pair must draw the same baseline. A band that outgrew the
+     * machine budget used to fall back onto a belt for its intermediate, and that belt's lane then
+     * shrank the plan to a smaller pair than the cheaper rate had shown.
+     */
+    @Test
+    fun theSameCircuitBandIsDrawnForOneMoreRequestedCopy() {
+        fun layout(rate: String) =
+            layoutFromUrl(
+                "http://localhost:8080/#/$rate/electronic-circuit/CFSXbimrt/4/3/10/" +
+                    "copper-plate,iron-plate",
+            )
+
+        val five = layout("30")
+        val six = layout("36")
+
+        assertAll(
+            { assertEquals(emptyList(), five.failures) },
+            { assertEquals(emptyList(), six.failures) },
+            { assertEquals(five.plan.scale, six.plan.scale, TOLERANCE) },
+            { assertEquals(five.plan.rows, six.plan.rows) },
+            { assertContainsNot(five.plan.beltMaterials, Material("copper-cable")) },
+            { assertContainsNot(six.plan.beltMaterials, Material("copper-cable")) },
+            { assertEquals("electronic-circuit (25%, place 4x for full rate)", five.plan.label) },
+            { assertEquals("electronic-circuit (21%, place 5x for full rate)", six.plan.label) },
         )
     }
 

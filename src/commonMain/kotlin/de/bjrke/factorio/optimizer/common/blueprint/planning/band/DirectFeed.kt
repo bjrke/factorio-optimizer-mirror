@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
+import kotlin.math.max
 
 /**
  * The rows a plan builds; a plain row repeats one recipe, a band interleaves several.
@@ -18,15 +19,22 @@ import kotlin.math.ceil
  * consumers outside the direct links plus, for the target, its external delivery. It is the rate
  * the plan must deliver, not what the whole machines could make, because an overproducing machine
  * is throttled by its product belt.
+ *
+ * [bandOverflow] is set for a forced material whose band did not fit [maxBandMachines]: the ratio
+ * by which the plan is too large for that band. The plan shrinks by it before it fits a product
+ * lane, so the material is inserted machine to machine instead of falling back onto a belt whose
+ * lane would then shrink the plan to a different baseline.
  */
 internal data class DirectFeed(
     val rows: List<PlannedRow>,
     val beltRates: Map<Material, Double>,
+    val bandOverflow: Map<Material, Double> = emptyMap(),
 )
 
 /** Splits the plan into band rows, the target row and the remaining belted rows. */
 internal fun DirectFeedContext.build(forcedMaterials: Set<Material> = emptySet()): DirectFeed {
-    val bandPlans = maximalGroups(forcedMaterials = forcedMaterials)
+    val candidates = candidateLinks()
+    val bandPlans = maximalGroups(candidates, forcedMaterials)
     val bands = buildBands(bandPlans)
     val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
     val built = bands.flatMap { it.machines }.groupingBy { it }.eachCount()
@@ -36,7 +44,42 @@ internal fun DirectFeedContext.build(forcedMaterials: Set<Material> = emptySet()
         included.values
             .sortedBy { it.recipe.name }
             .mapNotNull { belted(it, demand.perRecipe, onBelt, built) }
-    return DirectFeed(bands + targetRow(built) + beltedBands(belted), demand.perMaterial)
+    val rows = bands + targetRow(built) + beltedBands(belted)
+    return DirectFeed(
+        rows,
+        demand.perMaterial,
+        bandOverflow(
+            candidates,
+            forcedMaterials,
+            rows.flatMapTo(mutableSetOf()) { row -> row.links.map { it.material } },
+        ),
+    )
+}
+
+/**
+ * The shrink ratio of every forced material that a band did not take, when the band's whole-machine
+ * need is what kept it out. A forced link is the seed of its own group and growth never adds a link
+ * that does not fit, so an unbanded forced pair is over the budget itself. A material the group
+ * dropped for another reason (a footprint or belt-row limit) is absent: shrinking would not help.
+ */
+private fun DirectFeedContext.bandOverflow(
+    candidates: List<FeedLink>,
+    forcedMaterials: Set<Material>,
+    bandedMaterials: Set<Material>,
+): Map<Material, Double> {
+    val budget = maxBandMachines(links = 1)
+    return buildMap {
+        for (material in forcedMaterials) {
+            if (material in bandedMaterials) continue
+            val link = candidates.firstOrNull { it.material == material } ?: continue
+            val needs = groupNeeds(listOf(link)) ?: continue
+            val machines =
+                needs.values.sumOf { need ->
+                    ceil(max(1.0, need) - FEED_EPSILON).toInt()
+                }
+            if (machines > budget) put(material, machines.toDouble() / budget)
+        }
+    }
 }
 
 /**
