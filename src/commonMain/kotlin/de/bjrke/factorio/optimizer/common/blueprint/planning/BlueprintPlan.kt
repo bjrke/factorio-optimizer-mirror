@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -45,6 +46,9 @@ private const val MAX_CAPACITY_STEPS = 6
  * than its belt can carry is throttled by that belt, so overproduction is not a capacity failure; a
  * row that cannot even make the demand is underbuilt (for example by the machine cap), not over
  * capacity, and must not shrink the plan.
+ *
+ * A target no recipe produces is the optimizer's [Category.IMPORT] pseudo source, an import rather
+ * than a machine; it is reported as [BlueprintPlanResult.Unavailable] instead of being laid out.
  */
 fun blueprintPlan(
     result: OptimizationResult,
@@ -55,6 +59,12 @@ fun blueprintPlan(
         return BlueprintPlanResult.Unavailable(
             "all-science-packs needs every science pack and is too large for one blueprint; " +
                 "choose a specific material",
+        )
+    }
+    if (Category.IMPORT in result.recipe.categories) {
+        return BlueprintPlanResult.Unavailable(
+            "no recipe produces ${result.target.name} on this surface; choose a material a " +
+                "recipe makes there",
         )
     }
 

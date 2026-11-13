@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.advancedOilProcessingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.calcite
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.castingIronRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
@@ -123,6 +124,61 @@ class BlueprintPlanTest {
             )
 
         assertIs<BlueprintPlanResult.Unavailable>(outcome)
+    }
+
+    /**
+     * A material no recipe produces is the optimizer's `Category.IMPORT` pseudo source. Laying it
+     * out would put an infinity chest in the target row with the material as its recipe.
+     */
+    @Test
+    fun anImportTargetIsUnavailable() {
+        val imported =
+            Recipe(
+                name = calcite.name,
+                ingredients = emptyMap(),
+                result = mapOf(calcite to 1.0),
+                time = 1.0,
+                categories = setOf(Category.IMPORT),
+            )
+
+        val outcome =
+            blueprintPlan(
+                result(
+                    calcite,
+                    imported,
+                    listOf(production(imported, calcite, Factory.NO_FACTORY)),
+                ),
+                logistics,
+            )
+
+        val unavailable = assertIs<BlueprintPlanResult.Unavailable>(outcome)
+        assertContains(unavailable.reason, calcite.name)
+    }
+
+    /** Only the target recipe decides availability; an imported ingredient is still a source. */
+    @Test
+    fun anImportedIngredientDoesNotMakeTheTargetUnavailable() {
+        val oreImport =
+            Recipe(
+                name = ironOre.name,
+                ingredients = emptyMap(),
+                result = mapOf(ironOre to 1.0),
+                time = 1.0,
+                categories = setOf(Category.IMPORT),
+            )
+
+        val planned =
+            plan(
+                gear,
+                ironGearWheelRecipe,
+                listOf(
+                    production(oreImport, ironOre, Factory.NO_FACTORY),
+                    production(ironPlateSmeltingRecipe, ironPlate, Factory.ELECTRIC_FURNACE),
+                    production(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3),
+                ),
+            )
+
+        assertContains(planned.sources.map { it.material }, ironOre)
     }
 
     @Test

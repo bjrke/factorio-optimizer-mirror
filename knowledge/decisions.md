@@ -14,6 +14,21 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-13 — An unproducible target is refused, not hidden from the picker
+
+**Decision.** `ParsedRecipe.forSurface` keeps the dump-wide `materials` list, so the picker and a
+pasted URL can name a material another surface produces. `blueprintPlan` refuses a target whose
+`result.recipe` is the `Category.IMPORT` pseudo source, the web blueprint panel renders nothing for
+any `Unavailable` result, and the CLI fails only a target that no recipe in the dump produces.
+
+**Guardrail.** Never lay out an import production: `DirectFeed.targetRow` would place
+`Factory.NO_FACTORY` with the material as its recipe. Keep the `Unavailable` reason on the copy
+button, and keep an imported *ingredient* a planned source — only the target recipe decides
+availability.
+
+**See.** `blueprint/planning/BlueprintPlan.kt`, `game/prototype/SurfaceRecipes.kt`,
+`js/component/{MaterialSelector,BlueprintExport}.kt`, `jvm/CliOptimizer.kt`.
+
 ## 2026-11-13 — A product lane bounds the delivered rate, so the plan thins itself
 
 **Decision.** A row's product belt fills one lane (`RowPlacer.productLoad`), so `blueprintPlan`

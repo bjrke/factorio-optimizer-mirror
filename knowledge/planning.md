@@ -200,3 +200,13 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
   per built machine, so it must not multiply by the plan scale again; a shrunk plan
   would otherwise report its imports twice over. Evidence:
   `aSolidTargetShrinksToTheProductLane` (its copper plate source).
+- **An import-only target must be refused, not laid out.** The optimizer models a target no
+  recipe produces as a `Category.IMPORT` pseudo source. `blueprintPlan` must return
+  `BlueprintPlanResult.Unavailable` for it: the target production is seeded into
+  `DirectFeedContext.included`, so `DirectFeed.targetRow` would place `Factory.NO_FACTORY`
+  ("infinity-chest") with the material as its recipe — a `Planned` blueprint with no
+  `infinity_settings` and no error. `forSurface` deliberately keeps the dump-wide `materials`
+  list, so the picker or a pasted URL may name a material the surface cannot make; the
+  planner, not the recipe filter, is the guard. Evidence: `anImportTargetIsUnavailable`,
+  `anImportedIngredientDoesNotMakeTheTargetUnavailable`, `anUnavailablePlanRendersNoPanel`.
+  See `decisions.md` (2026-11-13).

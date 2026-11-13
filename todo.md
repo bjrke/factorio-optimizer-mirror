@@ -138,28 +138,6 @@ place no pole for the machine body (or strictly fewer poles), the inserters stay
 Each block below is self-contained: copy one as the task prompt. Line numbers refer to
 `main` @ `2cf115a`.
 
-### Reject targets that cannot be built on the selected surface
-
-Fix the blueprint planner so an unproducible target is rejected instead of being laid out as a fake
-machine.
-
-`ParsedRecipe.forSurface` (`SurfaceRecipes.kt:33-40`) copies `recipes` but keeps the dump-wide
-`materials` list, so the picker (`MaterialSelector.kt:119`) and any pasted URL offer materials such
-as `calcite`, `tungsten-ore` or `yumako` on Nauvis. The optimizer turns such a target into a free
-source (`Optimizer.kt:159-165`, `207`, `381-389`), `blueprintPlan` accepts it because the import
-production is in `factories` (`BlueprintPlan.kt:61-65`), and `DirectFeed.targetRow`
-(`DirectFeed.kt:188-192`) places `Factory.NO_FACTORY` (`"infinity-chest"`) with the material as its
-`recipe`. The result is a `Planned` blueprint with an infinity chest carrying a `recipe`, no
-`infinity_settings` and no error.
-
-Recompute `materials` in `forSurface` from the kept recipes, reject a target whose production has
-`Category.IMPORT` in `blueprintPlan`, and validate the URL/CLI target against
-`parsedRecipes.materials` (an unknown material currently prints a plan and exits 0).
-
-Add tests: the Nauvis material list excludes Vulcanus/Gleba/Fulgora/Aquilo materials; an import
-target returns `BlueprintPlanResult.Unavailable`; an unknown CLI/URL target fails instead of
-printing a plan.
-
 ### Gate the synthetic Space Age recipes
 
 Gate `harvestedFruit()` and `asteroidCollectionRecipes()` in `resourceRecipes.kt:14-20` on the Space

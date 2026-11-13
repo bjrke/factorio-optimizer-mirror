@@ -22,12 +22,14 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
+import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
+import kotlin.system.exitProcess
 
 /**
  * Which artifact(s) the CLI prints. Several may be requested at once; [order] is the order they are
@@ -76,8 +78,67 @@ data class CliArgs(
 )
 
 fun main(args: Array<String>) {
+    exitProcess(runCli(args))
+}
+
+/**
+ * Runs the CLI, writes through [out]/[err] and returns the process exit code. The sinks keep the
+ * rejection path testable without replacing the process streams; [main] only adds the exit.
+ */
+internal fun runCli(
+    args: Array<String>,
+    out: (String) -> Unit = { println(it) },
+    err: (String) -> Unit = { System.err.println(it) },
+): Int {
     val cli = parseArgs(args)
     val parsedRecipes = RecipeLoader.forSurface(cli.spaceAge, cli.surface)
+    val target = Material(cli.material)
+    if (target !in parsedRecipes.materials) {
+        err("Unknown material '${cli.material}'")
+        return 1
+    }
+
+    val run = resolve(cli, parsedRecipes, target)
+    val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
+    val blueprintOutputs = Output.order.filter { it.blueprint && it in outputs }
+    val outcome =
+        if (blueprintOutputs.isEmpty()) null
+        else blueprintPlan(run.result, run.logistics, cli.normalizeTarget)
+
+    val sections = mutableListOf<() -> Unit>()
+    if (Output.SETTINGS in outputs) {
+        sections += { out(settingsText(cli, run.factories, run.logistics)) }
+    }
+    if (Output.LISTING in outputs) sections += { printListing(run.result, run.logistics, out) }
+    val blueprintContext =
+        BlueprintContext(
+            run.logistics,
+            cli.beltEnd,
+            PowerPole.forSelection(cli.surface, run.factories),
+            out,
+        )
+    sections.addBlueprintSections(outcome, blueprintOutputs, blueprintContext)
+    sections.forEach { it() }
+    return 0
+}
+
+/** Everything the blueprint outputs need besides the plan itself. */
+private data class BlueprintContext(
+    val logistics: LogisticsCalculator,
+    val beltEnd: BeltEnd,
+    val powerPole: PowerPole,
+    val out: (String) -> Unit,
+)
+
+/** The resolved configuration and plan one CLI run prints. */
+private data class Run(
+    val factories: Set<Factory>,
+    val logistics: LogisticsCalculator,
+    val result: OptimizationResult,
+)
+
+/** Resolves the selection and logistics, then optimizes [target] with them. */
+private fun resolve(cli: CliArgs, parsedRecipes: ParsedRecipe, target: Material): Run {
     val factoryConfig = FactoryConfig(cli.spaceAge)
     val factories =
         cli.factories
@@ -111,47 +172,25 @@ fun main(args: Array<String>) {
         )
 
     val result =
-        Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[
-            Material(cli.material)]
-
-    val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
-    val blueprintOutputs = Output.order.filter { it.blueprint && it in outputs }
-    val outcome =
-        if (blueprintOutputs.isEmpty()) null
-        else blueprintPlan(result, logistics, cli.normalizeTarget)
-
-    val sections = mutableListOf<() -> Unit>()
-    if (Output.SETTINGS in outputs) sections += { println(settingsText(cli, factories, logistics)) }
-    if (Output.LISTING in outputs) sections += { printListing(result, logistics) }
-    sections.addBlueprintSections(outcome, blueprintOutputs, logistics, cli, factories)
-    sections.forEach { it() }
+        Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[target]
+    return Run(factories, logistics, result)
 }
 
 /** Appends the requested blueprint outputs, or the reason the plan cannot be built. */
 private fun MutableList<() -> Unit>.addBlueprintSections(
     outcome: BlueprintPlanResult?,
     blueprintOutputs: List<Output>,
-    logistics: LogisticsCalculator,
-    cli: CliArgs,
-    factories: Set<Factory>,
+    context: BlueprintContext,
 ) {
     when (outcome) {
         null -> {}
         is BlueprintPlanResult.Unavailable ->
             add {
-                println("No blueprint available: ${outcome.reason}")
+                context.out("No blueprint available: ${outcome.reason}")
             }
         is BlueprintPlanResult.Planned ->
             for (output in blueprintOutputs) {
-                add {
-                    emitBlueprint(
-                        output,
-                        outcome.plan,
-                        logistics,
-                        cli.beltEnd,
-                        PowerPole.forSelection(cli.surface, factories),
-                    )
-                }
+                add { emitBlueprint(output, outcome.plan, context) }
             }
     }
 }
@@ -181,15 +220,9 @@ internal fun settingsText(
         .trimIndent()
 
 /** Prints the requested blueprint [output]; the non-blueprint outputs never reach here. */
-private fun emitBlueprint(
-    output: Output,
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-    beltEnd: BeltEnd,
-    powerPole: PowerPole,
-) {
+private fun emitBlueprint(output: Output, plan: BlueprintPlan, context: BlueprintContext) {
     blueprintGenerator(output)?.let {
-        println(it(RowLayout(plan, logistics, beltEnd, powerPole)))
+        context.out(it(RowLayout(plan, context.logistics, context.beltEnd, context.powerPole)))
     }
 }
 
@@ -209,7 +242,11 @@ private fun json(rowLayout: RowLayout) = rowLayout.blueprint().toJson()
 private fun layout(rowLayout: RowLayout) = layoutAscii(rowLayout.layoutDump())
 
 /** Prints the per-recipe production listing: rates, machines and how each material is moved. */
-private fun printListing(result: OptimizationResult, logistics: LogisticsCalculator) {
+private fun printListing(
+    result: OptimizationResult,
+    logistics: LogisticsCalculator,
+    out: (String) -> Unit,
+) {
     fun transport(
         factory: Factory,
         material: Material,
@@ -229,19 +266,19 @@ private fun printListing(result: OptimizationResult, logistics: LogisticsCalcula
     }
 
     result.factories.values.sortedWith(factoryProductionComparator).forEach { production ->
-        println(
+        out(
             "${superRound(production.amount)} x ${production.recipe.name} in ${production.factory.name}",
         )
         production.recipe.ingredients.keys.forEach { material ->
             val rate = production.consumption(material)
-            println(
+            out(
                 "  in  ${material.name}: ${superRound(rate)} -> " +
                     transport(production.factory, material, rate, isOutput = false),
             )
         }
         production.recipe.result.keys.forEach { material ->
             val rate = production.production(material)
-            println(
+            out(
                 "  out ${material.name}: ${superRound(rate)} -> " +
                     transport(production.factory, material, rate, isOutput = true),
             )

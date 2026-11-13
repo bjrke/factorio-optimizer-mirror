@@ -176,7 +176,6 @@ val RouterBasedParams =
                     urlOptimizationResultPresenter(props)
                 }
                 blueprintPanel {
-                    outcome = preview.outcome
                     blueprint = preview.blueprint
                 }
             }

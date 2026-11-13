@@ -6,6 +6,11 @@ package de.bjrke.factorio.optimizer.common.game.prototype
  * This is a rulebook operation, not a URL codec: the entry points cache the result through
  * `RecipeLoader.forSurface`, so the parsed recipe set and its usage index are built once per
  * surface.
+ *
+ * The dump-wide [ParsedRecipe.materials] list is kept on purpose: the picker may offer a material
+ * this surface cannot make, and `blueprintPlan` reports such a target as unavailable instead.
+ * Recomputing the list from the kept recipes would hide those targets from the picker, while a
+ * pasted URL still has to be rejected by the planner.
  */
 fun ParsedRecipe.forSurface(surface: Surface): ParsedRecipe {
     val properties = surfaceProperties[surface] ?: surface.properties

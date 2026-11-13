@@ -29,6 +29,7 @@ import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import react.create
 import web.dom.Element
@@ -67,7 +68,6 @@ class BlueprintExportTest : ComponentTest() {
     private fun renderPanel(outcome: BlueprintPlanResult) =
         render(
             blueprintPanel.create {
-                this.outcome = outcome
                 this.blueprint = blueprintOf(outcome)
             },
         )
@@ -283,10 +283,13 @@ class BlueprintExportTest : ComponentTest() {
     }
 
     @Test
-    fun anUnavailablePlanShowsItsReasonInsteadOfAPreview() {
-        renderPanel(BlueprintPlanResult.Unavailable("too big"))
+    fun anUnavailablePlanRendersNoPanel() {
+        val result = renderPanel(BlueprintPlanResult.Unavailable("too big"))
 
-        assertNotNull(screen.getByText("too big"))
+        assertAll(
+            { assertNull(result.container.querySelector(".blueprint-panel")) },
+            { assertNull(screen.queryByText("too big")) },
+        )
     }
 
     @Test

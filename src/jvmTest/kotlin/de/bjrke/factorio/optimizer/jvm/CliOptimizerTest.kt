@@ -260,6 +260,30 @@ class CliOptimizerTest {
         )
 
     @Test
+    fun anUnknownTargetFailsInsteadOfPrintingAPlan() =
+        assertTableOf(
+            "positional" to arrayOf("no-such-material"),
+            "url" to arrayOf("#/4.5/no-such-material/-/1/1"),
+        ) { (case, args) ->
+            val output = mutableListOf<String>()
+            val errors = mutableListOf<String>()
+
+            val code = runCli(args, out = { output += it }, err = { errors += it })
+
+            assertAll(
+                { assertEquals(1, code, case) },
+                { assertEquals(emptyList(), output, "$case printed a plan") },
+                {
+                    assertContains(
+                        errors.single(),
+                        "no-such-material",
+                        message = errors.toString(),
+                    )
+                },
+            )
+        }
+
+    @Test
     fun settingsTextListsTheResolvedConfiguration() {
         val logistics =
             calculator(

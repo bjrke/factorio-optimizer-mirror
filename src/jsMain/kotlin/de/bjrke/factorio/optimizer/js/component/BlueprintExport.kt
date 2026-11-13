@@ -192,32 +192,23 @@ internal fun blueprintPreview(
 }
 
 external interface BlueprintPanelProps : Props {
-    var outcome: BlueprintPlanResult
     var blueprint: Blueprint?
 }
 
 /**
- * The blueprint next to the optimizer result, or the reason the plan cannot be built. The preview
- * scales the plan down to the panel.
+ * The blueprint preview next to the optimizer result. A plan without a blueprint (unavailable)
+ * renders no panel at all; the copy button beside the selectors carries the reason.
  */
 internal val blueprintPanel =
     FC<BlueprintPanelProps>("blueprintPanel") { props ->
         val blueprint = props.blueprint
-        div {
-            className = ClassName("blueprint-panel")
-            when (val outcome = props.outcome) {
-                is BlueprintPlanResult.Planned ->
-                    if (blueprint != null) {
-                        div {
-                            className = ClassName("blueprint-preview")
-                            blueprintView { this.blueprint = blueprint }
-                        }
-                    }
-                is BlueprintPlanResult.Unavailable ->
-                    div {
-                        className = ClassName("blueprint-unavailable")
-                        +outcome.reason
-                    }
+        if (blueprint != null) {
+            div {
+                className = ClassName("blueprint-panel")
+                div {
+                    className = ClassName("blueprint-preview")
+                    blueprintView { this.blueprint = blueprint }
+                }
             }
         }
     }
