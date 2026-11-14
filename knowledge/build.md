@@ -71,8 +71,12 @@ workflow (filtering to `de.bjrke`, allocation/exception views), see
 
 ## CI pipeline
 
-`.gitlab-ci.yml` runs `gradle --no-daemon -PCI … check jsBrowserDistribution` on
-every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
+`.gitlab-ci.yml` runs
+`gradle --no-daemon --max-workers=1 -PCI … check jsBrowserDistribution` on every
+pipeline and caches `.gradle` as `GRADLE_USER_HOME`. `--max-workers=1` keeps the
+job strictly serial: no two tasks overlap, so the CPU minutes match the work done
+instead of the runner's core count — and the worker count cannot vary the
+configuration cache entry between autoscaled machines.
 
 - **`-PCI` keeps the build clean.** `build.gradle.kts` reads the `CI` project
   property and calls `outputs.cacheIf { false }` on every task, so no compile,
@@ -101,9 +105,27 @@ every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
   restores symlinks, so the restored Yarn install keeps its `.bin` links and
   only needs validating; no `cache:archive` keyword is needed or accepted (see
   Traps).
-- **The cache key uses `gradle/libs.versions.toml` and `ci/Dockerfile`.** A key
-  file that does not exist is silently ignored, so the path must stay in sync
-  with the real Dockerfile location.
+- **The cache key uses `gradle/libs.versions.toml` and `.gitlab-ci.yml`.** The
+  second is there because its `cache.paths` *are* the archive layout: a layout
+  change must start a fresh key, or a pipeline still running an older path list
+  overwrites the archive without the directories it does not know. `ci/Dockerfile`
+  had to leave the key because `cache:key:files` takes at most two entries (see
+  Traps): the Gradle version it pins is named by the `.gradle/caches/9.8.1/…`
+  path in the same file, and any other toolchain change requires a manual image
+  build, i.e. a deliberate act with a visible pipeline. A key file that does not
+  exist is silently ignored, so a path must stay in sync with the real location.
+  The price of keying on the CI file is one cold cache per CI-config change.
+- **Only the `test` job caches anything.** `pages` and `docker-image` never run
+  Gradle; with a global `cache:` block they still restored and re-uploaded the
+  ~22k-file archive on every pipeline (15 s+ of runner time each) and could
+  propagate whatever layout they restored.
+- **Node comes from the cache, not from the image.** The Kotlin/JS plugin
+  downloads its Node distribution into `.gradle/nodejs` (202 MiB, one directory
+  per version plus a `.hash` file). A pipeline checkout has neither, so without
+  the cache entry every pipeline fetched and unpacked it again; caching the
+  directory and its hash keeps `kotlinNodeJsSetup` up to date. The version is
+  defined in exactly one place — the plugin's default for the pinned Kotlin
+  release — which is why the CI image deliberately carries no Node.
 - **The production bundle is minified by esbuild** (`esbuild-loader` via
   `webpack.config.d/02-esbuild-minify.js`), not webpack's Terser default; the
   dev bundle stays unminified either way. Development builds and `jsBrowserTest`
@@ -127,6 +149,24 @@ every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
   only cache keywords are `key`, `paths`, `untracked`, `when`, `policy`,
   `unprotect` and `fallback_keys`; the archive is a zip and already keeps
   symlinks. Verified on 2026-11-13 against the GitLab CI reference (`ci/yaml`).
+- **`cache:key:files` takes at most two files.** A third entry fails the pipeline
+  before any job starts with `jobs:test:cache:key:files config has too many items
+  (maximum is 2)` - seen on 2026-11-14 with the version catalog, `ci/Dockerfile`
+  and `.gitlab-ci.yml`. Key on the two files that must invalidate the archive and
+  let the rest ride along: the Gradle version in the image is already named by the
+  `.gradle/caches/<version>/…` cache path. A hand-typed `cache:key:prefix` would
+  reintroduce the duplication the key files exist to avoid.
+- **A cache archive that lacks `.gradle/configuration-cache` erases the entry for
+  everyone on that key.** Recognize it by the build opening with `Calculating task
+  graph as no cached configuration is available for tasks: check
+  jsBrowserDistribution` and closing with `Configuration cache entry stored`
+  instead of `Reusing configuration cache.`/`Configuration cache entry reused` —
+  seen on 2026-11-13 at `ece7aa74` after the entry had been written an hour
+  earlier. A key mismatch shows a different reason (`… cannot be reused because
+  …`), so "no cached configuration is available" means the store had no entry at
+  all: the restored archive was uploaded by a pipeline whose `cache.paths` did not
+  include the directory. Keeping `.gitlab-ci.yml` in `key.files` separates those
+  layouts; do not "fix" this by deleting the entry locally.
 - **`detektMainJvm`/`detektTestJvm` report "compiler errors found during analysis"
   although the code compiles.** Verified on 2026-10-24 at `395323f`, both with and
   without working-tree changes: both tasks print `There were 3 compiler errors

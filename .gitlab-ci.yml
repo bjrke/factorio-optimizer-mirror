@@ -1,8 +1,14 @@
 # Gradle keeps its dependency cache in the workspace so GitLab can cache it. The
-# key follows the two files that pin every dependency: the version catalog (Kotlin,
-# detekt, Spotless, kotlinx, the wrappers BOM) and `ci/Dockerfile` (its image tag
-# pins the Gradle and JDK versions, and so the cache layout). `build.gradle.kts`
-# and `buildSrc/build.gradle.kts` are not listed: they do not change the resolved
+# key follows the two files `cache:key:files` allows: the version catalog (Kotlin,
+# detekt, Spotless, kotlinx, the wrappers BOM) and this file, whose `cache.paths`
+# *are* the layout. This file is in the list on purpose: without it a change to the
+# cached paths would keep the key, and a pipeline still running an older path list
+# would overwrite the archive without `.gradle/configuration-cache`, discarding the
+# entry for everyone on that key. `ci/Dockerfile` gave up its slot for it, because
+# two is the maximum: the Gradle version that image pins is already named by the
+# `.gradle/caches/9.8.1/transforms` path in `cache.paths`, and any other toolchain
+# change needs a manual image build either way. `build.gradle.kts` and
+# `buildSrc/build.gradle.kts` are not listed: they do not change the resolved
 # artifacts unless the catalog does.
 #
 # CI keeps every task executing: `-PCI` makes build.gradle.kts opt the application
@@ -24,25 +30,30 @@ variables:
   # `gradle.properties`, and `gradle.properties` is where local builds enable it.
   GRADLE_OPTS: "-Dorg.gradle.caching=true"
 
-cache:
-  key:
-    files:
-      - gradle/libs.versions.toml
-      - ci/Dockerfile
-  paths:
-    - .gradle/caches/modules-2
-    - .gradle/caches/jars-9
-    - .gradle/caches/9.8.1/transforms
-    - .gradle/caches/build-cache-1
-    - .gradle/configuration-cache
-    - .gradle/yarn
-    - .kotlin
-    - buildSrc/build
-    - buildSrc/.gradle
-    - build/js/node_modules
-
 test:
   stage: test
+  # The cache belongs to this job alone: `pages` and `docker-image` never run
+  # Gradle, and a job that restores and re-uploads an archive it did not write
+  # only pays for 22k files. Everything the Kotlin/JS plugin fetches itself is
+  # here too, Node included: `.gradle/nodejs` is its 202 MiB distribution, and a
+  # checkout that misses it downloads the same version again.
+  cache:
+    key:
+      files:
+        - gradle/libs.versions.toml
+        - .gitlab-ci.yml
+    paths:
+      - .gradle/caches/modules-2
+      - .gradle/caches/jars-9
+      - .gradle/caches/9.8.1/transforms
+      - .gradle/caches/build-cache-1
+      - .gradle/configuration-cache
+      - .gradle/nodejs
+      - .gradle/yarn
+      - .kotlin
+      - buildSrc/build
+      - buildSrc/.gradle
+      - build/js/node_modules
   # The instance allows only `always` (`allowed_pull_policies`), so the image is
   # pulled once per pipeline even though it only changes with `ci/Dockerfile`.
   image: $CI_REGISTRY_IMAGE:latest
@@ -50,7 +61,10 @@ test:
     # `-Pkotlin.incremental.*=false`: a clean build never reuses incremental state,
     # so only its bookkeeping cost remains. `-Pkotlin.compiler.execution.strategy=in-process`
     # skips the Kotlin daemon JVM, which a one-build container never amortizes.
-    - gradle --no-daemon -PCI -Pkotlin.incremental=false -Pkotlin.incremental.js=false -Pkotlin.compiler.execution.strategy=in-process check jsBrowserDistribution
+    # `--max-workers=1` keeps the job strictly serial: tasks never overlap, so the
+    # CPU minutes match the work done instead of the runner's core count, which also
+    # stops being a configuration cache input.
+    - gradle --no-daemon --max-workers=1 -PCI -Pkotlin.incremental=false -Pkotlin.incremental.js=false -Pkotlin.compiler.execution.strategy=in-process check jsBrowserDistribution
     - mv build/dist/js/productionExecutable public
   artifacts:
     when: always
