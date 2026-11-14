@@ -176,7 +176,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.printing.output | 4 |
 
 `game.production` is at 10 files — the warn line itself, so split it before adding a
-file; `blueprint.layout` (9) and `blueprint.planning.row` (11) are next.
+file; `blueprint.layout` (10) and `blueprint.planning.row` (11) are next.
 
 ## Package dependencies
 

@@ -155,8 +155,3 @@ Also fix the dead/wrong-axis `poleWestBound` update at `CompactionPass.kt:68-77`
 to an x bound for horizontal corridors, currently unreachable because the horizontal call passes no
 `pinned` tiles (`:42-47`); either pass the pins there and update both axes correctly, or remove the
 branch.
-
-### Fix the stale file count in the knowledge base
-
-`knowledge/code.md:176` says `blueprint.layout` has 9 files; it has 10 (the table above says 10).
-Correct the count.
