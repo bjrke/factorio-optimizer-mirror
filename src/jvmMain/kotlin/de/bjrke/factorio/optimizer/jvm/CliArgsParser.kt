@@ -25,12 +25,12 @@ import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
  * `--full-belt`, `--belt-stack=<n>`, `--inserter-stack=<n>`, `--intermediates=<n>`,
  * `--exclude=<material>` (repeatable), `--normalize=<x>`, `--belt-end=<marker>` and its alias
  * `--cheats` (the infinity chest) are understood; `--settings`, `--listing`, `--layout`, `--json`
- * and `--blueprint` choose the [Output]s. Belt/inserter/machine/marker values are identifiers
- * (`express-transport-belt`, `foundry`, `buffer-chest`) or a single-letter code. Any argument may
- * be replaced by a pasted web UI URL, e.g.
- * `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10`, whose segments fill in the
- * material, selection, normalize target, stack sizes, intermediate limit and excluded materials.
- * Explicit flags override it.
+ * and `--blueprint` choose the [Output]s. An explicit belt/inserter/planet/machine/marker value
+ * must be an exact identifier (`express-transport-belt`, `foundry`, `buffer-chest`) or exactly one
+ * code character; anything else fails with [CliUsageException]. Any argument may be replaced by a
+ * pasted web UI URL, e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10`, whose
+ * segments fill in the material, selection, normalize target, stack sizes, intermediate limit and
+ * excluded materials. Explicit flags override it.
  */
 fun parseArgs(args: Array<String>): CliArgs {
     val url = args.firstNotNullOfOrNull { parseFactorioUrl(it) }
@@ -47,7 +47,7 @@ fun parseArgs(args: Array<String>): CliArgs {
         beltEnd = resolveBeltEnd(args, url, surface),
         normalizeTarget = resolveNormalizeTarget(args, url),
         selection = url?.selection,
-        factories = args.valueOptions("factory").mapNotNull { machine(it) },
+        factories = args.valueOptions("factory").map { machine(it) },
         belt = beltTier(args.valueOption("belt")),
         inserter = inserterTier(args.valueOption("inserter")),
         fullBelt = if (args.any { it == "--full-belt" }) true else null,
@@ -77,19 +77,20 @@ private fun Array<String>.valueOptions(name: String): List<String> = filter {
     .map { it.removePrefix("--$name=") }
 
 private fun resolveSpaceAge(args: Array<String>, url: FactorioUrl?) =
-    when {
-        args.any { it == "--base-game" } -> false
-        url != null -> spaceAgeIn(url.selection)
-        else -> true
-    }
+    if (args.any { it == "--base-game" }) false else spaceAgeIn(url?.selection)
 
 /** Base game always runs on Nauvis, mirroring the web UI. */
-private fun resolveSurface(args: Array<String>, spaceAge: Boolean, url: FactorioUrl?) =
-    if (!spaceAge) Surface.NAUVIS
-    else
-        surfaceFromPlanet(args.valueOption("planet"))
-            ?: surfaceFromUrl(url?.selection)
-            ?: Surface.NAUVIS
+private fun resolveSurface(args: Array<String>, spaceAge: Boolean, url: FactorioUrl?): Surface {
+    val requested =
+        args.valueOption("planet")?.let { value ->
+            surfaceFromPlanet(value) ?: unknownOption("--planet", value)
+        }
+    return when {
+        !spaceAge -> Surface.NAUVIS
+        requested != null -> requested
+        else -> surfaceFromUrl(url?.selection) ?: Surface.NAUVIS
+    }
+}
 
 private fun resolveNormalizeTarget(args: Array<String>, url: FactorioUrl?) =
     args.valueOption("normalize")?.let { validNormalizeTarget(it.toDoubleOrNull()) }
@@ -107,25 +108,30 @@ private fun resolveOutputs(args: Array<String>) = buildSet {
 /** A chest marker needs ground, so a chest choice on a space platform falls back to the label. */
 private fun resolveBeltEnd(args: Array<String>, url: FactorioUrl?, surface: Surface): BeltEnd {
     val requested =
-        args.valueOption("belt-end")?.let(::beltEndFromIdentifier)
+        args.valueOption("belt-end")?.let { value ->
+            beltEndFromIdentifier(value) ?: unknownOption("--belt-end", value)
+        }
             ?: if (args.any { it == "--cheats" }) BeltEnd.INFINITY_CHEST
             else beltEndFromSelection(url?.selection, surface)
     return requested.takeIf { it.allowedOn(surface) } ?: BeltEnd.CONSTANT_COMBINATOR
 }
 
-/** Resolves `--belt=` by prototype identifier or single-letter code. */
+/** Resolves `--belt=` strictly by prototype identifier or exactly one code character. */
 private fun beltTier(value: String?) = value?.let {
-    BeltTier.entries.firstOrNull { entry -> entry.identifier == it } ?: BeltTier.fromSelection(it)
+    BeltTier.entries.firstOrNull { entry ->
+        entry.identifier == it || (it.length == 1 && entry.code == it[0])
+    } ?: unknownOption("--belt", it)
 }
 
-/** Resolves `--inserter=` by prototype identifier or single-letter code. */
+/** Resolves `--inserter=` strictly by prototype identifier or exactly one code character. */
 private fun inserterTier(value: String?) = value?.let {
-    InserterTier.entries.firstOrNull { entry -> entry.identifier == it }
-        ?: InserterTier.fromSelection(it)
+    InserterTier.entries.firstOrNull { entry ->
+        entry.identifier == it || (it.length == 1 && entry.code == it[0])
+    } ?: unknownOption("--inserter", it)
 }
 
-/** Resolves `--factory=` by prototype identifier or single-letter code. */
-private fun machine(value: String?) = value?.let {
-    Factory.entries.firstOrNull { entry -> entry.identifier == it }
-        ?: Factory.entries.firstOrNull { entry -> entry.code?.toString() == it }
-}
+/** Resolves `--factory=` strictly by prototype identifier or exactly one code character. */
+private fun machine(value: String) =
+    Factory.entries.firstOrNull { entry ->
+        entry.identifier == value || entry.code?.toString() == value
+    } ?: unknownOption("--factory", value)

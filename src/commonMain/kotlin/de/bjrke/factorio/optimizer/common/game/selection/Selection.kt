@@ -19,8 +19,13 @@ enum class SelectionFlag(val code: Char) {
     internal fun enabledIn(selection: String?) = selection != null && code in selection
 }
 
-/** Whether the `selection` parameter announces Space Age. */
-fun spaceAgeIn(selection: String?) = SelectionFlag.SPACE_AGE.enabledIn(selection)
+/**
+ * Whether a plan runs Space Age. An absent `selection` segment means the default, Space Age on; a
+ * present segment turns it on only when it carries [SelectionFlag.SPACE_AGE], so the `-`
+ * placeholder selects the base game. Both entry points read this one rule.
+ */
+fun spaceAgeIn(selection: String?) =
+    selection == null || SelectionFlag.SPACE_AGE.enabledIn(selection)
 
 /**
  * Whether the `selection` parameter asks for both belt lanes instead of the single default lane.

@@ -121,7 +121,10 @@ CLI (JVM) from one shared core.
   webpack config in `webpack.config.d/`.
 - `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`, argument parsing
   `jvm/CliArgsParser.kt`; `jvm/common/game/production/loadRecipe.kt`
-  loads recipes from a classpath resource.
+  loads recipes from a classpath resource. An explicit `--name=value` accepts only
+  an exact prototype identifier or exactly one code character (Nauvis is `n` for
+  the CLI), so a typo fails instead of matching a character inside it; only the
+  URL `selection` segments keep scanning characters.
 - `src/commonTest` — shared kotlin-test suites, run by both `jvmTest` and
   `jsBrowserTest`; must stay platform-neutral. Every suite sits in the package it
   tests (`commonTest/…/common/blueprint/printing/…`, `.../game/production/…`), and shared

@@ -141,46 +141,11 @@ Move the source block clear of the turn/approach tiles (or reserve them as part 
 a failure when a drain lane cannot be placed, and add a test for a row with two belts on one side,
 the far one an east-fed mixed belt, plus a fluid lane on that side.
 
-### Reject unknown CLI option values
-
-Reject unknown `--belt/--inserter/--planet/--belt-end` values instead of decoding them as another
-choice.
-
-`--belt=yellow` becomes `EXPRESS_TRANSPORT_BELT` (`e`), `--belt=turbo` becomes `TRANSPORT_BELT`
-(`t`), `--inserter=yellow` becomes `BULK_INSERTER` (`y`), `--planet=mars` becomes `AQUILO` (`a`) and
-`--belt-end=Debug` becomes `STEEL_CHEST` (`D`) through the character-scanning fallbacks
-(`CliArgsParser.kt:117-131`, `Logistics.kt:87,118`, `SurfaceSelection.kt:11-12`,
-`BeltEndSelection.kt:15-18`). Keep the character scan for URL `selection` segments only; a
-`--name=value` must be an exact identifier or a single code character, otherwise exit non-zero with
-a message. Add table-driven tests for every option.
-
 ### Reset the material picker highlight
 
 Reset `highlighted` when Escape or blur closes the dropdown (`MaterialSelector.kt:57-80`). The
 first ArrowDown after reopening otherwise highlights index 1 and Enter selects the wrong material.
 Add a test that reopens after Escape and asserts index 0 is highlighted.
-
-### Print prototype identifiers in the CLI listing
-
-Print `production.factory.identifier` in the CLI listing (`CliOptimizer.kt:233`) instead of the enum
-constant, so the listing shows `electric-mining-drill` rather than `ELECTRIC_MINING_DRILL` and does
-not print `NO_FACTORY` for import rows. Add a CLI integration assertion.
-
-### Make `--planet` override a pasted URL
-
-Make `--planet=n` (and any surface choice) override the URL. `n` is not a surface code
-(`NAUVIS.code == null`), so `surfaceFromPlanet("n")` returns null and the URL wins
-(`CliArgsParser.kt:90-92`). Add a Nauvis code or accept the identifier `nauvis`, and add a test that
-parses `--planet=nauvis` together with an SA URL and expects Nauvis. Extend
-`CliOptimizerTest.planetSelectsTheSurfaceByIdentifierOrCode`, which currently passes only because it
-never supplies a URL.
-
-### Align the absent-selection default
-
-Make an absent `selection` segment mean the same in both entry points: the CLI reads
-`spaceAgeIn(null) == false` (`CliArgsParser.kt:79-84`) while the web UI reads `?: true`
-(`index.kt:71`). Decide on Space Age on or off and apply it in both, and test the truncated URL
-`#/4.5/advanced-circuit`.
 
 ### Type a fluid target icon
 

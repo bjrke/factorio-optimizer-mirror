@@ -68,7 +68,7 @@ class FactorioOptimizerProps {
     var normalizeTarget = normalizeTargetFromUrl(params[ParamName("normalizeTarget")])
     var target = Material(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
     private val selection = params[ParamName("selection")]
-    var spaceAgeEnabled = selection?.let(::spaceAgeIn) ?: true
+    var spaceAgeEnabled = spaceAgeIn(selection)
     val factoryConfig = FactoryConfig(spaceAgeEnabled)
     var factories = factoryConfig.fromUrl(selection)
     var surface =

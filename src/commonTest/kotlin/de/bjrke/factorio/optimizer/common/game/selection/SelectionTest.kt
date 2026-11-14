@@ -127,6 +127,25 @@ class SelectionTest {
             assertEquals(expected, SelectionFlag.SPACE_AGE.enabledIn(selection))
         }
 
+    @Test
+    fun anAbsentSelectionMeansSpaceAge() =
+        assertTableOf(
+            null to true,
+            "S" to true,
+            EMPTY_SELECTION to false,
+            "" to false,
+        ) { (selection, expected) ->
+            assertEquals(expected, spaceAgeIn(selection))
+        }
+
+    @Test
+    fun theCliBeltEndValueIsExact() =
+        assertAll(
+            { assertEquals(BeltEnd.STEEL_CHEST, beltEndFromIdentifier("steel-chest")) },
+            { assertEquals(BeltEnd.STEEL_CHEST, beltEndFromIdentifier("D")) },
+            { assertNull(beltEndFromIdentifier("Debug")) },
+        )
+
     private fun beltEndSelection(spaceAge: Boolean, surface: Surface, beltEnd: BeltEnd) =
         selectionString(
             Selection(

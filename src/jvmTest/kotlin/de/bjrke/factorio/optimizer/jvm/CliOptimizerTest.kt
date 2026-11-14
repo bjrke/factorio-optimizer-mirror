@@ -22,6 +22,7 @@ import kotlin.test.assertTrue
 class CliOptimizerTest {
 
     private val url = "http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1"
+    private val vulcanusUrl = "#/2/advanced-circuit/Sv/1/1"
 
     @Test
     fun defaultsToSpaceAgeAllSciencePacksAndNauvis() {
@@ -75,6 +76,20 @@ class CliOptimizerTest {
             "n" to Surface.NAUVIS,
         ) { (planet, expected) ->
             assertEquals(expected, parseArgs(arrayOf("--planet=$planet")).surface, planet)
+        }
+
+    @Test
+    fun planetOverridesAPastedUrl() =
+        assertTableOf(
+            "nauvis" to Surface.NAUVIS,
+            "n" to Surface.NAUVIS,
+            "fulgora" to Surface.FULGORA,
+        ) { (planet, expected) ->
+            assertEquals(
+                expected,
+                parseArgs(arrayOf(vulcanusUrl, "--planet=$planet")).surface,
+                planet,
+            )
         }
 
     @Test
@@ -192,11 +207,23 @@ class CliOptimizerTest {
 
     @Test
     fun theUrlSurfaceCodeSelectsTheSurface() {
-        val args = parseArgs(arrayOf("#/2/advanced-circuit/Sv/1/1"))
+        val args = parseArgs(arrayOf(vulcanusUrl))
 
         assertAll(
             { assertEquals(2.0, args.normalizeTarget) },
             { assertEquals(Surface.VULCANUS, args.surface) },
+        )
+    }
+
+    @Test
+    fun aTruncatedUrlDefaultsToSpaceAge() {
+        val args = parseArgs(arrayOf("#/4.5/advanced-circuit"))
+
+        assertAll(
+            { assertEquals("advanced-circuit", args.material) },
+            { assertNull(args.selection) },
+            { assertTrue(args.spaceAge) },
+            { assertEquals(Surface.NAUVIS, args.surface) },
         )
     }
 
@@ -282,6 +309,50 @@ class CliOptimizerTest {
                 },
             )
         }
+
+    @Test
+    fun unknownOptionValuesExitNonZero() =
+        assertTableOf(
+            listOf("--belt=yellow") to "Unknown --belt value 'yellow'",
+            listOf("--inserter=yellow") to "Unknown --inserter value 'yellow'",
+            listOf("--planet=mars") to "Unknown --planet value 'mars'",
+            listOf("--belt-end=Debug") to "Unknown --belt-end value 'Debug'",
+            listOf("--factory=nonsense") to "Unknown --factory value 'nonsense'",
+        ) { (args, message) ->
+            val output = mutableListOf<String>()
+            val errors = mutableListOf<String>()
+
+            val code = runCli(args.toTypedArray(), out = { output += it }, err = { errors += it })
+
+            assertAll(
+                { assertEquals(1, code) },
+                { assertEquals(emptyList(), output) },
+                { assertEquals(message, errors.single()) },
+            )
+        }
+
+    @Test
+    fun theListingPrintsPrototypeIdentifiers() {
+        val output = mutableListOf<String>()
+        val errors = mutableListOf<String>()
+
+        val code =
+            runCli(
+                arrayOf("iron-plate", "--base-game", "--exclude=iron-ore"),
+                out = { output += it },
+                err = { errors += it },
+            )
+        val text = output.joinToString("\n")
+
+        assertAll(
+            { assertEquals(0, code) },
+            { assertEquals(emptyList(), errors) },
+            { assertContains(text, "in electric-furnace", message = text) },
+            { assertContains(text, "in infinity-chest", message = text) },
+            { assertContainsNot(text, "ELECTRIC_FURNACE", message = text) },
+            { assertContainsNot(text, "NO_FACTORY", message = text) },
+        )
+    }
 
     @Test
     fun settingsTextListsTheResolvedConfiguration() {

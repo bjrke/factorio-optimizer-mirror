@@ -340,4 +340,14 @@ class SurfaceTest {
         assertTable(Surface.entries.filter { it.code != null }) { surface ->
             assertEquals(surface, surfaceFromPlanet(surface.code.toString()), "$surface")
         }
+
+    @Test
+    fun theCliNamesNauvisExplicitly() =
+        assertAll(
+            { assertEquals(Surface.NAUVIS, surfaceFromPlanet(Surface.NAUVIS.identifier)) },
+            // Nauvis carries no URL code, but the CLI accepts the single character for it
+            { assertEquals(Surface.NAUVIS, surfaceFromPlanet("n")) },
+            { assertNull(surfaceFromPlanet("mars")) },
+            { assertNull(surfaceFromPlanet("vu")) },
+        )
 }

@@ -91,7 +91,13 @@ internal fun runCli(
     out: (String) -> Unit = { println(it) },
     err: (String) -> Unit = { System.err.println(it) },
 ): Int {
-    val cli = parseArgs(args)
+    val cli =
+        try {
+            parseArgs(args)
+        } catch (exception: CliUsageException) {
+            err(exception.message ?: "Invalid arguments")
+            return 1
+        }
     val parsedRecipes = RecipeLoader.forSurface(cli.spaceAge, cli.surface)
     val target = Material(cli.material)
     if (target !in parsedRecipes.materials) {
@@ -269,21 +275,17 @@ private fun printListing(
 
     result.factories.values.sortedWith(factoryProductionComparator).forEach { production ->
         out(
-            "${superRound(production.amount)} x ${production.recipe.name} in ${production.factory.name}",
+            "${superRound(production.amount)} x ${production.recipe.name} in ${production.factory.identifier}",
         )
         production.recipe.ingredients.keys.forEach { material ->
             val rate = production.consumption(material)
-            out(
-                "  in  ${material.name}: ${superRound(rate)} -> " +
-                    transport(production.factory, material, rate, isOutput = false),
-            )
+            val transport = transport(production.factory, material, rate, isOutput = false)
+            out("  in  ${material.name}: ${superRound(rate)} -> $transport")
         }
         production.recipe.result.keys.forEach { material ->
             val rate = production.production(material)
-            out(
-                "  out ${material.name}: ${superRound(rate)} -> " +
-                    transport(production.factory, material, rate, isOutput = true),
-            )
+            val transport = transport(production.factory, material, rate, isOutput = true)
+            out("  out ${material.name}: ${superRound(rate)} -> $transport")
         }
     }
 }

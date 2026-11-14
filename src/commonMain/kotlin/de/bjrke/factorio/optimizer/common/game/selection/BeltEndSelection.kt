@@ -11,8 +11,10 @@ fun beltEndFromSelection(selection: String?, surface: Surface): BeltEnd =
     selection?.firstNotNullOfOrNull { BeltEnd.byCode[it] }?.takeIf { it.allowedOn(surface) }
         ?: BeltEnd.CONSTANT_COMBINATOR
 
-/** Resolves a CLI value: a full [BeltEnd.identifier] or a single selection code. */
-fun beltEndFromIdentifier(value: String): BeltEnd =
+/**
+ * Resolves a CLI value strictly: a full [BeltEnd.identifier] or exactly one selection code. Returns
+ * null for anything else, so the caller can reject it instead of selecting another marker.
+ */
+fun beltEndFromIdentifier(value: String): BeltEnd? =
     BeltEnd.entries.firstOrNull { it.identifier == value }
-        ?: BeltEnd.byCode[value.firstOrNull()]
-        ?: BeltEnd.CONSTANT_COMBINATOR
+        ?: value.singleOrNull()?.let { BeltEnd.byCode[it] }
