@@ -147,12 +147,6 @@ Reset `highlighted` when Escape or blur closes the dropdown (`MaterialSelector.k
 first ArrowDown after reopening otherwise highlights index 1 and Enter selects the wrong material.
 Add a test that reopens after Escape and asserts index 0 is highlighted.
 
-### Type a fluid target icon
-
-Write `type: "fluid"` for a fluid target's blueprint icon signal (`BlueprintJson.kt:30-35`), as
-`BlueprintEntityJson.kt:145` already does for fluid marker filters. Add a JSON test for a fluid
-target such as `petroleum-gas`.
-
 ### Keep compaction state in sync
 
 Relocate `fluidPorts` after a compaction corridor shifts the layout (`CompactionPass.kt:58`,

@@ -148,7 +148,9 @@ label (default), the infinity chest, or a chest the inserters feed
 (`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it;
 `BeltEndConnector.width`/`left` keep the routing corridors aligned; a fluid belt
 always keeps the combinator/pipe label. `blueprint/printing/json/BlueprintJson.kt` writes the
-blueprint envelope (`label`, `icons`, `entities`, top-level `wires`);
+blueprint envelope (`label`, `icons`, `entities`, top-level `wires`). The icon strip holds up to
+four entries: the target (a `fluid` signal when it is a fluid), the factory that builds it, and
+the placed belt and inserter; a fluid-only plan therefore omits unused logistics;
 `blueprint/printing/json/BlueprintEntityJson.kt` writes each entity's position and optional
 `request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
 `infinity_settings` and `neighbours` fields. An infinity pipe writes

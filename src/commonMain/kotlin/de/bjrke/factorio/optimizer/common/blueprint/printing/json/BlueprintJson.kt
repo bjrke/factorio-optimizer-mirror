@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.json
 
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
 import kotlinx.serialization.json.addJsonObject
@@ -21,16 +20,22 @@ private fun Blueprint.blueprintJson() = buildJsonObject {
     putJsonObject("blueprint") {
         put("item", "blueprint")
         put("label", label)
-        icon?.let { put("icons", iconJson(it)) }
+        if (icons.isNotEmpty()) put("icons", iconsJson())
         put("entities", entitiesJson())
         if (wires.isNotEmpty()) put("wires", wiresJson())
     }
 }
 
-private fun iconJson(icon: Material) = buildJsonArray {
-    addJsonObject {
-        put("index", 1)
-        put("signal", buildJsonObject { put("name", icon.name) })
+private fun Blueprint.iconsJson() = buildJsonArray {
+    icons.forEachIndexed { index, icon ->
+        addJsonObject {
+            put("index", index + 1)
+            putJsonObject("signal") {
+                // a fluid target is the only icon signal whose type the game cannot infer
+                if (icon.fluid) put("type", "fluid")
+                put("name", icon.name)
+            }
+        }
     }
 }
 

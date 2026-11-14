@@ -35,6 +35,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPoleRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.stoneBrick
 import de.bjrke.factorio.optimizer.common.fixtures.water
+import de.bjrke.factorio.optimizer.common.fixtures.waterPumpingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.wood
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -75,6 +76,58 @@ class BlueprintLayoutTest {
             { assertContains(names, BeltTier.EXPRESS_TRANSPORT_BELT.identifier) },
             { assertContains(names, "constant-combinator") },
             { assertContains(names, "medium-electric-pole") },
+        )
+    }
+
+    @Test
+    fun theIconStripNamesTheTargetItsFactoryAndThePlacedLogistics() {
+        val layout = Layout(basePlan)
+        val icons = layout.blueprint.icons
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertEquals(
+                    listOf(
+                        gear.name,
+                        Factory.ASSEMBLING_MACHINE_3.identifier,
+                        BeltTier.EXPRESS_TRANSPORT_BELT.identifier,
+                        InserterTier.FAST_INSERTER.identifier,
+                    ),
+                    icons.map { it.name },
+                )
+            },
+            { assertEquals(emptyList(), icons.filter { it.fluid }) },
+        )
+    }
+
+    @Test
+    fun aFluidTargetWithoutSolidFlowOmitsTheBeltAndInserterIcons() {
+        val plan =
+            BlueprintPlan(
+                target = water,
+                rows =
+                    listOf(
+                        PlannedRow.copies(
+                            planned(waterPumpingRecipe, Factory.OFFSHORE_PUMP),
+                            1,
+                        ),
+                    ),
+                sources = emptyList(),
+                label = "water",
+            )
+        val layout = Layout(plan)
+        val icons = layout.blueprint.icons
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertEquals(
+                    listOf(water.name, Factory.OFFSHORE_PUMP.identifier),
+                    icons.map { it.name },
+                )
+            },
+            { assertEquals(listOf(true, false), icons.map { it.fluid }) },
         )
     }
 

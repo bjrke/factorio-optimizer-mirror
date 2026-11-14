@@ -21,9 +21,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlanner
 import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.LayoutDump
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
+import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintIcon
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.chestWires
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 
 internal class RowLayout(
@@ -34,6 +36,9 @@ internal class RowLayout(
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
     private val powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ) {
+    /** A fluid target needs an explicit signal type; the other icons are item signals. */
+    private val targetIsFluid = logistics.isFluid(plan.target)
+
     private val board =
         LayoutBoard(
             LayoutNames(
@@ -143,9 +148,42 @@ internal class RowLayout(
         build()
         return Blueprint(
             label = plan.label,
-            icon = plan.target,
+            icons = blueprintIcons(),
             entities = board.placed.map { it.toBlueprintEntity() },
             wires = chestWires(board.placed),
         )
     }
+
+    /**
+     * The icon strip: the target, the factory that builds it, and the belt and inserter the layout
+     * actually placed. A fluid-only plan therefore shows two icons, not unused logistics.
+     */
+    private fun blueprintIcons(): List<BlueprintIcon> {
+        val placedNames = board.placed.map { it.name }.toSet()
+        val beltNames =
+            setOf(
+                board.names.belt,
+                board.names.undergroundBelt,
+                board.names.splitter,
+                board.names.loader,
+            )
+        val usedInserter =
+            when {
+                board.names.inserter in placedNames -> board.names.inserter
+                board.names.longInserter in placedNames -> board.names.longInserter
+                else -> null
+            }
+        return buildList {
+            add(BlueprintIcon(plan.target.name, fluid = targetIsFluid))
+            targetFactory()?.let { add(BlueprintIcon(it.identifier)) }
+            if (beltNames.any { it in placedNames }) add(BlueprintIcon(board.names.belt))
+            usedInserter?.let { add(BlueprintIcon(it)) }
+        }
+    }
+
+    /** The factory whose production exports the target, or null when the plan imports it. */
+    private fun targetFactory() =
+        plan.producerOf(plan.target)?.producerOf(plan.target)?.factory?.takeIf {
+            it != Factory.NO_FACTORY
+        }
 }

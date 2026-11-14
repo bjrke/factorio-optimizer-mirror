@@ -3,6 +3,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
+import de.bjrke.factorio.optimizer.common.fixtures.lubricant
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -39,4 +41,21 @@ class BlueprintFluidIntegrationTest {
                 { assertEquals(emptyList(), fluidNetworkProblems(layout.entities)) },
             )
         }
+
+    @Test
+    fun aFluidOnlyPlanOmitsTheUnusedBeltAndInserterIcons() {
+        val layout = Layout("lubricant")
+        val icons = layout.blueprint.icons
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertEquals(
+                    listOf(lubricant.name, Factory.CHEMICAL_PLANT.identifier),
+                    icons.map { it.name },
+                )
+            },
+            { assertEquals(listOf(true, false), icons.map { it.fluid }) },
+        )
+    }
 }

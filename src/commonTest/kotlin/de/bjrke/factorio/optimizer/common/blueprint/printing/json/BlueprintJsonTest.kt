@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettin
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.RequestFilter
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintIcon
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -14,11 +15,13 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -49,6 +52,73 @@ class BlueprintJsonTest {
             .jsonArray
             .first()
             .jsonObject
+
+    @Test
+    fun anIconWritesItsSignalTypeOnlyForAFluid() =
+        assertTableOf(
+            Triple(petroleum.name, true, JsonPrimitive("fluid")),
+            Triple(ironPlate.name, false, null),
+        ) { (name, fluid, expectedType) ->
+            val signal =
+                blueprintJson(Blueprint("test", icons = listOf(BlueprintIcon(name, fluid))))
+                    .getValue("icons")
+                    .jsonArray
+                    .single()
+                    .jsonObject
+                    .getValue("signal")
+                    .jsonObject
+
+            assertAll(
+                { assertEquals(expectedType, signal["type"]) },
+                { assertEquals(JsonPrimitive(name), signal["name"]) },
+            )
+        }
+
+    @Test
+    fun fourIconsGetConsecutiveIndices() {
+        val icons =
+            listOf(
+                BlueprintIcon(ironPlate.name),
+                BlueprintIcon("assembling-machine-3"),
+                BlueprintIcon("express-transport-belt"),
+                BlueprintIcon("fast-inserter"),
+            )
+        val written = blueprintJson(Blueprint("test", icons = icons)).getValue("icons").jsonArray
+
+        assertAll(
+            {
+                assertEquals(
+                    listOf(1, 2, 3, 4),
+                    written.map { it.jsonObject.getValue("index").jsonPrimitive.int },
+                )
+            },
+            {
+                assertEquals(
+                    icons.map { it.name },
+                    written.map {
+                        it.jsonObject
+                            .getValue("signal")
+                            .jsonObject
+                            .getValue("name")
+                            .jsonPrimitive
+                            .content
+                    },
+                )
+            },
+        )
+    }
+
+    @Test
+    fun aBlueprintWithoutIconsOmitsThem() {
+        assertNull(blueprintJson(Blueprint("test"))["icons"])
+    }
+
+    @Test
+    fun aBlueprintRejectsAFifthIcon() {
+        assertFailsWith<IllegalArgumentException> {
+            Blueprint("test", icons = List(5) { BlueprintIcon(ironPlate.name) })
+        }
+    }
 
     @Test
     fun directionsSerializeToTheirBlueprintNumbers() =

@@ -36,7 +36,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(basePlan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("920f535525b08a3d") },
+            { layout.assertSignature("3e90763ed6064723") },
         )
     }
 
@@ -45,7 +45,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("f015baab7b819827") },
+            { layout.assertSignature("1d430a3fd6f1dc5d") },
         )
     }
 
@@ -67,7 +67,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("1cb4766452495380") },
+            { layout.assertSignature("f5f0a1a83969824d") },
         )
     }
 
@@ -76,7 +76,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(sixInputPlan())
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("fcf2d7583121eac8") },
+            { layout.assertSignature("9332a9331e550640") },
         )
     }
 
@@ -103,7 +103,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("3785e7b4eb4bd068") },
+            { layout.assertSignature("1a895e0e6f4b393a") },
         )
     }
 
@@ -126,7 +126,7 @@ class BlueprintLayoutSnapshotTest {
 
     private fun canonical(blueprint: Blueprint) = buildString {
         append(blueprint.label).append('\n')
-        append(blueprint.icon).append('\n')
+        blueprint.icons.forEach { append(it).append('\n') }
         blueprint.entities.forEach { append(it).append('\n') }
         blueprint.wires.forEach { append(it).append('\n') }
     }

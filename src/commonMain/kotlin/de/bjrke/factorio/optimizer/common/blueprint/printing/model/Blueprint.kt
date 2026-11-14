@@ -107,10 +107,23 @@ data class BlueprintWire(
     val secondConnector: Int,
 )
 
-/** A whole blueprint: its [label], an optional [icon] signal, its [entities] and their [wires]. */
+/**
+ * One icon of the blueprint's icon strip: [name] is the prototype the signal names. [fluid] selects
+ * the game's `fluid` signal type; every other icon is an item/entity signal, so no type is needed.
+ */
+data class BlueprintIcon(val name: String, val fluid: Boolean = false)
+
+/** Factorio shows at most four icons on a blueprint. */
+private const val MAX_ICONS = 4
+
+/** A whole blueprint: its [label], its [icons], its [entities] and their [wires]. */
 data class Blueprint(
     val label: String,
-    val icon: Material? = null,
+    val icons: List<BlueprintIcon> = emptyList(),
     val entities: List<BlueprintEntity> = emptyList(),
     val wires: List<BlueprintWire> = emptyList(),
-)
+) {
+    init {
+        require(icons.size <= MAX_ICONS) { "a blueprint shows at most $MAX_ICONS icons" }
+    }
+}
