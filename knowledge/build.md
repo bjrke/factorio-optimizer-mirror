@@ -103,13 +103,18 @@ configuration cache entry between autoscaled machines.
   configuration cache key. Without the keystore every pipeline generates a new
   key, looks under a key nothing was stored under and logs `no cached
   configuration is available`, so `.gradle/configuration-cache` alone is dead
-  weight. `.gradle/caches/9.8.1/kotlin-dsl` is cached with it: the entry
-  fingerprints the instrumented Kotlin DSL script classes, and a checkout that
-  lacks them is rejected with `file '…/kotlin-dsl/scripts/…/instrumented/classes'
-  has been removed`. Verified on 9.8.1 with a fresh `GRADLE_USER_HOME` and a
-  restored `.gradle/configuration-cache`: no keystore → `no cached configuration
-  is available`, keystore only → the `kotlin-dsl` reason, both restored →
-  `Reusing configuration cache.` A *different* `GRADLE_USER_HOME` path is a
+  weight. The generated state the entry fingerprints lives beside it and has to
+  be restored too: `.gradle/caches/9.8.1/kotlin-dsl` (the instrumented Kotlin DSL
+  script classes) and `.gradle/caches/9.8.1/dependencies-accessors` (the version
+  catalog accessor classes), each rejected as `file '…/classes' has been
+  removed` when missing. Verified on 9.8.1 with a `GRADLE_USER_HOME` pruned to
+  `cache.paths`, a restored `.gradle/configuration-cache` and `check
+  jsBrowserDistribution --dry-run`: no keystore → `no cached configuration is
+  available`, keystore only → the `kotlin-dsl` reason, keystore and `kotlin-dsl`
+  → the `dependencies-accessors` reason, all three → `Reusing configuration
+  cache.` Nothing else under `caches/9.8.1` is fingerprinted:
+  `generated-gradle-jars`, `file-hashes` and `fileContent` were absent in the
+  reusing run. A *different* `GRADLE_USER_HOME` path is a
   fingerprint input of its own (`cannot be reused because Gradle user home
   directory has changed`), which is why it stays `$CI_PROJECT_DIR/.gradle`.
 - **`BuildInfo.date` is the commit timestamp** (`CI_COMMIT_TIMESTAMP`, falling
@@ -190,6 +195,14 @@ configuration cache entry between autoscaled machines.
   A genuine fingerprint change says `configuration cache cannot be reused because
   …` and names the file, environment variable or user home; read that reason
   instead of guessing. Never "fix" this by deleting the entry locally.
+- **A `cannot be reused` reason naming a file under
+  `.gradle/caches/<version>/` is missing restored state, not a real change.** The
+  entry fingerprints the instrumented Kotlin DSL script classes and the version
+  catalog accessors, and one pipeline each reported
+  `file '…/kotlin-dsl/scripts/…/instrumented/classes' has been removed` and `file
+  '…/dependencies-accessors/<hash>/classes' has been removed` — seen on
+  2026-11-15 at `51374e37` once `08210b61` had cached the keystore. Add the named
+  directory to `cache.paths` instead of deleting the entry.
 - **`detektMainJvm`/`detektTestJvm` report "compiler errors found during analysis"
   although the code compiles.** Verified on 2026-10-24 at `395323f`, both with and
   without working-tree changes: both tasks print `There were 3 compiler errors

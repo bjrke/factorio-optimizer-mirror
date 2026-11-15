@@ -26,10 +26,22 @@
 # key is one component of the configuration cache key. A checkout without the
 # keystore therefore gets a fresh key, computes a key no entry was stored under,
 # and logs `no cached configuration is available` - not a `cannot be reused`
-# reason - while the restored entry sits unused. `.gradle/caches/9.8.1/kotlin-dsl`
-# belongs to it too: the entry fingerprints the instrumented Kotlin DSL script
-# classes, and a checkout without them is rejected with `cannot be reused because
-# file '.../kotlin-dsl/scripts/.../instrumented/classes' has been removed`.
+# reason - while the restored entry sits unused. The generated state the entry
+# fingerprints has to be restored too, or the entry is rejected: the instrumented
+# Kotlin DSL script classes in `.gradle/caches/9.8.1/kotlin-dsl`, and the version
+# catalog accessor classes in `.gradle/caches/9.8.1/dependencies-accessors`. Each
+# is reported as `cannot be reused because file '.../classes' has been removed`,
+# one per pipeline until it is cached. Nothing else under `caches/9.8.1` is
+# fingerprinted: a checkout with the three restored reuses the entry while
+# `generated-gradle-jars`, `file-hashes` and `fileContent` are all still absent.
+#
+# The paths stay enumerated rather than caching `caches/9.8.1` whole: that would
+# add `generated-gradle-jars` (185 MiB on 9.8.1, three jars rebuilt from the
+# distribution on first use and identical everywhere) to every archive upload,
+# plus the observation caches a checkout invalidates on arrival (`fileHashes`,
+# `fileContent`, `file-changes`) and `jvms`, which records another machine's
+# toolchain probes. The fingerprinted state above is a few hundred KiB; the rest
+# is derived and buys no build time.
 #
 # `build/js/node_modules` is cached so the Yarn install only has to validate the
 # restored tree; the zip cache keeps its symlinks. There is no `cache:archive`
@@ -59,6 +71,7 @@ test:
       - .gradle/caches/9.8.1/transforms
       - .gradle/caches/9.8.1/cc-keystore
       - .gradle/caches/9.8.1/kotlin-dsl
+      - .gradle/caches/9.8.1/dependencies-accessors
       - .gradle/caches/build-cache-1
       - .gradle/configuration-cache
       - .gradle/nodejs
