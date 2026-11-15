@@ -67,7 +67,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("f5f0a1a83969824d") },
+            { layout.assertSignature("c1e12f03f3205ddd") },
         )
     }
 
@@ -76,7 +76,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(sixInputPlan())
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("9332a9331e550640") },
+            { layout.assertSignature("d23b9d95d9646245") },
         )
     }
 

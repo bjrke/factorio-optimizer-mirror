@@ -95,6 +95,17 @@ area-specific facts are in the other knowledge files.
   conform; new identifiers and new prose are American (user instruction,
   2026-10-24).
 
+## Reporting an issue
+
+- Before rejecting, postponing or calling a layout/behavior problem out of scope,
+  give the reproducing URL and the observed failure (failing coordinates or
+  message). Say whether it needs a local branch because the public site reflects
+  `main`; the user checks the URL before accepting the conclusion. A claim
+  without that URL is not reviewable and must be retracted.
+- Print every URL **complete**: protocol, host and port, then the hash route
+  (`http://localhost:8080/#/4.5/processing-unit/S/1/1/10`). A bare `#/...` route
+  is not clickable and makes the user retype the host.
+
 ## Behavior-preserving refactors
 
 - Before splitting a layout stage, pin its output with a characterization test.

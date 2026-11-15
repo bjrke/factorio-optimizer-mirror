@@ -1,18 +1,32 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.plumbing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FluidLane
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FluidLanePlacer
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LANE_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlacedMachine
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlannedLane
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.Row
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowFluidLane
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
+
+/**
+ * The east edge of the fluid marker column as the lane planner first places it, near the lane head
+ * so the block exists before routing. [ImportTrimmer] later joins the block to the shared import
+ * column; a fluid marker is a label, so it shares the solid marker's east edge and reaches less far
+ * west. When a source block or its connection run does not fit at this column, [FluidLaneFeed]
+ * reduces it west instead of dropping a lane, and the search also stops three tiles west of its
+ * lane head so the connection is a pair of touching underground ends rather than a short surface
+ * pipe.
+ */
+private const val IMPORT_MARKER_EAST = LANE_MARGIN - 2
 
 /** A placed drain lane joined to the feed lane of the same fluid on the same row. */
 internal class LaneConnection(
@@ -29,12 +43,19 @@ internal class LaneConnection(
  * by the lane, every other port of the row is left to the routed feed. A fluid that is both an
  * input and an output gets two lanes, one feeding and one draining; [connections] reports the pairs
  * the layout joins east of the row.
+ *
+ * Every lane's source block joins the shared import column of the solid belt markers: a fluid
+ * marker is a label, so it shares the solid marker's east edge. The block is placed before routing
+ * so it reserves its own tiles, and a pipe-to-ground run joins its east side to the lane head. The
+ * run tunnels under a belt, so a mixed belt's U-turn west of the head no longer makes the lane
+ * unplaceable.
  */
 internal class FluidLaneFeed(
     board: LayoutBoard,
-    imports: ImportExtension,
+    private val imports: ImportExtension,
     beltEnd: BeltEnd,
     private val logistics: LogisticsCalculator,
+    private val failures: MutableList<String>,
 ) {
     private val placer = FluidLanePlacer(board, imports, beltEnd)
     private val model = RowFluidLane(logistics)
@@ -52,25 +73,74 @@ internal class FluidLaneFeed(
         val tail: Coordinate,
     )
 
+    private class LaneSpec(
+        val row: Row,
+        val io: Io,
+        val side: LineSide,
+        val planned: PlannedLane,
+    )
+
     /**
-     * Places a lane for every fluid of every row that gets one for [side] and returns the ports the
-     * lanes could not reach, left to the routed feed. A further fluid on the same edge gets the
-     * next lane out, so a machine's second top/bottom port is fed like the first instead of by a
-     * route.
+     * Places a lane for every fluid of every row that gets one. A further fluid on the same edge
+     * gets the next lane out, so a machine's second top/bottom port is fed like the first instead
+     * of by a route.
      */
-    fun place(side: LineSide, rows: List<Row>): Map<Coordinate, Material> {
-        val unreached = mutableMapOf<Coordinate, Material>()
-        for (row in rows) {
-            for ((depth, fluid) in model.fluids(row, side).withIndex()) {
-                val laneRow = model.laneRow(row, side, depth)
-                val lane = FluidLane.of(laneRow, fluid.ports, side)
-                val placed = placer.place(lane, fluid.material, side, fluid.io) ?: continue
-                for (port in placed.ports) laneFeeds[port] = fluid.material
-                for (skipped in placed.skipped) unreached[skipped] = fluid.material
-                placedLanes += PlacedLaneRecord(row, fluid.material, fluid.io, lane.surface.last())
+    fun place(rows: List<Row>) {
+        val specs = buildList {
+            for (side in LineSide.entries) {
+                for (row in rows) {
+                    for ((depth, fluid) in model.fluids(row, side).withIndex()) {
+                        val laneRow = model.laneRow(row, side, depth)
+                        val lane = FluidLane.of(laneRow, fluid.ports, side)
+                        add(LaneSpec(row, fluid.io, side, placer.plan(lane, fluid.material)))
+                    }
+                }
             }
         }
-        return unreached
+        if (specs.isEmpty()) return
+
+        val markerEast = sharedMarkerEast(specs)
+        imports.fluidMarkerEast = markerEast
+        for (spec in specs) {
+            val end = Coordinate(markerEast, spec.planned.lane.laneRow)
+            // a shared column keeps every import marker east aligned; a lane that still cannot
+            // place reports a drain instead of silently losing its only outlet
+            val placed =
+                placer.place(spec.planned, spec.side, spec.io, end)
+                    ?: run {
+                        if (spec.io == Io.OUTPUT) {
+                            failures +=
+                                "${spec.planned.material.name} drain lane on row " +
+                                    "${spec.planned.lane.laneRow} (no room for a source block)"
+                        }
+                        continue
+                    }
+            for (port in placed) laneFeeds[port] = spec.planned.material
+            placedLanes +=
+                PlacedLaneRecord(
+                    spec.row,
+                    spec.planned.material,
+                    spec.io,
+                    spec.planned.lane.surface.last(),
+                )
+        }
+    }
+
+    /**
+     * The eastmost shared marker column where every lane's source block and connection run fit,
+     * starting at [IMPORT_MARKER_EAST] and stepping west, because only west of a mixed belt's
+     * U-turn can the connection run cross it. The search never steps west of [IMPORT_FEED], the
+     * column every import and every route starts from, so a block with nothing better left stands
+     * there uncompacted; the eastmost candidate is the fallback, so the search always yields a
+     * column for [FluidLanePlacer.place] to check.
+     */
+    private fun sharedMarkerEast(specs: List<LaneSpec>): Int {
+        val start = minOf(IMPORT_MARKER_EAST, specs.minOf { it.planned.lane.head.x - 3 })
+        return (start downTo IMPORT_FEED).firstOrNull { east ->
+            specs.all { spec ->
+                placer.fits(spec.planned, Coordinate(east, spec.planned.lane.laneRow))
+            }
+        } ?: start
     }
 
     /**

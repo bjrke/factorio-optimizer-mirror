@@ -12,7 +12,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 internal class ImportFeed(
     val material: Material,
     val start: Coordinate,
-    val row: Int,
     /** The lane tile the route feeds; the trim must never eat into the lane beyond it. */
     val feed: Coordinate,
 )
@@ -27,7 +26,7 @@ internal class FluidFeed(
     val row: Int,
     val head: Coordinate,
     /** The eastmost tile of the source block as placed inline. */
-    val source: Coordinate,
+    var source: Coordinate,
     /** Whether the lane drains its fluid, so its source block is an unfiltered sink. */
     val io: Io,
 )
@@ -48,6 +47,14 @@ internal class ImportExtension {
 
     /** The fluid lanes whose marker joins the solid import column, in placement order. */
     val fluidFeeds = mutableListOf<FluidFeed>()
+
+    /**
+     * The east edge of the fluid marker column as the lane planner placed it, before the import
+     * trimmer joins it to the solid import column. A fluid marker is a label, so the trimmer gives
+     * it the solid marker's east edge; the marker size then decides how far west it reaches. Null
+     * when the plan has no fluid lane.
+     */
+    var fluidMarkerEast: Int? = null
 
     /**
      * The import marker tiles. A vertical corridor may not move them, so the markers stay in one

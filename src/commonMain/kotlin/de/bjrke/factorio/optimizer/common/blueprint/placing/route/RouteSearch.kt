@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.route
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -8,8 +9,12 @@ import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 
-/** West edge no feed route may cross, so a route cannot run around the import lanes. */
-private const val ROUTE_WEST_BOUND = 2
+/**
+ * The west edge no route may cross: the import feed column, the first tile that is not part of an
+ * import marker. Every marker ends one tile before that column and reaches west by its own size, so
+ * no belt or pipe enters a marker whatever marker design is selected.
+ */
+private const val ROUTE_WEST_BOUND = IMPORT_FEED
 
 /**
  * How far past everything placed a route may still search on the north, south and east side: one
@@ -226,8 +231,9 @@ internal class RouteSearch(
         }
 
     /**
-     * Whether a route may use [coordinate]: east of [ROUTE_WEST_BOUND], and within [ROUTE_MARGIN]
-     * past everything placed on the other three sides, so the search stays near the blueprint.
+     * Whether a route may use [coordinate]: at or east of [ROUTE_WEST_BOUND], and within
+     * [ROUTE_MARGIN] past everything placed on the other three sides, so the search stays near the
+     * blueprint.
      */
     private fun inRegion(coordinate: Coordinate) =
         coordinate.x >= ROUTE_WEST_BOUND &&

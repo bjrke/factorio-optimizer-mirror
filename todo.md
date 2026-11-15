@@ -125,22 +125,6 @@ place no pole for the machine body (or strictly fewer poles), the inserters stay
 Each block below is self-contained: copy one as the task prompt. Line numbers refer to
 `main` @ `2cf115a`.
 
-### Fix the fluid lane / far merge collision
-
-Fix the collision between a far mixed belt's U-turn and the fluid lane's inline source block.
-
-`FAR_TOP` sits at `factoryTop-3`, so its turn row is `factoryTop-5`, which equals `laneRow(NORTH)`
-(`RowFluidLane.kt:87-99`). An east-fed merge puts its approach tile at column 8
-(`EAST_MERGE_OFFSET`, `RowPlacer.kt:47`), and `sourceEnd` requires `head.x-3 .. head.x-1`
-(`FluidLanePlacer.kt:98-103`), which always includes column 8 for the first machine. The
-`canPlacePipes` check fails and `FluidLaneFeed.place` silently `continue`s
-(`FluidLaneFeed.kt:67`): an input falls back to a routed pipe, but a non-target fluid output loses
-its only drain and `FluidFeeder` routes inputs only (`FluidFeeder.kt:67-114`, `141-151`).
-
-Move the source block clear of the turn/approach tiles (or reserve them as part of the lane), record
-a failure when a drain lane cannot be placed, and add a test for a row with two belts on one side,
-the far one an east-fed mixed belt, plus a fluid lane on that side.
-
 ### Reset the material picker highlight
 
 Reset `highlighted` when Escape or blur closes the dropdown (`MaterialSelector.kt:57-80`). The

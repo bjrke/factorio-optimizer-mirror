@@ -49,9 +49,9 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   outermost belt; a mixed belt's merge and turn are not part of the outline, the
   merge offset keeps them west of the lane head) and its depth: a side places one
   lane per fluid, each two rows further out than the last.
-  `blueprint/planning/row/FluidLanePlacer.kt` puts it on the board: the inline `oCo` marker, the
-  horizontal runs, the shaft ends and the tunnel index, skipping a shaft that finds
-  no room so only that port falls back to the route. It plans each run once
+  `blueprint/planning/row/FluidLanePlacer.kt` puts it on the board: the shared source block and its
+  connection run, the horizontal runs, the shaft ends and the tunnel index, skipping a shaft that
+  finds no room so only that port falls back to the route. It plans each run once
   (`tunnelPlan`) and checks exactly the tiles that plan claims, so a run longer
   than the pipe reach (a band whose fluid port is far from its lane head) is
   checked and placed from the same list.
@@ -82,15 +82,22 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   straight run decides the column; a mixed feed that turns before its merge stays
   inline instead of dragging every marker west. `connectorClear` walks that column
   west until the connector replaces only its own marker and straight feed belts, so
-  a foreign entity or a tunnel span never ends up under a loader. A **fluid**
-  lane marker moves into that same column; `blueprint/placing/routing/FluidFeedLinker.kt` joins its
-  lane head with pipe-to-ground runs along the lane row (`FluidFeed` in
-  `blueprint/planning/plan/ImportExtension.kt`). Without solid imports the column is the westmost
-  inline fluid marker, so the stacked lane markers still share one column. The
-  marker, link and head are pinned so compaction shifts them as one group. The
-  link is not pre-checked for room: the lane row was laid before any route ran, so
-  a link that would overlap a placed tile or touch a foreign fluid is placed,
-  rejected by `validateLayout` and rolled back, keeping the inline marker.
+  a foreign entity or a tunnel span never ends up under a loader. Every import marker ends one tile
+  before `IMPORT_FEED` in `blueprint/layout/LayoutBoard.kt`, so its size only changes how far west
+  it reaches and every marker design routes the same feed belt. A **fluid** source block is placed
+  on that same column before routing, sharing the solid marker's east edge because a fluid marker
+  is a label; `blueprint/placing/routing/FluidFeedLinker.kt` moves it when the solid connector
+  column changed, then joins its lane head with a pipe-to-ground run
+  along the lane row (`FluidFeed` in `blueprint/planning/plan/ImportExtension.kt`). The block keeps
+  three tiles to its lane head, so the block's own end and the run's two ends touch and no surface
+  pipe stands in the row; the column search never steps west of `IMPORT_FEED`, so a block with
+  nothing better left stands there uncompacted.
+  Without solid imports the column is the shared fluid marker column, so the
+  stacked lane markers still share one column. The marker, link and head are
+  pinned so compaction shifts them as one group. The link is not pre-checked for
+  room: the lane row was laid before any route ran, so a link that would overlap a
+  placed tile or touch a foreign fluid is placed, rejected by `validateLayout` and
+  rolled back, keeping the previous marker and link.
 
 ## Traps
 
@@ -189,19 +196,23 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   outermost belt lands **on the far belt row**, `board.isFree` fails on the belt
   tiles and the lane silently falls back to the route (evidence: `lubricant` lane
   planned at `y=95` over belts on `y=95/97`, then `no pipe route`).
-- **A fluid lane may use a mixed belt's turn row, but must clear the merge columns.**
-  A mixed lane's merge sits one row outside the belt and its turn tile two rows
-  outside, at the row's west/east edge; the lane row is read from the belts alone
-  (`RowFluidLane.laneRow`), so the lane can land on the turn row. An east-fed merge
-  now starts at `LANE_MARGIN - EAST_MERGE_OFFSET`, which puts the turn and approach
-  tiles west of the machine column where the lane head starts. The reported
-  utility-science battery row's acid lane was dropped when the lane row ran
-  through the gear belt's merge and its marker block collided with the merge.
-  Do not shrink `EAST_MERGE_OFFSET` without re-checking the lane head: the lane
-  must stay east of `merge.turnColumn`. A three-tile marker block reaches further
-  west than the lane head, so a plan using the constant-combinator fluid source can
-  still fall back to the routed feed on such a row. Evidence:
+- **A fluid lane may use a mixed belt's turn row because the U-turn feeder enters head-on.**
+  A mixed lane's merge sits one row outside the belt and its turn tile two rows outside, at the
+  row's west/east edge; the lane row is read from the belts alone (`RowFluidLane.laneRow`), so the
+  outermost mixed belt's lane can land on its turn row. `DeliveryPreparation.sinksOf` feeds the
+  U-turn tile from the row **beyond** the turn (its facing row), not from the tile on the lane row
+  beside it: that side tile is where `FluidLaneFeed`'s pipe-to-ground link surfaces, and a link
+  end there would leave the feeder without a tile to stand on. Two mixed belts whose turns face
+  each other over one gap (the six-input, three-pair row) cannot both enter head-on, so the duplicate
+  head-on tile is rejected and both keep the side feed on the turn row. A factory one or two tiles
+  high would park each head-on feeder on the *other* turn tile instead; no plan builds such a row
+  today (only the 2x2 steel furnace and recycler are that flat, and a row of either takes at most one
+  mixed pair), and one would surface as a `foreign side-load into …` validation failure rather than
+  lose the feed quietly. `FluidLaneFeed` puts every fluid source block on the shared import marker
+  column and steps it west only until every block and link fits. Evidence:
   `aMixedBeltTurnRowKeepsTheLaneHeadClear`,
+  `aMixedBeltTurnRowKeepsItsFluidLaneConnected`,
+  `aSixInputRowMixesThreeInputPairs`,
   `theReportedUtilityScienceUrlCompacts`.
 - **A burner furnace's fuel belt fills the inserter row and leaves the small pole no tile.** A
   stone furnace row with coal and ore on two belt rows packs both machine columns with inserters
@@ -249,14 +260,18 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   product) fits through one mixed belt. Recognize a genuine routing failure by
   `foreign side-load into …` while the row still has a free input lane, not by
   compaction rejecting every corridor. See `packRowBelts` (`BeltRows.kt`).
-- **A fluid marker joins the solid import column unless the source block or a run
-  end is taken.** The link (`blueprint/placing/routing/FluidFeedLinker.kt`) buries under a belt,
-  underground belt or inserter that crosses the lane row in the west corridor, so a
-  solid route crossing the lane no longer keeps the marker out of the column (the
-  `--cheats` electric-engine case: the circuit belt at the lane row is passed
-  under). A machine or another non-buryable entity at the source tile or a run end,
-  or a reserved tile, keeps the inline marker: the fluid is still correct, only the
-  shared column is missed.
+- **A fluid marker shares the solid import column because it is placed there, not trimmed there.**
+  `FluidLaneFeed` chooses one column for every fluid source block and steps it west until every
+  block and its connection run fit; `FluidFeedLinker` moves a block when the solid column changed.
+  The fluid marker is a label, so it shares the solid marker's east edge and reaches less far west;
+  the connection run buries under a belt, underground belt or inserter that crosses
+  the lane row, so the run itself does not block a belt. Its **surfaced ends** still do: the link
+  ends on the row beyond the block, and a U-turn feeder that wants the side tile on that row would
+  find a pipe-to-ground end there. That is why the U-turn feed is head-on (see above); the
+  processing-unit gas lane is the case that used to be dropped and reported
+  `petroleum-gas … (no pipe route)`. A machine, another non-buryable entity or a reserved tile at a
+  block or run end still prevents the move; the old marker and link are then kept. Evidence:
+  `aMixedBeltTurnRowKeepsItsFluidLaneConnected`.
 - **A reserved fluid port must not cost an input inserter.**
   `MachineInserterPlacer` spreads the short/long pattern over the free columns and
   falls back to the machine's last column (normally kept for a pole) when the port

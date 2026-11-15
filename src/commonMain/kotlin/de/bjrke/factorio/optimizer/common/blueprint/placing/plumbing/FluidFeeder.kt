@@ -24,7 +24,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
@@ -55,7 +54,7 @@ internal class FluidFeeder(
     private val logistics = stage.logistics
     private val rowPlacer = stage.rowPlacer
     private val router = stage.router
-    private val lanes = FluidLaneFeed(board, imports, beltEnd, logistics)
+    private val lanes = FluidLaneFeed(board, imports, beltEnd, logistics, failures)
 
     /** The routed fallback prepared by [placeImports], routed by [routeFluids]. */
     private var groups: List<PipeGroup> = emptyList()
@@ -68,7 +67,7 @@ internal class FluidFeeder(
         // the row lanes go in first: they are placed before any routed pipe, so a route cannot take
         // a tile of one, and every port a lane reaches is left to the lane
         // a lane that could not reach a port leaves it free, so the loop below routes it
-        LineSide.entries.forEach { side -> lanes.place(side, rowPlacer.placedRows) }
+        lanes.place(rowPlacer.placedRows)
         // reserve every fluid's machine edge first, so two fluids never pick touching edges
         val targets = mutableMapOf<Material, MutableList<FluidSink>>()
         for (row in rowPlacer.placedRows) {

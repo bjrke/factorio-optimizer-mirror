@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.special
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.CircuitCondition
@@ -29,7 +30,8 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
 
     /**
      * How many tiles the solid belt connector occupies left of the feed: three for a label or a
-     * cheat chest, five for a chest the inserters feed.
+     * cheat chest, five for a chest the inserters feed. An import places the marker so its east
+     * edge is one tile before [IMPORT_FEED]; the target output places it east of the product belt.
      */
     val width
         get() =
@@ -38,13 +40,6 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
                 BeltEnd.INFINITY_CHEST -> 3
                 else -> 5
             }
-
-    /**
-     * The column a solid connector starts on. A cheat chest sits two tiles in so its loader fits
-     * before the feed; every other connector starts at the west edge.
-     */
-    val left
-        get() = if (beltEnd == BeltEnd.INFINITY_CHEST) 2 else 0
 
     /**
      * Places the selected solid belt connector for [material] on [row], starting at column [left]:
@@ -60,7 +55,7 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
                 // the label sits above an underground run, so the belt can pass underneath
                 board.placeMarker(Coordinate(left + 1, row), Signal(material))
 
-                board.placeTunnel(material, from, to, Direction.EAST)
+                board.placeTunnel(material, from, to, EAST)
             }
             BeltEnd.INFINITY_CHEST -> {
                 if (input) {

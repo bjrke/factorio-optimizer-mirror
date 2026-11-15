@@ -101,6 +101,12 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   asked directly and the work stopped — never turned into a script. For a
   blocked/failing URL, name the host, paste the `curl` proof (status + raw
   body), and ask whether to approve or block it.
+- **Never reject, postpone or call a layout/behavior problem out of scope
+  without a reproducing URL and the observed failure.** Put the URL and the
+  failing coordinates or message first, and say when it needs the local branch
+  because the public site reflects `main`; the user checks the URL before
+  accepting the conclusion. Always print the URL complete — protocol, host and
+  port, then the hash route (`http://localhost:8080/#/...`), never a bare `#/...`.
 - A **host command** (must run outside the sandbox): never paste it into chat;
   write a short, reviewable, Ubuntu-compatible script `tmp/<topic>.sh` that saves
   results beside itself. `tmp/` is intentionally not gitignored: keep scripts

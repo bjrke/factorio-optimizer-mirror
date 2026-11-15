@@ -70,8 +70,9 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   (`RouteCosts.turnCost`/`tunnelEntry`), so a route runs straight and rounds a belt row instead of
   tunneling under it; a long crossing still tunnels. The search region is everything placed plus
   `ROUTE_MARGIN` (3) tiles on the north, south and east side and the fixed `ROUTE_WEST_BOUND` on the
-  west; `LayoutRouter` retries with `WIDE_ROUTE_MARGIN` only when that box has no route, and records
-  the retry in the layout's failures.
+  west — the import feed column (`IMPORT_FEED` in `blueprint/layout/LayoutBoard.kt`), which bounds
+  belts and pipes alike; `LayoutRouter` retries with `WIDE_ROUTE_MARGIN` only when that box has no
+  route, and records the retry in the layout's failures.
 - `blueprint/placing/special/PathPlacer.kt` — `placePath` and the tile roles for plain and
   underground runs; shared by belt and pipe routes. `placePath` rejects a belt path that uses one
   tile twice (`pathConflicts`, the tiles are returned and nothing is placed) and lets the caller
@@ -123,8 +124,12 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   crossing belt is tunneled under). A belt still east of the finished connector is a failure;
   `DeliveryPreparation` reserves the sinks and sources (imports first) and each sink's approach
   tile for its material; a mixed
-  input belt contributes two sinks (its straight feeder and its U-turn feeder) and
-  pins the merge group. A delivery is re-searched with the tiles blocked when its path uses a
+  input belt contributes two sinks (its straight feeder and its U-turn feeder, which
+  enters the turn head-on from beyond it) and pins the merge group. Every import marker
+  ends one tile before `IMPORT_FEED` in `blueprint/layout/LayoutBoard.kt` and reaches west by its
+  own size, so the marker design only changes the west extent and the belt always starts on the
+  same feed column. A belt route may not use a tile west of that feed column, so a route never
+  enters a marker. A delivery is re-searched with the tiles blocked when its path uses a
   belt tile twice. `SplitDeliveryRouter` inserts the branch splitters,
   `DeliveryNetworks` remembers the produced trunks and `BeltRouteRules` is the
   belt-tile predicate shared by both routes; it never side-loads a mixed or
@@ -193,7 +198,10 @@ baselines, so every finding fails.
   value) and at 10. Only the x coordinates move, by `LANE_MARGIN - 40`. The constant must hold the
   widest connector (five tiles for a chest), the merge column at `LANE_MARGIN - EAST_MERGE_OFFSET`
   and that merge's approach tile, which puts the floor at eight. Tests that pin absolute tiles read
-  the `internal` constant, not a literal.
+  the `internal` constant, not a literal. Every import marker ends one tile before `IMPORT_FEED` in
+  `blueprint/layout/LayoutBoard.kt` and reaches west by its own size, so a marker design changes
+  only the west extent of the blueprint; the routed belt starts on the same feed column and has the
+  same length for every design.
 - **A route must not need the wide search box.** `RouteSearch` searches north, south and east only
   `ROUTE_MARGIN` (3) tiles past everything placed — one ring lane for the route and one for its turn.
   `LayoutRouter.routeWide` retries with `WIDE_ROUTE_MARGIN` (24) and still appends

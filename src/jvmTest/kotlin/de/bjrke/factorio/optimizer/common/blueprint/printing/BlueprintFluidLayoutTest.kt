@@ -378,8 +378,8 @@ class BlueprintFluidLayoutTest {
         assertAll(
             // the trimmer relocates the sink marker but must keep it unfiltered
             { assertNull(sink.settings) },
-            // it joins the same west column as the solid import
-            { assertEquals(solidImport.area.topLeft.x, sink.area.topLeft.x) },
+            // it ends on the east edge of the solid import's three-tile connector
+            { assertEquals(solidImport.area.topLeft.x + 2, sink.area.topLeft.x) },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )

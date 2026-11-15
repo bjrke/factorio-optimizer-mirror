@@ -56,7 +56,7 @@ internal data class RouteProfile(val costs: RouteCosts, val tunnels: TunnelRules
 
 /**
  * One routing request: the start and heading, the goal, the tile predicate and the profile.
- * Grouping them keeps the A* search from threading the same six values through every helper.
+ * Grouping them keeps the A* search from threading the same values through every helper.
  */
 internal data class RouteRequest(
     val from: Coordinate,

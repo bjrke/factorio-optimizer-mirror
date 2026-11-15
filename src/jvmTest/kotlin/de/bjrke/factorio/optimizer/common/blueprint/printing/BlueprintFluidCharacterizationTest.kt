@@ -138,7 +138,7 @@ class BlueprintFluidCharacterizationTest {
         }
 
     @Test
-    fun theMarkerSitsInlineWestOfTheLaneHead() {
+    fun theMarkerSitsInTheSharedImportColumnWestOfTheLaneHead() {
         val markers = layout.entities.filterIsInstance<MarkerEntity>()
         val fluidMarker = markers.single { it.signal.fluid }
 
@@ -149,7 +149,7 @@ class BlueprintFluidCharacterizationTest {
             {
                 assertEquals(
                     MarkerEntity(
-                        Coordinate(LANE_MARGIN - 2, -3).area(),
+                        Coordinate(LANE_MARGIN - 4, -3).area(),
                         "constant-combinator",
                         fluidMarker.signal,
                     ),
@@ -161,27 +161,49 @@ class BlueprintFluidCharacterizationTest {
     }
 
     @Test
-    fun theLabelIsFlankedByTheTwoEndsOfItsUndergroundRun() =
-        assertTableOf(
-            Coordinate(LANE_MARGIN - 3, -3) to INPUT,
-            Coordinate(LANE_MARGIN - 1, -3) to OUTPUT,
-        ) { (tile, io) ->
-            assertAll(
-                { assertEquals(emptyList(), layout.failures) },
-                { assertEquals(end(tile, petroleum, EAST, io), plumbingAt(tile)) },
-            )
-        }
+    fun theSourceBlockEndsWestOfItsConnectionRun() {
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            {
+                assertEquals(
+                    end(Coordinate(LANE_MARGIN - 5, -3), petroleum, EAST, INPUT),
+                    plumbingAt(Coordinate(LANE_MARGIN - 5, -3)),
+                )
+            },
+            {
+                assertEquals(
+                    end(Coordinate(LANE_MARGIN - 3, -3), petroleum, EAST, OUTPUT),
+                    plumbingAt(Coordinate(LANE_MARGIN - 3, -3)),
+                )
+            },
+            // the block ends three tiles west of the lane head; the link is a pair of touching ends
+            {
+                assertEquals(
+                    end(Coordinate(LANE_MARGIN - 2, -3), petroleum, EAST, INPUT),
+                    plumbingAt(Coordinate(LANE_MARGIN - 2, -3)),
+                )
+            },
+            {
+                assertEquals(
+                    end(Coordinate(LANE_MARGIN - 1, -3), petroleum, EAST, OUTPUT),
+                    plumbingAt(Coordinate(LANE_MARGIN - 1, -3)),
+                )
+            },
+        )
+    }
 
     @Test
     fun theRowCarriesTheWaterInJunctionsRunsMarkerAndShafts() {
         val plumbing = layout.entities.filterIsInstance<Plumbing>()
-        val pipes = plumbing.filterIsInstance<PipeEntity>().map { it.area.topLeft }
+        val pipes =
+            plumbing.filterIsInstance<PipeEntity>().map { it.area.topLeft }.sortedBy { it.x }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            // three junctions, four gap ends, the marker's two ends and six shaft ends
-            { assertEquals(15, plumbing.size) },
-            { assertEquals(12, plumbing.count { it is PipeToGroundEntity }) },
+            // three junctions, four gap ends, the source block's two ends, its two link ends and
+            // six shafts
+            { assertEquals(17, plumbing.size) },
+            { assertEquals(14, plumbing.count { it is PipeToGroundEntity }) },
             {
                 assertEquals(
                     listOf(
@@ -206,22 +228,23 @@ class BlueprintFluidCharacterizationTest {
 
     @Test
     fun theFluidRowDrawingIsStable() {
-        // The board starts at x = LANE_MARGIN - 3, so the ruler prints "1" at x = 10 and "2" at
-        // x = 20 when LANE_MARGIN is 10. Codes: 1 = the chemical plant, a = petroleum on the input
-        // lane, b = solid fuel on the output belt, o = a pipe-to-ground end, - = a plain pipe,
+        // The source block starts at x = LANE_MARGIN - 5, so the ruler prints "1" at x = 10 and "2"
+        // at x = 20 when LANE_MARGIN is 10. Codes: 1 = the chemical plant, a = petroleum on the
+        // input lane, b = solid fuel on the output belt, o = a pipe-to-ground end, - = a plain
+        // pipe,
         // C = a constant combinator, ^ = a product inserter, + = a pole.
         val expected =
             """
-            layout 16x8
-                 1         2
-            -3 oCo-oo-oo-
-            -2    o  o  o
-            -1    o  o  o
-            0    111111111 +
-            1    111111111
-            2    111111111
-            3     ^ +^  ^
-            4    bbbbbbbbbb(C)
+            layout 18x8
+                   1         2
+            -3 oCooo-oo-oo-
+            -2      o  o  o
+            -1      o  o  o
+            0      111111111 +
+            1      111111111
+            2      111111111
+            3       ^ +^  ^
+            4      bbbbbbbbbb(C)
 
             legend
               1 = chemical-plant: solid-fuel-from-petroleum-gas

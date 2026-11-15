@@ -129,3 +129,8 @@ internal fun LayoutBoard.placeTunnelPlan(plan: TunnelPlan) {
 internal fun LayoutBoard.placeTunnels(material: Material, from: Coordinate, to: Coordinate) {
     placeTunnelPlan(tunnelPlan(material, from, to))
 }
+
+/** Removes every surface entity of [plan]; the buried tiles hold no entity. */
+internal fun LayoutBoard.removeTunnelPlan(plan: TunnelPlan) {
+    (plan.surface + plan.runs.flatMap { (from, to) -> listOf(from, to) }).forEach(::removeAt)
+}

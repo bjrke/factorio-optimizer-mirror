@@ -61,7 +61,7 @@ internal class LayoutRouter(
     /**
      * A weighted A* route for belts: a straight surface run is cheapest, a turn costs a little, and
      * a straight underground run under an obstacle is preferred over routing around it. The route
-     * never steps west of the import lanes, and surface tiles outside the start-to-goal corridor
+     * never steps west of [ROUTE_WEST_BOUND], and surface tiles outside the start-to-goal corridor
      * pay [RouteCosts.detourCost].
      */
     fun findRoute(
@@ -70,7 +70,17 @@ internal class LayoutRouter(
         to: Coordinate,
         allowed: (Coordinate, Direction) -> Boolean,
         strictStart: Boolean = false,
-    ) = route(RouteRequest(from, fromDirection, to, allowed, beltProfile, strictStart))
+    ) =
+        route(
+            RouteRequest(
+                from,
+                fromDirection,
+                to,
+                allowed,
+                beltProfile,
+                strictStart,
+            ),
+        )
 
     /**
      * A weighted A* route. A tile costs [RouteCosts.surfaceCost], a turn adds

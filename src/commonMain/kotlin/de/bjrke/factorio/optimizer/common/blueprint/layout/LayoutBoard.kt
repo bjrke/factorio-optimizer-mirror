@@ -13,6 +13,13 @@ internal const val PIPE_TO_GROUND = "pipe-to-ground"
 /** The name of an underground run cannot exceed the prototype's `max_underground_distance`. */
 internal const val PIPE_UNDERGROUND_RANGE = 10
 
+/**
+ * The first tile that is not part of an import marker: every imported feed starts here, so the
+ * marker design only changes how far west the marker reaches. No route may use a tile west of this
+ * column, whatever marker a layout selects.
+ */
+internal const val IMPORT_FEED = 0
+
 /** The prototype names derived from the selected belt, inserter and the fixed pipe entities. */
 internal data class LayoutNames(
     val belt: String,

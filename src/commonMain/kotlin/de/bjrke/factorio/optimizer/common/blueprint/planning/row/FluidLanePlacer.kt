@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
-import de.bjrke.factorio.optimizer.common.blueprint.layout.FLUID_SOURCE_WIDTH
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.TunnelPlan
 import de.bjrke.factorio.optimizer.common.blueprint.layout.canPlacePipes
 import de.bjrke.factorio.optimizer.common.blueprint.layout.endName
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltLikeEntity
@@ -10,8 +10,10 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.fluidSourceTiles
 import de.bjrke.factorio.optimizer.common.blueprint.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeFluidSource
+import de.bjrke.factorio.optimizer.common.blueprint.layout.placeFluidSourceLink
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placePipe
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeTunnelPlan
@@ -24,16 +26,29 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.south
+import de.bjrke.factorio.optimizer.common.core.model.west
 import kotlin.math.abs
 
-/** What placing a lane achieved: the ports it reaches, and the ports it had no room for. */
-internal class PlacedLane(val ports: List<Coordinate>, val skipped: List<Coordinate>)
+/**
+ * A lane whose horizontal runs are planned once, so the fit check and the placement share the same
+ * tiles, including the surface tiles a run longer than the pipe's reach splits into.
+ */
+internal class PlannedLane(
+    val lane: FluidLane,
+    val material: Material,
+    val runs: List<TunnelPlan>,
+) {
+
+    /** Every tile the lane claims on the surface: its junctions and both ends of every run. */
+    val tiles = lane.surface + runs.flatMap { it.tiles }
+}
 
 /**
  * Puts a [FluidLane] on the board and sources it: the junction pipes of the lane row, the
  * **horizontal** runs across the gaps between them, a **vertical** shaft down to every machine port
- * and the inline marker west of the lane head.
+ * and the shared source block west of the lane head, joined by its own underground run.
  *
  * The horizontal run across a two-tile gap is a pair of directly adjacent ends (`pUUp`): the player
  * walks over the run instead of around a surface pipe. A shaft's top end stands one row inside the
@@ -50,64 +65,85 @@ internal class FluidLanePlacer(
 ) {
 
     /**
-     * Places [lane] for [material] and the marker that sources it. Returns null when the lane row
-     * itself or the marker block is taken.
+     * Places [planned]'s lane and the shared source block ending at [sourceEnd], returning the
+     * machine ports the lane reaches. Returns null when the lane row, the source block or its
+     * connection run is taken.
      */
     fun place(
-        lane: FluidLane,
-        material: Material,
+        planned: PlannedLane,
         side: LineSide,
         io: Io,
-    ): PlacedLane? {
-        // plan every run once: the fit check and the placement then share the same tiles, including
-        // the surface tiles a run longer than the pipe's reach splits into
-        val runs = lane.runs.map { (from, to) -> board.tunnelPlan(material, from, to) }
-        val laneTiles = lane.surface + runs.flatMap { it.tiles }
-        if (!laneTiles.all { board.canPlacePipes(it, material) }) return null
-        val source = sourceEnd(lane.head, material) ?: return null
+        sourceEnd: Coordinate,
+    ): List<Coordinate>? {
+        if (!fits(planned, sourceEnd)) return null
+        val lane = planned.lane
         val buried =
-            lane.shafts.filter { (top, bottom) -> shaftFits(top, bottom, material) }.toSet()
+            lane.shafts
+                .filter { (top, bottom) -> shaftFits(top, bottom, planned.material) }
+                .toList()
 
-        for (tile in lane.surface) board.placePipe(tile, material)
-        for (run in runs) board.placeTunnelPlan(run)
-        for ((top, bottom) in lane.shafts) {
-            if ((top to bottom) !in buried) continue
-            board.placeTunnel(material, top, bottom)
+        for (tile in lane.surface) board.placePipe(tile, planned.material)
+        for (run in planned.runs) board.placeTunnelPlan(run)
+
+        for ((top, bottom) in buried) {
+            board.placeTunnel(planned.material, top, bottom)
         }
-        placeSource(source, material, io)
-        // the marker is placed inline for now; the import trimmer moves it to the solid marker
-        // column and joins it to the head, so one west column serves every import
-        imports.fluidFeeds += FluidFeed(material, lane.laneRow, lane.head, source, io)
+        placeSource(lane.head, sourceEnd, planned.material, io)
+        imports.fluidFeeds += FluidFeed(planned.material, lane.laneRow, lane.head, sourceEnd, io)
         imports.markerRows += lane.laneRow
         // the machine port is the end that touches the machine: the bottom of a north lane, the top
         // of a south lane
-        val reached =
-            lane.shafts
-                .filter { (top, bottom) -> (top to bottom) in buried }
-                .map { (top, bottom) -> if (side == LineSide.NORTH) bottom else top }
-        val skipped =
-            lane.ports.filter { port -> reached.none { it.x == port.x && it.y == port.y } }
-        return PlacedLane(reached, skipped)
+        return buried.map { (top, bottom) -> if (side == LineSide.NORTH) bottom else top }
+    }
+
+    /** Plans [lane]'s runs once, so every [fits] check of one lane reuses the same tiles. */
+    fun plan(lane: FluidLane, material: Material) =
+        PlannedLane(
+            lane,
+            material,
+            lane.runs.map { (from, to) -> board.tunnelPlan(material, from, to) },
+        )
+
+    /**
+     * Whether [planned]'s lane can take its source block ending at [sourceEnd]: the lane tiles, the
+     * source block and the run from the block's east side to the head all fit. The run may pass
+     * under a belt, so a mixed belt's U-turn does not block a source block placed west of it.
+     */
+    fun fits(planned: PlannedLane, sourceEnd: Coordinate): Boolean {
+        val lane = planned.lane
+        val material = planned.material
+        // ALWAYS leave room for a pair of touching pipe-to-ground ends east of the source block: a
+        // belt may stand between their buried runs, and two ends beat a short surface pipe.
+        if (sourceEnd.x > lane.head.x - 3) return false
+        if (!planned.tiles.all { board.canPlacePipes(it, material) }) {
+            return false
+        }
+        if (!fluidSourceTiles(sourceEnd, beltEnd).all { board.canPlacePipes(it, material) }) {
+            return false
+        }
+        val from = sourceEnd.east()
+        val to = lane.head.west()
+        if (from.x > to.x) return true
+        val link = board.tunnelPlan(material, from, to)
+        if (!link.tiles.all { board.canPlacePipes(it, material) }) return false
+        val buried = board.endName(material)
+        return link.runs.all { (start, end) ->
+            val step = if (end.x > start.x) Coordinate.east else Coordinate.west
+            (1 until abs(end.x - start.x)).all { offset ->
+                val tile = start + step * offset
+                canBury(board.entityAt(tile)) && !board.hasTunnel(tile, step, buried)
+            }
+        }
     }
 
     /**
-     * The eastmost tile of the marker block west of the lane [head], or null when the block does
-     * not fit. The block is one tile for an infinity chest and three tiles otherwise, ending one
-     * tile west of the head so the lane is fed straight east.
+     * Places the shared source block ending at [end] and the run from its east side to the lane
+     * [head]. An [io] of [Io.OUTPUT] drains its fluid, so its cheat pipe is unfiltered and deletes
+     * what reaches it.
      */
-    private fun sourceEnd(head: Coordinate, material: Material): Coordinate? {
-        val width = if (beltEnd == BeltEnd.INFINITY_CHEST) 1 else FLUID_SOURCE_WIDTH
-        val end = Coordinate(head.x - 1, head.y)
-        val tiles = (end.x - width + 1..end.x).map { Coordinate(it, head.y) }
-        return end.takeIf { tiles.all { tile -> board.canPlacePipes(tile, material) } }
-    }
-
-    /**
-     * Places the marker block west of its lane, ending at [end]. An [io] of [Io.OUTPUT] drains its
-     * fluid, so its cheat pipe is unfiltered and deletes what reaches it.
-     */
-    private fun placeSource(end: Coordinate, material: Material, io: Io) {
+    private fun placeSource(head: Coordinate, end: Coordinate, material: Material, io: Io) {
         board.placeFluidSource(beltEnd, end, material, io)
+        board.placeFluidSourceLink(material, end, head)
         val westBound = if (beltEnd == BeltEnd.INFINITY_CHEST) end.x else end.x + 1
         // the lane head is where the import extension may not be compacted over
         imports.compactionWestBound = maxOf(imports.compactionWestBound, westBound)
