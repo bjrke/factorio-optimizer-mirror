@@ -116,13 +116,3 @@ nutrients ↔ bioflux cycle, and a bioflux target likewise; a blueprint test whe
 place no pole for the machine body (or strictly fewer poles), the inserters stay covered and
 `validateLayout`/power tests pass; a `PowerPlacer`/`isPowered` unit test for a burner machine.
 
-## Review findings — prompt-ready
-
-Each block below is self-contained: copy one as the task prompt. Line numbers refer to
-`main` @ `2cf115a`.
-
-### Reset the material picker highlight
-
-Reset `highlighted` when Escape or blur closes the dropdown (`MaterialSelector.kt:57-80`). The
-first ArrowDown after reopening otherwise highlights index 1 and Enter selects the wrong material.
-Add a test that reopens after Escape and asserts index 0 is highlighted.

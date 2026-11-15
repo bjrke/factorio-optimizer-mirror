@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.test.ComponentTest
+import de.bjrke.test.RenderResult
 import de.bjrke.test.assertAll
 import de.bjrke.test.changeTo
 import de.bjrke.test.fireEvent
@@ -32,6 +33,12 @@ class MaterialSelectorTest : ComponentTest() {
         )
 
     private fun searchField() = screen.getByPlaceholderText(ironOre.name) as HTMLInputElement
+
+    private fun highlightedOption(result: RenderResult) =
+        assertNotNull(
+            result.container.querySelector(".material-selector-option.highlighted"),
+            result.container.textContent,
+        )
 
     @Test
     fun focusOpensDropdownListingAvailableMaterials() {
@@ -97,6 +104,30 @@ class MaterialSelectorTest : ComponentTest() {
             { assertEquals("", searchField().value) },
             { assertNull(screen.queryByText(copperOre.name)) },
         )
+    }
+
+    @Test
+    fun reopeningAfterEscapeHighlightsTheFirstOptionAgain() {
+        val result = renderSelector()
+        fireEvent.focus(searchField())
+        fireEvent.keyDown(searchField(), key("ArrowDown"))
+        fireEvent.keyDown(searchField(), key("Escape"))
+
+        fireEvent.focus(searchField())
+
+        assertEquals(ironOre.name, highlightedOption(result).textContent)
+    }
+
+    @Test
+    fun reopeningAfterBlurHighlightsTheFirstOptionAgain() {
+        val result = renderSelector()
+        fireEvent.focus(searchField())
+        fireEvent.keyDown(searchField(), key("ArrowDown"))
+        fireEvent.blur(searchField())
+
+        fireEvent.focus(searchField())
+
+        assertEquals(ironOre.name, highlightedOption(result).textContent)
     }
 
     @Test

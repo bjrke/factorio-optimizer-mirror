@@ -32,11 +32,17 @@ internal val materialSelector =
 
         val matches = searchMaterials(props.availableMaterials, query)
 
+        fun closeDropdown() {
+            setOpen(false)
+            // Reopening starts at the first match again; a stale index would highlight the wrong
+            // option for the first ArrowDown/Enter.
+            setHighlighted(0)
+        }
+
         fun select(material: Material) {
             props.changeMaterial(material)
             setQuery("")
-            setOpen(false)
-            setHighlighted(0)
+            closeDropdown()
         }
 
         selectionGroup {
@@ -57,7 +63,7 @@ internal val materialSelector =
                             setHighlighted(0)
                         }
                         onFocus = { setOpen(true) }
-                        onBlur = { setOpen(false) }
+                        onBlur = { closeDropdown() }
                         onKeyDown = { event ->
                             when (event.key) {
                                 "ArrowDown" -> {
@@ -77,7 +83,7 @@ internal val materialSelector =
                                 }
                                 "Escape" -> {
                                     setQuery("")
-                                    setOpen(false)
+                                    closeDropdown()
                                 }
                             }
                         }
