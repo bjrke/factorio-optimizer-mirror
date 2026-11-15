@@ -38,15 +38,12 @@ private const val MAX_ROUTE_STARTS = 8
  * that lane is never routed. A machine whose port is on a side edge, or that has no port table,
  * still takes the point-to-point route from a marker. The lanes and their markers go in before the
  * solid imports; the routed fallback follows them, so a solid import keeps the direct path and the
- * pipe route goes around it. The machine ports a lane carries are shared with the underground
- * stretcher through [fluidPorts].
+ * pipe route goes around it.
  */
 internal class FluidFeeder(
     stage: LayoutStage,
     private val beltEnd: BeltEnd,
     private val imports: ImportExtension,
-    /** The machine-port tiles a fluid must reach; an underground run never swallows one. */
-    private val fluidPorts: MutableSet<Coordinate>,
     private val failures: MutableList<String>,
 ) {
     private val board = stage.board
@@ -91,7 +88,6 @@ internal class FluidFeeder(
                     fed[material] = port
                     board.reserve(port, material)
                     board.setEdgeFluid(port, material)
-                    fluidPorts += port
                     // every port reaching this point is not lane-fed, so it is routed
                     targets
                         .getOrPut(material) { mutableListOf() }
@@ -160,7 +156,6 @@ internal class FluidFeeder(
             } ?: return
         board.reserve(coordinate, plan.target)
         board.setEdgeFluid(coordinate, plan.target)
-        fluidPorts += coordinate
         val source =
             fluidMarker(
                 plan.target,

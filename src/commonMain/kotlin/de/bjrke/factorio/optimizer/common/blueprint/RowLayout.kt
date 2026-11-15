@@ -24,7 +24,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintIcon
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.chestWires
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.toBlueprintEntity
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 
@@ -66,12 +65,6 @@ internal class RowLayout(
 
     private val connector = BeltEndConnector(board, beltEnd)
 
-    /**
-     * The machine-port tiles a fluid must reach. An underground run never swallows one, so growing
-     * a run cannot pull a pipe off the machine it feeds.
-     */
-    private val fluidPorts = mutableSetOf<Coordinate>()
-
     /** The import markers and west bounds the trim, compaction and power stages share. */
     private val imports = ImportExtension()
 
@@ -81,11 +74,11 @@ internal class RowLayout(
 
     private val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, router)
 
-    private val fluidFeeder = FluidFeeder(stage, beltEnd, imports, fluidPorts, failures)
+    private val fluidFeeder = FluidFeeder(stage, beltEnd, imports, failures)
 
     private val importTrimmer = ImportTrimmer(board, connector, beltEnd, imports)
 
-    private val compactionPass = CompactionPass(board, beltEnd, imports, fluidPorts)
+    private val compactionPass = CompactionPass(board, beltEnd, imports)
 
     private val deliveryRouter = DeliveryRouter(stage, connector, imports, beltEnd, failures)
 
@@ -122,7 +115,7 @@ internal class RowLayout(
         }
     }
 
-    private fun stretchUndergroundRuns() = UndergroundStretcher(board, fluidPorts).stretchAll()
+    private fun stretchUndergroundRuns() = UndergroundStretcher(board).stretchAll()
 
     /** The placed entities and the feed routes that failed, for the CLI's text layout. */
     internal fun layoutDump(): LayoutDump {

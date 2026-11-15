@@ -126,12 +126,3 @@ Each block below is self-contained: copy one as the task prompt. Line numbers re
 Reset `highlighted` when Escape or blur closes the dropdown (`MaterialSelector.kt:57-80`). The
 first ArrowDown after reopening otherwise highlights index 1 and Enter selects the wrong material.
 Add a test that reopens after Escape and asserts index 0 is highlighted.
-
-### Keep compaction state in sync
-
-Relocate `fluidPorts` after a compaction corridor shifts the layout (`CompactionPass.kt:58`,
-`RowLayout.kt:109-116`) so `UndergroundStretcher`'s port protection still names the real port tiles.
-Also fix the dead/wrong-axis `poleWestBound` update at `CompactionPass.kt:68-77`: it adds a y shift
-to an x bound for horizontal corridors, currently unreachable because the horizontal call passes no
-`pinned` tiles (`:42-47`); either pass the pins there and update both axes correctly, or remove the
-branch.

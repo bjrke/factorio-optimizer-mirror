@@ -4,17 +4,26 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeInserter
+import de.bjrke.factorio.optimizer.common.blueprint.layout.placePipe
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeTunnel
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,6 +39,14 @@ class UndergroundStretcherTest {
             temperatureOf = { 0 },
         )
 
+    private fun fluidBoard() =
+        LayoutBoard(
+            names = LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
+            undergroundRange = 6,
+            fluidPredicate = { it == water },
+            temperatureOf = { 0 },
+        )
+
     /** A short run followed by the plain lane it may swallow. */
     private fun LayoutBoard.tunnelWithLane() {
         placeTunnel(ironPlate, Coordinate(0, 0), Coordinate(2, 0), EAST)
@@ -42,7 +59,7 @@ class UndergroundStretcherTest {
         val board = board()
         board.tunnelWithLane()
 
-        UndergroundStretcher(board, emptySet()).stretchAll()
+        UndergroundStretcher(board).stretchAll()
 
         val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(5, 0)))
         assertEquals(Io.OUTPUT, output.io)
@@ -57,7 +74,7 @@ class UndergroundStretcherTest {
             board.placeBelt(Coordinate(x, 0), LaneLoad.half(ironPlate, left = false), EAST)
         }
 
-        UndergroundStretcher(board, emptySet()).stretchAll()
+        UndergroundStretcher(board).stretchAll()
 
         val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(2, 0)))
         assertAll(
@@ -73,11 +90,39 @@ class UndergroundStretcherTest {
         // the inserter takes from (3, 0); the run must not swallow that belt
         board.placeInserter(Coordinate(3, 1), Direction.NORTH, ironPlate, long = false)
 
-        UndergroundStretcher(board, emptySet()).stretchAll()
+        UndergroundStretcher(board).stretchAll()
 
         val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(2, 0)))
         assertAll(
             { assertIs<BeltEntity>(board.entityAt(Coordinate(3, 0))) },
+            { assertEquals(Io.OUTPUT, output.io) },
+        )
+    }
+
+    /**
+     * A machine port is a plain pipe on the machine edge, and the run grows over the straight lane
+     * continuation on either side of it. The port is recognized on the settled board, so a port
+     * that a compaction shift moved is still protected.
+     */
+    @Test
+    fun aRunLeavesTheMachinePortPastItsOutput() {
+        val board = fluidBoard()
+        board.place(
+            MachineEntity(
+                Factory.ASSEMBLING_MACHINE_3,
+                Area(Coordinate(0, 3), Dimension(3, 3)),
+                "assembling-machine-3",
+            ),
+        )
+        board.placeTunnel(water, Coordinate(-1, -1), Coordinate(-1, 2), SOUTH)
+        // the port pipe feeds the machine, and two more pipes continue the lane past it
+        for (y in 3..5) board.placePipe(Coordinate(-1, y), water)
+
+        UndergroundStretcher(board).stretchAll()
+
+        val output = assertIs<PipeToGroundEntity>(board.entityAt(Coordinate(-1, 2)))
+        assertAll(
+            { assertIs<PipeEntity>(board.entityAt(Coordinate(-1, 3))) },
             { assertEquals(Io.OUTPUT, output.io) },
         )
     }
@@ -94,7 +139,7 @@ class UndergroundStretcherTest {
         board.placeBelt(Coordinate(5, 0), ironPlate, WEST)
         board.placeBelt(Coordinate(6, 0), copperPlate, WEST)
 
-        UndergroundStretcher(board, emptySet()).stretchAll()
+        UndergroundStretcher(board).stretchAll()
 
         assertAll(
             { assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(4, 0))) },
@@ -113,7 +158,7 @@ class UndergroundStretcherTest {
         board.placeBelt(Coordinate(3, 0), ironPlate, EAST)
         board.placeBelt(Coordinate(4, 0), copperPlate, EAST)
 
-        UndergroundStretcher(board, emptySet()).stretchAll()
+        UndergroundStretcher(board).stretchAll()
 
         assertAll(
             { assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(2, 0))) },

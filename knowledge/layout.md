@@ -81,8 +81,10 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   `directionBetween` is the compass helper on the model (`core/model/Tile.kt`).
 - `blueprint/placing/compaction/UndergroundStretcher.kt` — grows underground runs along their own
   straight surface run; its `RunGrowth` owns one run's budget, swallow rule and
-  end sharing. It never swallows a fluid port or a belt tile an inserter takes from
-  or drops onto, so a run cannot strand a row inserter, and it only grows where a
+  end sharing. It never swallows a machine port or a belt tile an inserter takes from
+  or drops onto, so a run cannot strand a row inserter or a pipe off its machine. The
+  ports are re-derived from the settled board (the plain pipes that touch a machine),
+  not kept as coordinates, so a corridor shift cannot leave a stale tile; it only grows where a
   same-material full belt still faces into the run past the swallowed tile, so a moved
   entrance or exit keeps its feeder or lane.
 - `blueprint/planning/row/RowTopology.kt` — the target-centred row topology. It builds the
@@ -105,8 +107,9 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   loop tries the next corridor instead of aborting. The solid and fluid import
   markers, their links and the lane head are pinned
   (`ImportExtension.pinnedImportTiles`, passed to `nextCompaction` as `pinned`),
-  so compaction moves them as one column; `fluidPorts` stays read-only (the
-  stretcher uses it to avoid swallowing a port).
+  so compaction moves them as one column. Only a vertical corridor gets pins, and only
+  it moves the pins and `poleWestBound`: a horizontal corridor shifts rows, so its y
+  shift must never touch the pole's x bound.
 - `blueprint/placing/compaction/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
   `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program;
   `CorridorShift` (in `LayoutCompaction.kt`) cuts one corridor and moves the far

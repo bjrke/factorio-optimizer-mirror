@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.endName
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
@@ -20,20 +21,17 @@ import de.bjrke.factorio.optimizer.common.core.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.core.model.neighbors
 
 /**
  * Grows underground runs along their own straight surface run, up to the tier's reach. It runs
  * after all feeding and before electricity, so it may rewrite belts and pipes; a run only grows by
  * swallowing the plain belts/pipes of its own material that already continue it.
  */
-internal class UndergroundStretcher(
-    private val board: LayoutBoard,
-    /** The machine-port tiles a fluid must reach; a run never swallows one. */
-    private val fluidPorts: Set<Coordinate>,
-) {
+internal class UndergroundStretcher(private val board: LayoutBoard) {
 
     fun stretchAll() {
-        val protected = fluidPorts + inserterTiles()
+        val protected = portTiles() + inserterTiles()
         for (input in
             board.placed.filterIsInstance<UndergroundEntity>().filter { it.io == INPUT }) {
             // the import connector is a fixed marker or chest, not a route to stretch
@@ -52,6 +50,21 @@ internal class UndergroundStretcher(
             for (distance in 1..reach) {
                 add(inserter.area.topLeft + inserter.direction.step * distance)
                 add(inserter.area.topLeft - inserter.direction.step * distance)
+            }
+        }
+    }
+
+    /**
+     * The plain pipes that touch a machine: every routed machine port. Derived from the settled
+     * board, so a compaction shift cannot leave the set naming tiles that no longer hold a port; a
+     * lane port is a pipe-to-ground, which [RunGrowth] never swallows anyway.
+     */
+    private fun portTiles() = buildSet {
+        for (machine in board.placed.filterIsInstance<MachineEntity>()) {
+            for (tile in machine.area) {
+                for (neighbor in tile.neighbors) {
+                    if (board.entityAt(neighbor) is PipeEntity) add(neighbor)
+                }
             }
         }
     }
@@ -92,7 +105,7 @@ private class RunGrowth(
     private val outputTile: Coordinate,
     private val direction: Direction,
     private val material: Material,
-    /** Tiles the run must leave on the surface: fluid ports and inserter pickup/drop tiles. */
+    /** Tiles the run must leave on the surface: machine ports and inserter pickup/drop tiles. */
     private val protected: Set<Coordinate>,
 ) {
     private val step = direction.step

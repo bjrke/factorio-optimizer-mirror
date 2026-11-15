@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.east
-import de.bjrke.factorio.optimizer.common.core.model.south
 
 /** Upper bound on compaction corridors, so a pathological layout cannot loop forever. */
 private const val MAX_COMPACTION_PASSES = 256
@@ -21,8 +20,6 @@ internal class CompactionPass(
     private val board: LayoutBoard,
     private val beltEnd: BeltEnd,
     private val imports: ImportExtension,
-    /** The machine-port tiles a fluid must reach; a grown run never swallows one. */
-    private val fluidPorts: Set<Coordinate>,
 ) {
 
     fun compact() {
@@ -55,7 +52,7 @@ internal class CompactionPass(
             val saved = board.placed.toList()
             board.replaceAll(chosen.entities)
             // a corridor can expose a longer underground run; grow it again before the next one
-            UndergroundStretcher(board, fluidPorts).stretchAll()
+            UndergroundStretcher(board).stretchAll()
             if (validateLayout(board.placed).isNotEmpty()) {
                 board.replaceAll(saved)
                 val rejected =
@@ -64,16 +61,13 @@ internal class CompactionPass(
                 rejected += chosen.seamTiles
                 return@repeat
             }
-            // the whole import group moved together, so its pins and the no-pole zone move with it
-            if (chosen.pinnedShift != 0) {
+            // a vertical corridor can move the whole import group west; a horizontal one only
+            // shifts rows, so it must not touch the x bound the poles use
+            if (chosen.orientation == SeamOrientation.VERTICAL && chosen.pinnedShift != 0) {
                 if (!beltEnd.isChest) imports.poleWestBound += chosen.pinnedShift
                 val moved =
                     imports.pinnedImportTiles.mapTo(mutableSetOf()) { tile ->
-                        if (chosen.orientation == SeamOrientation.VERTICAL) {
-                            tile.east(chosen.pinnedShift)
-                        } else {
-                            tile.south(chosen.pinnedShift)
-                        }
+                        tile.east(chosen.pinnedShift)
                     }
                 imports.pinnedImportTiles.clear()
                 imports.pinnedImportTiles += moved
