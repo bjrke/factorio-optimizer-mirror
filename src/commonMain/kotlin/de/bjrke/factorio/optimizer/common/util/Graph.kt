@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.core.util
+package de.bjrke.factorio.optimizer.common.util
 
 /**
  * The connected components of [items]: every item appears in exactly one component, and two items

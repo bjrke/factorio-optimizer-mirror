@@ -1,9 +1,10 @@
 package de.bjrke.test
 
+import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.test.fail
 
 /** Shared absolute delta for floating-point `assertEquals` in tests. */
-internal const val TOLERANCE = 1e-9
+internal const val TOLERANCE = EPSILON
 
 fun assertAll(vararg assertions: () -> Unit) = assertAll(assertions.toList())
 

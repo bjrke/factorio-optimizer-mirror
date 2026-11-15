@@ -18,8 +18,9 @@ CLI (JVM) from one shared core.
     `Area`, `Dimension`, `Direction`, `Io`), `TileGeometry.kt` (distance and
     compass helpers), `Material.kt`, `IconLayer.kt`. A leaf: it imports no other
     project package.
-  - `core/util` — `MinHeap`, `connectedComponents`, `ArrayDeque.drain`, and
-    `MathUtils` (`countVectors`, `greatestCommonDivisor`).
+  - `util` — dependency-free helpers: `MinHeap`, `connectedComponents`,
+    `ArrayDeque.drain`, and `MathUtils` (`countVectors`, `greatestCommonDivisor`,
+    `EPSILON`, `snapToWhole`, `epsilonCeil`, `superRound`).
   - `game/prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (`BeltStats`/`InserterStats`/`PoleStats`, `Logistics` and
@@ -151,7 +152,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | package | files |
 | --- | --- |
 | core.model | 4 |
-| core.util | 4 |
+| util | 4 |
 | game.prototype | 8 |
 | game.production | 10 |
 | game.selection | 4 |
@@ -194,7 +195,7 @@ dependencies at the bottom, the assembly root at the top):
 
 ```
 core.model < game.prototype < game.production
-core.model, core.util, game.prototype < model < optimize < blueprint
+core.model, util, game.prototype < model < optimize < blueprint
 blueprint.layout < blueprint.placing.route, blueprint.planning.plan
 blueprint.layout, blueprint.planning.plan < blueprint.planning.row,
   blueprint.placing.compaction
@@ -215,24 +216,24 @@ other.
 | package | may use | may not reach |
 | --- | --- | --- |
 | `core.model` | nothing | every project package |
-| `core.util` | nothing | every project package |
+| `util` | nothing | every project package |
 | `game.prototype` | `core.model` | `game.production`, `model`, `optimize`, `blueprint` |
-| `game.production` | `core.model`, `game.prototype` | `model`, `optimize`, `blueprint` |
+| `game.production` | `core.model`, `game.prototype`, `util` | `model`, `optimize`, `blueprint` |
 | `game.selection` | `blueprint.layout`, `core.model`, `game.prototype` | `optimize`, `model`, the dump loader |
 | `model` | `core.model`, `game.prototype` | everything above (the shared result models) |
-| `optimize` | `core.model`, `game.prototype`, `model` | `game.production` (the dump loader), `game.selection`, `blueprint` |
+| `optimize` | `core.model`, `game.prototype`, `model`, `util` | `game.production` (the dump loader), `game.selection`, `blueprint` |
 | `blueprint` | `blueprint.layout(+entity,validation)`, the placing stages, `blueprint.planning.{plan,row}`, `blueprint.printing.{model,output,inspection}`, `core.model`, `game.prototype` | `blueprint.json`, `optimize` (the optimizer stays out) |
 | `blueprint.layout` | `blueprint.layout.entity`, `core.model`, `game.prototype` | `optimize`, `blueprint`, the stages above |
 | `blueprint.layout.entity` | `core.model`, `game.prototype` | everything else |
 | `blueprint.layout.validation` | `blueprint.layout`, `blueprint.layout.entity`, `core.model` | `blueprint` and above |
-| `blueprint.planning` | `blueprint.planning.{band,plan}`, `core.model`, `game.production`, `game.prototype`, `model` | `layout` (it builds a plan, not a grid), the placing/printing stages |
+| `blueprint.planning` | `blueprint.planning.{band,plan}`, `core.model`, `game.production`, `game.prototype`, `model`, `util` | `layout` (it builds a plan, not a grid), the placing/printing stages |
 | `blueprint.planning.plan` | `core.model`, `game.prototype`, `model` | `layout`, `blueprint` |
-| `blueprint.planning.row` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.planning`, `blueprint.planning.plan`, `core.model`, `game.prototype`, `model` | `routing`, `blueprint` |
-| `blueprint.planning.band` | `blueprint.planning.plan`, `core.model`, `core.util`, `game.prototype`, `model` | the layout |
-| `blueprint.placing.route` | `blueprint.layout`, `core.model`, `core.util` | `routing`, `blueprint` |
+| `blueprint.planning.row` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.planning`, `blueprint.planning.plan`, `core.model`, `game.prototype`, `model`, `util` | `routing`, `blueprint` |
+| `blueprint.planning.band` | `blueprint.planning.plan`, `core.model`, `game.prototype`, `model`, `util` | the layout |
+| `blueprint.placing.route` | `blueprint.layout`, `core.model`, `util` | `routing`, `blueprint` |
 | `blueprint.placing.routing` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.layout.validation`, `blueprint.placing.route`, `blueprint.placing.special`, `blueprint.planning.{plan,row}`, `core.model` | `compaction`, `blueprint` |
 | `blueprint.placing.plumbing` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.placing.special`, `blueprint.planning.{plan,row}`, `core.model` | `routing`, `blueprint` |
-| `blueprint.placing.special` | `blueprint.layout`, `blueprint.layout.entity`, `core.model`, `core.util` | `routing`, `blueprint` |
+| `blueprint.placing.special` | `blueprint.layout`, `blueprint.layout.entity`, `core.model`, `util` | `routing`, `blueprint` |
 | `blueprint.placing.compaction` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.layout.validation`, `blueprint.planning.plan`, `core.model` | `routing`, `blueprint` |
 | `blueprint.printing.model` | `blueprint.layout.entity`, `core.model` | everything above (the DTO leaf) |
 | `blueprint.printing.json` | `blueprint.layout.entity`, `blueprint.printing.model`, `core.model` | — and **nothing may import it**: it is a leaf writer |

@@ -3,10 +3,6 @@
 Delete an item's whole section as part of the change that implements it; this
 file lists open work only.
 
-- http://localhost:8080/#/1.8/splitter/CFSXbmr/1/1/10/iron-plate and
-  http://localhost:8080/#/1.8/splitter/CFSXbmr/1/1/10/copper-ore,iron-plate have different poles 
-  because the amount of inserters changes. The reason is probably a different autoscale.
-
 ## Feature findings — prompt-ready
 
 Each block below is self-contained: copy one as the task prompt.

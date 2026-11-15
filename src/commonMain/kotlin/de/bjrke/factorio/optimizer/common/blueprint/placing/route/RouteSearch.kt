@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
-import de.bjrke.factorio.optimizer.common.core.util.MinHeap
+import de.bjrke.factorio.optimizer.common.util.MinHeap
 
 /**
  * The west edge no route may cross: the import feed column, the first tile that is not part of an

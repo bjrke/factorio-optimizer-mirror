@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
-private const val EPS = 1e-9
+import de.bjrke.factorio.optimizer.common.util.EPSILON
+
+private const val EPS = EPSILON
 
 /** The outcome of a [LinearProgram]. */
 sealed interface LinearProgramResult {

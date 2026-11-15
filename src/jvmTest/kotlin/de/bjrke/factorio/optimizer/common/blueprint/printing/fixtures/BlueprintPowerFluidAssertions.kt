@@ -15,9 +15,9 @@ import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.core.model.west
-import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
-import de.bjrke.factorio.optimizer.common.core.util.drain
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
+import de.bjrke.factorio.optimizer.common.util.connectedComponents
+import de.bjrke.factorio.optimizer.common.util.drain
 import de.bjrke.test.assertAll
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

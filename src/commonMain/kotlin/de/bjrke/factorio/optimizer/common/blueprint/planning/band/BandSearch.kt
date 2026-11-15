@@ -2,9 +2,9 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.util.countVectors
-import de.bjrke.factorio.optimizer.common.core.util.greatestCommonDivisor
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.util.countVectors
+import de.bjrke.factorio.optimizer.common.util.greatestCommonDivisor
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -245,10 +245,10 @@ private fun compareNames(first: List<FactoryProduction>, second: List<FactoryPro
     first.zip(second) { a, b -> a.recipe.name.compareTo(b.recipe.name) }.firstOrNull { it != 0 }
         ?: 0
 
-private fun DirectFeedContext.bandPlanComparator(): Comparator<BandPlan> =
+private fun bandPlanComparator(): Comparator<BandPlan> =
     compareBy<BandPlan> { it.machines.size }
         .thenBy { it.ratioPenalty }
-        .thenBy { plan -> plan.feeds.sumOf { inserters(it.flow) } }
+        .thenBy { plan -> plan.feeds.sumOf { it.flow } }
         .then { a, b -> compareNames(a.machines, b.machines) }
 
 /**
@@ -327,10 +327,6 @@ private fun ratioPenalty(machines: List<FactoryProduction>, links: List<FeedLink
         under * UNDERFEED_PENALTY + over * OVERFEED_PENALTY
     }
 }
-
-/** How many inserters one machine-to-machine flow needs, at least one. */
-private fun DirectFeedContext.inserters(flow: Double) =
-    maxOf(1.0, ceil(logistics.directInserterCount(flow)))
 
 /**
  * One window's greedy left-to-right flow: every consumer takes from its left neighbor first and

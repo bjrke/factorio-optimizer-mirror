@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.core.util
+package de.bjrke.factorio.optimizer.common.util
 
 import de.bjrke.test.assertAll
 import kotlin.test.Test

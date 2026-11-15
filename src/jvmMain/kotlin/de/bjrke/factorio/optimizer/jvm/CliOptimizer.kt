@@ -16,7 +16,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
-import de.bjrke.factorio.optimizer.common.game.production.superRound
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.DEFAULT_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -30,6 +29,7 @@ import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
+import de.bjrke.factorio.optimizer.common.util.superRound
 import kotlin.system.exitProcess
 
 /**

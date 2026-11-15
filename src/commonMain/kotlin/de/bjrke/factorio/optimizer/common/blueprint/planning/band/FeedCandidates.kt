@@ -1,8 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.util.MinHeap
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.util.MinHeap
 
 // Maximal grouping for direct feed: a group keeps growing while an arrangement exists, merging
 // groups that meet and staying inside the machine budget.

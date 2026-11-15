@@ -71,6 +71,30 @@ class BlueprintPowerIntegrationTest {
         )
     }
 
+    /**
+     * The reported splitter URLs: excluding copper ore does not change the blueprint because the
+     * plan imports it either way. A one-ULP machine count used to draw a third band inserter and
+     * move the poles.
+     */
+    @Test
+    fun theReportedSplitterUrlsDrawTheSamePoles() {
+        val ironOnly =
+            layoutFromUrl("http://localhost:8080/#/1.8/splitter/CFSXbmr/1/1/10/iron-plate")
+        val withCopperOre =
+            layoutFromUrl(
+                "http://localhost:8080/#/1.8/splitter/CFSXbmr/1/1/10/copper-ore,iron-plate",
+            )
+        val entities = ironOnly.blueprint.entities
+
+        assertAll(
+            { assertEquals(emptyList(), ironOnly.failures) },
+            { assertEquals(emptyList(), withCopperOre.failures) },
+            { assertEquals(ironOnly.blueprint, withCopperOre.blueprint) },
+            { assertPolesCoverAndConnect(entities) },
+            { assertPolesWired(entities) },
+        )
+    }
+
     @Test
     fun spacePlatformsHaveNoPoles() {
         val layout = Layout("space-science-pack", surface = Surface.SPACE)

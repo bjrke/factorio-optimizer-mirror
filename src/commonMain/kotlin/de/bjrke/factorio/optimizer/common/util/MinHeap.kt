@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.core.util
+package de.bjrke.factorio.optimizer.common.util
 
 /**
  * A binary min-heap ordered by [comparator]; commonMain has no priority queue and A* needs one.

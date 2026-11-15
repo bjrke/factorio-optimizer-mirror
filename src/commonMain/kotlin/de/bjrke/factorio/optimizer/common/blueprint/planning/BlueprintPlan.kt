@@ -10,11 +10,12 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /** Slack for a delivered rate that should fit one lane but carries floating-point noise. */
-private const val CAPACITY_EPSILON = 1e-9
+private const val CAPACITY_EPSILON = EPSILON
 
 /**
  * How often the planner may replan while it fits the product belts and the direct-feed bands. Each

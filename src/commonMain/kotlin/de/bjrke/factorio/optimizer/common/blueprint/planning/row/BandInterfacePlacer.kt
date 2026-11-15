@@ -8,7 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluid
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
-import kotlin.math.ceil
+import de.bjrke.factorio.optimizer.common.util.epsilonCeil
 
 /**
  * Places the inserters that move a direct-feed band's internal material straight from one machine
@@ -29,7 +29,7 @@ internal class BandInterfacePlacer(
         val right = row.machines[link.gap + 1]
         val blocked = portRows(row, left, east = true) + portRows(row, right, east = false)
         val free = (row.factoryTop..row.factoryBottom).filterNot(blocked::contains)
-        val needed = maxOf(1, ceil(logistics.directInserterCount(link.flow)).toInt())
+        val needed = maxOf(1, epsilonCeil(logistics.directInserterCount(link.flow)))
         val x = left.left + row.width
         for (y in free.take(needed)) {
             board.placeInserter(

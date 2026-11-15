@@ -168,6 +168,16 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
   `plannedMachines`; the `1e-9` feed slack rounds a rate that is only floating-point noise above a
   whole number up to an extra machine. Evidence:
   `aBeltedProductionDoesNotRoundUpFloatingPointNoise`.
+- **A whole-inserter count must not round up on floating-point noise.** The optimizer's machine
+  amount can differ by one ULP between otherwise identical plans: the reported splitter URLs at
+  1.8/s, `…/1.8/splitter/CFSXbmr/1/1/10/iron-plate` and
+  `…/1.8/splitter/CFSXbmr/1/1/10/copper-ore,iron-plate`, drew 43 vs 42 fast inserters and
+  different poles because `1/6 × 1.8 × 16` became `4.800000000000001`, so the count was
+  `2.0000000000000004` and its ceiling added a third band inserter. `common/util/MathUtils.kt`
+  holds `snapToWhole` and `epsilonCeil` (both use `EPSILON`), and the machine-edge
+  `inserterPattern` reads `snapToWhole`d amounts. Evidence:
+  `theReportedSplitterUrlsDrawTheSamePoles`, `snapToWholeIgnoresOnlyRoundingNoise`,
+  `epsilonCeilRoundsUpButNotOnRoundingNoise`.
 - **Stone and solid fuel must stay out of the multi-producer direct feed.** `FeedNode.ingredients`
   links every in-plan producer, so a solid with two producers is direct-fed from whichever link
   the walk sees first; `maximalGroups` drops the others. `DirectFeedContext.producers` excludes

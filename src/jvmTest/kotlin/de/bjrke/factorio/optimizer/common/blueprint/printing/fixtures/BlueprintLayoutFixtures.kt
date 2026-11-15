@@ -10,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
-import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -24,6 +23,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.util.connectedComponents
 
 fun planned(
     recipe: Recipe,

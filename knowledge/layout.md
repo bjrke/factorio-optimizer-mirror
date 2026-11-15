@@ -141,10 +141,10 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   `ImportExtension`, `FluidFeeder`, `ImportTrimmer` and `CompactionPass` stages own
   the rest.
 
-`common/core/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the
-layout test fixtures instead of a per-suite breadth-first walk.
-`common/core/util/MathUtils.kt` holds the generic `countVectors` and
-`greatestCommonDivisor` the band search uses.
+`common/util/Graph.kt` holds `connectedComponents`, used by pole wiring and the layout
+test fixtures instead of a per-suite breadth-first walk. `common/util/MathUtils.kt`
+holds the generic `countVectors` and `greatestCommonDivisor` the band search uses,
+plus `snapToWhole`/`epsilonCeil` for whole inserter counts.
 
 ## Belt ends and printing
 

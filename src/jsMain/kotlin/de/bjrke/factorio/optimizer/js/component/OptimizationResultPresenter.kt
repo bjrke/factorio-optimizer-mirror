@@ -3,12 +3,12 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.game.production.superRound
 import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.factoryProductionComparator
+import de.bjrke.factorio.optimizer.common.util.superRound
 import de.bjrke.factorio.optimizer.js.FactorioOptimizerProps
 import emotion.react.css
 import react.ChildrenBuilder

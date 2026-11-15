@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.math.max
 
 // The machine-rate arithmetic that decides how attractive a feed link is, and the band model the
@@ -35,7 +36,7 @@ internal const val MAX_BAND_RECIPES = 8
 internal const val MAX_RATIO_MACHINES = 6
 
 /** Slack for the floating point rate and supply comparisons. */
-internal const val FEED_EPSILON = 1e-9
+internal const val FEED_EPSILON = EPSILON
 
 /** How much an underfed pattern costs against an exact ratio. */
 internal const val UNDERFEED_PENALTY = 3.0

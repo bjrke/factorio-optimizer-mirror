@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.util.snapToWhole
 import kotlin.math.abs
 
 /**
@@ -96,7 +97,7 @@ internal class MachineInserterPlacer(
                     }
                 }
         val amounts = usedByBelt.mapValues { (belt, used) ->
-            planner.insertersFor(production, belt.io, used.sumOf { it.second })
+            snapToWhole(planner.insertersFor(production, belt.io, used.sumOf { it.second }))
         }
         val materialByBelt = usedByBelt.mapValues { (belt, used) ->
             used.maxByOrNull { it.second }?.first ?: belt.material

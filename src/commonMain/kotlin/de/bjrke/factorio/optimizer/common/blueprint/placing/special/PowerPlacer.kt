@@ -8,8 +8,8 @@ import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
-import de.bjrke.factorio.optimizer.common.core.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
+import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import kotlin.math.ceil
 import kotlin.math.round
 import kotlin.math.sqrt

@@ -1,4 +1,4 @@
-package de.bjrke.factorio.optimizer.common.core.util
+package de.bjrke.factorio.optimizer.common.util
 
 /**
  * Applies [block] to the elements in dequeue order until the deque is empty, including the elements
