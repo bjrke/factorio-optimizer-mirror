@@ -96,6 +96,22 @@ configuration cache entry between autoscaled machines.
   which is only read when the copy runs. A configuration-time `System.getenv`,
   `Instant.now()` or `expand` discards the entry every commit or freezes a stale
   value.
+- **The entry is encrypted, and the key has to be cached with it.** Gradle 9.8
+  encrypts each entry with a random key it generates into
+  `.gradle/caches/9.8.1/cc-keystore` (`Encryption key source: default Gradle
+  keystore (pkcs12)` at `--info`), and a hash of that key is part of the
+  configuration cache key. Without the keystore every pipeline generates a new
+  key, looks under a key nothing was stored under and logs `no cached
+  configuration is available`, so `.gradle/configuration-cache` alone is dead
+  weight. `.gradle/caches/9.8.1/kotlin-dsl` is cached with it: the entry
+  fingerprints the instrumented Kotlin DSL script classes, and a checkout that
+  lacks them is rejected with `file '…/kotlin-dsl/scripts/…/instrumented/classes'
+  has been removed`. Verified on 9.8.1 with a fresh `GRADLE_USER_HOME` and a
+  restored `.gradle/configuration-cache`: no keystore → `no cached configuration
+  is available`, keystore only → the `kotlin-dsl` reason, both restored →
+  `Reusing configuration cache.` A *different* `GRADLE_USER_HOME` path is a
+  fingerprint input of its own (`cannot be reused because Gradle user home
+  directory has changed`), which is why it stays `$CI_PROJECT_DIR/.gradle`.
 - **`BuildInfo.date` is the commit timestamp** (`CI_COMMIT_TIMESTAMP`, falling
   back to `git show -s --format=%cI`), not the wall-clock build time: it is
   stable per commit, which is what keeps `generateBuildInfo` up to date locally
@@ -156,17 +172,24 @@ configuration cache entry between autoscaled machines.
   let the rest ride along: the Gradle version in the image is already named by the
   `.gradle/caches/<version>/…` cache path. A hand-typed `cache:key:prefix` would
   reintroduce the duplication the key files exist to avoid.
-- **A cache archive that lacks `.gradle/configuration-cache` erases the entry for
-  everyone on that key.** Recognize it by the build opening with `Calculating task
-  graph as no cached configuration is available for tasks: check
-  jsBrowserDistribution` and closing with `Configuration cache entry stored`
-  instead of `Reusing configuration cache.`/`Configuration cache entry reused` —
-  seen on 2026-11-13 at `ece7aa74` after the entry had been written an hour
-  earlier. A key mismatch shows a different reason (`… cannot be reused because
-  …`), so "no cached configuration is available" means the store had no entry at
-  all: the restored archive was uploaded by a pipeline whose `cache.paths` did not
-  include the directory. Keeping `.gitlab-ci.yml` in `key.files` separates those
-  layouts; do not "fix" this by deleting the entry locally.
+- **`Calculating task graph as no cached configuration is available for tasks: …
+  check jsBrowserDistribution` means the computed configuration cache key has no
+  entry, which is almost always a *key* change, not a missing or invalid entry.**
+  The build closes with `Configuration cache entry stored` instead of `Reusing
+  configuration cache.`/`Configuration cache entry reused`, and the archive it
+  restored can be perfectly fine. Causes, in the order seen:
+  1. `.gradle/caches/<version>/cc-keystore` is not in `cache.paths` (or was
+     deleted), so the job encrypts with a fresh key and hashes that new key into
+     the configuration cache key. That was the reason the configuration cache
+     never worked in CI between 2026-11-13 (when it was first persisted) and
+     2026-11-15, although the entry was archived every time.
+  2. The restored archive came from a pipeline whose `cache.paths` did not include
+     `.gradle/configuration-cache` at all — seen on 2026-11-13 at `ece7aa74` after
+     the entry had been written an hour earlier. Keeping `.gitlab-ci.yml` in
+     `key.files` separates those layouts.
+  A genuine fingerprint change says `configuration cache cannot be reused because
+  …` and names the file, environment variable or user home; read that reason
+  instead of guessing. Never "fix" this by deleting the entry locally.
 - **`detektMainJvm`/`detektTestJvm` report "compiler errors found during analysis"
   although the code compiles.** Verified on 2026-10-24 at `395323f`, both with and
   without working-tree changes: both tasks print `There were 3 compiler errors

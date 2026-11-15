@@ -20,6 +20,17 @@
 # state has to be restored as a unit: rebuilding buildSrc invalidates the
 # configuration cache entry even when the jar is byte-identical.
 #
+# `.gradle/configuration-cache` alone is not the configuration cache: Gradle 9
+# encrypts every entry with a key it generates into `.gradle/caches/9.8.1/cc-keystore`
+# (`Encryption key source: default Gradle keystore (pkcs12)`), and a hash of that
+# key is one component of the configuration cache key. A checkout without the
+# keystore therefore gets a fresh key, computes a key no entry was stored under,
+# and logs `no cached configuration is available` - not a `cannot be reused`
+# reason - while the restored entry sits unused. `.gradle/caches/9.8.1/kotlin-dsl`
+# belongs to it too: the entry fingerprints the instrumented Kotlin DSL script
+# classes, and a checkout without them is rejected with `cannot be reused because
+# file '.../kotlin-dsl/scripts/.../instrumented/classes' has been removed`.
+#
 # `build/js/node_modules` is cached so the Yarn install only has to validate the
 # restored tree; the zip cache keeps its symlinks. There is no `cache:archive`
 # keyword: GitLab rejects the config with `cache config contains unknown keys:
@@ -46,6 +57,8 @@ test:
       - .gradle/caches/modules-2
       - .gradle/caches/jars-9
       - .gradle/caches/9.8.1/transforms
+      - .gradle/caches/9.8.1/cc-keystore
+      - .gradle/caches/9.8.1/kotlin-dsl
       - .gradle/caches/build-cache-1
       - .gradle/configuration-cache
       - .gradle/nodejs
