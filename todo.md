@@ -62,31 +62,6 @@ with a link, no belt carries the gear wheel, `failures` is empty and `validateLa
 same URL without the foundry as an unchanged regression case; an inserter case where only a long
 inserter reaches the near belt, with the lane load still correct.
 
-### Plan rocket parts and launches with the Space Age rocket silo
-
-Make a rocket-silo plan possible in Space Age, so the optimizer can feed a silo as fast as possible
-and launch one rocket after another.
-
-`Factory.ROCKET_SILO` is `baseOnly` (`Factory.kt:75`), so Space Age offers no rocket-building
-machine at all; `rocket-part` recipes exist in both dumps, but a `rocket-part` target has nowhere to
-build. The Space Age dump has a `rocket-silo` with `fixed_recipe = rocket-part`,
-`crafting_categories = [rocket-building]`, crafting speed 1, `rocket_parts_required` and a 9×9
-footprint (`blueprintMachineFootprint` already knows the size), and `rocket-part` is processing-unit
-+ low-density-structure + rocket-fuel.
-
-Add the Space Age silo as a factory next to the base-game one: 9×9, rocket-building category, the
-fixed `rocket-part` recipe (no recipe choice), no fluid ports, solid inputs fed by inserters, and no
-product belt — the parts stay in the silo and a launch consumes `rocket_parts_required` of them.
-The plan must report how many launches per minute it can sustain rather than pretending the parts
-are exported; fix the base-game path only where it shares code.
-
-Add tests: `FactoryConfig(spaceAge = true)` offers the silo while the base game still has it; an
-optimizer test for `rocket-part` in Space Age where the silo is the producing factory, the three
-ingredients are planned or imported and there is no free source; a blueprint/layout test where the
-9×9 silo sits in a row with its three input lanes, no output belt or infinity chest for the parts,
-`failures` empty and `validateLayout` clean; a launch-rate assertion (parts /
-`rocket_parts_required`) that covers the base-game `rocket_parts_required` fallback of 100.
-
 ### Model biochamber nutrients as fuel and break the cycle
 
 Count the nutrients a biochamber burns, without creating a nutrients ↔ bioflux cycle.

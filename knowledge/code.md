@@ -43,8 +43,8 @@ CLI (JVM) from one shared core.
     `forSurface(spaceAge, surface)` view), `prototypeDump.kt` (the
     `loadPrototypeDump` `expect` declaration), `RecipePrototype.kt`,
     `JsonFields.kt`, `resourceRecipes.kt`, `customRecipes.kt`
-    (`ALL_SCIENCE_PACKS` from `lab.inputs`, plus the base game's rocket-silo
-    launch), `spoilageRecipes.kt`, `utils.kt` (normalization) and
+    (`ALL_SCIENCE_PACKS` from `lab.inputs`, plus the silo's launch cycle in
+    either game), `spoilageRecipes.kt`, `utils.kt` (normalization) and
     `prototypeStats.kt` (`machineStats`/`logisticsStats`: machine energy use,
     belt speed and underground reach, inserter and pole stats); `recipeParser.kt`
     also reads the `fuelValues` of burnable items and the per-surface

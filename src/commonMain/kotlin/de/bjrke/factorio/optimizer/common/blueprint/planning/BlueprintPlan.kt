@@ -132,20 +132,16 @@ fun blueprintPlan(
  * so its lane capacity follows the requested belt stack even when the selected inserter cannot
  * stack; any other product is stacked only by a stacking inserter.
  */
-private fun DirectFeed.overCapacityOutputs(
-    logistics: LogisticsCalculator,
-): Map<Material, Double> {
+private fun DirectFeed.overCapacityOutputs(logistics: LogisticsCalculator) = buildMap {
     val onBelt = rows.flatMapTo(mutableSetOf()) { row -> row.beltMaterials }
-    return buildMap {
-        for ((material, demand) in beltRates) {
-            if (material !in onBelt) continue
-            val capacity = laneCapacity(material, logistics)
-            if (
-                demand > capacity + CAPACITY_EPSILON &&
-                    builtRate(material) > capacity + CAPACITY_EPSILON
-            ) {
-                put(material, demand / capacity)
-            }
+    for ((material, demand) in beltRates) {
+        if (material !in onBelt) continue
+        val capacity = laneCapacity(material, logistics)
+        if (
+            demand > capacity + CAPACITY_EPSILON &&
+                builtRate(material) > capacity + CAPACITY_EPSILON
+        ) {
+            put(material, demand / capacity)
         }
     }
 }

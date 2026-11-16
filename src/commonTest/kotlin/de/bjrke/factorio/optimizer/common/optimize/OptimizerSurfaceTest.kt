@@ -12,12 +12,16 @@ import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironBacteria
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.jellynut
+import de.bjrke.factorio.optimizer.common.fixtures.lowDensityStructure
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.fixtures.metallicAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.nutrients
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.rawFish
+import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
+import de.bjrke.factorio.optimizer.common.fixtures.rocketPart
 import de.bjrke.factorio.optimizer.common.fixtures.scrap
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.spaceScience
@@ -231,6 +235,7 @@ class OptimizerSurfaceTest {
         assertEquals(Factory.AGRICULTURAL_TOWER, actual)
     }
 
+    /** The base game's launch is the silo's whole cycle, so no part row feeds the silo. */
     @Test
     fun baseGameSpaceScienceComesFromRocketSilo() {
         val optimizer =
@@ -238,8 +243,58 @@ class OptimizerSurfaceTest {
                 RecipeLoader.forActiveMods(false).forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = false).defaults,
             )
+        val result = optimizer[spaceScience]
+        val production = result.production(spaceScience)
 
-        assertEquals(Factory.ROCKET_SILO, optimizer[spaceScience].production(spaceScience).factory)
+        assertAll(
+            { assertEquals(Factory.ROCKET_SILO, production.factory) },
+            { assertEquals(1000.0, production.recipe.result.getValue(spaceScience)) },
+            {
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter { it.material == rocketPart },
+                )
+            },
+        )
+    }
+
+    /**
+     * A Space Age rocket-part plan is one launch's worth of parts: the silo runs the launch cycle
+     * whose 50-part result is the target.
+     */
+    @Test
+    fun spaceAgeRocketPartsComeFromTheRocketSilo() {
+        val result =
+            Optimizer(
+                RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS),
+                FactoryConfig(spaceAge = true).defaults,
+            )[rocketPart]
+        val production = result.production(rocketPart)
+        val ingredients = setOf(processingUnit, lowDensityStructure, rocketFuel)
+
+        assertAll(
+            { assertEquals(Factory.ROCKET_SILO, production.factory) },
+            { assertEquals("rocket-part", production.recipe.name) },
+            { assertEquals(ingredients, production.recipe.ingredients.keys) },
+            { assertEquals(50.0, production.recipe.result.getValue(rocketPart)) },
+            {
+                assertEquals(
+                    ingredients,
+                    result.factories.values
+                        .map { it.material }
+                        .filter { it in ingredients }
+                        .toSet(),
+                )
+            },
+            {
+                assertEquals(
+                    emptyList(),
+                    result.factories.values.filter {
+                        it.material == rocketPart && it.factory == Factory.NO_FACTORY
+                    },
+                )
+            },
+        )
     }
 
     @Test

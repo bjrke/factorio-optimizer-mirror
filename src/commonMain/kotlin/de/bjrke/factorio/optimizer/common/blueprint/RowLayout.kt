@@ -174,7 +174,7 @@ internal class RowLayout(
         }
     }
 
-    /** The factory whose production exports the target, or null when the plan imports it. */
+    /** The factory that makes the target, or null when the plan imports it. */
     private fun targetFactory() =
         plan.producerOf(plan.target)?.producerOf(plan.target)?.factory?.takeIf {
             it != Factory.NO_FACTORY

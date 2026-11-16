@@ -99,7 +99,8 @@ private fun recipeCategories(element: JsonObject) =
         .mapNotNull(::category)
         .toSet()
 
-private fun JsonObject.surfaceConditions() =
+/** The `surface_conditions` a prototype declares; also read for a synthetic launch recipe. */
+internal fun JsonObject.surfaceConditions() =
     objects("surface_conditions").mapNotNull { table ->
         val property = table.string("property")?.let(::surfaceProperty) ?: return@mapNotNull null
         val min = table.number("min")?.toInt() ?: Int.MIN_VALUE

@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.oxideAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.promethiumAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessor
+import de.bjrke.factorio.optimizer.common.fixtures.rocketPart
 import de.bjrke.factorio.optimizer.common.fixtures.solarPanel
 import de.bjrke.factorio.optimizer.common.fixtures.spaceScience
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
@@ -41,6 +42,18 @@ class OptimizerSpaceTest {
             Factory.ASSEMBLING_MACHINE_3,
             optimizer[spaceScience].production(spaceScience).factory,
         )
+    }
+
+    @Test
+    fun rocketPartsAreImportedOnSpacePlatforms() {
+        // the silo needs pressure, so a platform cannot run the launch cycle it would host
+        val optimizer =
+            Optimizer(
+                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                FactoryConfig(spaceAge = true).defaults,
+            )
+
+        assertEquals(Factory.NO_FACTORY, optimizer[rocketPart].production(rocketPart).factory)
     }
 
     @Test

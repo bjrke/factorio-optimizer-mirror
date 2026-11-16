@@ -48,6 +48,7 @@ class FactoryTest {
             Factory.CAPTIVE_BITER_SPAWNER,
             Factory.AGRICULTURAL_TOWER,
             Factory.SPOILING,
+            Factory.ROCKET_SILO,
         )
 
     private val specialtyBonuses =
@@ -149,15 +150,21 @@ class FactoryTest {
         assertEquals(spaceAge.defaults - spaceAge.singles, spaceAge.fromUrl("S"))
 
     @Test
-    fun rocketSiloIsBaseOnlyAndAlwaysOn() =
-        assertAll(
-            { assertContains(base.defaults, Factory.ROCKET_SILO) },
-            { assertContains(base.alwaysEnabled, Factory.ROCKET_SILO) },
-            { assertContainsNot(base.singles, Factory.ROCKET_SILO) },
-            { assertEquals(base.defaults, base.remove(base.defaults, Factory.ROCKET_SILO)) },
-            { assertContainsNot(spaceAge.available, Factory.ROCKET_SILO) },
-            { assertContainsNot(spaceAge.defaults, Factory.ROCKET_SILO) },
-        )
+    fun rocketSiloIsAlwaysOnInBothGames() =
+        assertTable(listOf(base, spaceAge)) { config ->
+            assertAll(
+                { assertContains(config.available, Factory.ROCKET_SILO) },
+                { assertContains(config.defaults, Factory.ROCKET_SILO) },
+                { assertContains(config.alwaysEnabled, Factory.ROCKET_SILO) },
+                { assertContainsNot(config.singles, Factory.ROCKET_SILO) },
+                {
+                    assertEquals(
+                        config.defaults,
+                        config.remove(config.defaults, Factory.ROCKET_SILO),
+                    )
+                },
+            )
+        }
 
     @Test
     fun scienceLabIsAlwaysOn() =

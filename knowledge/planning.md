@@ -76,6 +76,18 @@ for another row, and a sink with no producer row is a layout failure. `RowPlacer
 `internalInputs` through `fullyInternalInputs` to decide whether a link material still needs an
 input lane.
 
+A rocket-silo plan is a launch cycle, not a part production that happens to be capped: the launch
+recipe is synthesised in `customRecipes.kt` and contains everything one launch consumes, so the
+target's rate is the launch rate. The base game's space science is the 100 parts' ingredients (ten
+each) plus a satellite for 1000 packs, Space Age's `rocket-part` is the 50 parts one launch needs
+and replaces the dump's one-part recipe. The recipe time is the part crafting time
+(`rocket_parts_required` x the `rocket-part` recipe's `energy_required`); the launch interval after
+the last part (27.20 s in the base game and 26.95 s in Space Age on the wiki) is ignored on purpose:
+it is shorter than the crafting and only shrinks the launch rate. The silo's `surface_conditions`
+gate the synthesised recipe, so a surface the silo cannot be built on (a space platform) imports its
+parts. The parts go onto the silo's product belt, which in game only removes the silo's cargo, so a
+player launching them can delete that belt.
+
 The grouping, stone/solid-fuel and fluid-link rules and their guardrails are in
 the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
 `game/prototype/RecipePolicy.kt`; the shared-product rule is in `decisions.md`

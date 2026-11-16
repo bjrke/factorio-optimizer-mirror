@@ -64,9 +64,9 @@ data class BlueprintPlan(
         get() = sources.map { it.material }.toSet()
 
     /**
-     * The first row that puts [material] on a belt, or null when the plan imports it. A band
-     * inserts its link material machine to machine, so that product is not a belt source; another
-     * row making the same material still can be.
+     * The first row that puts [material] on a belt, or null when the plan imports it or consumes it
+     * in place. A band inserts its link material machine to machine, so that product is not a belt
+     * source; another row making the same material still can be.
      */
     fun producerOf(material: Material) = rows.firstOrNull {
         material in it.beltMaterials

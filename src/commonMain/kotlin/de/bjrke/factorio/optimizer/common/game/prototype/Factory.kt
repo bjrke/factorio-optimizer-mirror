@@ -26,7 +26,6 @@ data class FactorySpec(
     val productivity: Double = 0.0,
     val preferred: Boolean = false,
     val spaceAgeOnly: Boolean = false,
-    val baseOnly: Boolean = false,
     val outputsDirectly: Boolean = false,
     val stacksOnBelt: Boolean = false,
     /**
@@ -42,7 +41,7 @@ data class FactorySpec(
 
 /**
  * A machine that can run recipes. Some machines only exist with a certain mod active
- * ([spaceAgeOnly], [baseOnly]), which [FactoryConfig] uses to gate what the user can pick.
+ * ([spaceAgeOnly]), which [FactoryConfig] uses to gate what the user can pick.
  */
 enum class Factory(
     val code: Char?,
@@ -71,8 +70,8 @@ enum class Factory(
     OIL_REFINERY(null, "oil-refinery", setOf(Category.OIL_PROCESSING)),
     CHEMICAL_PLANT(null, "chemical-plant", setOf(Category.CHEMISTRY)),
     CENTRIFUGE(null, "centrifuge", setOf(Category.CENTRIFUGING)),
-    // the rocket silo only builds space science in the base game, so it is always on there
-    ROCKET_SILO(null, "rocket-silo", setOf(Category.ROCKET_BUILDING), FactorySpec(baseOnly = true)),
+    // the silo builds rocket parts in both games; only the base game gets a space-science launch
+    ROCKET_SILO(null, "rocket-silo", setOf(Category.ROCKET_BUILDING)),
     STONE_FURNACE(
         'f',
         "stone-furnace",
@@ -178,9 +177,6 @@ enum class Factory(
     val spaceAgeOnly: Boolean
         get() = spec.spaceAgeOnly
 
-    val baseOnly: Boolean
-        get() = spec.baseOnly
-
     val outputsDirectly: Boolean
         get() = spec.outputsDirectly
 
@@ -203,20 +199,12 @@ enum class Factory(
 
 /**
  * The machines that can be selected for a given mod set. Without Space Age the DLC-only machines
- * are hidden and the rocket silo stays; with it the silo is replaced by the Space Age recipes.
+ * are hidden. The rocket silo is available in both games: the base game's dump gives it the
+ * space-science launch, Space Age's dump the rocket-part recipe.
  */
 class FactoryConfig(val spaceAge: Boolean = true) {
 
-    val available =
-        Factory.entries
-            .filter {
-                when {
-                    it.baseOnly -> !spaceAge
-                    it.spaceAgeOnly -> spaceAge
-                    else -> true
-                }
-            }
-            .toSet()
+    val available = Factory.entries.filter { !it.spaceAgeOnly || spaceAge }.toSet()
 
     private val smelters = available.filter { it.categories == smelterCategories }.toSet()
     private val assemblers = available.filter { it.categories.contains(Category.CRAFTING) }.toSet()

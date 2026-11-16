@@ -28,7 +28,7 @@ fun resourceRecipes(root: JsonObject) = buildList {
  * the `tree-seed` recipe marks that dump. The base game has no way to grow wood or fruit or to
  * collect asteroid chunks, so their extraction recipes must not be offered there.
  */
-private fun JsonObject.isSpaceAgeDump() = table("recipe").containsKey("tree-seed")
+internal fun JsonObject.isSpaceAgeDump() = table("recipe").containsKey("tree-seed")
 
 /** `data.raw.resource`: the resource the drill/pumpjack extracts and how long a unit takes. */
 private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {

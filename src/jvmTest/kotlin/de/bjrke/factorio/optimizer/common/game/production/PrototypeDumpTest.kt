@@ -1,11 +1,15 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltStats
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.prototype.SurfaceCondition
 import de.bjrke.factorio.optimizer.common.game.prototype.SurfaceProperty
+import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
+import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -88,6 +92,48 @@ class PrototypeDumpTest {
         assertAll(
             { assertFalse("tree-seed" in names, "tree-seed needs pressure 1000") },
             { assertFalse("fish-breeding" in names, "fish-breeding needs pressure 1000") },
+        )
+    }
+
+    /**
+     * The base game's launch is the silo's whole cycle: 100 rocket parts of ten ingredients each
+     * plus the satellite, yielding one launch's 1000 packs after 100 * 3 s of crafting. The launch
+     * interval after the last part is ignored.
+     */
+    @Test
+    fun theBaseLaunchIsOneSiloCycle() {
+        val base = RecipeLoader.forActiveMods(spaceAge = false).recipes.associateBy { it.name }
+        val launch = base.getValue("space-science-pack")
+
+        assertAll(
+            { assertEquals(1000.0, launch.ingredients.getValue(Material("processing-unit"))) },
+            { assertEquals(1000.0, launch.ingredients.getValue(Material("rocket-fuel"))) },
+            { assertEquals(1.0, launch.ingredients.getValue(Material("satellite"))) },
+            { assertContainsNot(launch.ingredients.keys, Material("rocket-part")) },
+            { assertEquals(300.0, launch.time, TOLERANCE) },
+        )
+    }
+
+    /**
+     * Space Age's launch cycle is the 50 parts one launch consumes: the dump's one-part recipe is
+     * replaced, its 50 * 3 s of part crafting is the time, and the silo's pressure condition gates
+     * it (a space platform cannot build the silo).
+     */
+    @Test
+    fun theSpaceAgePartRecipeIsOneLaunchOfParts() {
+        val parts =
+            RecipeLoader.forActiveMods(spaceAge = true).recipes.single { it.name == "rocket-part" }
+
+        assertAll(
+            { assertEquals(50.0, parts.result.getValue(Material("rocket-part"))) },
+            { assertEquals(50.0, parts.ingredients.getValue(Material("processing-unit"))) },
+            { assertEquals(150.0, parts.time, TOLERANCE) },
+            {
+                assertEquals(
+                    listOf(SurfaceCondition(SurfaceProperty.PRESSURE, 1..Int.MAX_VALUE)),
+                    parts.surfaceConditions,
+                )
+            },
         )
     }
 
