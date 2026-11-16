@@ -20,6 +20,8 @@ private fun iconName(s: String) =
         "space-age" -> "factorio-space-age-logo-11tiles"
         // the recipe auto-derives its icon from the hot fluid it produces
         "fluoroketone" -> "fluoroketone-hot"
+        // the biochamber's pseudo fuel stands for the real nutrient item
+        "nutrients-fuel" -> "nutrients"
         // these prototypes reuse another prototype's icon file
         "barrel" -> "empty-barrel"
         "heat-exchanger" -> "heat-boiler"

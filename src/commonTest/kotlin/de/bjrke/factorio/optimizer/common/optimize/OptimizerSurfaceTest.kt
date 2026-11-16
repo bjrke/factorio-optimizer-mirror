@@ -184,16 +184,16 @@ class OptimizerSurfaceTest {
     }
 
     @Test
-    fun glebaSpoilageComesFromCheapOrganicByproductNotScience() {
-        // spoilage is cheapest as a byproduct of the bacteria recipes, not by rotting raw fruit
-        // (jellynut itself takes an hour) nor by spoiling expensive Gleba science packs.
+    fun glebaSpoilageAvoidsTheSciencePacks() {
+        // once the biochamber's nutrient fuel is counted, rotting jellynut is the import-cheapest
+        // spoilage source; spoiling expensive Gleba science packs stays out either way.
         val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.GLEBA))
 
         val result = optimizer[spoilage]
         val production = result.production(spoilage)
         assertAll(
-            { assertEquals("iron-bacteria", production.recipe.name) },
-            { assertEquals(Factory.BIOCHAMBER, production.factory) },
+            { assertEquals("jellynut-spoiling", production.recipe.name) },
+            { assertEquals(Factory.SPOILING, production.factory) },
             {
                 assertEquals(
                     emptyList(),

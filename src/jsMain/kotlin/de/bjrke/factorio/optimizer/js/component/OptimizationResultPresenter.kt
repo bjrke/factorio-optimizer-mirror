@@ -141,10 +141,11 @@ private fun ChildrenBuilder.exclusionCheckbox(
     span {
         title =
             when {
-                excluded -> "Include ${material.name} in the blueprint"
+                excluded -> "Include ${material.prototypeName} in the blueprint"
                 target -> "The target cannot be excluded from the blueprint"
-                imported -> "${material.name} is already imported, so there is nothing to exclude"
-                else -> "Exclude ${material.name} from the blueprint"
+                imported ->
+                    "${material.prototypeName} is already imported, so there is nothing to exclude"
+                else -> "Exclude ${material.prototypeName} from the blueprint"
             }
         css {
             display = Display.inlineBlock
@@ -199,7 +200,7 @@ private fun ChildrenBuilder.materialGroup(
     isOutput: Boolean,
 ) {
     groupBox {
-        amountInputIcon(props, material.name, amount, material)
+        amountInputIcon(props, material.prototypeName, amount, material)
         materialLogistics(props, factory, material, amount, isOutput)
     }
 }
@@ -400,10 +401,10 @@ internal val optimizationResult =
                     }
                     groupBox(inline = true) {
                         exclusionCheckbox(props, material, imported = true)
-                        icon(material.name)
+                        icon(material.prototypeName)
                         span {
                             css { marginLeft = 0.25.rem }
-                            +material.name
+                            +material.prototypeName
                         }
                     }
                 }

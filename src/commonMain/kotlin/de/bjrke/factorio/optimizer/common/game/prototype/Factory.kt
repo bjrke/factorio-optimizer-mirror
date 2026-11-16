@@ -8,6 +8,15 @@ private val assembler2Categories = assembler1Categories.plus(Category.CRAFTING_W
 private val smelterCategories = setOf(Category.SMELTING)
 
 /**
+ * How a machine is fuelled. [BURNING] is the one combustible fuel [burnerFuel] supplies on the
+ * machine's surface; [NUTRIENTS] is the biochamber's nutrient supply, which is not a burning fuel.
+ */
+enum class FactoryFuel {
+    BURNING,
+    NUTRIENTS,
+}
+
+/**
  * The curated stats and gating flags of a [Factory]. [productivity] is the machine's built-in
  * productivity bonus (its output is multiplied by `1 + productivity` without consuming more
  * ingredients). [preferred] marks the Space Age speciality machines that should be used whenever
@@ -29,18 +38,18 @@ data class FactorySpec(
     val outputsDirectly: Boolean = false,
     val stacksOnBelt: Boolean = false,
     /**
-     * Whether the machine burns fuel to run a recipe, so the optimizer adds the surface's fuel to
-     * its recipes. Only the furnaces are modelled: the burner mining drill burns fuel too, but it
-     * is an early-game machine that feeds a furnace directly and is never laid out (a mining drill
-     * source is imported), so its fuel stays out of the plan.
+     * The fuel the machine needs to run a recipe, so the optimizer adds it to its recipes. The
+     * furnaces burn the surface's fuel; the biochamber consumes nutrients, which are not a burning
+     * fuel. The burner mining drill also burns fuel, but it is an early-game machine that feeds a
+     * furnace directly and is never laid out (a mining drill source is imported), so its fuel stays
+     * out of the plan.
      */
-    val burner: Boolean = false,
+    val fuel: FactoryFuel? = null,
     /**
      * Whether the machine draws power from the electric grid, so the layout has to cover it with a
-     * pole. It is not the negation of [burner]: [burner] marks the machines whose surface fuel is
-     * modelled (the furnaces), while a biochamber or a captive biter spawner burns its own fuel
-     * that the plan does not model yet, and the burner mining drill is never laid out. Every burner
-     * machine is unpowered, which is why the two facts live side by side.
+     * pole. It is not the negation of [fuel]: the captive biter spawner and the burner mining drill
+     * need no power but their fuel is not modelled, and the burner mining drill is never laid out.
+     * Every fuelled machine is unpowered, which is why the two facts live side by side.
      */
     val needsPower: Boolean = true,
     /** Curated fallback for [MachineStats.energyUsage] when no dump was parsed. */
@@ -84,7 +93,11 @@ enum class Factory(
         'f',
         "stone-furnace",
         smelterCategories,
-        FactorySpec(burner = true, needsPower = false, energyUsage = 90_000.0),
+        FactorySpec(
+            fuel = FactoryFuel.BURNING,
+            needsPower = false,
+            energyUsage = 90_000.0,
+        ),
     ),
     STEEL_FURNACE(
         's',
@@ -92,7 +105,7 @@ enum class Factory(
         smelterCategories,
         FactorySpec(
             speed = 2.0,
-            burner = true,
+            fuel = FactoryFuel.BURNING,
             needsPower = false,
             energyUsage = 90_000.0,
         ),
@@ -107,7 +120,9 @@ enum class Factory(
             productivity = 0.5,
             preferred = true,
             spaceAgeOnly = true,
+            fuel = FactoryFuel.NUTRIENTS,
             needsPower = false,
+            energyUsage = 500_000.0,
         ),
     ),
     FOUNDRY(
@@ -202,8 +217,8 @@ enum class Factory(
     val stacksOnBelt: Boolean
         get() = spec.stacksOnBelt
 
-    val burner: Boolean
-        get() = spec.burner
+    val fuel: FactoryFuel?
+        get() = spec.fuel
 
     val needsPower: Boolean
         get() = spec.needsPower

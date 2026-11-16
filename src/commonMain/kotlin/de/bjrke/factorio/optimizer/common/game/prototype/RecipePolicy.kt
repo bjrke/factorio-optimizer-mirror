@@ -49,12 +49,24 @@ internal fun unplannedRecipes(surface: Surface) = buildSet {
     add(coalOrCarbon(surface))
 }
 
+/** The real nutrient item the biochamber consumes. */
+internal val nutrients = Material("nutrients")
+
 /**
- * The one fuel the burner machines burn on [surface]. Coal is the mined fuel where the surface has
- * a coal patch; the others burn what their own chain provides: Fulgora refines solid fuel from
- * heavy oil, Aquilo from ammonia, Gleba makes rocket fuel from jelly and a space platform crushes
- * carbon out of carbonic asteroids. One fuel per surface also keeps the plan from splitting its
- * demand across several producers.
+ * The pseudo material a biochamber's nutrient demand is booked as. It is a distinct key from
+ * [nutrients] so the nutrients a biochamber consumes do not close a cycle: bioflux is made in a
+ * biochamber too. No recipe produces it, so the optimizer's LP imports it; the plan and the listing
+ * show that import, while [Material.prototypeName] makes display and blueprint output name the real
+ * nutrient item. The pseudo material renders with the nutrients icon.
+ */
+internal val biochamberFuel = Material("nutrients-fuel", prototypeName = "nutrients")
+
+/**
+ * The one fuel the furnaces burn on [surface]. Coal is the mined fuel where the surface has a coal
+ * patch; the others burn what their own chain provides: Fulgora refines solid fuel from heavy oil,
+ * Aquilo from ammonia, Gleba makes rocket fuel from jelly and a space platform crushes carbon out
+ * of carbonic asteroids. One fuel per surface also keeps the plan from splitting its demand across
+ * several producers.
  */
 internal fun burnerFuel(surface: Surface): Material =
     when (surface) {

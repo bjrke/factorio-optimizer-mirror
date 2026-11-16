@@ -69,7 +69,7 @@ private fun InfinitySettings.chestJson() = buildJsonObject {
     item?.let { item ->
         putJsonArray("filters") {
             addJsonObject {
-                put("name", item.name)
+                put("name", item.prototypeName)
                 put("count", INFINITY_STOCK)
                 put("mode", "at-least")
                 put("index", 1)
@@ -79,7 +79,7 @@ private fun InfinitySettings.chestJson() = buildJsonObject {
 }
 
 private fun InfinityPipeSettings.pipeJson() = buildJsonObject {
-    put("name", fluid.name)
+    put("name", fluid.prototypeName)
     put("percentage", percentage)
     put("temperature", temperature)
     put("mode", mode)
@@ -143,7 +143,7 @@ private fun markerControlBehavior(material: Material, fluid: Boolean) = buildJso
                         // match what the game writes for a constant combinator;
                         // a filter without a concrete quality is not displayed
                         if (fluid) put("type", "fluid")
-                        put("name", material.name)
+                        put("name", material.prototypeName)
                         put("quality", "normal")
                         put("comparator", "=")
                         put("count", 1)

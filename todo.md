@@ -3,6 +3,9 @@
 Delete an item's whole section as part of the change that implements it; this
 file lists open work only.
 
+- https://bjrke.gitlab.io/factorio-optimizer/#/2.4/bioflux/CFSbgmr/1/1/10/- doesn't contain yumako-mash because it has
+  by products
+
 ## Feature findings — prompt-ready
 
 Each block below is self-contained: copy one as the task prompt.
@@ -61,26 +64,4 @@ splitter URL with the foundry where gear-wheel and transport-belt machines share
 with a link, no belt carries the gear wheel, `failures` is empty and `validateLayout` is clean; the
 same URL without the foundry as an unchanged regression case; an inserter case where only a long
 inserter reaches the near belt, with the lane load still correct.
-
-### Model biochamber nutrients as fuel and break the cycle
-
-Count the nutrients a biochamber burns, without creating a nutrients ↔ bioflux cycle.
-
-A biochamber runs on nutrients instead of electricity, but `FactorySpec.burner` and `burnerFuel`
-(`RecipePolicy.kt`) model fuel only for furnaces, so a biochamber's nutrient demand is missing from
-the plan and the listing. The dump carries `fuel_value = 2MJ` for nutrients and a biochamber
-`energy_usage` of 500kW, i.e. 0.25 nutrients per second per running biochamber. Make the fuel a
-factory property (nutrients for the biochamber on every surface, separate from the surface fuel
-`burnerFuel` returns for furnaces), and show the demand in the listing and the plan.
-
-The fuel edge creates a cycle: nutrients are made in a biochamber, and bioflux — the nutrients
-input — is itself made in a biochamber that would burn nutrients. Break it with a pseudo material
-for the fuel term: a distinct material key that renders with the nutrients icon and name
-(`iconLayers`), used for the burner energy instead of `nutrients`, and supplied either as an import
-or from the real nutrients row — pick one and document it in the owning KDoc. The pseudo material
-must never reach the blueprint as an item that cannot be moved.
-
-Add tests: a biochamber production consumes 0.25 nutrients/s and the pseudo material appears in the
-plan's materials with the nutrients icon; a `nutrients` target on Gleba plans without a
-nutrients ↔ bioflux cycle, and a bioflux target likewise.
 

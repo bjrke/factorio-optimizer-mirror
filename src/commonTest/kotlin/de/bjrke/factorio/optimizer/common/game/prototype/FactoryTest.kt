@@ -308,14 +308,28 @@ class FactoryTest {
             assertTrue(factory.outputsDirectly, "$factory")
         }
 
-    /** Every burner machine runs on fuel instead of the electric grid. */
+    /** The furnaces burn the surface's combustible fuel; the biochamber consumes nutrients. */
     @Test
-    fun onlyBurnerMachinesRunWithoutPower() =
+    fun fuelKindsFollowTheMachine() =
         assertTable(Factory.entries) { factory ->
-            assertEquals(factory !in burnerMachines, factory.needsPower, "$factory")
+            val expected =
+                when (factory) {
+                    Factory.STONE_FURNACE,
+                    Factory.STEEL_FURNACE -> FactoryFuel.BURNING
+                    Factory.BIOCHAMBER -> FactoryFuel.NUTRIENTS
+                    else -> null
+                }
+            assertEquals(expected, factory.fuel, "$factory")
         }
 
-    private val burnerMachines =
+    /** Machines that run on fuel or their own process need no power pole. */
+    @Test
+    fun onlyUnpoweredMachinesRunWithoutPower() =
+        assertTable(Factory.entries) { factory ->
+            assertEquals(factory !in unpoweredMachines, factory.needsPower, "$factory")
+        }
+
+    private val unpoweredMachines =
         setOf(
             Factory.STONE_FURNACE,
             Factory.STEEL_FURNACE,

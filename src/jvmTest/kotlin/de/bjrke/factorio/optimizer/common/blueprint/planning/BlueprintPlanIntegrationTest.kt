@@ -15,6 +15,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.stone
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.prototype.biochamberFuel
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import de.bjrke.test.assertTableOf
@@ -189,9 +190,11 @@ class BlueprintPlanIntegrationTest {
                 )
             },
             {
+                // the biochamber's pseudo fuel is an import of its own; the real solid-fuel chain
+                // still has light oil as its single source
                 assertEquals(
                     listOf(lightOil),
-                    planned.sources.map { it.material },
+                    planned.sources.map { it.material }.filter { it != biochamberFuel },
                 )
             },
         )

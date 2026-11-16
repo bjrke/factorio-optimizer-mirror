@@ -86,14 +86,20 @@ class BlueprintFurnaceFuelTest {
         )
     }
 
+    /**
+     * Counting the biochamber's nutrient fuel makes importing rocket fuel cheaper than building the
+     * jelly chain, so the furnace fuel comes from a source. It is still the surface's rocket fuel,
+     * and it is still a solid the layout feeds.
+     */
     @Test
-    fun glebaBeltsTheRocketFuelItsFurnaceBurns() {
+    fun glebaFeedsTheRocketFuelItsFurnaceBurns() {
         val layout = Layout("iron-plate", surface = Surface.GLEBA, factories = stoneFurnace)
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertContains(layout.plan.beltMaterials, rocketFuel) },
+            { assertContains(layout.plan.sources.map { it.material }, rocketFuel) },
             { assertContains(layout.belted(), rocketFuel) },
+            { assertContains(layout.furnaceIngredients(), rocketFuel) },
         )
     }
 }

@@ -30,8 +30,9 @@ CLI (JVM) from one shared core.
     (`ParsedRecipe.forSurface`),
     `RecipeUsage.kt` (the cached transitive usage counts, the least-used-first
     order and the intermediate-limit constants) and `RecipePolicy.kt` (the
-    optimizer's explicit recipe exclusions, `unplannedRecipes`, and the one
-    burning fuel per surface, `burnerFuel`).
+    optimizer's explicit recipe exclusions, `unplannedRecipes`, the one burning
+    fuel per surface, `burnerFuel`, and the biochamber's pseudo nutrient fuel,
+    `biochamberFuel`).
   - `game/selection` — the URL/CLI codecs: `Selection.kt`
     (`Selection`, `SelectionFlag`, `selectionString`, `spaceAgeIn`,
     `fullBeltIn`), `BeltEndSelection.kt` (`beltEndFromSelection/-Identifier`),
@@ -52,9 +53,10 @@ CLI (JVM) from one shared core.
   - `optimize` — the optimizer: `Optimizer.kt` and `MachineCatalog.kt`
     (machine choice and rates) and `LinearProgram.kt`. It takes a `ParsedRecipe`
     in and returns an `OptimizationResult` (from `model`); it never loads the
-    dump or builds a blueprint. `MachineCatalog.fuelled` adds the surface's
-    burning fuel to a burner furnace's recipe, so the fuel is an ordinary solid
-    the plan pays for and the blueprint feeds. Its output models now live in
+    dump or builds a blueprint. `MachineCatalog.fuelled` adds the fuel in
+    `FactorySpec.fuel`: the surface's burning fuel for the furnaces, and the
+    biochamber's pseudo nutrient fuel, so the fuel is an ordinary solid the plan
+    pays for and the blueprint feeds. Its output models now live in
     `model`, so the blueprint planner can consume an optimizer result without
     depending on the optimizer itself. `Optimizer` takes a `maxIntermediates`
     limit: it keeps the least-used produced materials (from `ParsedRecipe.usage`)

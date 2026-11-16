@@ -165,8 +165,10 @@ the placed belt and inserter; a fluid-only plan therefore omits unused logistics
 `request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
 `infinity_settings` and `neighbours` fields. An infinity pipe writes
 `infinity_settings` only as a source; a sink is unfiltered and writes none, so
-the game deletes whatever reaches it. See `BeltEndConnector.kt` for the
-geometry and `## Traps` below for the wire and pole traps.
+the game deletes whatever reaches it. Every item name the JSON writes comes from
+`Material.prototypeName`, so a pseudo plan material is emitted as the real item it stands
+for (the biochamber's pseudo nutrient fuel writes `nutrients`). See
+`BeltEndConnector.kt` for the geometry and `## Traps` below for the wire and pole traps.
 
 ## Tests
 

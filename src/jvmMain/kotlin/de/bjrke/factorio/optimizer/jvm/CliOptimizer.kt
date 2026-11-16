@@ -17,6 +17,7 @@ import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.DEFAULT_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
@@ -274,18 +275,20 @@ private fun printListing(
     }
 
     result.factories.values.sortedWith(factoryProductionComparator).forEach { production ->
-        out(
-            "${superRound(production.amount)} x ${production.recipe.name} in ${production.factory.identifier}",
-        )
+        // an imported pseudo material is named after the real item it supplies
+        val name =
+            if (Category.IMPORT in production.recipe.categories) production.material.prototypeName
+            else production.recipe.name
+        out("${superRound(production.amount)} x $name in ${production.factory.identifier}")
         production.recipe.ingredients.keys.forEach { material ->
             val rate = production.consumption(material)
             val transport = transport(production.factory, material, rate, isOutput = false)
-            out("  in  ${material.name}: ${superRound(rate)} -> $transport")
+            out("  in  ${material.prototypeName}: ${superRound(rate)} -> $transport")
         }
         production.recipe.result.keys.forEach { material ->
             val rate = production.production(material)
             val transport = transport(production.factory, material, rate, isOutput = true)
-            out("  out ${material.name}: ${superRound(rate)} -> $transport")
+            out("  out ${material.prototypeName}: ${superRound(rate)} -> $transport")
         }
     }
 }

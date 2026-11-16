@@ -35,9 +35,7 @@ data class MachineStats(
     val categories: Set<Category>,
     val speed: Double,
     val productivity: Double,
-    /**
-     * The machine's energy use in watts at crafting speed 1; a burner furnace burns fuel for it.
-     */
+    /** The machine's energy use in watts at crafting speed 1; a fuelled machine consumes for it. */
     val energyUsage: Double = 0.0,
 )
 

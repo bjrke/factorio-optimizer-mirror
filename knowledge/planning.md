@@ -93,6 +93,18 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
 `game/prototype/RecipePolicy.kt`; the shared-product rule is in `decisions.md`
 (2026-11-11).
 
+## Machine fuel
+
+`MachineCatalog.fuelled` adds the fuel in `FactorySpec.fuel` to a recipe: the surface's
+one burning fuel (`burnerFuel`) for the furnaces, and `biochamberFuel` for the biochamber.
+The latter is a pseudo material with `prototypeName = "nutrients"`: the biochamber consumes
+nutrients but bioflux is made in a biochamber too, so booking the fuel as real `nutrients`
+would close a nutrients ↔ bioflux cycle. No recipe produces the pseudo material, so the LP
+imports it; `OptimizationResult` and the listing show that demand, while display and the
+blueprint use `Material.prototypeName`. The pseudo material has no fuel value of its own;
+the real nutrients item supplies it, so one biochamber consumes `500 kW / 2 MJ = 0.25`
+nutrients per second at its dump energy usage.
+
 ## Traps
 
 - **Recipe cycles are excluded by the optimizer, not by `buildable`.**
@@ -105,6 +117,14 @@ the KDoc of `DirectFeedModel` (`maxBandMachines`, `FeedNode.ingredients`) and
   Evidence: `bannedRecipesAreNeverPlanned`, `nutrientsAreNotBredFromFish` and
   `uranium235IsBuiltByProcessingNotKovarex`. See `unplannedRecipes`
   (`RecipePolicy.kt`).
+- **The biochamber's fuel is a pseudo import, not real nutrients.** Booking `nutrients`
+  directly would close the nutrients ↔ bioflux cycle, because bioflux is also made in a
+  biochamber. `biochamberFuel` is a distinct key that the LP imports; it must stay out of
+  blueprint item names through `Material.prototypeName`. Evidence:
+  `aBiochamberConsumesQuarterNutrientsPerSecond`,
+  `glebaNutrientAndBiofluxPlansStayCycleFree`,
+  `glebaNutrientPlansNameTheRealItemInTheBlueprint`. See `biochamberFuel` and
+  `MachineCatalog.fuelled`.
 - **A cycle that contains the target must not make the target importable.** `importableMaterials`
   allows a cycle member to be imported so the LP stays feasible, but the target must be built when
   a recipe produces it. Otherwise the LP imports the target, `Optimizer` reports a `freeSource`

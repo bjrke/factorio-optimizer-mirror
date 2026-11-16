@@ -97,11 +97,11 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
                 placeConnectorInserter(material, Coordinate(left + 3, row), WEST, mirror = true)
                 placeChest(
                     Coordinate(left + 2, row),
-                    requestFilter = RequestFilter(material.name, count, buffer),
+                    requestFilter = RequestFilter(material.prototypeName, count, buffer),
                 )
             }
             else -> {
-                val condition = CircuitCondition(material.name, "<", 200)
+                val condition = CircuitCondition(material.prototypeName, "<", 200)
                 placeConnectorInserter(
                     material,
                     Coordinate(left + 1, row),
@@ -116,7 +116,7 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
                 )
                 placeChest(
                     Coordinate(left + 2, row),
-                    requestFilter = RequestFilter(material.name, count, buffer),
+                    requestFilter = RequestFilter(material.prototypeName, count, buffer),
                     circuitConditionEnabled = false,
                 )
             }

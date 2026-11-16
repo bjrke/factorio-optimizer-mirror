@@ -164,7 +164,7 @@ internal fun asciiLegend(entities: List<LayoutEntity>): String {
         legend.append("  ${codes.recipeCode(recipe)} = ${machine.name}: $recipe\n")
     }
     for (material in codes.materials()) {
-        legend.append("  ${codes.materialCode(material)} = ${material.name}\n")
+        legend.append("  ${codes.materialCode(material)} = ${material.prototypeName}\n")
     }
     if (entities.any { it is BeltEntity && it.load.isMixed }) {
         legend.append("  ~ = mixed belt\n")
@@ -184,7 +184,7 @@ private fun markerLegend(entities: List<LayoutEntity>): String =
         .map { it.signal.material }
         .distinct()
         .sortedBy { it.name }
-        .joinToString("") { "  C = constant-combinator: ${it.name}\n" }
+        .joinToString("") { "  C = constant-combinator: ${it.prototypeName}\n" }
 
 /** The fixed infinity entity codes, listed when the layout holds one of them. */
 private fun infinityLegend(entities: List<LayoutEntity>): String = buildString {

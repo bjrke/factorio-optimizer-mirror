@@ -355,6 +355,29 @@ class CliOptimizerTest {
     }
 
     @Test
+    fun theListingShowsTheBiochamberNutrientFuel() {
+        val output = mutableListOf<String>()
+        val errors = mutableListOf<String>()
+
+        val code =
+            runCli(
+                arrayOf("bioflux", "--planet=gleba", "--listing"),
+                out = { output += it },
+                err = { errors += it },
+            )
+        val text = output.joinToString("\n")
+
+        assertAll(
+            { assertEquals(0, code) },
+            { assertEquals(emptyList(), errors) },
+            // the pseudo material is shown as the real nutrient item it supplies
+            { assertContains(text, "in  nutrients:", message = text) },
+            { assertContains(text, "x nutrients in infinity-chest", message = text) },
+            { assertContainsNot(text, "nutrients-fuel", message = text) },
+        )
+    }
+
+    @Test
     fun settingsTextListsTheResolvedConfiguration() {
         val logistics =
             calculator(
