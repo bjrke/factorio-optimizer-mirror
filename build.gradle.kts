@@ -231,7 +231,15 @@ tasks.register<JavaExec>("run") {
 
 spotless {
     kotlin {
-        target("src/**/*.kt", "buildSrc/**/*.kt")
+        // Target the source trees instead of the equivalent `src/**/*.kt` string
+        // globs: Spotless turns a glob into `project.fileTree(projectDir)` plus an
+        // include, which Gradle resolves while configuring, and the resolved file
+        // collection then becomes a configuration cache fingerprint. Every Kotlin
+        // add or edit would discard the entry (see `knowledge/build.md`).
+        target(
+            layout.projectDirectory.dir("src").asFileTree.matching { include("**/*.kt") },
+            layout.projectDirectory.dir("buildSrc").asFileTree.matching { include("**/*.kt") },
+        )
         targetExclude("buildSrc/build/**")
         ktfmt().kotlinlangStyle()
     }

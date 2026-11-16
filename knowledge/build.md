@@ -71,12 +71,8 @@ workflow (filtering to `de.bjrke`, allocation/exception views), see
 
 ## CI pipeline
 
-`.gitlab-ci.yml` runs
-`gradle --no-daemon --max-workers=1 -PCI … check jsBrowserDistribution` on every
-pipeline and caches `.gradle` as `GRADLE_USER_HOME`. `--max-workers=1` keeps the
-job strictly serial: no two tasks overlap, so the CPU minutes match the work done
-instead of the runner's core count — and the worker count cannot vary the
-configuration cache entry between autoscaled machines.
+`.gitlab-ci.yml` runs `gradle --no-daemon -PCI … check jsBrowserDistribution`
+on every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
 
 - **`-PCI` keeps the build clean.** `build.gradle.kts` reads the `CI` project
   property and calls `outputs.cacheIf { false }` on every task, so no compile,
@@ -95,7 +91,9 @@ configuration cache entry between autoscaled machines.
   `MapProperty` input fed by `providers.environmentVariable`/`providers.exec`,
   which is only read when the copy runs. A configuration-time `System.getenv`,
   `Instant.now()` or `expand` discards the entry every commit or freezes a stale
-  value.
+  value, and so does any file collection *resolved* while configuring, even when
+  it is "only" a task input — the Spotless `target` globs were such a collection
+  until 2026-11-16 (see Traps).
 - **The entry is encrypted, and the key has to be cached with it.** Gradle 9.8
   encrypts each entry with a random key it generates into
   `.gradle/caches/9.8.1/cc-keystore` (`Encryption key source: default Gradle
@@ -195,6 +193,28 @@ configuration cache entry between autoscaled machines.
   A genuine fingerprint change says `configuration cache cannot be reused because
   …` and names the file, environment variable or user home; read that reason
   instead of guessing. Never "fix" this by deleting the entry locally.
+- **`an input to unknown location has changed` is a file collection resolved while
+  configuring, and a Spotless `target("src/**/*.kt")` glob is the one in this
+  build.** Measured 2026-11-16 on 9.8.1 with
+  `check jsBrowserDistribution --configuration-cache --dry-run`: with
+  `target("src/**/*.kt", "buildSrc/**/*.kt")` an edit of a `.kt` file, a new `.kt`
+  file under `src/` — even `src/commonMain/resources/Foo.kt`, outside every source
+  set — or a new `.kt` under `buildSrc/` discarded the entry, while a new `.txt`
+  file, `LICENSE`, `knowledge/**`, `config/detekt/detekt.yml` and
+  `buildSrc/templates/**` (non-Kotlin) did not. The reason is a
+  `ConfigurationCacheFingerprint$WorkInputs` fingerprint written by
+  `fileCollectionObserved` (`ConfigurationCacheFingerprintChecker` in
+  `gradle-configuration-cache-9.8.1.jar`, template `an input to %s has changed`;
+  `%s` is `PropertyTrace.Unknown`). An added non-Kotlin file under the same
+  `buildSrc/templates/` directory did *not* discard it, so the trigger is the
+  glob, not a buildSrc rebuild. `target(String)` builds
+  `project.fileTree(projectDir).include(pattern)`, which is resolved against the
+  project directory while configuring, so the entry carries the Kotlin source
+  content. `target(layout.projectDirectory.dir("src").asFileTree.matching {
+  include("**/*.kt") }, …)` covers the same files without the fingerprint: the
+  entry then survived content edits, new source files and files outside the
+  source sets, and `spotlessCheck` still failed for unformatted Kotlin in `src/`
+  and `buildSrc/src/` while skipping `buildSrc/build/`.
 - **A `cannot be reused` reason naming a file under
   `.gradle/caches/<version>/` is missing restored state, not a real change.** The
   entry fingerprints the instrumented Kotlin DSL script classes and the version

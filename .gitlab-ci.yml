@@ -87,10 +87,7 @@ test:
     # `-Pkotlin.incremental.*=false`: a clean build never reuses incremental state,
     # so only its bookkeeping cost remains. `-Pkotlin.compiler.execution.strategy=in-process`
     # skips the Kotlin daemon JVM, which a one-build container never amortizes.
-    # `--max-workers=1` keeps the job strictly serial: tasks never overlap, so the
-    # CPU minutes match the work done instead of the runner's core count, which also
-    # stops being a configuration cache input.
-    - gradle --no-daemon --max-workers=1 -PCI -Pkotlin.incremental=false -Pkotlin.incremental.js=false -Pkotlin.compiler.execution.strategy=in-process check jsBrowserDistribution
+    - gradle --no-daemon -PCI -Pkotlin.incremental=false -Pkotlin.incremental.js=false -Pkotlin.compiler.execution.strategy=in-process check jsBrowserDistribution
     - mv build/dist/js/productionExecutable public
   artifacts:
     when: always
