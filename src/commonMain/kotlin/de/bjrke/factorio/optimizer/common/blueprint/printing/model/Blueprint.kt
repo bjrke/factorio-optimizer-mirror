@@ -91,8 +91,6 @@ data class BlueprintEntity(
         circuitCondition = circuitCondition,
         circuitConditionEnabled = circuitConditionEnabled,
     )
-
-    fun isPowered(): Boolean = recipe != null || name.endsWith("inserter")
 }
 
 /**

@@ -35,6 +35,14 @@ data class FactorySpec(
      * source is imported), so its fuel stays out of the plan.
      */
     val burner: Boolean = false,
+    /**
+     * Whether the machine draws power from the electric grid, so the layout has to cover it with a
+     * pole. It is not the negation of [burner]: [burner] marks the machines whose surface fuel is
+     * modelled (the furnaces), while a biochamber or a captive biter spawner burns its own fuel
+     * that the plan does not model yet, and the burner mining drill is never laid out. Every burner
+     * machine is unpowered, which is why the two facts live side by side.
+     */
+    val needsPower: Boolean = true,
     /** Curated fallback for [MachineStats.energyUsage] when no dump was parsed. */
     val energyUsage: Double = 0.0,
 )
@@ -76,20 +84,31 @@ enum class Factory(
         'f',
         "stone-furnace",
         smelterCategories,
-        FactorySpec(burner = true, energyUsage = 90_000.0),
+        FactorySpec(burner = true, needsPower = false, energyUsage = 90_000.0),
     ),
     STEEL_FURNACE(
         's',
         "steel-furnace",
         smelterCategories,
-        FactorySpec(speed = 2.0, burner = true, energyUsage = 90_000.0),
+        FactorySpec(
+            speed = 2.0,
+            burner = true,
+            needsPower = false,
+            energyUsage = 90_000.0,
+        ),
     ),
     ELECTRIC_FURNACE(null, "electric-furnace", smelterCategories, FactorySpec(speed = 2.0)),
     BIOCHAMBER(
         'b',
         "biochamber",
         setOf(Category.ORGANIC),
-        FactorySpec(speed = 2.0, productivity = 0.5, preferred = true, spaceAgeOnly = true),
+        FactorySpec(
+            speed = 2.0,
+            productivity = 0.5,
+            preferred = true,
+            spaceAgeOnly = true,
+            needsPower = false,
+        ),
     ),
     FOUNDRY(
         'F',
@@ -126,13 +145,13 @@ enum class Factory(
         null,
         "captive-biter-spawner",
         setOf(Category.CAPTIVE_SPAWNER_PROCESS),
-        FactorySpec(spaceAgeOnly = true),
+        FactorySpec(spaceAgeOnly = true, needsPower = false),
     ),
     BURNER_MINING_DRILL(
         'B',
         "burner-mining-drill",
         setOf(Category.MINING_BASIC_SOLID),
-        FactorySpec(speed = 0.25, outputsDirectly = true),
+        FactorySpec(speed = 0.25, outputsDirectly = true, needsPower = false),
     ),
     ELECTRIC_MINING_DRILL(
         'E',
@@ -185,6 +204,9 @@ enum class Factory(
 
     val burner: Boolean
         get() = spec.burner
+
+    val needsPower: Boolean
+        get() = spec.needsPower
 
     val energyUsage: Double
         get() = spec.energyUsage

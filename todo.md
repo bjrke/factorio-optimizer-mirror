@@ -80,14 +80,7 @@ for the fuel term: a distinct material key that renders with the nutrients icon 
 or from the real nutrients row — pick one and document it in the owning KDoc. The pseudo material
 must never reach the blueprint as an item that cannot be moved.
 
-Biochambers also need no poles: `MachineEntity.isPowered` is hard-coded true
-(`LayoutEntityStations.kt:16`) and `PowerPlacer` covers every powered entity, so a biochamber row
-gets poles for the machine body. Let burner machines be unpowered; their inserters still need
-poles, so the pole count drops rather than the row going dark.
-
 Add tests: a biochamber production consumes 0.25 nutrients/s and the pseudo material appears in the
 plan's materials with the nutrients icon; a `nutrients` target on Gleba plans without a
-nutrients ↔ bioflux cycle, and a bioflux target likewise; a blueprint test where biochamber rows
-place no pole for the machine body (or strictly fewer poles), the inserters stay covered and
-`validateLayout`/power tests pass; a `PowerPlacer`/`isPowered` unit test for a burner machine.
+nutrients ↔ bioflux cycle, and a bioflux target likewise.
 

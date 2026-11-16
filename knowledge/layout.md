@@ -116,7 +116,9 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   side.
 - `blueprint/placing/special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry. The pole comes from `PowerPole.forSelection`: none in space, the small pole for
-  an early-game assembling machine 1 on Nauvis, the medium pole otherwise.
+  an early-game assembling machine 1 on Nauvis, the medium pole otherwise. A burner machine is
+  unpowered (`MachineEntity.isPowered` follows `Factory.needsPower`), so a furnace or biochamber
+  row gets poles only for its inserters.
 - `blueprint/placing/special/BeltEndConnector.kt` — the label, infinity-chest and chest belt ends,
   their connector width/offset, and the chest circuit wires.
 - `blueprint/placing/routing/DeliveryRouter.kt` — routes the solid imports first and the produced
@@ -315,6 +317,14 @@ baselines, so every finding fails.
   `advanced-circuit` ("input (38,22) can still grow back") after the band reshaped
   the layout; the layout's own `undergroundOutputOf` compares the material, and the
   test now does too. Match material whenever you search along a run.
+- **Power need is a factory fact (`needsPower`), not the negation of `burner`.** `FactorySpec.burner`
+  only marks the machines whose *surface* fuel the optimizer models (stone and steel furnace), so
+  the biochamber, the captive biter spawner and the burner mining drill are burners without that
+  flag. Deriving `MachineEntity.isPowered` from `burner` would keep powering a biochamber row, and
+  hard-coding it true powers every machine body. `FactorySpec.needsPower` records the grid
+  connection for all of them; their inserters still need poles. Evidence: `aBurnerMachineNeedsNoPole`,
+  `anElectricMachineIsCovered`, `aBurnerMachineRowStillPowersItsInserter`,
+  `glebaBiochambersDoNotNeedPower`.
 - **`poleWestBound` keeps poles out of the import extension.** The pole pass
   (`bestPoleSpot`, `freeNear`) places a pole only at `x >= poleWestBound`, which
   `importSource`, `ImportTrimmer.trim()` and the compaction shift raise to the import

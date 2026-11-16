@@ -12,6 +12,7 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** Pole coverage, pole networks and the neighbour list a blueprint needs to rebuild wires. */
 class BlueprintPowerIntegrationTest {
@@ -92,6 +93,28 @@ class BlueprintPowerIntegrationTest {
             { assertEquals(ironOnly.blueprint, withCopperOre.blueprint) },
             { assertPolesCoverAndConnect(entities) },
             { assertPolesWired(entities) },
+        )
+    }
+
+    /**
+     * A biochamber runs on nutrients instead of electricity, so its body needs no pole; the
+     * inserters around it still do.
+     */
+    @Test
+    fun glebaBiochambersDoNotNeedPower() {
+        val layout = Layout("bioflux", surface = Surface.GLEBA)
+        val entities = layout.blueprint.entities
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertPolesCoverAndConnect(entities) },
+            { assertPolesWired(entities) },
+            {
+                assertTrue(
+                    layout.machineEntities.none { it.isPowered },
+                    "a biochamber body must not require a pole",
+                )
+            },
         )
     }
 

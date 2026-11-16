@@ -308,6 +308,22 @@ class FactoryTest {
             assertTrue(factory.outputsDirectly, "$factory")
         }
 
+    /** Every burner machine runs on fuel instead of the electric grid. */
+    @Test
+    fun onlyBurnerMachinesRunWithoutPower() =
+        assertTable(Factory.entries) { factory ->
+            assertEquals(factory !in burnerMachines, factory.needsPower, "$factory")
+        }
+
+    private val burnerMachines =
+        setOf(
+            Factory.STONE_FURNACE,
+            Factory.STEEL_FURNACE,
+            Factory.BIOCHAMBER,
+            Factory.CAPTIVE_BITER_SPAWNER,
+            Factory.BURNER_MINING_DRILL,
+        )
+
     @Test
     fun onlyTheBigMiningDrillAndTheRecyclerStackTheirOutput() =
         assertTable(Factory.entries) { factory ->

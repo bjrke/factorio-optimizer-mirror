@@ -13,7 +13,7 @@ data class MachineEntity(
     /** The blueprint direction the machine is placed in; north is the prototype's own facing. */
     val direction: Direction = Direction.NORTH,
 ) : LayoutEntity {
-    override val isPowered = true
+    override val isPowered = factory.needsPower
     override val name = factory.identifier
 
     override fun withArea(area: Area) = copy(area = area)

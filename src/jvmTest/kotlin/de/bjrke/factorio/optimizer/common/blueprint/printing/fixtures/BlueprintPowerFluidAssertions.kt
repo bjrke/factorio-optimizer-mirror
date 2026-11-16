@@ -15,6 +15,7 @@ import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.core.model.west
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.util.drain
@@ -25,7 +26,15 @@ import kotlin.test.assertTrue
 /** Invariants of the power and fluid networks: pole coverage and wiring, pipe connectivity. */
 private const val PIPE_REACH = 10
 
-/** Every machine tile must sit in a pole's supply area, and the poles must form one network. */
+/** The machine prototypes that draw no power; a [BlueprintEntity] names them by identifier. */
+private val unpoweredMachines =
+    Factory.entries.filterNot { it.needsPower }.map { it.identifier }.toSet()
+
+/** Whether a power pole must cover this entity: a recipe machine unless it is a burner machine. */
+private fun BlueprintEntity.needsPower() =
+    name.endsWith("inserter") || (recipe != null && name !in unpoweredMachines)
+
+/** Every powered tile must sit in a pole's supply area, and the poles must form one network. */
 fun assertPolesCoverAndConnect(
     entities: List<BlueprintEntity>,
     pole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
@@ -35,7 +44,7 @@ fun assertPolesCoverAndConnect(
         entities.asSequence().filter { it.name == pole.identifier }.map { it.area.topLeft }.toList()
     val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(stats.supplyRadius) }
     val unpowered = entities.filter {
-        it.isPowered() && (it.area intersect coveredByPoles).isEmpty()
+        it.needsPower() && (it.area intersect coveredByPoles).isEmpty()
     }
     val reachSq = stats.wireReach * stats.wireReach
     val components =
