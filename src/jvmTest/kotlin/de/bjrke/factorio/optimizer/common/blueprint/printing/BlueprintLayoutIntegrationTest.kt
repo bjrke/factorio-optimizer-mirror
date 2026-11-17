@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
@@ -72,11 +73,10 @@ class BlueprintLayoutIntegrationTest {
                 { assertConnectedUndergroundBelts(entities) },
                 { assertTunnelEndsAreFed(entities) },
                 { assertSplittersOnlyFeedSurface(entities) },
-                { assertNoMergingBelts(entities, layout.beltMaterials, layout.beltLoads) },
+                { assertNoMergingBelts(entities) },
                 {
                     assertUndergroundRunsAreStretched(
                         entities,
-                        layout.beltMaterials,
                         layout.logistics.undergroundRange,
                     )
                 },
@@ -157,14 +157,15 @@ class BlueprintLayoutIntegrationTest {
         // plastic is built from petroleum gas now, so the plan imports two fluids; pin the acid one
         val layout = Layout("processing-unit", beltEnd = BeltEnd.INFINITY_CHEST)
         val entities = layout.blueprint.entities
-        val pipe = entities.single {
-            it.name == "infinity-pipe" && it.infinityPipe?.fluid == sulfuricAcid
-        }
+        val pipe =
+            entities.filterIsInstance<InfinityPipeEntity>().single {
+                it.name == "infinity-pipe" && it.settings?.fluid == sulfuricAcid
+            }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(sulfuricAcid, pipe.infinityPipe?.fluid) },
-            { assertEquals(25, pipe.infinityPipe?.temperature) },
+            { assertEquals(sulfuricAcid, pipe.settings?.fluid) },
+            { assertEquals(25, pipe.settings?.temperature) },
         )
     }
 

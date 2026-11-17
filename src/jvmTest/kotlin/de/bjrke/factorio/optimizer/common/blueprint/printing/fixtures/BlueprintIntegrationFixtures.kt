@@ -176,6 +176,7 @@ data class Layout(
 
     fun direction(machine: MachineEntity) =
         blueprint.entities
+            .filterIsInstance<MachineEntity>()
             .single {
                 it.area.topLeft == machine.area.topLeft && it.name == machine.name
             }

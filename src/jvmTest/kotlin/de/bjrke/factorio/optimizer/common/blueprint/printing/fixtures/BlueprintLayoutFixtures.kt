@@ -1,11 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Material
@@ -61,20 +63,23 @@ val basePlan =
  * so two ends of an underground run face away from each other: the partner of an end sits one step
  * in the direction *opposite* its facing, up to the pipe's reach, and itself faces that same way.
  */
-fun plumbingComponents(entities: List<BlueprintEntity>): List<Set<Coordinate>> {
+fun plumbingComponents(entities: List<LayoutEntity>): List<Set<Coordinate>> {
     val tiles =
         entities
+            .filterIsInstance<Plumbing>()
             .filter { it.name == "pipe" || it.name == "pipe-to-ground" }
             .associateBy { it.area.topLeft }
     val grounds =
-        tiles.filterValues { it.name == "pipe-to-ground" }.mapValues { it.value.direction }
+        tiles
+            .filterValues { it is PipeToGroundEntity }
+            .mapValues { (it.value as PipeToGroundEntity).mouth }
     return connectedComponents(tiles.keys) { tile -> plumbingNeighbors(tile, tiles, grounds) }
 }
 
 private fun plumbingNeighbors(
     tile: Coordinate,
-    tiles: Map<Coordinate, BlueprintEntity>,
-    grounds: Map<Coordinate, Direction?>,
+    tiles: Map<Coordinate, Plumbing>,
+    grounds: Map<Coordinate, Direction>,
 ) = buildList {
     val mouth = grounds[tile]
     for (neighbor in tile.neighbors) {

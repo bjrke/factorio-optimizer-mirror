@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoOverlap
@@ -46,7 +47,9 @@ class BlueprintBeltEndIntegrationTest {
         val blueprint = layout.blueprint
         val chest =
             blueprint.entities.withIndex().single { (_, entity) ->
-                entity.name == "buffer-chest" && entity.circuitConditionEnabled == false
+                entity is ChestEntity &&
+                    entity.name == "buffer-chest" &&
+                    entity.circuitConditionEnabled == false
             }
         val chestNumber = chest.index + 1
         val wired = blueprint.wires.flatMap { listOf(it.first, it.second) }.toSet()

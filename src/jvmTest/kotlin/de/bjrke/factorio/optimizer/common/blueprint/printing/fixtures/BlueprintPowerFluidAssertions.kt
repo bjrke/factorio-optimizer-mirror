@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
@@ -15,7 +15,6 @@ import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.distanceSq
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 import de.bjrke.factorio.optimizer.common.core.model.west
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 import de.bjrke.factorio.optimizer.common.util.connectedComponents
 import de.bjrke.factorio.optimizer.common.util.drain
@@ -26,17 +25,9 @@ import kotlin.test.assertTrue
 /** Invariants of the power and fluid networks: pole coverage and wiring, pipe connectivity. */
 private const val PIPE_REACH = 10
 
-/** The machine prototypes that draw no power; a [BlueprintEntity] names them by identifier. */
-private val unpoweredMachines =
-    Factory.entries.filterNot { it.needsPower }.map { it.identifier }.toSet()
-
-/** Whether a power pole must cover this entity: a recipe machine unless it is a burner machine. */
-private fun BlueprintEntity.needsPower() =
-    name.endsWith("inserter") || (recipe != null && name !in unpoweredMachines)
-
 /** Every powered tile must sit in a pole's supply area, and the poles must form one network. */
 fun assertPolesCoverAndConnect(
-    entities: List<BlueprintEntity>,
+    entities: List<LayoutEntity>,
     pole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
     stats: PoleStats = logistics.poles.getValue(pole.identifier),
 ) {
@@ -44,7 +35,7 @@ fun assertPolesCoverAndConnect(
         entities.asSequence().filter { it.name == pole.identifier }.map { it.area.topLeft }.toList()
     val coveredByPoles = poles.flatMapTo(mutableSetOf()) { it.area().grow(stats.supplyRadius) }
     val unpowered = entities.filter {
-        it.needsPower() && (it.area intersect coveredByPoles).isEmpty()
+        it.isPowered && (it.area intersect coveredByPoles).isEmpty()
     }
     val reachSq = stats.wireReach * stats.wireReach
     val components =
@@ -160,7 +151,7 @@ private fun mouthOf(pipe: PipeToGroundEntity) =
 
 /** A blueprint does not rebuild pole wires, so each pole must list the poles it is wired to. */
 fun assertPolesWired(
-    entities: List<BlueprintEntity>,
+    entities: List<LayoutEntity>,
     pole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ) {
     val poles = entities.withIndex().filter { it.value.name == pole.identifier }
@@ -173,7 +164,7 @@ fun assertPolesWired(
         components++
 
         ArrayDeque(listOf(number)).drain { current ->
-            for (neighbour in entities[current - 1].neighbours) {
+            for (neighbour in (entities[current - 1] as PoleEntity).neighbours) {
                 if (neighbour in numbers && seen.add(neighbour)) addLast(neighbour)
             }
         }
@@ -183,7 +174,7 @@ fun assertPolesWired(
             if (poles.size >= 2) {
                 assertEquals(
                     emptyList(),
-                    poles.filter { it.value.neighbours.isEmpty() },
+                    poles.filter { (it.value as PoleEntity).neighbours.isEmpty() },
                     "unwired poles",
                 )
             }

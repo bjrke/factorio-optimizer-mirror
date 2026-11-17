@@ -172,9 +172,10 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   `aFluidThatIsBothInputAndOutputJoinsItsTwoLanes` in
   `BlueprintFluidLaneLinkTest`, and `heavy-oil --planet=vulcanus` in the CLI.
 - **A pipe-to-ground's blueprint `direction` is the side its surface pipe attaches
-  on, not the run's travel direction.** `toBlueprintEntity`
-  (`blueprint/printing/output/LayoutSerialization.kt`) flips **only the input end**
-  (`Io.INPUT`) and leaves the output end as stored, so the internal convention is
+  on, not the run's travel direction.** `LayoutEntity.facingDirection` returns
+  `PipeToGroundEntity.mouth`, and the entity JSON writer (`BlueprintEntityJson.kt`)
+  and the preview both use it; the wire direction therefore flips **only the input end**
+  (`Io.INPUT`) and leaves the output end as stored. The internal convention is
   "store both ends with the run's travel direction". A shaft that dives from a lane
   above a machine therefore stores its **lane-side end as `INPUT`** and its
   port-side end as `OUTPUT`, both with `Direction.SOUTH`; the writer then emits N at

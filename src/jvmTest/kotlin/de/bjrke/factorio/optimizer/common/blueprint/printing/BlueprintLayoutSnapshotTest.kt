@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
+import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.gear
@@ -36,7 +37,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(basePlan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("3e90763ed6064723") },
+            { layout.assertSignature("f32cb513422b28a8") },
         )
     }
 
@@ -45,7 +46,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("1d430a3fd6f1dc5d") },
+            { layout.assertSignature("0f32cd4598df8516") },
         )
     }
 
@@ -67,7 +68,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("c1e12f03f3205ddd") },
+            { layout.assertSignature("94afe82e2b9791be") },
         )
     }
 
@@ -76,7 +77,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(sixInputPlan())
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("d23b9d95d9646245") },
+            { layout.assertSignature("8ffe66606ab2f45b") },
         )
     }
 
@@ -103,7 +104,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("1a895e0e6f4b393a") },
+            { layout.assertSignature("a1170b4ba7578597") },
         )
     }
 
@@ -124,12 +125,11 @@ class BlueprintLayoutSnapshotTest {
         return hash.toULong().toString(16).padStart(16, '0')
     }
 
-    private fun canonical(blueprint: Blueprint) = buildString {
-        append(blueprint.label).append('\n')
-        blueprint.icons.forEach { append(it).append('\n') }
-        blueprint.entities.forEach { append(it).append('\n') }
-        blueprint.wires.forEach { append(it).append('\n') }
-    }
+    /**
+     * The serialized artifact itself, not an entity `toString()`: the hash then pins byte-for-byte
+     * what a blueprint string carries, independent of how the entities are modeled.
+     */
+    private fun canonical(blueprint: Blueprint) = blueprint.toJson()
 }
 
 /** A six-input row: three mixed belts plus the product. */

@@ -109,9 +109,9 @@ area-specific facts are in the other knowledge files.
 ## Behavior-preserving refactors
 
 - Before splitting a layout stage, pin its output with a characterization test.
-  `BlueprintLayoutSnapshotTest` hashes the canonical entity/wire list (each
-  `BlueprintEntity.toString()` plus the wires, FNV-1a) for the base, chest, fluid
-  and band plans. Prove the split is neutral by running the same test in a clean
+  `BlueprintLayoutSnapshotTest` hashes the serialized JSON (`Blueprint.toJson()`,
+  FNV-1a) for the base, chest, fluid and band plans, so it pins what a blueprint
+  string carries rather than the entity model behind it. Prove the split is neutral by running the same test in a clean
   worktree at the pre-change commit (`git worktree add /tmp/opencode/<name> HEAD`),
   copying the test in and comparing: identical hashes mean unchanged geometry and
   entity order. Remove the worktree when done.

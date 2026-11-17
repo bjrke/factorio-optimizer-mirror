@@ -1,97 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.model
 
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.CircuitCondition
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeSettings
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.RequestFilter
-import de.bjrke.factorio.optimizer.common.core.model.Area
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Direction
-import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.model.area
-
-/**
- * One entity of a blueprint. [direction] is only set for entities that face a way.
- *
- * [type] is `input`/`output` for an underground belt (or pipe-to-ground), [recipe] the recipe an
- * assembling machine runs and [marker] the material a constant-combinator marker carries.
- */
-data class BlueprintEntity(
-    val name: String,
-    val area: Area,
-    val direction: Direction = Direction.NORTH,
-    val recipe: String? = null,
-    val type: Io? = null,
-    val marker: Material? = null,
-    /**
-     * Whether [marker] is a fluid; a constant combinator needs an explicit signal type for those.
-     */
-    val markerFluid: Boolean = false,
-    /**
-     * The `entity_number`s this entity is wired to (power poles connect this way; a blueprint does
-     * not rebuild those wires on its own).
-     */
-    val neighbours: List<Int> = emptyList(),
-    /** Set on an infinity chest: the item it provides or the fact that it voids everything. */
-    val infinity: InfinitySettings? = null,
-    /** Set on an infinity pipe: the fluid it supplies. */
-    val infinityPipe: InfinityPipeSettings? = null,
-    /** Set on a chest: the logistic request it keeps in stock. */
-    val requestFilter: RequestFilter? = null,
-    /** Set on a chest: the inventory bar limit, e.g. the four slots a wooden chest is capped to. */
-    val bar: Int? = null,
-    /** Set on an inserter: it is the mirrored variant of the one facing [direction]. */
-    val mirror: Boolean = false,
-    /** Set on an inserter: the circuit condition that enables it. */
-    val circuitCondition: CircuitCondition? = null,
-    /** Set on a chest: whether its own circuit condition is enabled. */
-    val circuitConditionEnabled: Boolean? = null,
-) {
-
-    constructor(
-        name: String,
-        topLeft: Coordinate,
-        direction: Direction = Direction.NORTH,
-        recipe: String? = null,
-        type: Io? = null,
-        marker: Material? = null,
-        markerFluid: Boolean = false,
-        neighbours: List<Int> = emptyList(),
-        /** Set on an infinity chest: the item it provides or the fact that it voids everything. */
-        infinity: InfinitySettings? = null,
-        /** Set on an infinity pipe: the fluid it supplies. */
-        infinityPipe: InfinityPipeSettings? = null,
-        /** Set on a chest: the logistic request it keeps in stock. */
-        requestFilter: RequestFilter? = null,
-        /**
-         * Set on a chest: the inventory bar limit, e.g. the four slots a wooden chest is capped to.
-         */
-        bar: Int? = null,
-        /** Set on an inserter: it is the mirrored variant of the one facing [direction]. */
-        mirror: Boolean = false,
-        /** Set on an inserter: the circuit condition that enables it. */
-        circuitCondition: CircuitCondition? = null,
-        /** Set on a chest: whether its own circuit condition is enabled. */
-        circuitConditionEnabled: Boolean? = null,
-    ) : this(
-        name = name,
-        area = topLeft.area(1, 1),
-        direction = direction,
-        recipe = recipe,
-        type = type,
-        marker = marker,
-        markerFluid = markerFluid,
-        neighbours = neighbours,
-        infinity = infinity,
-        infinityPipe = infinityPipe,
-        requestFilter = requestFilter,
-        bar = bar,
-        mirror = mirror,
-        circuitCondition = circuitCondition,
-        circuitConditionEnabled = circuitConditionEnabled,
-    )
-}
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 
 /**
  * One circuit network wire: the two entities it joins (their `entity_number`) and the connector
@@ -114,11 +23,17 @@ data class BlueprintIcon(val name: String, val fluid: Boolean = false)
 /** Factorio shows at most four icons on a blueprint. */
 private const val MAX_ICONS = 4
 
-/** A whole blueprint: its [label], its [icons], its [entities] and their [wires]. */
+/**
+ * A planned blueprint: its [label], [icons], the [entities] the layout placed and their [wires].
+ *
+ * [entities] are the layout's own entities in placement order; an entity's index plus one is the
+ * `entity_number` its [wires] and a pole's neighbours refer to. The JSON writer turns them into the
+ * wire format, so this model needs no second entity representation.
+ */
 data class Blueprint(
     val label: String,
     val icons: List<BlueprintIcon> = emptyList(),
-    val entities: List<BlueprintEntity> = emptyList(),
+    val entities: List<LayoutEntity> = emptyList(),
     val wires: List<BlueprintWire> = emptyList(),
 ) {
     init {

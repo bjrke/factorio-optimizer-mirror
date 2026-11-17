@@ -53,7 +53,7 @@ The fields that matter for reading a layout:
 | `position` | `{x, y}` in tiles — the **center** of the entity, not a corner |
 | `direction` | `0`=north, `4`=east, `8`=south, `12`=west (2.0); absent = no facing |
 | `recipe` | The recipe an assembling machine / furnace runs |
-| `type` | `input`/`output` for `underground-belt` and `pipe-to-ground` |
+| `type` | `input`/`output` for an `underground-belt` or `loader`; a `pipe-to-ground` carries only `direction` |
 | `neighbours` | `entity_number`s this entity is wired to (power poles, see below) |
 | `control_behavior` | Circuit conditions / filters (constant combinators, inserters) |
 | `infinity_settings` | Infinity chest contents (`remove_unfiltered_items`, `filters`) |
@@ -82,19 +82,31 @@ some circuit connections — when in doubt, check both.
 
 ## This repo's mapping
 
-- `src/commonMain/.../model/Blueprint.kt` — `Blueprint`, `BlueprintEntity`,
-  `InfinitySettings`, and `toJson()`. This is the code that writes the fields
-  above (`direction`, `recipe`, `type`, `neighbours`, `control_behavior`, ...).
-- `src/commonMain/.../business/blueprintString.kt` — `blueprintString(json)`
-  emits `"0" + base64(zlibStored(json))`. The zlib payload uses **stored**
-  (uncompressed) DEFLATE blocks, but it is a normal zlib stream any decoder reads.
-- `src/commonMain/.../business/BlueprintLayout.kt` — `buildBlueprint` lays out
-  entities and wires poles (`neighbours`); `NORTH/EAST/SOUTH/WEST = 0/4/8/12`.
-- `src/commonMain/.../business/BlueprintPlan.kt` — reduces an optimization
-  result to the recipes of one blueprint.
-- Tests to copy patterns from: `commonTest/.../BlueprintStringTest.kt`,
-  `jvmTest/.../BlueprintStringDecodeTest.kt` (decodes with the JDK's zlib),
-  `jvmTest/.../BlueprintIntegrationTest.kt` (decodes and inspects entities).
+- `src/commonMain/.../blueprint/printing/model/Blueprint.kt` — `Blueprint`
+  (label, up to four `BlueprintIcon`s, the placed `LayoutEntity`s and the
+  `BlueprintWire`s), `BlueprintIcon`, `BlueprintWire`.
+- `src/commonMain/.../blueprint/printing/json/BlueprintJson.kt` —
+  `Blueprint.toJson()` writes the `blueprint` envelope (`label`, `icons`,
+  `entities`, top-level `wires`). `BlueprintEntityJson.kt` writes one entity's
+  wire fields (`position`, `direction`, `recipe`, `type`, `neighbours`,
+  `control_behavior`; `direction` is `0/4/8/12` for 2.0), and
+  `BlueprintSettingsJson.kt` writes `infinity_settings`, `request_filters`, `bar`
+  and `mirror`.
+- `src/commonMain/.../blueprint/printing/output/BlueprintString.kt` —
+  `blueprintString(json)` emits `"0" + base64(zlibStored(json))`. The zlib
+  payload uses **stored** (uncompressed) DEFLATE blocks, but it is a normal zlib
+  stream any decoder reads.
+- `src/commonMain/.../blueprint/RowLayout.kt` — `blueprint()` lays out a
+  `BlueprintPlan` as rows, places poles and wires them (`neighbours`).
+- `src/commonMain/.../blueprint/planning/BlueprintPlan.kt` — `blueprintPlan(...)`
+  reduces an `OptimizationResult` to a `BlueprintPlan`;
+  `src/commonMain/.../blueprint/planning/plan/BlueprintMachine.kt` holds
+  `blueprintMachineFootprint(factory)`.
+- Tests to copy patterns from: `commonTest/.../printing/json/BlueprintJsonTest.kt`
+  (the wire fields), `jvmTest/.../printing/output/BlueprintStringTest.kt`,
+  `jvmTest/.../printing/output/BlueprintStringDecodeTest.kt` (decodes with the
+  JDK's zlib), and `jvmTest/.../printing/BlueprintSerializationIntegrationTest.kt`
+  (end-to-end string round trip).
 
 The repo's own blueprints omit `version` and use stored DEFLATE; both are legal
 and decode fine.
@@ -106,6 +118,7 @@ and decode fine.
 3. Full JSON to `/tmp/bp.json` and `jq` it for questions like "how many
    `fast-inserter`s" or "which recipes run".
 4. To check a machine's size or footprint, use `blueprintMachineFootprint(...)`
-   in `BlueprintPlan.kt` rather than guessing from `position` alone.
+   in `blueprint/planning/plan/BlueprintMachine.kt` rather than guessing from
+   `position` alone.
 
 See `references/blueprint-json.md` for the fuller per-object field reference.

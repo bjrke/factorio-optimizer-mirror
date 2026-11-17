@@ -118,17 +118,23 @@ class BlueprintFluidLayoutTest {
         val layout = Layout(fluidPlan)
         val blueprint = layout.blueprint
         val label =
-            blueprint.entities.single {
-                it.name == "constant-combinator" && it.markerFluid
+            blueprint.entities.filterIsInstance<MarkerEntity>().single {
+                it.name == "constant-combinator" && it.signal.fluid
             }
-        val west = blueprint.entities.single { it.area.topLeft == label.area.topLeft.west() }
-        val east = blueprint.entities.single { it.area.topLeft == label.area.topLeft.east() }
+        val west =
+            blueprint.entities.filterIsInstance<PipeToGroundEntity>().single {
+                it.area.topLeft == label.area.topLeft.west()
+            }
+        val east =
+            blueprint.entities.filterIsInstance<PipeToGroundEntity>().single {
+                it.area.topLeft == label.area.topLeft.east()
+            }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals("pipe-to-ground", west.name) },
-            { assertEquals(WEST, west.direction) },
-            { assertEquals(EAST, east.direction) },
+            { assertEquals(WEST, west.mouth) },
+            { assertEquals(EAST, east.mouth) },
         )
     }
 
@@ -250,15 +256,20 @@ class BlueprintFluidLayoutTest {
             {
                 assertEquals(
                     emptyList(),
-                    entities.filter { it.name == "constant-combinator" && it.markerFluid },
+                    entities.filter {
+                        it is MarkerEntity && it.name == "constant-combinator" && it.signal.fluid
+                    },
                     "the fluid label should be replaced",
                 )
             },
             {
-                val pipe = entities.single { it.name == "infinity-pipe" }
+                val pipe =
+                    entities.filterIsInstance<InfinityPipeEntity>().single {
+                        it.name == "infinity-pipe"
+                    }
                 assertEquals(
                     InfinityPipeSettings(petroleum, temperature = 15),
-                    pipe.infinityPipe,
+                    pipe.settings,
                 )
             },
         )

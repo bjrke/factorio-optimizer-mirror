@@ -3,17 +3,27 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.RequestFilter
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -23,6 +33,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -63,12 +74,8 @@ private val plan =
         label = "iron-gear-wheel",
     )
 
-/** One tooltip expectation: the blueprint entity, its lines, and the layout entity behind it. */
-private data class TitleCase(
-    val entity: BlueprintEntity,
-    val expected: List<String>,
-    val placed: LayoutEntity? = null,
-)
+/** One tooltip expectation: the entity and the lines its hover text carries. */
+private data class TitleCase(val entity: LayoutEntity, val expected: List<String>)
 
 class BlueprintExportTest : ComponentTest() {
 
@@ -79,16 +86,8 @@ class BlueprintExportTest : ComponentTest() {
             RowLayout(it.plan, logistics).blueprint()
         }
 
-    private fun renderPanel(
-        outcome: BlueprintPlanResult,
-        placedEntities: List<LayoutEntity> = emptyList(),
-    ) =
-        render(
-            blueprintPanel.create {
-                this.blueprint = blueprintOf(outcome)
-                this.placedEntities = placedEntities
-            },
-        )
+    private fun renderPanel(outcome: BlueprintPlanResult) =
+        render(blueprintPanel.create { blueprint = blueprintOf(outcome) })
 
     private fun renderCopyButton(outcome: BlueprintPlanResult) =
         render(
@@ -98,14 +97,10 @@ class BlueprintExportTest : ComponentTest() {
             },
         )
 
-    private fun renderView(
-        vararg entities: BlueprintEntity,
-        placed: List<LayoutEntity> = emptyList(),
-    ) =
+    private fun renderView(vararg entities: LayoutEntity) =
         render(
             blueprintView.create {
                 blueprint = Blueprint("test", entities = entities.toList())
-                placedEntities = placed
             },
         )
 
@@ -122,47 +117,96 @@ class BlueprintExportTest : ComponentTest() {
     @Test
     fun displayRotationTurnsEachDirectionalIconToItsBlueprintDirection() =
         assertTableOf(
-            BlueprintEntity(
+            LoaderEntity(
+                Coordinate(0, 0).area(2, 1),
                 "fast-loader",
-                area = Coordinate(0, 0).area(2, 1),
-                direction = Direction.EAST,
-                type = Io.OUTPUT,
+                ironPlate,
+                Io.OUTPUT,
+                Direction.EAST,
             ) to 90,
-            BlueprintEntity(
+            SplitterEntity(
+                Coordinate(0, 0).area(1, 2),
                 "fast-splitter",
-                area = Coordinate(0, 0).area(1, 2),
-                direction = Direction.EAST,
+                ironPlate,
+                Direction.EAST,
             ) to 180,
-            BlueprintEntity(
+            UndergroundBeltEntity(
+                Coordinate(0, 0).area(1, 1),
                 "fast-underground-belt",
-                area = Coordinate(0, 0).area(1, 1),
-                direction = Direction.EAST,
-                type = Io.INPUT,
+                ironPlate,
+                Direction.EAST,
+                Io.INPUT,
             ) to 0,
-            BlueprintEntity(
+            UndergroundBeltEntity(
+                Coordinate(0, 0).area(1, 1),
                 "fast-underground-belt",
-                area = Coordinate(0, 0).area(1, 1),
-                direction = Direction.EAST,
-                type = Io.OUTPUT,
+                ironPlate,
+                Direction.EAST,
+                Io.OUTPUT,
             ) to 180,
-            BlueprintEntity(
+            BeltEntity(
+                Coordinate(0, 0).area(1, 1),
                 "express-transport-belt",
-                area = Coordinate(0, 0).area(1, 1),
-                direction = Direction.NORTH,
+                ironPlate,
+                Direction.NORTH,
             ) to 270,
+            PipeToGroundEntity(
+                Coordinate(0, 0).area(1, 1),
+                "pipe-to-ground",
+                water,
+                Direction.EAST,
+                Io.INPUT,
+            ) to 180,
+            PipeToGroundEntity(
+                Coordinate(0, 0).area(1, 1),
+                "pipe-to-ground",
+                water,
+                Direction.EAST,
+                Io.OUTPUT,
+            ) to 0,
         ) { (entity, expected) ->
             assertEquals(expected, blueprintDisplayRotation(entity))
         }
 
     @Test
+    fun aNonDirectionalEntityKeepsItsIconUpright() =
+        assertTableOf(
+            ChestEntity(Coordinate(0, 0).area(1, 1), "steel-chest"),
+            PoleEntity(Coordinate(0, 0).area(1, 1), "medium-electric-pole"),
+            MarkerEntity(
+                Coordinate(0, 0).area(1, 1),
+                "constant-combinator",
+                Signal(ironPlate),
+            ),
+            InfinityChestEntity(
+                Coordinate(0, 0).area(1, 1),
+                "infinity-chest",
+                InfinitySettings(item = ironPlate),
+            ),
+        ) { entity ->
+            assertEquals("none", computedTransform(renderView(entity).image(entity.name)))
+        }
+
+    /** An infinity pipe has no icon asset, so pin its rotation without rendering it. */
+    @Test
+    fun anInfinityPipeKeepsItsIconUpright() =
+        assertEquals(
+            0,
+            blueprintDisplayRotation(
+                InfinityPipeEntity(Coordinate(0, 0).area(1, 1), "infinity-pipe", water),
+            ),
+        )
+
+    @Test
     fun aLoaderIsRotatedClockwiseAndStretchedToItsFootprint() {
         val result =
             renderView(
-                BlueprintEntity(
+                LoaderEntity(
+                    Coordinate(0, 0).area(2, 1),
                     "fast-loader",
-                    area = Coordinate(0, 0).area(2, 1),
-                    direction = Direction.EAST,
-                    type = Io.OUTPUT,
+                    ironPlate,
+                    Io.OUTPUT,
+                    Direction.EAST,
                 ),
             )
 
@@ -179,10 +223,11 @@ class BlueprintExportTest : ComponentTest() {
     fun aSplitterPointsOppositeAndFillsItsFootprint() {
         val result =
             renderView(
-                BlueprintEntity(
+                SplitterEntity(
+                    Coordinate(0, 0).area(1, 2),
                     "fast-splitter",
-                    area = Coordinate(0, 0).area(1, 2),
-                    direction = Direction.EAST,
+                    ironPlate,
+                    Direction.EAST,
                 ),
             )
 
@@ -202,11 +247,12 @@ class BlueprintExportTest : ComponentTest() {
         ) { (io, expected) ->
             val result =
                 renderView(
-                    BlueprintEntity(
+                    UndergroundBeltEntity(
+                        Coordinate(0, 0).area(1, 1),
                         "fast-underground-belt",
-                        area = Coordinate(0, 0).area(1, 1),
-                        direction = Direction.EAST,
-                        type = io,
+                        ironPlate,
+                        Direction.EAST,
+                        io,
                     ),
                 )
             assertEquals(expected, computedTransform(result.image("fast-underground-belt")))
@@ -216,10 +262,10 @@ class BlueprintExportTest : ComponentTest() {
     fun aNonSquareMachineStretchesToItsFootprint() {
         val result =
             renderView(
-                BlueprintEntity(
-                    "recycler",
-                    area = Coordinate(0, 0).area(4, 2),
-                    recipe = "iron-gear-wheel",
+                MachineEntity(
+                    Factory.RECYCLER,
+                    Coordinate(0, 0).area(4, 2),
+                    "iron-gear-wheel",
                 ),
             )
 
@@ -233,7 +279,7 @@ class BlueprintExportTest : ComponentTest() {
     @Test
     fun recipesAndMaterialsAreShownCentredOnTheirEntity() {
         data class OverlayCase(
-            val entity: BlueprintEntity,
+            val entity: LayoutEntity,
             val overlay: String,
             val size: Int,
             val left: String,
@@ -241,10 +287,10 @@ class BlueprintExportTest : ComponentTest() {
 
         assertTableOf(
             OverlayCase(
-                BlueprintEntity(
-                    "assembling-machine-3",
-                    area = Coordinate(0, 0).area(3, 3),
-                    recipe = "iron-gear-wheel",
+                MachineEntity(
+                    Factory.ASSEMBLING_MACHINE_3,
+                    Coordinate(0, 0).area(3, 3),
+                    "iron-gear-wheel",
                 ),
                 "iron-gear-wheel",
                 36,
@@ -252,20 +298,20 @@ class BlueprintExportTest : ComponentTest() {
                 "18px",
             ),
             OverlayCase(
-                BlueprintEntity(
+                MarkerEntity(
+                    Coordinate(0, 0).area(1, 1),
                     "constant-combinator",
-                    area = Coordinate(0, 0).area(1, 1),
-                    marker = ironPlate,
+                    Signal(ironPlate),
                 ),
                 "iron-plate",
                 12,
                 "6px",
             ),
             OverlayCase(
-                BlueprintEntity(
+                InfinityChestEntity(
+                    Coordinate(0, 0).area(1, 1),
                     "infinity-chest",
-                    area = Coordinate(0, 0).area(1, 1),
-                    infinity = InfinitySettings(item = ironPlate),
+                    InfinitySettings(item = ironPlate),
                 ),
                 "iron-plate",
                 12,
@@ -285,10 +331,11 @@ class BlueprintExportTest : ComponentTest() {
     fun theBlueprintScalesDownToFitThePreview() {
         val result =
             renderView(
-                BlueprintEntity(
-                    "transport-belt",
+                BeltEntity(
                     Coordinate(0, 0).area(1, 1),
-                    direction = Direction.EAST,
+                    "transport-belt",
+                    ironPlate,
+                    Direction.EAST,
                 ),
             )
 
@@ -303,11 +350,11 @@ class BlueprintExportTest : ComponentTest() {
     fun titlesShowTheFieldsTheBlueprintCarries() =
         assertTableOf(
             TitleCase(
-                BlueprintEntity(
-                    "assembling-machine-3",
-                    area = Coordinate(0, 0).area(3, 3),
-                    direction = Direction.EAST,
-                    recipe = "iron-gear-wheel",
+                MachineEntity(
+                    Factory.ASSEMBLING_MACHINE_3,
+                    Coordinate(0, 0).area(3, 3),
+                    "iron-gear-wheel",
+                    Direction.EAST,
                 ),
                 listOf(
                     "#1 assembling-machine-3",
@@ -317,36 +364,34 @@ class BlueprintExportTest : ComponentTest() {
                 ),
             ),
             TitleCase(
-                BlueprintEntity(
+                PoleEntity(
+                    Coordinate(6, 0).area(1, 1),
                     "medium-electric-pole",
-                    area = Coordinate(6, 0).area(1, 1),
-                    neighbours = listOf(2, 5),
+                    listOf(2, 5),
                 ),
                 listOf("#1 medium-electric-pole", "at (6, 0) 1x1", "wired to: #2, #5"),
             ),
             TitleCase(
-                BlueprintEntity(
+                InfinityChestEntity(
+                    Coordinate(0, 4).area(1, 1),
                     "infinity-chest",
-                    area = Coordinate(0, 4).area(1, 1),
-                    infinity = InfinitySettings(item = ironPlate),
+                    InfinitySettings(item = ironPlate),
                 ),
                 listOf("#1 infinity-chest", "at (0, 4) 1x1", "provides: iron-plate"),
             ),
             TitleCase(
-                BlueprintEntity(
+                ChestEntity(
+                    Coordinate(8, 4).area(1, 1),
                     "steel-chest",
-                    area = Coordinate(8, 4).area(1, 1),
                     requestFilter = RequestFilter("iron-plate", 50),
                     bar = 4,
                 ),
                 listOf("#1 steel-chest", "at (8, 4) 1x1", "request: iron-plate x50", "bar: 4"),
             ),
-        ) { (entity, expected, placed) ->
+        ) { (entity, expected) ->
             assertEquals(
                 expected.joinToString("\n"),
-                renderView(entity, placed = listOfNotNull(placed))
-                    .image(entity.name)
-                    ?.getAttribute("title"),
+                renderView(entity).image(entity.name)?.getAttribute("title"),
             )
         }
 
@@ -354,10 +399,11 @@ class BlueprintExportTest : ComponentTest() {
     fun titlesAddTheFactsOnlyTheLayoutKnows() =
         assertTableOf(
             TitleCase(
-                BlueprintEntity(
+                BeltEntity(
+                    Coordinate(3, 1).area(1, 1),
                     "express-transport-belt",
-                    area = Coordinate(3, 1).area(1, 1),
-                    direction = Direction.SOUTH,
+                    Direction.SOUTH,
+                    LaneLoad.mixed(ironPlate, copperPlate),
                 ),
                 listOf(
                     "#1 express-transport-belt",
@@ -365,19 +411,14 @@ class BlueprintExportTest : ComponentTest() {
                     "direction: south",
                     "lanes left=iron-plate right=copper-plate",
                 ),
-                placed =
-                    BeltEntity(
-                        Coordinate(3, 1).area(1, 1),
-                        "express-transport-belt",
-                        Direction.SOUTH,
-                        LaneLoad.mixed(ironPlate, copperPlate),
-                    ),
             ),
             TitleCase(
-                BlueprintEntity(
+                InserterEntity(
+                    Coordinate(4, 2).area(1, 1),
                     "long-handed-inserter",
-                    area = Coordinate(4, 2).area(1, 1),
-                    direction = Direction.WEST,
+                    copperPlate,
+                    Direction.WEST,
+                    long = true,
                     mirror = true,
                 ),
                 listOf(
@@ -388,21 +429,11 @@ class BlueprintExportTest : ComponentTest() {
                     "material: copper-plate",
                     "long-handed",
                 ),
-                placed =
-                    InserterEntity(
-                        Coordinate(4, 2).area(1, 1),
-                        "long-handed-inserter",
-                        copperPlate,
-                        Direction.WEST,
-                        long = true,
-                    ),
             ),
-        ) { (entity, expected, placed) ->
+        ) { (entity, expected) ->
             assertEquals(
                 expected.joinToString("\n"),
-                renderView(entity, placed = listOfNotNull(placed))
-                    .image(entity.name)
-                    ?.getAttribute("title"),
+                renderView(entity).image(entity.name)?.getAttribute("title"),
             )
         }
 
@@ -477,16 +508,12 @@ class BlueprintExportTest : ComponentTest() {
 
         val preview = blueprintPreview(result, logistics, 1.0, BeltEnd.CONSTANT_COMBINATOR)
         val blueprint = assertNotNull(preview.blueprint)
+        val planned = assertNotNull(preview.outcome as? BlueprintPlanResult.Planned)
+        val placed =
+            RowLayout(planned.plan, logistics, BeltEnd.CONSTANT_COMBINATOR).layoutDump().entities
 
         assertAll(
-            { assertTrue(preview.outcome is BlueprintPlanResult.Planned) },
-            // the tooltip pairs the two lists by index, so their order has to stay identical
-            {
-                assertEquals(
-                    blueprint.entities.map { it.area },
-                    preview.placedEntities.map { it.area },
-                )
-            },
+            { assertEquals(placed, blueprint.entities) },
         )
     }
 }

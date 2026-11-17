@@ -1,15 +1,20 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestLikeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.TransportEntity
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.facingDirection
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 
 /**
@@ -19,48 +24,91 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
  * [index] is the entity's position in the blueprint, which is also its one-based `entity_number`
  * and the number wires and neighbours refer to. The position is the area's top-left, the same
  * coordinate the ASCII layout dump uses, so a tooltip can be matched against `--layout` output.
- * [placed] is the layout entity at the same index; a missing one only drops the extra facts.
  */
-internal fun blueprintTitle(index: Int, entity: BlueprintEntity, placed: LayoutEntity?): String {
+internal fun blueprintTitle(index: Int, entity: LayoutEntity): String {
     val area = entity.area
     val lines = buildList {
         add("#${index + 1} ${entity.name}")
         add("at (${area.topLeft.x}, ${area.topLeft.y}) ${area.width}x${area.height}")
-        if (entity.direction != Direction.NORTH) {
-            add("direction: ${entity.direction.name.lowercase()}")
-        }
+        entity.facingDirection
+            ?.takeIf { it != Direction.NORTH }
+            ?.let {
+                add("direction: ${it.name.lowercase()}")
+            }
         addAll(entity.settingLines())
-        addAll(placed?.transportFacts(entity).orEmpty())
+        addAll(entity.transportFacts())
     }
     return lines.joinToString("\n")
 }
 
 /** The optional fields the blueprint itself carries, in the order the wire format writes them. */
-private fun BlueprintEntity.settingLines(): List<String> = buildList {
-    recipe?.let { add("recipe: $it") }
-    type?.let { add("type: ${it.name.lowercase()}") }
-    marker?.let { add("signal: ${it.name}") }
-    infinity?.let { settings ->
-        add(settings.item?.let { "provides: ${it.name}" } ?: "voids everything")
-    }
-    infinityPipe?.let { pipe ->
-        add("fluid: ${pipe.fluid.name}, ${pipe.temperature}°, ${pipe.percentage * 100}%")
-    }
-    requestFilter?.let { filter ->
-        add("request: ${filter.name} x${filter.count}")
-        if (filter.trashNotRequested) add("trash unrequested")
-    }
-    bar?.let { add("bar: $it") }
-    circuitCondition?.let { add("circuit: ${it.name} ${it.comparator} ${it.constant}") }
-    if (mirror) add("mirrored")
-    if (neighbours.isNotEmpty()) add("wired to: ${neighbours.joinToString { "#$it" }}")
+private fun LayoutEntity.settingLines(): List<String> = buildList {
+    listOfNotNull(machineLine(), typeLine(), markerLine(), infinityChestLine(), infinityPipeLine())
+        .forEach(::add)
+    addAll(chestLines())
+    addAll(inserterLines())
+    poleLine()?.let(::add)
 }
+
+private fun LayoutEntity.machineLine(): String? =
+    (this as? MachineEntity)?.let { "recipe: ${it.recipe}" }
+
+/** An underground belt and a loader write an input/output type; a pipe-to-ground has none. */
+private fun LayoutEntity.typeLine(): String? =
+    when (this) {
+        is UndergroundBeltEntity -> io.name.lowercase()
+        is LoaderEntity -> io.name.lowercase()
+        else -> null
+    }?.let { "type: $it" }
+
+private fun LayoutEntity.markerLine(): String? =
+    (this as? MarkerEntity)?.let { "signal: ${it.signal.material.name}" }
+
+private fun LayoutEntity.infinityChestLine(): String? =
+    (this as? InfinityChestEntity)?.let {
+        it.settings.item?.let { item -> "provides: ${item.name}" } ?: "voids everything"
+    }
+
+private fun LayoutEntity.infinityPipeLine(): String? =
+    (this as? InfinityPipeEntity)?.settings?.let {
+        "fluid: ${it.fluid.name}, ${it.temperature}°, ${it.percentage * 100}%"
+    }
+
+private fun LayoutEntity.chestLines(): List<String> =
+    (this as? ChestEntity)
+        ?.let { chest ->
+            buildList {
+                chest.requestFilter?.let { filter ->
+                    add("request: ${filter.name} x${filter.count}")
+                    if (filter.trashNotRequested) add("trash unrequested")
+                }
+                chest.bar?.let { add("bar: $it") }
+            }
+        }
+        .orEmpty()
+
+private fun LayoutEntity.inserterLines(): List<String> =
+    (this as? InserterEntity)
+        ?.let { inserter ->
+            buildList {
+                inserter.circuitCondition?.let {
+                    add("circuit: ${it.name} ${it.comparator} ${it.constant}")
+                }
+                if (inserter.mirror) add("mirrored")
+            }
+        }
+        .orEmpty()
+
+private fun LayoutEntity.poleLine(): String? =
+    (this as? PoleEntity)
+        ?.takeIf { it.neighbours.isNotEmpty() }
+        ?.let { "wired to: ${it.neighbours.joinToString { "#$it" }}" }
 
 /**
  * The facts only the placed entity knows. An infinity pipe's fluid is already on its settings line,
  * and a mirror is a blueprint field, so both are left out here.
  */
-private fun LayoutEntity.transportFacts(entity: BlueprintEntity): List<String> =
+private fun LayoutEntity.transportFacts(): List<String> =
     when (this) {
         is BeltEntity ->
             listOf("lanes left=${load.left?.name ?: "-"} right=${load.right?.name ?: "-"}")
@@ -70,7 +118,8 @@ private fun LayoutEntity.transportFacts(entity: BlueprintEntity): List<String> =
                 if (long) add("long-handed")
             }
         is Plumbing ->
-            if (entity.infinityPipe == null) listOf("fluid: ${material.name}") else emptyList()
+            if (this is InfinityPipeEntity && settings != null) emptyList()
+            else listOf("fluid: ${material.name}")
         is TransportEntity -> listOf("material: ${material.name}")
         is MachineEntity,
         is MarkerEntity,

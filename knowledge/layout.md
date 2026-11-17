@@ -16,8 +16,8 @@ fluid lanes and source markers, solid import deliveries, the routed fluid
 fallback, produced solid deliveries, the drain/feed lane link, the fluid target
 output, trim import prefixes, stretch underground runs, compaction, the solid
 target output connector, poles (which place their wires) — and returns a
-`Blueprint` whose `entities` are numbered by
-list position and whose `wires` are the chest-connector wires from
+`Blueprint` whose `entities` are the placed `LayoutEntity`s in insertion order (the list position
+plus one is the `entity_number`) and whose `wires` are the chest-connector wires from
 `blueprint/printing/output/ChestWires.kt`. The order is load-bearing: fluid lanes go
 before solid belts, solid imports go before produced deliveries, the lane link
 after the other routes so it can go around them, the import trim before the
@@ -161,9 +161,12 @@ always keeps the combinator/pipe label. `blueprint/printing/json/BlueprintJson.k
 blueprint envelope (`label`, `icons`, `entities`, top-level `wires`). The icon strip holds up to
 four entries: the target (a `fluid` signal when it is a fluid), the factory that builds it, and
 the placed belt and inserter; a fluid-only plan therefore omits unused logistics;
-`blueprint/printing/json/BlueprintEntityJson.kt` writes each entity's position and optional
-`request_filters`, `bar`, `mirror`, `control_behavior` (circuit condition),
-`infinity_settings` and `neighbours` fields. An infinity pipe writes
+`blueprint/printing/json/BlueprintEntityJson.kt` writes each placed `LayoutEntity` directly
+(position, `direction`, `recipe`, `type`, `neighbours` and `control_behavior`), and
+`BlueprintSettingsJson.kt` writes its settings (`request_filters`, `bar`, `mirror`,
+`infinity_settings`); together they are the only place that knows the domain-to-wire
+mapping, and their `when`s list every `LayoutEntity` type so a new one fails to compile.
+An infinity pipe writes
 `infinity_settings` only as a source; a sink is unfiltered and writes none, so
 the game deletes whatever reaches it. Every item name the JSON writes comes from
 `Material.prototypeName`, so a pseudo plan material is emitted as the real item it stands
@@ -177,9 +180,9 @@ The layout tests are grouped by scenario (`BlueprintLayoutTest`,
 `BlueprintBandFluidTest`, `BlueprintBeltEndTest`); `LaneLoadTest`, `BeltRowsTest`,
 `BeltRowLimitTest` and the `aSixInputRowMixesThreeInputPairs` /
 `producedInputsPairOnBothFeedSides` cases pin the mixed-belt budget and merge;
-`BlueprintLayoutSnapshotTest` hashes the canonical entity/wire list of
+`BlueprintLayoutSnapshotTest` hashes the serialized JSON of
 representative plans, including `wideLayoutIsStable`'s six-input row, so any
-geometry or entity-order change is deliberate. The JVM integration suite is split by plan, layout, power, fluid,
+geometry, entity-order or wire-format change is deliberate. The JVM integration suite is split by plan, layout, power, fluid,
 belt end and serialization. `./gradlew check` runs Detekt (see `conventions.md`):
 the type-resolved `detektMainJvm`/`detektTestJvm` plus the light
 `detektJsMainSourceSet`/`detektJsTestSourceSet`; there are no committed

@@ -15,9 +15,9 @@ data class Signal(val material: Material, val fluid: Boolean = false)
 /**
  * Something the layout places on the grid, with its own behaviour. It carries only the facts the
  * layout reasons about (a belt's direction and the material it moves, a pipe's fluid, a marker's
- * signal), so a `when` over a [LayoutEntity] is exhaustive. A finished layout is turned into the
- * blueprint wire DTO by `blueprint.output.toBlueprintEntity`, the single place that knows both
- * sides; that is why this package never mentions the blueprint. [withArea] is how compaction moves
+ * signal), so a `when` over a [LayoutEntity] is exhaustive. The blueprint writer reads these
+ * entities directly (`blueprint.printing.json`), and it is the single place that knows the wire
+ * format; that is why this package never mentions the blueprint. [withArea] is how compaction moves
  * one without knowing its concrete type.
  */
 sealed interface LayoutEntity {
@@ -32,6 +32,29 @@ sealed interface LayoutEntity {
     val isPowered: Boolean
         get() = false
 }
+
+/**
+ * The direction the entity faces on the surface, or null when it faces no way. A pipe-to-ground
+ * faces the side its surface pipe attaches on ([PipeToGroundEntity.mouth]); its stored
+ * [UndergroundEntity.direction] is the run's travel direction instead.
+ */
+val LayoutEntity.facingDirection: Direction?
+    get() =
+        when (this) {
+            is MachineEntity -> direction
+            is BeltEntity -> direction
+            is UndergroundBeltEntity -> direction
+            is SplitterEntity -> direction
+            is InserterEntity -> direction
+            is LoaderEntity -> direction
+            is PipeToGroundEntity -> mouth
+            is PipeEntity,
+            is InfinityPipeEntity,
+            is InfinityChestEntity,
+            is ChestEntity,
+            is MarkerEntity,
+            is PoleEntity -> null
+        }
 
 /**
  * Everything the layout moves material with: items on belts, inserters and loaders, fluids in

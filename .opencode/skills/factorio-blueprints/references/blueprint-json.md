@@ -3,8 +3,8 @@
 Decoded blueprints are plain JSON. This is the field-level reference for the
 object types and entities you are most likely to read. It targets Factorio 2.0.
 When a field is ambiguous, prefer what actually appears in the decoded JSON over
-this list, and check `src/commonMain/.../model/Blueprint.kt` for what this repo
-writes.
+this list, and check `src/commonMain/.../blueprint/printing/json/` for what this
+repo writes.
 
 ## Contents
 

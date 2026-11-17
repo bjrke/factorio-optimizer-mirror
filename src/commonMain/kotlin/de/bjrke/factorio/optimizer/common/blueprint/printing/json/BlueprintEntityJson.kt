@@ -1,15 +1,25 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.json
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.CircuitCondition
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeSettings
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.RequestFilter
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.facingDirection
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -18,25 +28,52 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-/** The stock an infinity chest keeps available, matching what the game writes into a blueprint. */
-private const val INFINITY_STOCK = 100
-
-internal fun BlueprintEntity.toJson(entityNumber: Int) = buildJsonObject {
+/**
+ * One placed entity as the blueprint wire format writes it. [entityNumber] is its one-based
+ * position in the blueprint; the layout entity itself carries every field, so this is the only
+ * place that knows how the domain maps onto the wire.
+ */
+internal fun LayoutEntity.toJson(entityNumber: Int) = buildJsonObject {
+    val entity = this@toJson
     put("entity_number", entityNumber)
-    put("name", name)
-    put("position", positionJson())
-    if (direction != Direction.NORTH) put("direction", direction.blueprintNumber)
-    recipe?.let { put("recipe", it) }
-    type?.let { put("type", it.typeName) }
-    putSettings(this)
-    if (neighbours.isNotEmpty()) put("neighbours", neighboursJson())
-    controlBehaviorJson()?.let { put("control_behavior", it) }
+    put("name", entity.name)
+    put("position", entity.positionJson())
+    entity.facingDirection
+        ?.takeIf { it != Direction.NORTH }
+        ?.let {
+            put("direction", it.blueprintNumber)
+        }
+    if (entity is MachineEntity) put("recipe", entity.recipe)
+    entity.wireType()?.let { put("type", it.typeName) }
+    entity.putSettings(this)
+    if (entity is PoleEntity && entity.neighbours.isNotEmpty()) {
+        put("neighbours", entity.neighbours.neighboursJson())
+    }
+    entity.controlBehaviorJson()?.let { put("control_behavior", it) }
 }
 
-private fun BlueprintEntity.positionJson() = buildJsonObject {
+private fun LayoutEntity.positionJson() = buildJsonObject {
     put("x", jsonNumber(area.topLeft.x + area.width / 2.0))
     put("y", jsonNumber(area.topLeft.y + area.height / 2.0))
 }
+
+/** An underground belt and a loader write their input/output side; a pipe-to-ground has none. */
+private fun LayoutEntity.wireType(): Io? =
+    when (this) {
+        is UndergroundBeltEntity -> io
+        is LoaderEntity -> io
+        is MachineEntity,
+        is BeltEntity,
+        is SplitterEntity,
+        is InserterEntity,
+        is PipeEntity,
+        is PipeToGroundEntity,
+        is InfinityPipeEntity,
+        is InfinityChestEntity,
+        is ChestEntity,
+        is MarkerEntity,
+        is PoleEntity -> null
+    }
 
 /** The 2.0 convention doubles the cardinal values to 0/4/8/12. */
 private val Direction.blueprintNumber: Int
@@ -55,68 +92,30 @@ private val Io.typeName: String
             Io.OUTPUT -> "output"
         }
 
-/** Writes the machine, chest and inserter settings in their blueprint field order. */
-private fun BlueprintEntity.putSettings(json: JsonObjectBuilder) {
-    infinity?.let { json.put("infinity_settings", it.chestJson()) }
-    infinityPipe?.let { json.put("infinity_settings", it.pipeJson()) }
-    requestFilter?.let { json.put("request_filters", it.requestFiltersJson()) }
-    bar?.let { json.put("bar", it) }
-    if (mirror) json.put("mirror", true)
+private fun List<Int>.neighboursJson() = buildJsonArray {
+    forEach { add(JsonPrimitive(it)) }
 }
 
-private fun InfinitySettings.chestJson() = buildJsonObject {
-    put("remove_unfiltered_items", removeUnfiltered)
-    item?.let { item ->
-        putJsonArray("filters") {
-            addJsonObject {
-                put("name", item.prototypeName)
-                put("count", INFINITY_STOCK)
-                put("mode", "at-least")
-                put("index", 1)
+/** The one control behavior an entity writes. */
+private fun LayoutEntity.controlBehaviorJson(): JsonObject? =
+    when (this) {
+        is ChestEntity ->
+            circuitConditionEnabled?.let { enabled ->
+                buildJsonObject { put("circuit_condition_enabled", enabled) }
             }
-        }
+        is InserterEntity -> circuitCondition?.controlBehaviorJson()
+        is MarkerEntity -> markerControlBehavior(signal.material, signal.fluid)
+        is MachineEntity,
+        is BeltEntity,
+        is UndergroundBeltEntity,
+        is SplitterEntity,
+        is LoaderEntity,
+        is PipeEntity,
+        is PipeToGroundEntity,
+        is InfinityPipeEntity,
+        is InfinityChestEntity,
+        is PoleEntity -> null
     }
-}
-
-private fun InfinityPipeSettings.pipeJson() = buildJsonObject {
-    put("name", fluid.prototypeName)
-    put("percentage", percentage)
-    put("temperature", temperature)
-    put("mode", mode)
-}
-
-private fun RequestFilter.requestFiltersJson() = buildJsonObject {
-    putJsonArray("sections") {
-        addJsonObject {
-            put("index", 1)
-            putJsonArray("filters") {
-                addJsonObject {
-                    put("index", 1)
-                    put("name", name)
-                    put("quality", "normal")
-                    put("comparator", "=")
-                    put("count", count)
-                }
-            }
-        }
-    }
-    if (trashNotRequested) put("trash_not_requested", true)
-}
-
-private fun BlueprintEntity.neighboursJson() = buildJsonArray {
-    neighbours.forEach { add(JsonPrimitive(it)) }
-}
-
-/**
- * The one control behavior an entity writes. The game-specific fields overwrite each other in field
- * order, so the latest set field is the one that survives.
- */
-private fun BlueprintEntity.controlBehaviorJson(): JsonObject? =
-    circuitConditionEnabled?.let { enabled ->
-        buildJsonObject { put("circuit_condition_enabled", enabled) }
-    }
-        ?: circuitCondition?.controlBehaviorJson()
-        ?: marker?.let { markerControlBehavior(it, markerFluid) }
 
 private fun CircuitCondition.controlBehaviorJson() = buildJsonObject {
     put("circuit_enabled", true)

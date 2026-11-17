@@ -107,25 +107,25 @@ CLI (JVM) from one shared core.
       chest, chest), `special` (the path, power and material-search passes) and
       `compaction` (`LayoutCompaction`, `CompactionPass`, `SeamGrid`,
       `UndergroundStretcher`).
-    - `blueprint/printing` — emitting the artifact: `model` (the wire DTO:
-      `Blueprint`, `BlueprintEntity`, `BlueprintWire` — imports only
-      `core/model` and `blueprint/layout/entity`, so the encoders and the
-      assembly can share it without a cycle), `json` (`Blueprint.toJson`,
-      `BlueprintEntityJson.kt` — the wire JSON, a leaf nothing else may import),
-      `output` (`BlueprintString.kt`, `FactorioUrl.kt`, `LayoutSerialization.kt`,
-      `ChestWires.kt`) and `inspection` (the ASCII layout and dump —
-      `LayoutAscii*.kt`, `LayoutDump.kt`). The ordered `build()` pipeline lives in
-      `RowLayout.kt` at the `blueprint` root, not in this stage (see
-      `layout.md`).
+    - `blueprint/printing` — emitting the artifact: `model` (the planned
+      blueprint: `Blueprint` with its placed `LayoutEntity`s, `BlueprintWire` —
+      imports only `core/model` and `blueprint/layout/entity`, so the encoders
+      and the assembly can share it without a cycle), `json` (`Blueprint.toJson`,
+      `BlueprintEntityJson.kt` — writes the wire JSON directly from a
+      `LayoutEntity`; a leaf nothing else may import), `output`
+      (`BlueprintString.kt`, `FactorioUrl.kt`, `ChestWires.kt`) and `inspection`
+      (the ASCII layout and dump — `LayoutAscii*.kt`, `LayoutDump.kt`). The
+      ordered `build()` pipeline lives in `RowLayout.kt` at the `blueprint` root,
+      not in this stage (see `layout.md`).
   - plus the dumped `prototypes/` resources.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, the TanStack router
   `tanstack.react.router`, `emotion-react`); entry `js/index.kt`;
   `common/game/production/loadRecipe.kt` pulls the dumps via `@JsModule` and the
   webpack config in `webpack.config.d/`. `component/` holds the components; the
-  blueprint preview's hover text is built in `BlueprintTooltip.kt` from the
-  blueprint entity plus the index-aligned `RowLayout.layoutDump()` entity, and it
-  must be passed through `IconProps.title`, because `Icon` falls back to its own
-  label and an icon that covers the tile shadows any title on its container.
+  blueprint preview and its hover text in `BlueprintTooltip.kt` read the blueprint's
+  own `LayoutEntity`s, and the title must be passed through `IconProps.title`,
+  because `Icon` falls back to its own label and an icon that covers the tile
+  shadows any title on its container.
 - `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`, argument parsing
   `jvm/CliArgsParser.kt`; `jvm/common/game/production/loadRecipe.kt`
   loads recipes from a classpath resource. An explicit `--name=value` accepts only
@@ -178,9 +178,9 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.placing.special | 4 |
 | blueprint.placing.compaction | 4 |
 | blueprint.printing.model | 1 |
-| blueprint.printing.json | 2 |
+| blueprint.printing.json | 3 |
 | blueprint.printing.inspection | 3 |
-| blueprint.printing.output | 4 |
+| blueprint.printing.output | 3 |
 
 `game.production` is at 10 files — the warn line itself, so split it before adding a
 file; `blueprint.layout` (10) and `blueprint.planning.row` (11) are next.
@@ -211,7 +211,7 @@ blueprint.layout.entity < blueprint.printing.model <
 (pulling all of the above together) < blueprint
 ```
 
-`blueprint.printing.model` is the DTO leaf the encoders share; `blueprint` is the
+`blueprint.printing.model` is the planned-blueprint leaf the encoders share; `blueprint` is the
 assembly root and imports the placing stages, `blueprint.planning.plan` and
 `blueprint.planning.row`, and `blueprint.printing.{model,output,inspection}`. Only
 the entry points (UI, CLI) and the tests import `blueprint` itself, for `RowLayout`
@@ -241,7 +241,7 @@ other.
 | `blueprint.placing.plumbing` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.placing.special`, `blueprint.planning.{plan,row}`, `core.model` | `routing`, `blueprint` |
 | `blueprint.placing.special` | `blueprint.layout`, `blueprint.layout.entity`, `core.model`, `util` | `routing`, `blueprint` |
 | `blueprint.placing.compaction` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.layout.validation`, `blueprint.planning.plan`, `core.model` | `routing`, `blueprint` |
-| `blueprint.printing.model` | `blueprint.layout.entity`, `core.model` | everything above (the DTO leaf) |
+| `blueprint.printing.model` | `blueprint.layout.entity`, `core.model` | everything above (the planned-blueprint leaf) |
 | `blueprint.printing.json` | `blueprint.layout.entity`, `blueprint.printing.model`, `core.model` | — and **nothing may import it**: it is a leaf writer |
 | `blueprint.printing.inspection` | `blueprint.layout.entity`, `core.model` | `blueprint` and above (it only reads a finished layout) |
 | `blueprint.printing.output` | `blueprint.layout.entity`, `blueprint.printing.model`, `core.model`, `game.production` | `blueprint`, `blueprint.json` |

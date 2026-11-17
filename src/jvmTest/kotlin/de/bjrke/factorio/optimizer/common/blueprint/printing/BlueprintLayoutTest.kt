@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.TransportEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
@@ -541,7 +542,10 @@ class BlueprintLayoutTest {
     fun theTargetOutputIsBeltedAndMarked() {
         val layout = Layout(basePlan)
         val markers =
-            layout.blueprint.entities.filter { it.name == "constant-combinator" }.map { it.marker }
+            layout.blueprint.entities
+                .filterIsInstance<MarkerEntity>()
+                .filter { it.name == "constant-combinator" }
+                .map { it.signal.material }
 
         // the product leaves the target on a belt labelled with the target signal
         assertAll(

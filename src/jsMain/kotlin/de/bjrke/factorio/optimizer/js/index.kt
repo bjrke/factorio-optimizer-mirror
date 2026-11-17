@@ -183,10 +183,7 @@ val RouterBasedParams =
                     className = ClassName("app-result")
                     urlOptimizationResultPresenter(props)
                 }
-                blueprintPanel {
-                    blueprint = preview.blueprint
-                    placedEntities = preview.placedEntities
-                }
+                blueprintPanel { blueprint = preview.blueprint }
             }
         }
     }

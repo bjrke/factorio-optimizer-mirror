@@ -6,17 +6,22 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.facingDirection
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import emotion.react.css
 import react.FC
@@ -48,23 +53,27 @@ private fun rotationDegrees(direction: Direction) =
  * arrow points north and a splitter's arrows point west; an underground exit opens the other way
  * than the belt it feeds. The blueprint itself is never changed, only the preview.
  */
-internal fun blueprintDisplayRotation(entity: BlueprintEntity): Int {
-    val name = entity.name
-    if (name in Factory.factoriesByIdentifier) return 0
-    val base = rotationDegrees(entity.direction)
+internal fun blueprintDisplayRotation(entity: LayoutEntity): Int {
+    if (entity is MachineEntity) return 0
+    val direction = entity.facingDirection ?: return 0
     val extra =
-        when {
-            name.endsWith("loader") -> 90
-            name.endsWith("splitter") -> 180
-            name.endsWith("underground-belt") && entity.type == Io.OUTPUT -> 180
+        when (entity) {
+            is LoaderEntity -> 90
+            is SplitterEntity -> 180
+            is UndergroundBeltEntity -> if (entity.io == Io.OUTPUT) 180 else 0
             else -> 0
         }
-    return (base + extra) % 360
+    return (rotationDegrees(direction) + extra) % 360
 }
 
 /** The recipe or material signal an entity displays, or null when it shows nothing. */
-internal fun blueprintOverlay(entity: BlueprintEntity): String? =
-    entity.recipe ?: entity.marker?.name ?: entity.infinity?.item?.name
+internal fun blueprintOverlay(entity: LayoutEntity): String? =
+    when (entity) {
+        is MachineEntity -> entity.recipe
+        is MarkerEntity -> entity.signal.material.name
+        is InfinityChestEntity -> entity.settings.item?.name
+        else -> null
+    }
 
 private fun copyToClipboard(text: String) {
     js("navigator.clipboard && navigator.clipboard.writeText(text)")
@@ -72,9 +81,6 @@ private fun copyToClipboard(text: String) {
 
 external interface BlueprintViewProps : Props {
     var blueprint: Blueprint
-
-    /** The layout entities behind [blueprint], in the same order, for the hover text. */
-    var placedEntities: List<LayoutEntity>
 }
 
 /**
@@ -119,8 +125,7 @@ internal val blueprintView =
                         val cellWidth = cell.width * TILE
                         val cellHeight = cell.height * TILE
                         val iconRotation = blueprintDisplayRotation(entity)
-                        val entityTitle =
-                            blueprintTitle(index, entity, props.placedEntities.getOrNull(index))
+                        val entityTitle = blueprintTitle(index, entity)
                         // a quarter turn swaps the icon's box, so the rotated icon still fills the
                         // cell
                         val quarterTurn = iconRotation % 180 != 0
@@ -177,16 +182,8 @@ internal val blueprintView =
         }
     }
 
-/**
- * The blueprint a plan produces, or null when the plan cannot be built, plus the layout entities
- * behind it in the same order as [blueprint]'s entities.
- */
-internal data class BlueprintPreview(
-    val outcome: BlueprintPlanResult,
-    val blueprint: Blueprint?,
-    /** The layout facts a tooltip shows; index-aligned with [blueprint]'s entities. */
-    val placedEntities: List<LayoutEntity>,
-)
+/** The blueprint a plan produces, or null when the plan cannot be built. */
+internal data class BlueprintPreview(val outcome: BlueprintPlanResult, val blueprint: Blueprint?)
 
 /**
  * Plans and lays out the blueprint for [result] once, so the always-visible panel does not rerun
@@ -200,22 +197,16 @@ internal fun blueprintPreview(
     powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ): BlueprintPreview {
     val outcome = blueprintPlan(result, logistics, normalizeTarget)
-    val layout =
-        (outcome as? BlueprintPlanResult.Planned)?.let {
-            RowLayout(it.plan, logistics, beltEnd, powerPole)
-        }
     return BlueprintPreview(
         outcome,
-        layout?.blueprint(),
-        // build() is idempotent, and the dump keeps the placement order the blueprint maps into,
-        // so the two lists stay index-aligned for the tooltip
-        layout?.layoutDump()?.entities.orEmpty(),
+        (outcome as? BlueprintPlanResult.Planned)?.let {
+            RowLayout(it.plan, logistics, beltEnd, powerPole).blueprint()
+        },
     )
 }
 
 external interface BlueprintPanelProps : Props {
     var blueprint: Blueprint?
-    var placedEntities: List<LayoutEntity>
 }
 
 /**
@@ -230,10 +221,7 @@ internal val blueprintPanel =
                 className = ClassName("blueprint-panel")
                 div {
                     className = ClassName("blueprint-preview")
-                    blueprintView {
-                        this.blueprint = blueprint
-                        placedEntities = props.placedEntities
-                    }
+                    blueprintView { this.blueprint = blueprint }
                 }
             }
         }

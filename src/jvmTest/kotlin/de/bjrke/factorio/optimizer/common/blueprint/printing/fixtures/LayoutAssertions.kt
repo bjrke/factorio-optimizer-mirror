@@ -1,10 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.TransportEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEntity
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
@@ -12,10 +15,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import kotlin.test.assertEquals
 
-/**
- * A tile the underground-run assertion understands, whichever source it came from: the blueprint
- * DTO (whose belts carry no material, so the caller supplies it) or the placed layout entities.
- */
+/** A placed entity in the shape the underground-run assertion understands. */
 private data class RunTile(
     val name: String,
     val area: Area,
@@ -24,26 +24,24 @@ private data class RunTile(
     val material: Material?,
 )
 
-/** Asserts on the blueprint DTO; [materials] supplies the material carried on each belt tile. */
-fun assertUndergroundRunsAreStretched(
-    entities: List<BlueprintEntity>,
-    materials: Map<Coordinate, Material>,
-    range: Int,
-) = assertRunsStretched(entities.map { it.runTile(materials) }, range)
-
 /** Asserts on the placed entities of a layout dump, which carry their own material. */
 fun assertUndergroundRunsAreStretched(entities: List<LayoutEntity>, range: Int) =
     assertRunsStretched(entities.map { it.runTile() }, range)
-
-private fun BlueprintEntity.runTile(materials: Map<Coordinate, Material>) =
-    RunTile(name, area, direction, type, materials[area.topLeft])
 
 private fun LayoutEntity.runTile() =
     RunTile(
         name = name,
         area = area,
-        direction = (this as? ConveyorEntity)?.direction ?: (this as? UndergroundEntity)?.direction,
-        type = (this as? UndergroundEntity)?.io,
+        direction =
+            when (this) {
+                is ConveyorEntity -> direction
+                is UndergroundEntity -> direction
+                is InserterEntity -> direction
+                is LoaderEntity -> direction
+                is MachineEntity -> direction
+                else -> null
+            },
+        type = if (this is UndergroundBeltEntity) io else (this as? LoaderEntity)?.io,
         material = (this as? TransportEntity)?.material,
     )
 

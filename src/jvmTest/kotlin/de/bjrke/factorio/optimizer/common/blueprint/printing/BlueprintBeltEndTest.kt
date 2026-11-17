@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.CircuitCondition
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
@@ -58,7 +59,9 @@ class BlueprintBeltEndTest {
             {
                 assertNotNull(
                     withEntities.firstOrNull {
-                        it.name == "infinity-chest" && it.infinity?.item == ironOre
+                        it is InfinityChestEntity &&
+                            it.name == "infinity-chest" &&
+                            it.settings.item == ironOre
                     },
                     "no input chest for the imported ore",
                 )
@@ -155,7 +158,7 @@ class BlueprintBeltEndTest {
             (beltEnd, count) ->
             val layout = Layout(basePlan, beltEnd = beltEnd)
             val chest =
-                layout.blueprint.entities.single {
+                layout.blueprint.entities.filterIsInstance<ChestEntity>().single {
                     it.name == beltEnd.identifier && it.requestFilter?.name == ironOre.name
                 }
             assertAll(
@@ -178,7 +181,7 @@ class BlueprintBeltEndTest {
         assertTableOf(BeltEnd.WOODEN_CHEST, BeltEnd.STEEL_CHEST) { beltEnd ->
             val layout = Layout(basePlan, beltEnd = beltEnd)
             val chests =
-                layout.blueprint.entities.filter {
+                layout.blueprint.entities.filterIsInstance<ChestEntity>().filter {
                     it.name == beltEnd.identifier
                 }
             assertAll(
@@ -231,7 +234,10 @@ class BlueprintBeltEndTest {
     fun theChestOutputWiresBothInsertersToTheChest() {
         val layout = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST)
         val blueprint = layout.blueprint
-        val chest = blueprint.entities.indexOfFirst { it.requestFilter?.name == gear.name } + 1
+        val chest =
+            blueprint.entities.indexOfFirst {
+                it is ChestEntity && it.requestFilter?.name == gear.name
+            } + 1
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -253,7 +259,9 @@ class BlueprintBeltEndTest {
             val layout = Layout(basePlan, beltEnd = beltEnd)
             val blueprint = layout.blueprint
             val inputChest =
-                blueprint.entities.indexOfFirst { it.requestFilter?.name == ironOre.name } + 1
+                blueprint.entities.indexOfFirst {
+                    it is ChestEntity && it.requestFilter?.name == ironOre.name
+                } + 1
             val wired = blueprint.wires.flatMap { listOf(it.first, it.second) }
 
             assertAll(

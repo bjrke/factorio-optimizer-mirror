@@ -1,19 +1,21 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import kotlin.test.ExperimentalKotlinTestApi
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /** Invariants of the entity grid a plan produces: overlap, inserters, tunnels and belt merges. */
 @OptIn(ExperimentalKotlinTestApi::class)
-fun assertNoOverlap(entities: List<BlueprintEntity>) {
-    val seen = mutableMapOf<Coordinate, BlueprintEntity>()
+fun assertNoOverlap(entities: List<LayoutEntity>) {
+    val seen = mutableMapOf<Coordinate, LayoutEntity>()
     for (entity in entities) {
         for (tile in entity.area) {
             val existing = seen.put(tile, entity)
@@ -22,13 +24,13 @@ fun assertNoOverlap(entities: List<BlueprintEntity>) {
     }
 }
 
-fun assertNoDanglingInserter(entities: List<BlueprintEntity>) {
+fun assertNoDanglingInserter(entities: List<LayoutEntity>) {
     val occupied = entities.flatMapTo(mutableSetOf()) { it.area }
 
     // an inserter always takes from the tile it faces; the long inserter reaches two tiles
     val dangling =
         entities
-            .filter { it.name.endsWith("inserter") }
+            .filterIsInstance<InserterEntity>()
             .filter {
                 val reach = if (it.name == "long-handed-inserter") 2 else 1
                 val tile = it.area.topLeft + it.direction.step * reach
@@ -64,21 +66,20 @@ fun assertOneBeltSourcePerMaterial(plan: BlueprintPlan) {
  * A splitter output may not enter an underground belt directly: that feeds one side of the tunnel,
  * and a route can be left with an orphaned tunnel end when the two disagree.
  */
-fun assertSplittersOnlyFeedSurface(entities: List<BlueprintEntity>) {
+fun assertSplittersOnlyFeedSurface(entities: List<LayoutEntity>) {
     val inputs =
         entities
-            .filter { it.name.endsWith("underground-belt") && it.type == Io.INPUT }
+            .filterIsInstance<UndergroundBeltEntity>()
+            .filter { it.io == Io.INPUT }
             .map { it.area.topLeft }
             .toSet()
     val problems =
-        entities
-            .filter { it.name.endsWith("splitter") }
-            .flatMap { splitter ->
-                splitter.area.mapNotNull { tile ->
-                    val downstream = tile + splitter.direction.step
-                    if (downstream in inputs) "$tile -> $downstream" else null
-                }
+        entities.filterIsInstance<SplitterEntity>().flatMap { splitter ->
+            splitter.area.mapNotNull { tile ->
+                val downstream = tile + splitter.direction.step
+                if (downstream in inputs) "$tile -> $downstream" else null
             }
+        }
     assertEquals(emptyList(), problems, "splitter output feeds underground belt")
 }
 
@@ -87,26 +88,18 @@ fun assertSplittersOnlyFeedSurface(entities: List<BlueprintEntity>) {
  * all: a mixed input belt merges one lane per material on purpose, while any other merge would pour
  * two materials into one lane or discard one.
  */
-fun assertNoMergingBelts(
-    entities: List<BlueprintEntity>,
-    materials: Map<Coordinate, Material>,
-    lanes: Map<Coordinate, LaneLoad>,
-) {
-    val belts =
-        entities
-            .filter { it.name.contains("transport-belt") }
-            .filterNot { it.name.contains("underground") }
-            .associate { it.area.topLeft to it.direction }
+fun assertNoMergingBelts(entities: List<LayoutEntity>) {
+    val belts = entities.filterIsInstance<BeltEntity>().associateBy { it.area.topLeft }
 
     val merges =
         belts
             .filter { (tile, _) ->
                 val fed =
-                    belts
-                        .filter { (from, direction) -> from + direction.step == tile }
-                        .mapNotNull { materials[it.key] }
+                    belts.values
+                        .filter { from -> from.area.topLeft + from.direction.step == tile }
+                        .map { it.material }
                         .toSet()
-                fed.size > 1 && lanes[tile]?.materials != fed
+                fed.size > 1 && belts.getValue(tile).load.materials != fed
             }
             .keys
     assertEquals(emptySet(), merges, "belts fed by several materials")

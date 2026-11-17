@@ -23,7 +23,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.LayoutDu
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintIcon
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.chestWires
-import de.bjrke.factorio.optimizer.common.blueprint.printing.output.toBlueprintEntity
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 
@@ -142,7 +141,7 @@ internal class RowLayout(
         return Blueprint(
             label = plan.label,
             icons = blueprintIcons(),
-            entities = board.placed.map { it.toBlueprintEntity() },
+            entities = board.placed.toList(),
             wires = chestWires(board.placed),
         )
     }

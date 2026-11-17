@@ -1,11 +1,24 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.json
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.CircuitCondition
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeSettings
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.RequestFilter
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
-import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintIcon
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.core.model.Area
@@ -17,6 +30,7 @@ import de.bjrke.factorio.optimizer.common.core.model.areaTile
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.water
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -46,7 +60,7 @@ class BlueprintJsonTest {
         Json.parseToJsonElement(blueprint.toJson()).jsonObject.getValue("blueprint").jsonObject
 
     /** The JSON object a single-entity blueprint writes for its only entity. */
-    private fun entityJson(entity: BlueprintEntity): JsonObject =
+    private fun entityJson(entity: LayoutEntity): JsonObject =
         blueprintJson(Blueprint("test", entities = listOf(entity)))
             .getValue("entities")
             .jsonArray
@@ -128,7 +142,7 @@ class BlueprintJsonTest {
             Direction.SOUTH to 8,
             Direction.WEST to 12,
         ) { (direction, expected) ->
-            val entity = BlueprintEntity("transport-belt", areaTile(0, 0), direction = direction)
+            val entity = BeltEntity(areaTile(0, 0), "transport-belt", ironPlate, direction)
             val written = entityJson(entity)["direction"]?.jsonPrimitive?.int
             assertEquals(expected, written)
         }
@@ -139,21 +153,32 @@ class BlueprintJsonTest {
             Io.INPUT to "input",
             Io.OUTPUT to "output",
         ) { (io, expected) ->
-            val entity = BlueprintEntity("transport-belt", areaTile(0, 0), type = io)
+            val entity =
+                UndergroundBeltEntity(
+                    areaTile(0, 0),
+                    "transport-belt",
+                    ironPlate,
+                    Direction.NORTH,
+                    io,
+                )
             val written = entityJson(entity).getValue("type").jsonPrimitive.content
             assertEquals(expected, written)
         }
 
     @Test
     fun anEntityWithoutIoOmitsTheType() {
-        val entity = BlueprintEntity("pipe", areaTile(0, 0))
+        val entity = PipeEntity(areaTile(0, 0), "pipe", water)
         assertNull(entityJson(entity)["type"])
     }
 
     @Test
     fun theEntityCentreIsWrittenAsAnIntegralPosition() {
         val entity =
-            BlueprintEntity("assembling-machine-1", Area(Coordinate(1, 2), Dimension(2, 2)))
+            MachineEntity(
+                Factory.ASSEMBLING_MACHINE_1,
+                Area(Coordinate(1, 2), Dimension(2, 2)),
+                "iron-gear-wheel",
+            )
         val position = entityJson(entity).getValue("position").jsonObject
 
         assertAll(
@@ -164,12 +189,7 @@ class BlueprintJsonTest {
 
     @Test
     fun anEntityRecipeIsWritten() {
-        val entity =
-            BlueprintEntity(
-                "assembling-machine-1",
-                areaTile(0, 0),
-                recipe = "iron-gear-wheel",
-            )
+        val entity = MachineEntity(Factory.ASSEMBLING_MACHINE_1, areaTile(0, 0), "iron-gear-wheel")
 
         assertEquals(JsonPrimitive("iron-gear-wheel"), entityJson(entity)["recipe"])
     }
@@ -192,7 +212,7 @@ class BlueprintJsonTest {
             InfinitySettings(removeUnfiltered = true) to
                 buildJsonObject { put("remove_unfiltered_items", true) },
         ) { (settings, expected) ->
-            val entity = BlueprintEntity("infinity-chest", areaTile(0, 0), infinity = settings)
+            val entity = InfinityChestEntity(areaTile(0, 0), "infinity-chest", settings)
 
             assertEquals(expected, entityJson(entity).getValue("infinity_settings"))
         }
@@ -200,16 +220,16 @@ class BlueprintJsonTest {
     @Test
     fun anInfinityPipeWritesItsFluidSettings() {
         val entity =
-            BlueprintEntity(
-                "infinity-pipe",
+            InfinityPipeEntity(
                 areaTile(0, 0),
-                infinityPipe =
-                    InfinityPipeSettings(
-                        water,
-                        temperature = 25,
-                        percentage = 1,
-                        mode = "at-least",
-                    ),
+                "infinity-pipe",
+                water,
+                InfinityPipeSettings(
+                    water,
+                    temperature = 25,
+                    percentage = 1,
+                    mode = "at-least",
+                ),
             )
         val expected = buildJsonObject {
             put("name", "water")
@@ -223,8 +243,7 @@ class BlueprintJsonTest {
 
     @Test
     fun neighboursSerializeAsEntityNumbers() {
-        val entity =
-            BlueprintEntity("small-electric-pole", areaTile(0, 0), neighbours = listOf(2, 5))
+        val entity = PoleEntity(areaTile(0, 0), "small-electric-pole", listOf(2, 5))
         val expected = buildJsonArray {
             add(2)
             add(5)
@@ -240,12 +259,7 @@ class BlueprintJsonTest {
             Triple(water, true, JsonPrimitive("fluid")),
         ) { (material, fluid, expectedType) ->
             val entity =
-                BlueprintEntity(
-                    "constant-combinator",
-                    areaTile(0, 0),
-                    marker = material,
-                    markerFluid = fluid,
-                )
+                MarkerEntity(areaTile(0, 0), "constant-combinator", Signal(material, fluid))
             val behavior = entityJson(entity).getValue("control_behavior").jsonObject
             val filter =
                 behavior
@@ -272,9 +286,9 @@ class BlueprintJsonTest {
     @Test
     fun aChestRequestFilterWritesTheGameSections() {
         val entity =
-            BlueprintEntity(
-                "buffer-chest",
+            ChestEntity(
                 areaTile(0, 0),
+                "buffer-chest",
                 requestFilter = RequestFilter("iron-plate", 100, trashNotRequested = true),
             )
         val expected = buildJsonObject {
@@ -301,9 +315,9 @@ class BlueprintJsonTest {
     @Test
     fun aStorageChestRequestFilterOmitsTrashNotRequested() {
         val entity =
-            BlueprintEntity(
-                "storage-chest",
+            ChestEntity(
                 areaTile(0, 0),
+                "storage-chest",
                 requestFilter = RequestFilter("iron-plate", 1),
             )
 
@@ -313,9 +327,12 @@ class BlueprintJsonTest {
     @Test
     fun anInserterCircuitConditionWritesItsControlBehavior() {
         val entity =
-            BlueprintEntity(
-                "fast-inserter",
+            InserterEntity(
                 areaTile(0, 0),
+                "fast-inserter",
+                ironPlate,
+                Direction.NORTH,
+                long = false,
                 circuitCondition = CircuitCondition("advanced-circuit", "<", 200),
             )
         val expected = buildJsonObject {
@@ -332,8 +349,7 @@ class BlueprintJsonTest {
 
     @Test
     fun aChestCircuitConditionEnabledWritesItsControlBehavior() {
-        val entity =
-            BlueprintEntity("buffer-chest", areaTile(0, 0), circuitConditionEnabled = false)
+        val entity = ChestEntity(areaTile(0, 0), "buffer-chest", circuitConditionEnabled = false)
         val expected = buildJsonObject { put("circuit_condition_enabled", false) }
 
         assertEquals(expected, entityJson(entity).getValue("control_behavior"))
@@ -343,22 +359,84 @@ class BlueprintJsonTest {
     fun aChestBarAndAnInserterMirrorAreWrittenOnlyWhenSet() =
         assertAll(
             {
-                val entity = BlueprintEntity("wooden-chest", areaTile(0, 0), bar = 4)
+                val entity = ChestEntity(areaTile(0, 0), "wooden-chest", bar = 4)
                 assertEquals(JsonPrimitive(4), entityJson(entity)["bar"])
             },
             {
-                val entity = BlueprintEntity("wooden-chest", areaTile(0, 0))
+                val entity = ChestEntity(areaTile(0, 0), "wooden-chest")
                 assertNull(entityJson(entity)["bar"])
             },
             {
-                val entity = BlueprintEntity("fast-inserter", areaTile(0, 0), mirror = true)
+                val entity =
+                    InserterEntity(
+                        areaTile(0, 0),
+                        "fast-inserter",
+                        ironPlate,
+                        Direction.NORTH,
+                        long = false,
+                        mirror = true,
+                    )
                 assertEquals(JsonPrimitive(true), entityJson(entity)["mirror"])
             },
             {
-                val entity = BlueprintEntity("fast-inserter", areaTile(0, 0))
+                val entity =
+                    InserterEntity(
+                        areaTile(0, 0),
+                        "fast-inserter",
+                        ironPlate,
+                        Direction.NORTH,
+                        long = false,
+                    )
                 assertNull(entityJson(entity)["mirror"])
             },
         )
+
+    @Test
+    fun aPipeToGroundWritesTheSideItsSurfacePipeAttachesOn() =
+        assertTableOf(
+            PipeToGroundEntity(
+                areaTile(0, 0),
+                "pipe-to-ground",
+                water,
+                Direction.EAST,
+                Io.INPUT,
+            ) to 12,
+            PipeToGroundEntity(
+                areaTile(0, 0),
+                "pipe-to-ground",
+                water,
+                Direction.EAST,
+                Io.OUTPUT,
+            ) to 4,
+        ) { (entity, direction) ->
+            assertAll(
+                { assertEquals(JsonPrimitive(direction), entityJson(entity)["direction"]) },
+                { assertNull(entityJson(entity)["type"]) },
+            )
+        }
+
+    @Test
+    fun anUndergroundBeltAndALoaderWriteTheirType() =
+        assertTableOf(
+            UndergroundBeltEntity(
+                areaTile(0, 0),
+                "transport-belt",
+                ironPlate,
+                Direction.NORTH,
+                Io.INPUT,
+            ) to "input",
+            LoaderEntity(areaTile(0, 0), "fast-loader", ironPlate, Io.OUTPUT, Direction.EAST) to
+                "output",
+        ) { (entity, type) ->
+            assertEquals(JsonPrimitive(type), entityJson(entity)["type"])
+        }
+
+    @Test
+    fun anInfinityPipeSinkOmitsItsSettings() {
+        val entity = InfinityPipeEntity(areaTile(0, 0), "infinity-pipe", water)
+
+        assertNull(entityJson(entity)["infinity_settings"])
+    }
 
     @Test
     fun circuitWiresSerializeAsFlatQuadruples() {

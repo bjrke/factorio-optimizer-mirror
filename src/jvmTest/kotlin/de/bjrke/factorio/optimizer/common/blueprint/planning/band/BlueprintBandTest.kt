@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
@@ -51,6 +52,7 @@ class BlueprintBandTest {
         val gap = left.area.topLeft.x + left.area.dimension.width
         val interfaces =
             blueprintEntities
+                .filterIsInstance<InserterEntity>()
                 .filter { it.name == InserterTier.FAST_INSERTER.identifier }
                 .filter { it.area.topLeft.x == gap }
 
