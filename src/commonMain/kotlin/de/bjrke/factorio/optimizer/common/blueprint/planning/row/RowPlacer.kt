@@ -245,8 +245,9 @@ internal class RowPlacer(
 
     /**
      * Places the input output belts of [row] across the whole row, including the gaps of a band. A
-     * mixed belt also gets its T merge: the mixed merge tile, the U-turn turn tile and the approach
-     * tile; the two feeders' last straight tiles are left to the delivery router.
+     * mixed belt also gets its T merge: the mixed merge tile, and the U-turn turn and approach
+     * tiles unless the turn material is produced and can feed the merge from the outside
+     * (`sideLoadsTurn`). The two feeders' last straight tiles are left to the delivery router.
      */
     private fun placeLanes(row: Row) {
         for (belt in row.belts) {
@@ -261,20 +262,34 @@ internal class RowPlacer(
                 board.placeBelt(Coordinate(x, belt.y), belt.load, belt.direction)
             }
             val mergeRow = merge.mergeRow(belt.y)
-            val turnRow = merge.turnRow(belt.y)
             placeMergeBelt(Coordinate(merge.column, mergeRow), merge.load, merge.mergeDirection)
-            placeMergeBelt(
-                Coordinate(merge.turnColumn, turnRow),
-                LaneLoad.full(merge.turnMaterial),
-                merge.mergeDirection,
-            )
-            placeMergeBelt(
-                Coordinate(merge.turnColumn, mergeRow),
-                LaneLoad.full(merge.turnMaterial),
-                merge.approachDirection,
-            )
+            if (!sidesLoadsTurn(belt, merge)) {
+                val turnRow = merge.turnRow(belt.y)
+                placeMergeBelt(
+                    Coordinate(merge.turnColumn, turnRow),
+                    LaneLoad.full(merge.turnMaterial),
+                    merge.mergeDirection,
+                )
+                placeMergeBelt(
+                    Coordinate(merge.turnColumn, mergeRow),
+                    LaneLoad.full(merge.turnMaterial),
+                    merge.approachDirection,
+                )
+            }
         }
     }
+
+    /**
+     * Whether the delivery router feeds [merge]'s turn material straight into the lane. An import
+     * keeps the U-turn: its marker is on the west side, so routing it around the merge is the only
+     * way to reach the turn lane. A produced trunk is free to approach from the outside, where the
+     * lane has no machines to miss.
+     */
+    private fun sidesLoadsTurn(belt: RowBelt, merge: BeltMerge) =
+        merge.sideLoadsTurn(
+            belt.side,
+            produced = plan.producerOf(merge.turnMaterial) != null,
+        )
 
     private fun placeMergeBelt(coordinate: Coordinate, load: LaneLoad, direction: Direction) {
         if (!board.isFree(coordinate)) {

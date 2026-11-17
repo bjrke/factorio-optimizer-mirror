@@ -131,13 +131,13 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   puts the connector at `maxX + 1`, and routes the product belt last with its half lane (a
   crossing belt is tunneled under). A belt still east of the finished connector is a failure;
   `DeliveryPreparation` reserves the sinks and sources (imports first) and each sink's approach
-  tile for its material; a mixed
-  input belt contributes two sinks (its straight feeder and its U-turn feeder, which
-  enters the turn head-on from beyond it) and pins the merge group. Every import marker
-  ends one tile before `IMPORT_FEED` in `blueprint/layout/LayoutBoard.kt` and reaches west by its
-  own size, so the marker design only changes the west extent and the belt always starts on the
-  same feed column. A belt route may not use a tile west of that feed column, so a route never
-  enters a marker. A delivery is re-searched with the tiles blocked when its path uses a
+  tile for its material; a mixed input belt contributes two sinks (its straight feeder and its
+  turn feeder: a produced feeder on an outer lane feeds the merge from its open side, while an
+  import or an inner lane U-turns and enters the turn head-on from beyond it) and pins
+  the U-turn group. Every import marker ends one tile before `IMPORT_FEED` in
+  `blueprint/layout/LayoutBoard.kt` and reaches west by its own size, so the marker design only
+  changes the west extent and the belt always starts on the same feed column. A belt route may
+  not use a tile west of that feed column, so a route never enters a marker. A delivery is re-searched with the tiles blocked when its path uses a
   belt tile twice. `SplitDeliveryRouter` inserts the branch splitters,
   `DeliveryNetworks` remembers the produced trunks and `BeltRouteRules` is the
   belt-tile predicate shared by both routes; it never side-loads a mixed or

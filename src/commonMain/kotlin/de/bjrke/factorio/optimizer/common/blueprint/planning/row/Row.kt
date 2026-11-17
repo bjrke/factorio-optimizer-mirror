@@ -27,6 +27,10 @@ internal class PlacedMachine(val production: FactoryProduction, val left: Int)
  * to the lanes by the merge tile's own direction: an above merge (south) fills its right lane from
  * the west and its left lane from the east; a below merge (north) fills left from the west and
  * right from the east. A turn keeps the lane slots.
+ *
+ * A **produced** turn feeder on an outer lane (see [sideLoadsTurn]) feeds the merge from its open
+ * side instead of making the U-turn, so only the merge tile is placed; the delivery router puts the
+ * turn belt on the merge row, still leaving the merge fed from both sides.
  */
 internal data class BeltMerge(
     val column: Int,
@@ -55,13 +59,28 @@ internal data class BeltMerge(
     val turnMaterial: Material
         get() = if (direction == EAST) eastMaterial else westMaterial
 
-    /** The column of the U-turn feeder's turn and approach tiles. */
+    /** The column of the U-turn feeder's turn and approach tiles, or of its direct side-load. */
     val turnColumn: Int
         get() = if (direction == EAST) column + 1 else column - 1
 
     /** The direction of the U-turn feeder's approach tile (it feeds the merge from the side). */
     val approachDirection: Direction
         get() = if (direction == EAST) WEST else EAST
+
+    /**
+     * Whether the turn feeder can approach this merge from the outside instead of making the U-turn
+     * around it. Only a merge beyond the lane qualifies: an outer lane has a free row behind its
+     * turn, while an inner lane's turn row lies between the lane and the machines and can only be
+     * reached by routing around the lane.
+     */
+    fun turnFeedsFromOutside(side: LineSide): Boolean = above == (side == LineSide.NORTH)
+
+    /**
+     * Whether the turn feeder feeds the merge from its open side instead of using the U-turn: only
+     * a produced feed may do so, because an imported feed has to keep its marker route straight.
+     */
+    fun sideLoadsTurn(side: LineSide, produced: Boolean): Boolean =
+        produced && turnFeedsFromOutside(side)
 
     fun mergeRow(y: Int) = if (above) y - 1 else y + 1
 

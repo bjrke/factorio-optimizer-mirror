@@ -14,7 +14,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetwo
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
+import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.coalLiquefactionRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
@@ -66,9 +66,9 @@ class BlueprintFluidLaneLinkTest {
 
     /**
      * The processing-unit row puts a mixed belt on its far north row, so the gas lane used to land
-     * on that belt's U-turn and be dropped. The source block must move west to the shared marker
-     * column and its connection run must tunnel under the turn. The U-turn feeder enters the turn
-     * from the north, so the tile beside the turn (on the lane row) never cuts it off.
+     * on that belt's U-turn and be dropped. The produced turn feeder now feeds the merge from its
+     * open side, leaving the turn row to the gas lane. The source block must move west to the
+     * shared marker column, and its connection run must still reach the lane head.
      */
     @Test
     fun aMixedBeltTurnRowKeepsItsFluidLaneConnected() {
@@ -82,9 +82,8 @@ class BlueprintFluidLaneLinkTest {
                 !it.signal.fluid && it.signal.material == coal
             }
         val belts = layout.entities.filterIsInstance<BeltEntity>()
-        // the mixed merge at (7,9) turns at (8,8); its feeder drops in from (8,7)
-        val turn = Coordinate(8, 8)
-        val turnFeed = Coordinate(8, 7)
+        // the mixed merge at (7,8) is fed from the side by its produced feeder at (8,8)
+        val sideLoad = Coordinate(8, 8)
         val plastic =
             layout.entities.filterIsInstance<MachineEntity>().filter {
                 it.recipe == "plastic-bar"
@@ -106,15 +105,8 @@ class BlueprintFluidLaneLinkTest {
                     "a plastic-bar machine has no gas pipe on its port",
                 )
             },
-            // the U-turn keeps both tiles: the turn and the feeder that drops into it
-            {
-                assertEquals(
-                    listOf(SOUTH, SOUTH),
-                    listOf(turn, turnFeed).map { tile ->
-                        belts.single { it.area.topLeft == tile }.direction
-                    },
-                )
-            },
+            // the produced feeder enters the merge from the side, leaving the turn row to the gas
+            { assertEquals(WEST, belts.single { it.area.topLeft == sideLoad }.direction) },
             // no belt route may run west of the import marker column
             {
                 assertEquals(

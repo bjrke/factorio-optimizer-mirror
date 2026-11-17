@@ -74,6 +74,7 @@ internal class DeliveryPreparation(
     private val board = stage.board
     private val plan = stage.plan
     private val rowPlacer = stage.rowPlacer
+    private val turnFeeds = MixedTurnFeeds(board) { material -> plan.producerOf(material) != null }
 
     /**
      * Places every solid source up front and returns the deliveries to route, imports first. The
@@ -97,9 +98,11 @@ internal class DeliveryPreparation(
 
     /**
      * One input belt has one sink; a mixed belt has two, one on each side of its T merge. The
-     * straight feeder enters from the lane's source side. The U-turn feeder enters the turn tile
-     * head-on from its own row, because the tile beside the turn is the lane row that a fluid link
-     * may claim; only when another U-turn already owns that gap tile does it keep the side feed.
+     * straight feeder enters from the lane's source side. The turn feeder either feeds the merge
+     * from its open side at [sideLoadFeed] (a produced trunk on an outer lane) or uses the U-turn:
+     * it enters the turn tile head-on from its own row, because the tile beside the turn is the
+     * lane row that a fluid link may claim; only when another U-turn already owns that gap tile
+     * does it keep the side feed.
      *
      * The head-on choice is deduplicated only against an identical head-on tile. Two U-turns whose
      * turns sit directly next to each other (a factory one or two tiles high) would instead each
@@ -110,15 +113,22 @@ internal class DeliveryPreparation(
         row: Row,
         belt: RowBelt,
         uniqueHeadOn: Set<Coordinate>,
+        sideLoadFeed: Coordinate?,
     ): List<Pair<Material, Sink>> {
         val merge = belt.merge ?: return listOf(belt.material to sinkOf(row, belt))
         val mergeRow = merge.mergeRow(belt.y)
-        val turnRow = merge.turnRow(belt.y)
         val straightFeed =
             if (belt.direction == EAST) Coordinate(merge.column - 1, mergeRow)
             else Coordinate(merge.column + 1, mergeRow)
         val straightTarget = Coordinate(merge.column, mergeRow)
         val straightDirection = if (belt.direction == EAST) EAST else WEST
+        if (sideLoadFeed != null) {
+            return listOf(
+                merge.straightMaterial to Sink(straightTarget, straightFeed, straightDirection),
+                merge.turnMaterial to Sink(straightTarget, sideLoadFeed, merge.approachDirection),
+            )
+        }
+        val turnRow = merge.turnRow(belt.y)
         val headOnTile = Coordinate(merge.turnColumn, turnRow + if (merge.above) -1 else 1)
         // two mixed belts whose turns face each other share the one tile between them; neither may
         // take it head-on, so both keep the side feed on the turn row
@@ -133,33 +143,32 @@ internal class DeliveryPreparation(
     }
 
     private fun allSolidSinks(): List<Triple<Material, Row, Sink>> {
-        val merged =
+        val inputBelts =
             rowPlacer.placedRows.flatMap { row ->
-                row.belts
-                    .filter { it.io == Io.INPUT }
-                    .mapNotNull { belt ->
-                        belt.merge?.let { merge ->
-                            Coordinate(
-                                merge.turnColumn,
-                                merge.turnRow(belt.y) + if (merge.above) -1 else 1,
-                            )
-                        }
-                    }
+                row.belts.filter { it.io == Io.INPUT }.map { row to it }
             }
-        // a head-on tile only one U-turn asks for is free to use; a shared one is not
-        val uniqueHeadOn = merged.groupingBy { it }.eachCount().filterValues { it == 1 }.keys
-        return rowPlacer.placedRows.flatMap { row ->
-            row.belts
-                .filter { it.io == Io.INPUT }
-                .flatMap { belt ->
-                    val sinks = sinksOf(row, belt, uniqueHeadOn)
-                    belt.merge?.let { merge ->
-                        val turnFeed =
-                            sinks.first { (material, _) -> material == merge.turnMaterial }.second
-                        pinMerge(imports, belt, turnFeed.feed)
-                    }
-                    sinks.map { (material, sink) -> Triple(material, row, sink) }
-                }
+        val sideLoadFeeds = turnFeeds.sideLoadFeeds(inputBelts)
+        val uniqueHeadOn = turnFeeds.uniqueHeadOn(inputBelts, sideLoadFeeds)
+        return inputBelts.flatMapIndexed { index, (row, belt) ->
+            val merge = belt.merge
+            val sideLoad = sideLoadFeeds[index]
+            if (merge != null && sideLoad == null && turnFeeds.sideLoadsTurn(belt)) {
+                // RowPlacer left the U-turn tiles out, so without an upstream tile there is no
+                // feed. Keep the straight half and report the lost turn material.
+                failures +=
+                    "${merge.turnMaterial.name} has no free side-load tile on the mixed belt " +
+                        "at (${merge.column}, ${belt.y})"
+                return@flatMapIndexed sinksOf(row, belt, uniqueHeadOn, sideLoadFeed = null)
+                    .filter { (material, _) -> material != merge.turnMaterial }
+                    .map { (material, sink) -> Triple(material, row, sink) }
+            }
+            val sinks = sinksOf(row, belt, uniqueHeadOn, sideLoad)
+            if (merge != null && sideLoad == null) {
+                val turnFeed =
+                    sinks.first { (material, _) -> material == merge.turnMaterial }.second
+                pinMerge(imports, belt, turnFeed.feed)
+            }
+            sinks.map { (material, sink) -> Triple(material, row, sink) }
         }
     }
 

@@ -101,7 +101,8 @@ CLI (JVM) from one shared core.
     - `blueprint/placing` — placing the entities and their connections:`route`
       (the weighted A* shared by belts and pipes — `LayoutRouter`,
       `RouteSearch`, `RouteProfile`), `routing` (implicit delivery — `Delivery*`,
-      `Import*`, `FluidFeedLinker`, `SplitDeliveryRouter` and `BeltRouteRules`),
+      `Import*`, `FluidFeedLinker`, `SplitDeliveryRouter`, `BeltRouteRules` and
+      `MixedTurnFeeds`),
       `plumbing` (the fluid feed — `FluidFeeder`, `FluidLaneFeed`), `beltend`
       (`BeltEndConnector.kt` — the solid belt's end marker: label, infinity
       chest, chest), `special` (the path, power and material-search passes) and
@@ -149,7 +150,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 `expect`/`actual` pairs with the common declaration, both in
 `common.production`).
 
-Package sizes (files, verified 2026-11-13). **Files** are the budget: past 10 is a
+Package sizes (files, verified 2026-11-17). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
 removed, so review keeps it. There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
@@ -173,7 +174,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.planning.row | 11 |
 | blueprint.planning.band | 6 |
 | blueprint.placing.route | 3 |
-| blueprint.placing.routing | 7 |
+| blueprint.placing.routing | 8 |
 | blueprint.placing.plumbing | 2 |
 | blueprint.placing.special | 4 |
 | blueprint.placing.compaction | 4 |

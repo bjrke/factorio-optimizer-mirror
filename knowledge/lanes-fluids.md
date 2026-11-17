@@ -136,6 +136,20 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   `row.left - 2` for east-fed mixes and `row.right + 8` for west-fed ones. Getting the side wrong
   looks valid to a material-only check but side-loads the wrong lane; `validateLayout` uses
   `LaneLoad.laneAt` and should report a foreign side-load.
+- **A produced turn feeder on an outer lane feeds the merge from its open side; only an import or
+  an inner lane U-turns.** The reported chemical-science URL paired an iron import with a produced
+  plastic feed: the import anchored the lane east, so plastic became the turn feeder and the
+  U-turn added a turn tile and a west-facing approach. `RowPlacer` now leaves both out when
+  `BeltMerge.sideLoadsTurn` is true (an outer row and a produced turn material), and
+  `DeliveryPreparation` routes the trunk to the turn column on the merge row, facing the merge.
+  The merge tile stays the **straight belt fed from both sides**: one feeder fills each lane, and
+  its turn into the lane keeps the slots. Do not feed the lane directly with the turn trunk: a
+  full belt side-loads only one lane, backs up, and the two materials fight for the same lane.
+  The reported sulfur/engine-unit merge at `(8,36)` is the same shape and needs the same
+  north-to-west feed.
+  An import keeps the U-turn because its marker route is west of the row; an inner row keeps it
+  because the lane blocks the direct approach. Evidence:
+  `theReportedChemicalScienceUrlSideLoadsItsProducedTurnFeed`, `BeltMergeTest`.
 - **A mixed feed that turns before its merge must not set the import column.** `ImportTrimmer`
   returns `null` from `lastStraightEast` for it, and only the straight feeds choose the common
   column. Treating the old `start.x - 1` fallback as a real end drags every marker west and the
@@ -223,8 +237,10 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
 - **A fluid lane may use a mixed belt's turn row because the U-turn feeder enters head-on.**
   A mixed lane's merge sits one row outside the belt and its turn tile two rows outside, at the
   row's west/east edge; the lane row is read from the belts alone (`RowFluidLane.laneRow`), so the
-  outermost mixed belt's lane can land on its turn row. `DeliveryPreparation.sinksOf` feeds the
-  U-turn tile from the row **beyond** the turn (its facing row), not from the tile on the lane row
+  outermost mixed belt's lane can land on its turn row. A produced turn feeder on an outer lane
+  feeds the merge from the side instead, so it never occupies the turn row; the head-on rule
+  below only governs the remaining U-turns. `DeliveryPreparation.sinksOf` feeds the U-turn tile from the
+  row **beyond** the turn (its facing row), not from the tile on the lane row
   beside it: that side tile is where `FluidLaneFeed`'s pipe-to-ground link surfaces, and a link
   end there would leave the feeder without a tile to stand on. Two mixed belts whose turns face
   each other over one gap (the six-input, three-pair row) cannot both enter head-on, so the duplicate
