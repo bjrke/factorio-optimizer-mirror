@@ -117,8 +117,15 @@ async function stagedStat(directory) {
   return (result.stdout ?? "").trim();
 }
 
+// A model often wraps the answer in a Markdown fence even when asked for only
+// the message. The fence lines are not part of the message, so drop an opening
+// and a closing fence before the commit; the body's own backticks stay intact.
 function commitMessage(generated) {
-  return (generated?.text ?? "").trim();
+  return (generated?.text ?? "")
+    .trim()
+    .replace(/^`{3,}[^\n]*\n/, "")
+    .replace(/\n`{3,}$/, "")
+    .trim();
 }
 
 function withDiff(diff, stat) {
