@@ -93,7 +93,9 @@ on every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
   `Instant.now()` or `expand` discards the entry every commit or freezes a stale
   value, and so does any file collection *resolved* while configuring, even when
   it is "only" a task input — the Spotless `target` globs were such a collection
-  until 2026-11-16 (see Traps).
+  until 2026-11-16 (see Traps). Spotless's default line-ending policy read the
+  whole `.git` directory, detached CI `HEAD` included, until 2026-11-17; the
+  `spotless { lineEndings = LineEnding.UNIX }` line removed that (see Traps).
 - **The entry is encrypted, and the key has to be cached with it.** Gradle 9.8
   encrypts each entry with a random key it generates into
   `.gradle/caches/9.8.1/cc-keystore` (`Encryption key source: default Gradle
@@ -215,6 +217,29 @@ on every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
   entry then survived content edits, new source files and files outside the
   source sets, and `spotlessCheck` still failed for unformatted Kotlin in `src/`
   and `buildSrc/src/` while skipping `buildSrc/build/`.
+- **`cannot be reused because file '.git/HEAD' has changed` is Spotless's
+  line-ending policy, not the git providers in `build.gradle.kts`.** Measured
+  2026-11-17 on 9.8.1. `SpotlessExtension.lineEndings` defaults to
+  `GIT_ATTRIBUTES_FAST_ALLSAME`, and `FormatExtension` hands each `SpotlessTask`
+  a `project.provider { … }` that builds the policy; the configuration cache has
+  to evaluate that provider at *store* time, so JGit opens the repository during
+  configuration and `.git/HEAD`, `.git/config`, `commondir`, `objects`, `refs`,
+  the system/user `gitconfig`, the PATH search for `git` and one `.gitattributes`
+  path per target file all land in `buildfingerprint.bin`. A local branch keeps
+  `ref: refs/heads/<branch>` there, which is commit-invariant, but a GitLab
+  checkout is detached and stores the commit SHA, so every pipeline rejected the
+  entry while everything else matched. `providers.exec { git … }` is *not* the
+  cause: a probe project with only that pattern still reuses after a commit.
+  `spotless { lineEndings = LineEnding.UNIX }` drops every `.git` fingerprint and
+  the entry survives `git checkout --detach`; the policy object simply no longer
+  reads git. `GIT_ATTRIBUTES` is rejected by the plugin, and
+  `org.gradle.configuration-cache.inputs.unsafe.ignore.file-system-checks` does
+  not help — it covers existence/directory checks, not a content read
+  (`.git`, `.git/HEAD`, `**/.git/**` and absolute paths were all tried). Read a
+  fingerprint directly by storing once with
+  `-Dorg.gradle.internal.configuration-cache.encryption=false` and grepping the
+  entry: `strings .gradle/configuration-cache/<entry>/buildfingerprint.bin |
+  grep '\.git/'`.
 - **A `cannot be reused` reason naming a file under
   `.gradle/caches/<version>/` is missing restored state, not a real change.** The
   entry fingerprints the instrumented Kotlin DSL script classes and the version

@@ -1,3 +1,4 @@
+import com.diffplug.spotless.LineEnding
 import de.bjrke.factorio.optimizer.buildlogic.dumpPrototypes
 import de.bjrke.factorio.optimizer.buildlogic.sanitizePrototypes
 import de.bjrke.factorio.optimizer.buildlogic.updateImages
@@ -230,6 +231,15 @@ tasks.register<JavaExec>("run") {
 }
 
 spotless {
+    // Spotless resolves its default `GIT_ATTRIBUTES_FAST_ALLSAME` policy with JGit while
+    // Gradle stores the configuration cache, because `FormatExtension` hands each
+    // `SpotlessTask` a `project.provider { … }` that the store has to evaluate. That reads
+    // `.git/HEAD`, `.git/config`, the refs and gitconfig into the fingerprint, and a CI
+    // checkout has a detached HEAD whose content is the commit SHA, so every pipeline
+    // discarded the entry (`cannot be reused because file '.git/HEAD' has changed`). The
+    // repository has no `.gitattributes`, so git resolves to LF anyway; `UNIX` states that
+    // and keeps the formatter identical on every platform (see `knowledge/build.md`).
+    lineEndings = LineEnding.UNIX
     kotlin {
         // Target the source trees instead of the equivalent `src/**/*.kt` string
         // globs: Spotless turns a glob into `project.fileTree(projectDir)` plus an
