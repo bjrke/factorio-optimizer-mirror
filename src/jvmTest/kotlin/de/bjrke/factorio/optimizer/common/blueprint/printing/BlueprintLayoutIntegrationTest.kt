@@ -306,6 +306,26 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
+     * The reported stacked logistic-science layout compacted rows around its iron-plate tunnel
+     * exit: the exit feeds a splitter directly, so the belt in front of it is spliceable. It was 64
+     * rows tall while the seam and the tunnel stretch left that lone belt in place.
+     */
+    @Test
+    fun theReportedStackedLogisticScienceUrlCompactsItsTunnelExitRow() {
+        val layout =
+            layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSbmr/1/1/10/-")
+        val entities = layout.entities
+        val height =
+            entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(entities)) },
+            { assertTrue(height <= 61, "layout is still $height rows tall") },
+        )
+    }
+
+    /**
      * The reported production-science layout distributes the target's three producer branches
      * across both sides of the target instead of stacking them on one side.
      */

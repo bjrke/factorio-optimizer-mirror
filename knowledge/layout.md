@@ -85,8 +85,8 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   or drops onto, so a run cannot strand a row inserter or a pipe off its machine. The
   ports are re-derived from the settled board (the plain pipes that touch a machine),
   not kept as coordinates, so a corridor shift cannot leave a stale tile; it only grows where a
-  same-material full belt still faces into the run past the swallowed tile, so a moved
-  entrance or exit keeps its feeder or lane.
+  same-material full belt or splitter still faces into the run past the swallowed tile, so a
+  moved entrance or exit keeps its feeder or lane.
 - `blueprint/planning/row/RowTopology.kt` — the target-centred row topology. It builds the
   producer graph from each row's external solid inputs (`rowInputs` minus
   `fullyInternalInputs`) and `BlueprintPlan.producerOf`, roots it at the target, sends a direct
@@ -111,9 +111,10 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   it moves the pins and `poleWestBound`: a horizontal corridor shifts rows, so its y
   shift must never touch the pole's x bound.
 - `blueprint/placing/compaction/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
-  `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program;
-  `CorridorShift` (in `LayoutCompaction.kt`) cuts one corridor and moves the far
-  side.
+  `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program; a belt is
+  spliceable when both sides of the cut continue it, when it is a corner, or when a same-material
+  tunnel output behind it takes over its feed (`beltCuttable`); `CorridorShift` (in
+  `LayoutCompaction.kt`) cuts one corridor and moves the far side.
 - `blueprint/placing/special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry. The pole comes from `PowerPole.forSelection`: none in space, the small pole for
   an early-game assembling machine 1 on Nauvis, the medium pole otherwise. A burner machine is
@@ -247,16 +248,30 @@ baselines, so every finding fails.
   corridor's far or near edge and the shift lands the lane next to the feeder.
   Evidence: `aCornerBeltIsDroppedAndItsFeederSideLoadsTheLane`,
   `theReportedLogisticScienceUrlCompacts`.
-- **A grown underground run must leave a belt of its own material beyond the tile it swallows.**
-  `UndergroundStretcher.RunGrowth` grows a run by swallowing plain same-material belts, so a moved
-  entrance is fed by the belt past the swallowed one and a moved exit pours into the lane past it.
-  Checking only that *something* stands there is not enough: the reported rocket-silo layout let a
-  copper-cable run swallow the corner belt of its split branch, and the entrance slid onto a tile
-  whose east neighbor was a concrete belt, so `validateLayout` reported the entrance as unfed and
-  compaction stayed off. Require a same-material full belt facing into the run (`continues`); a
-  foreign belt, or no belt at all, stops the growth. Evidence:
-  `aRunDoesNotMoveItsEntranceOntoAForeignFeed`,
-  `aRunDoesNotGrowItsExitIntoAForeignLane`, `theReportedRocketSiloUrlCompacts`.
+- **A grown underground run must leave a belt or splitter of its own material beyond the tile it
+  swallows.** `UndergroundStretcher.RunGrowth` grows a run by swallowing plain same-material belts,
+  so a moved entrance is fed by the belt past the swallowed one and a moved exit pours into the lane
+  past it. Checking only that *something* stands there is not enough: the reported rocket-silo layout
+  let a copper-cable run swallow the corner belt of its split branch, and the entrance slid onto a
+  tile whose east neighbor was a concrete belt, so `validateLayout` reported the entrance as unfed
+  and compaction stayed off. Require a same-material full belt facing into the run (`continues`); a
+  foreign belt, or no belt at all, stops the growth. A splitter facing into the run counts too: it
+  takes items on its back and hands them along, so the output can pour into it (or it can feed a
+  moved entrance). Evidence: `aRunDoesNotMoveItsEntranceOntoAForeignFeed`,
+  `aRunDoesNotGrowItsExitIntoAForeignLane`, `aRunGrowsItsExitIntoASplitter`,
+  `theReportedRocketSiloUrlCompacts`.
+- **A tunnel output behind a belt takes over its feed, so that belt is a splice.** `beltCuttable`
+  used to require a plain belt on both sides, which left the reported stacked logistic-science
+  layout's iron-plate belt at `(24,32)` in place: its north neighbor is a splitter and its south
+  neighbor is the tunnel output at `(24,33)`, so neither the straight nor the corner rule applied and
+  the row never compacted (64 rows). A same-material output facing the same direction lands on the
+  removed belt's tile and pours into the same straight consumer — a splitter included — so the belt
+  is redundant. The stretcher and the seam are complementary: `continues` also accepts the splitter,
+  so a run can grow its exit onto the belt's tile first (freeing the row below); the seam still works
+  when the run is at its reach. Evidence:
+  `aBeltBeforeATunnelOutputIsDroppedWhenTheOutputFeedsItsSplitter`,
+  `aTunnelOutputOnlyReplacesABeltOfItsOwnMaterial`,
+  `theReportedStackedLogisticScienceUrlCompactsItsTunnelExitRow`.
 - **A buried entrance does not feed the tile it faces.** `validateMaterials`
   treated every conveyor as feeding the tile ahead, so an underground belt input
   looked like it side-loaded a belt standing above its tunnel span. In the reported

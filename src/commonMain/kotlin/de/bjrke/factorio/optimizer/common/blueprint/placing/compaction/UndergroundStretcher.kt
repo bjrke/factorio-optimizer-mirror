@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.hasTunnel
@@ -131,9 +132,9 @@ private class RunGrowth(
 
     /**
      * How far the end at [start] can grow in [step], at most [budget] tiles: every swallowed tile
-     * must be [swallowable], a same-material belt must still face into the run beyond it (never
-     * another underground end of a belt), and the tile that becomes part of the run must not
-     * already carry a tunnel of the same [type] on the same axis.
+     * must be [swallowable], a same-material belt or splitter must still face into the run beyond
+     * it (never another underground end of a belt), and the tile that becomes part of the run must
+     * not already carry a tunnel of the same [type] on the same axis.
      */
     private fun length(start: Coordinate, step: Coordinate): Int {
         var count = 0
@@ -148,18 +149,24 @@ private class RunGrowth(
         if (!swallowable(next)) return false
         // a belt exit/entrance joins a surface belt, not the next run's underground end
         if (!fluid && beyond is UndergroundBeltEntity) return false
-        // the new end must still join a belt of its own material: the feed behind a moved
+        // the new end must still join a conveyor of its own material: the feed behind a moved
         // entrance and the lane in front of a moved exit both face into the run
         if (!fluid && !continues(beyond)) return false
         return !board.hasTunnel(start + step * count, step, type)
     }
 
-    /** Whether a belt past [tile] carries the run's material and faces into it. */
+    /**
+     * Whether the conveyor past [tile] carries the run's material and faces into it. A splitter
+     * counts: it takes items on its back and hands them along, so a moved exit may pour into it and
+     * a moved entrance may be fed by it.
+     */
     private fun continues(tile: LayoutEntity): Boolean =
-        tile is BeltEntity &&
-            tile.materials == setOf(material) &&
-            tile.load.isFull &&
-            tile.direction == direction
+        when (tile) {
+            is BeltEntity ->
+                tile.materials == setOf(material) && tile.load.isFull && tile.direction == direction
+            is SplitterEntity -> tile.material == material && tile.direction == direction
+            else -> false
+        }
 
     private fun swallowable(tile: Coordinate) =
         when (val entity = board.entityAt(tile)) {

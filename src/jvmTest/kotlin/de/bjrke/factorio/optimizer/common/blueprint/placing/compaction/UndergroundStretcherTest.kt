@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeInserter
@@ -162,6 +163,58 @@ class UndergroundStretcherTest {
 
         assertAll(
             { assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(2, 0))) },
+            { assertIs<BeltEntity>(board.entityAt(Coordinate(3, 0))) },
+        )
+    }
+
+    /**
+     * An exit may grow into a splitter: it takes items on its back and hands them along, so the
+     * output pours straight into it. The reported logistic-science layout's iron-plate run left a
+     * lone belt in front of a splitter, and that belt kept its row from compacting.
+     */
+    @Test
+    fun aRunGrowsItsExitIntoASplitter() {
+        val board = board()
+        board.placeTunnel(ironPlate, Coordinate(0, 0), Coordinate(2, 0), EAST)
+        board.placeBelt(Coordinate(3, 0), ironPlate, EAST)
+        board.place(
+            SplitterEntity(
+                Area(Coordinate(4, 0), Dimension(1, 2)),
+                "fast-splitter",
+                ironPlate,
+                EAST,
+            ),
+        )
+
+        UndergroundStretcher(board).stretchAll()
+
+        val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(3, 0)))
+        assertAll(
+            { assertEquals(Io.OUTPUT, output.io) },
+            { assertIs<SplitterEntity>(board.entityAt(Coordinate(4, 0))) },
+        )
+    }
+
+    /** A splitter of another material is not a lane continuation. */
+    @Test
+    fun aRunDoesNotGrowItsExitIntoAForeignSplitter() {
+        val board = board()
+        board.placeTunnel(ironPlate, Coordinate(0, 0), Coordinate(2, 0), EAST)
+        board.placeBelt(Coordinate(3, 0), ironPlate, EAST)
+        board.place(
+            SplitterEntity(
+                Area(Coordinate(4, 0), Dimension(1, 2)),
+                "fast-splitter",
+                copperPlate,
+                EAST,
+            ),
+        )
+
+        UndergroundStretcher(board).stretchAll()
+
+        val output = assertIs<UndergroundBeltEntity>(board.entityAt(Coordinate(2, 0)))
+        assertAll(
+            { assertEquals(Io.OUTPUT, output.io) },
             { assertIs<BeltEntity>(board.entityAt(Coordinate(3, 0))) },
         )
     }

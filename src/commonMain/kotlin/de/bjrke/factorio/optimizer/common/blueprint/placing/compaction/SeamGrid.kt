@@ -3,11 +3,15 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.compaction
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.north
 import de.bjrke.factorio.optimizer.common.core.model.south
@@ -66,8 +70,12 @@ private fun isRemovable(
  * a corner: the belt behind it feeds it straight and the tile ahead is a perpendicular belt of the
  * same material. Dropping the corner frees the row for the shift and lets the belt behind side-load
  * the lane that moved up. No belt may side-load into the cut tile. Anything other than a plain belt
- * next to it (a splitter, a loader, an underground end, a machine) stops the corridor, so a shift
- * can never pull a belt off such a neighbour.
+ * next to it (a loader, an underground end, a machine) stops the corridor, so a shift can never
+ * pull a belt off such a neighbour.
+ *
+ * A tunnel output right behind the belt is the one exception: removing the belt lands the output on
+ * its tile, so the output takes over the feed and only the straight consumer ahead has to continue
+ * the lane. That consumer may be a splitter, which takes items on its back.
  */
 private fun beltCuttable(
     index: LayoutIndex,
@@ -96,15 +104,46 @@ private fun beltCuttable(
             }
         }
     if (straight) return true
+    if (replacedByTunnelOutput(behind, ahead, belt)) return true
     // a corner into a perpendicular lane: drop the turn belt, the one behind it side-loads the lane
-    return behind is BeltEntity &&
+    return cornersIntoPerpendicularLane(behind, ahead, belt)
+}
+
+/** Whether the belt behind turns into a perpendicular lane of the same material ahead. */
+private fun cornersIntoPerpendicularLane(
+    behind: LayoutEntity?,
+    ahead: LayoutEntity?,
+    belt: BeltEntity,
+): Boolean =
+    behind is BeltEntity &&
         behind.materials == belt.materials &&
         behind.direction == belt.direction &&
         ahead is BeltEntity &&
         ahead.materials == belt.materials &&
         ahead.direction != belt.direction &&
         ahead.direction != belt.direction.opposite()
-}
+
+/**
+ * Whether the tunnel output behind [belt] takes over its feed when a corridor removes it: the
+ * output lands on the belt's tile and pours into [ahead], so the belt itself is redundant. The
+ * output and the consumer must carry the belt's single material and face along the lane; a splitter
+ * is a consumer because it takes items on its back.
+ */
+private fun replacedByTunnelOutput(
+    behind: LayoutEntity?,
+    ahead: LayoutEntity?,
+    belt: BeltEntity,
+): Boolean =
+    behind is UndergroundBeltEntity &&
+        behind.io == Io.OUTPUT &&
+        behind.direction == belt.direction &&
+        belt.materials == setOf(behind.material) &&
+        when (ahead) {
+            is BeltEntity -> ahead.direction == belt.direction && ahead.materials == belt.materials
+            is SplitterEntity ->
+                ahead.direction == belt.direction && ahead.material == behind.material
+            else -> false
+        }
 
 /**
  * A pipe is spliceable only on a straight run: a pipe branching north/south (for a vertical seam),
@@ -251,7 +290,7 @@ private class SeamSearch(private val grid: SeamGrid) {
                     minOf(previousWidth, runWidth),
                     previousCost + (grid.cost[tile] ?: 0),
                 )
-            if (best == null || isBetter(step, best, grid.orientation)) best = step
+            if (best == null || isBetter(step, best)) best = step
         }
         return best
     }
@@ -263,7 +302,7 @@ private class SeamSearch(private val grid: SeamGrid) {
             val tile = grid.tile(primary, secondary)
             val width = bottleneck[tile] ?: continue
             val step = Step(tile, width, cost[tile] ?: 0)
-            if (best == null || isBetter(step, best, grid.orientation)) best = step
+            if (best == null || isBetter(step, best)) best = step
         }
         return best
     }
@@ -279,12 +318,19 @@ private class SeamSearch(private val grid: SeamGrid) {
         return path
     }
 
-    private fun isBetter(candidate: Step, best: Step, orientation: SeamOrientation) =
+    /** The final tie-break: the northernmost/leftmost tile wins. */
+    private fun compareTiles(a: Coordinate, b: Coordinate): Int {
+        val secondary = secondaryOf(grid.orientation, a).compareTo(secondaryOf(grid.orientation, b))
+        if (secondary != 0) return secondary
+        return primaryOf(grid.orientation, a).compareTo(primaryOf(grid.orientation, b))
+    }
+
+    private fun isBetter(candidate: Step, best: Step) =
         candidate.width > best.width ||
             (candidate.width == best.width && candidate.cost < best.cost) ||
             (candidate.width == best.width &&
                 candidate.cost == best.cost &&
-                compareTiles(orientation, candidate.tile, best.tile) < 0)
+                compareTiles(candidate.tile, best.tile) < 0)
 }
 
 /**
@@ -293,9 +339,3 @@ private class SeamSearch(private val grid: SeamGrid) {
  * tile up or down per row.
  */
 internal fun findSeam(grid: SeamGrid) = SeamSearch(grid).find()
-
-private fun compareTiles(orientation: SeamOrientation, a: Coordinate, b: Coordinate): Int {
-    val secondary = secondaryOf(orientation, a).compareTo(secondaryOf(orientation, b))
-    if (secondary != 0) return secondary
-    return primaryOf(orientation, a).compareTo(primaryOf(orientation, b))
-}

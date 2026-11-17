@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.core.model.Area
@@ -19,6 +20,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
@@ -40,9 +42,20 @@ private const val UNDERGROUND_BELT = "express-underground-belt"
 private const val PIPE = "pipe"
 private const val MARKER = "constant-combinator"
 private const val MACHINE = "assembling-machine-3"
+private const val SPLITTER = "express-splitter"
 
 private fun belt(x: Int, y: Int, material: Material = ironOre, direction: Direction = EAST) =
     BeltEntity(areaTile(x, y), BELT, material, direction)
+
+/** A splitter facing [direction]; its two tiles lie across that facing. */
+private fun splitter(x: Int, y: Int, direction: Direction, material: Material = ironOre) =
+    SplitterEntity(
+        if (direction == EAST || direction == WEST) Coordinate(x, y).area(1, 2)
+        else Coordinate(x, y).area(2, 1),
+        SPLITTER,
+        material,
+        direction,
+    )
 
 private fun marker(x: Int, y: Int, material: Material = ironOre) =
     MarkerEntity(areaTile(x, y), MARKER, Signal(material))
@@ -314,6 +327,51 @@ class LayoutCompactionTest {
             { assertEquals(emptyList(), validateLayout(result.entities)) },
         )
     }
+
+    /**
+     * A tunnel output right behind a belt takes its place when the corridor is cut: the shift lands
+     * the output on the belt's tile and it pours straight into the splitter ahead, which takes
+     * items on its back. The reported logistic-science layout's iron-plate exit fed a belt that fed
+     * a splitter, and that lone belt kept its row from compacting.
+     */
+    @Test
+    fun aBeltBeforeATunnelOutputIsDroppedWhenTheOutputFeedsItsSplitter() {
+        val entities = tunnelBehindSplitter(ironOre, ironOre)
+
+        val result = assertNotNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+        val output =
+            result.entities.filterIsInstance<UndergroundBeltEntity>().single { it.io == Io.OUTPUT }
+        val splitter = result.entities.filterIsInstance<SplitterEntity>().single()
+
+        assertAll(
+            { assertEquals(1, result.width, "the lone belt row goes in one shift") },
+            { assertEquals(Coordinate(0, 1), output.area.topLeft, "the exit takes the belt tile") },
+            { assertEquals(Coordinate(0, 0), splitter.area.topLeft, "the splitter stays") },
+            { assertEquals(emptyList(), validateLayout(result.entities)) },
+        )
+    }
+
+    /** The output and the belt must carry the same material; a foreign exit cannot replace it. */
+    @Test
+    fun aTunnelOutputOnlyReplacesABeltOfItsOwnMaterial() {
+        val entities = tunnelBehindSplitter(beltMaterial = ironOre, runMaterial = ironPlate)
+        assertNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+    }
+
+    /**
+     * A belt with a tunnel output behind it and a splitter ahead, walled east so the empty tunnel
+     * span cannot become a corridor of its own. The only horizontal corridor is the belt's row.
+     */
+    private fun tunnelBehindSplitter(beltMaterial: Material, runMaterial: Material) =
+        listOf(
+            splitter(0, 0, NORTH, beltMaterial),
+            belt(0, 1, beltMaterial, NORTH),
+            underground(0, 2, NORTH, Io.OUTPUT, runMaterial),
+            underground(0, 5, NORTH, Io.INPUT, runMaterial),
+            belt(0, 6, beltMaterial, NORTH),
+            machine(1, 2),
+            machine(1, 5),
+        )
 
     /**
      * A corridor made only of empty tiles would leave one side of the layout empty. It must never
