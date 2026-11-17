@@ -7,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.Fixed
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.FAR_TOP
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.NEAR_BOTTOM
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer.FixedBeltLocation.NEAR_TOP
-import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
 
@@ -120,18 +119,13 @@ private fun mergeInto(
     if ((rates.inputs[material] ?: 0.0) > rates.laneCapacity) return false
     val index = sideGroups.indexOfFirst { candidate ->
         candidate.materials.size == 1 &&
+            candidate.direction == group.direction &&
             candidate.materials.none { it in rates.outputs } &&
             (rates.inputs[candidate.materials.single()] ?: 0.0) <= rates.laneCapacity
     }
     if (index < 0) return false
     val candidate = sideGroups[index]
-    val direction =
-        when {
-            candidate.direction == null -> group.direction ?: EAST
-            group.direction == null -> candidate.direction
-            candidate.direction == group.direction -> candidate.direction
-            else -> EAST
-        }
-    sideGroups[index] = BeltGroup(candidate.materials + group.materials, direction)
+    sideGroups[index] =
+        BeltGroup(candidate.materials + group.materials, candidate.direction ?: group.direction)
     return true
 }

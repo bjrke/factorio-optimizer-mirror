@@ -16,8 +16,9 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.core.model.west
 
-/** How far east of a row a free output source is searched for. */
+/** How far past a row's output lane a free source is searched for. */
 private const val SOURCE_SEARCH_RANGE = 60
 
 /** How many rows an imported source may be shifted down to avoid an occupied marker row. */
@@ -193,34 +194,59 @@ internal class DeliveryPreparation(
             failures += "${material.name} has no producer row"
             return@flatMap emptyList()
         }
-        val start = outputStart(producerRow, material)
-        if (start == null) {
+        val outputBelt =
+            producerRow.belts.firstOrNull { it.io == Io.OUTPUT && it.material == material }
+        if (outputBelt == null) {
             failures += "${material.name} has no output belt on its producer row"
             return@flatMap emptyList()
         }
+
+        val source = outputStart(outputBelt, producerRow, material) ?: return@flatMap emptyList()
+
         val distinctSinks = list.map { it.third }.distinctBy { it.feed }
         // the trunk reaches the farthest consumer, so it passes the nearer ones on the way
-        val sorted = distinctSinks.sortedByDescending { start.manhattanDist(it.feed) }
+        val sorted = distinctSinks.sortedByDescending { source.start.manhattanDist(it.feed) }
         listOf(
             Delivery(
                 material = material,
-                start = start,
-                direction = EAST,
+                start = source.start,
+                direction = source.direction,
                 sink = sorted.first(),
                 followUps = sorted.drop(1),
             ),
         )
     }
 
-    /** The first free belt tile east of [row]'s output lane, reserved as a source. */
-    private fun outputStart(row: Row, material: Material): Coordinate? {
-        val outputBelt =
-            row.belts.firstOrNull { it.io == Io.OUTPUT && it.material == material } ?: return null
-        var start = Coordinate(row.right + 1, outputBelt.y)
-        while (start.x < row.right + SOURCE_SEARCH_RANGE && !isFree(start)) start = start.east()
-        reserve(start, material)
-        return start
-    }
+    /** A produced source: the first free tile past the product belt, and the way it leaves. */
+    private class Source(val start: Coordinate, val direction: Direction)
+
+    /**
+     * The first free belt tile beyond [row]'s output lane, in the lane's own direction, reserved as
+     * a source. A westbound product belt is fed from its west end, so the source is searched west.
+     */
+    private fun outputStart(outputBelt: RowBelt, row: Row, material: Material) =
+        when (val direction = outputBelt.direction) {
+            EAST -> {
+                var start = Coordinate(row.right + 1, outputBelt.y)
+                while (start.x < row.right + SOURCE_SEARCH_RANGE && !isFree(start)) {
+                    start = start.east()
+                }
+                reserve(start, material)
+                Source(start, EAST)
+            }
+            WEST -> {
+                var start = Coordinate(row.left - 1, outputBelt.y)
+                while (start.x > row.left - SOURCE_SEARCH_RANGE && !isFree(start)) {
+                    start = start.west()
+                }
+                reserve(start, material)
+                Source(start, WEST)
+            }
+            else -> {
+                failures += "did not expect a belt to $direction"
+                null
+            }
+        }
 
     /**
      * A solid belt connector feeding one imported sink: a constant-combinator label, an infinity

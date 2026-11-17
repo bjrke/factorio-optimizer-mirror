@@ -151,20 +151,23 @@ private class RunGrowth(
         if (!fluid && beyond is UndergroundBeltEntity) return false
         // the new end must still join a conveyor of its own material: the feed behind a moved
         // entrance and the lane in front of a moved exit both face into the run
-        if (!fluid && !continues(beyond)) return false
+        if (!fluid && !continues(beyond, entrance = step == backward)) return false
         return !board.hasTunnel(start + step * count, step, type)
     }
 
     /**
-     * Whether the conveyor past [tile] carries the run's material and faces into it. A splitter
-     * counts: it takes items on its back and hands them along, so a moved exit may pour into it and
-     * a moved entrance may be fed by it.
+     * Whether the conveyor past [tile] carries the run's material and faces into it. A splitter may
+     * receive the run's exit, but it must not feed a moved entrance: the splitter's output would
+     * then feed one side of a tunnel end directly.
      */
-    private fun continues(tile: LayoutEntity): Boolean =
+    private fun continues(tile: LayoutEntity, entrance: Boolean): Boolean =
         when (tile) {
             is BeltEntity ->
                 tile.materials == setOf(material) && tile.load.isFull && tile.direction == direction
-            is SplitterEntity -> tile.material == material && tile.direction == direction
+            // a splitter may receive the run's exit, but its output may not feed an entrance:
+            // that would feed one side of a tunnel end directly
+            is SplitterEntity ->
+                !entrance && tile.material == material && tile.direction == direction
             else -> false
         }
 

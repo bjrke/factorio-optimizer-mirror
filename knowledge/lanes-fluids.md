@@ -7,6 +7,16 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
 
 ## Map
 
+- `blueprint/planning/row/FeedSides.kt` — the network split behind every feed side. A produced
+  material is one network of its producer row plus every row that takes it, so its weight is
+  `consumers + 1` (a 1:1 feed 2, one producer feeding two rows 3) and its order is the mean east
+  extent of those rows; an import weighs 1, is keyed 0 and is always `EAST`, so imports reserve the
+  west corridor. The networks sort by order and the prefix whose cumulative weight is closest to
+  half the total runs `EAST` (fed from the west), the rest `WEST`; ties keep the smaller prefix. A
+  producer has one output side, so every material gets one feed side for all its consumer belts and
+  its own product exits on the opposite side. `RowTopology` builds the networks; `RowPlacer` uses
+  the feed side for inputs and the product side for outputs, and `packRowBelts` only pairs feeds
+  from the same side (an import may pair across and makes the pair `EAST`).
 - `blueprint/planning/row/RowBeltPlacement.kt` — assigns every `BeltGroup` to the fixed belt rows:
   a product faces its consumer, an input faces its producer, each side takes at most two rows, and
   an overflowing input shares a capacity-safe mixed belt on its preferred side before moving across.
@@ -14,8 +24,9 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
 - `blueprint/planning/row/RowPlacer.kt` — places the machine rows (`Row` = `PlannedRow` +
   `Area` + `RowLanes` + machines, declared in `Row.kt`) and the bands, and owns
   the ordered `placedRows` list and the lane direction. It consumes `planner.units` (already
-  north to south) and `assignRowBelts`; lane direction sorts by `planner.outletX`, so a producer
-  placed after its consumer still has a defined outlet. `RowLanes` holds at most
+  north to south) and `assignRowBelts`; the lane direction comes from `FeedSides`, which gives
+  every material network one feed side for its whole layout, so a producer placed after its
+  consumer still has a defined outlet. `RowLanes` holds at most
   `MAX_ROW_BELTS` fixed belt locations as `RowBelt` values (y, `LaneLoad`, direction,
   io and side), including the product; a mixed input belt also carries its `BeltMerge`
   (merge column, above/below, the two feeder materials and the lane direction).
@@ -101,6 +112,18 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
 
 ## Traps
 
+- **A feed side is a whole-material network decision, not a per-row half split.** The old
+  `laneDirection` halved a row's produced inputs by their producer outlet, so the reported
+  logistic-science layout fed its `transport-belt` + `electronic-circuit` lane from the west while
+  both producers (the south foundry and the north circuit row) handed their products to the east:
+  each trunk ran east and then reversed across the layout to the merge at `(7,20)`. `FeedSides`
+  now weighs whole networks (`producer row + consumers`), orders them by the mean row extent and
+  splits by cumulative weight, so imports reserve east and a heavier network can move the boundary.
+  The product side is the opposite of the feed side; do not reintroduce a per-row outlet order.
+  Evidence: `theReportedLogisticScienceOutputsFollowTheirFeedSide`, `FeedDirectionsTest`.
+- **A westbound product belt fills the other lane.** `productLoad` picks the lane farther from the
+  machines in the belt's own frame (`left = (side == NORTH) == (direction == EAST)`), so flipping
+  the product side also flips the filled lane. Do not hard-code the north/south side to a lane.
 - **A lane load is in the belt's own left/right frame, not the compass.** `LaneLoad.left` is
   north for an eastbound belt, south for a westbound one; `laneAt(direction, side)` is the one
   place that maps a neighbor side to a lane. A turn keeps the slots, so the merge tile's load is

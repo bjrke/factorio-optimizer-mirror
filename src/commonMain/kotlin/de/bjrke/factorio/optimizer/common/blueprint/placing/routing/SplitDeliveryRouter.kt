@@ -53,6 +53,9 @@ internal class SplitDeliveryRouter(
         var bestScore = Int.MAX_VALUE
         for (candidate in candidates.take(SPLIT_CANDIDATES)) {
             val splitterTiles = setOf(candidate.belt, candidate.side)
+            // the branch starts on the splitter's exit, which the search itself never judges; a
+            // foreign belt pouring into it would side-load the branch
+            if (rules.sideLoadedByForeign(candidate.exit, material, splitterTiles)) continue
             val segment =
                 router.findRoute(
                     candidate.exit,

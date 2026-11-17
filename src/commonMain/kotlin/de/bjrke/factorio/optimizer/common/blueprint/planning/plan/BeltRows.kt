@@ -131,7 +131,7 @@ internal fun packRowBelts(request: BeltPackRequest): BeltPacking {
                 .take(needed - pairs.size)
                 .map { pairGroup(it[0], it[1], directions, imports, inputs) }
     }
-    return BeltPacking(groupMaterials(solids, pairs, inputs, outputs))
+    return BeltPacking(groupMaterials(solids, pairs, inputs, outputs, directions))
 }
 
 private fun pairAll(
@@ -190,6 +190,7 @@ private fun groupMaterials(
     pairs: List<BeltGroup>,
     inputs: Map<Material, Double>,
     outputs: Map<Material, Double>,
+    directions: Map<Material, Direction>,
 ): List<BeltGroup> {
     val partner = mutableMapOf<Material, BeltGroup>()
     for (pair in pairs) {
@@ -205,7 +206,7 @@ private fun groupMaterials(
             groups += pair
             grouped += pair.materials
         } else {
-            groups += BeltGroup(listOf(material), null)
+            groups += BeltGroup(listOf(material), directions[material])
             grouped += material
         }
     }

@@ -284,8 +284,8 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
-     * The reported logistic-science layout still compacts to a bounded size. Smelting is planned
-     * now, so the plate rows make it taller than before.
+     * The reported logistic-science layout still compacts to a bounded size. Its mix merge sits
+     * east of the row, so it is wider than the old west-merge layout.
      */
     @Test
     fun theReportedLogisticScienceUrlCompacts() {
@@ -300,7 +300,7 @@ class BlueprintLayoutIntegrationTest {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
             // smelting is planned now, so the plate rows make the layout taller than before
-            { assertTrue(width <= 43, "layout is still $width tiles wide") },
+            { assertTrue(width <= 48, "layout is still $width tiles wide") },
             { assertTrue(height <= 68, "layout is still $height rows tall") },
         )
     }
@@ -321,7 +321,7 @@ class BlueprintLayoutIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(height <= 61, "layout is still $height rows tall") },
+            { assertTrue(height <= 62, "layout is still $height rows tall") },
         )
     }
 

@@ -84,9 +84,9 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   end sharing. It never swallows a machine port or a belt tile an inserter takes from
   or drops onto, so a run cannot strand a row inserter or a pipe off its machine. The
   ports are re-derived from the settled board (the plain pipes that touch a machine),
-  not kept as coordinates, so a corridor shift cannot leave a stale tile; it only grows where a
-  same-material full belt or splitter still faces into the run past the swallowed tile, so a
-  moved entrance or exit keeps its feeder or lane.
+  not kept as coordinates, so a corridor shift cannot leave a stale tile; it grows only where a
+  same-material full belt (or, at an exit, a splitter) still faces into the run past the swallowed
+  tile, so a moved entrance or exit keeps its feeder or lane.
 - `blueprint/planning/row/RowTopology.kt` — the target-centred row topology. It builds the
   producer graph from each row's external solid inputs (`rowInputs` minus
   `fullyInternalInputs`) and `BlueprintPlan.producerOf`, roots it at the target, sends a direct
@@ -96,11 +96,13 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   south); a two-branch target keeps the plan-order split. Every other target keeps the compact
   one-sided order: the target sits at the opposite end, the product moves to the empty side and the
   branches are ordered largest-first, so the largest branch is nearest the target. It owns the
-  `RowUnit(index, row, side)` order, the preferred input and output sides, the planned outlet
-  columns (`outletX`) and the topology-aware test. Graph nodes are plan-row positions, so
-  structurally equal rows stay distinct occurrences.
+  `RowUnit(index, row, side)` order, the preferred input and output sides and the topology-aware
+  test; its `FeedSides` gives every material one feed side and the product side opposite it
+  (`lanes-fluids.md`). Graph nodes are plan-row positions, so structurally equal rows stay distinct
+  occurrences.
 - `blueprint/planning/row/RowPlanner.kt` — delegates to `RowTopology`, exposes the `RowUnit` order,
-  side queries and `outletX`, and keeps the pure sizing helpers (`inserterPattern`).
+  the side queries, `feedDirection`/`productDirection`, and keeps the pure sizing helpers
+  (`inserterPattern`).
 - `blueprint/placing/compaction/CompactionPass.kt` — the seam-compaction loop; it re-stretches the
   underground runs after each corridor and shifts the import pins and bounds. A
   candidate that fails only after the stretch is ruled out by its seam path and the
@@ -255,11 +257,12 @@ baselines, so every finding fails.
   let a copper-cable run swallow the corner belt of its split branch, and the entrance slid onto a
   tile whose east neighbor was a concrete belt, so `validateLayout` reported the entrance as unfed
   and compaction stayed off. Require a same-material full belt facing into the run (`continues`); a
-  foreign belt, or no belt at all, stops the growth. A splitter facing into the run counts too: it
-  takes items on its back and hands them along, so the output can pour into it (or it can feed a
-  moved entrance). Evidence: `aRunDoesNotMoveItsEntranceOntoAForeignFeed`,
+  foreign belt, or no belt at all, stops the growth. A splitter facing into the run counts for the
+  run's **exit** only (its back takes the moved exit's load). It must not feed a moved entrance:
+  the splitter's output would then feed one side of a tunnel end directly, which
+  `assertSplittersOnlyFeedSurface` rejects. Evidence: `aRunDoesNotMoveItsEntranceOntoAForeignFeed`,
   `aRunDoesNotGrowItsExitIntoAForeignLane`, `aRunGrowsItsExitIntoASplitter`,
-  `theReportedRocketSiloUrlCompacts`.
+  `realBlueprintsAreValid` (the processing-unit splitter), `theReportedRocketSiloUrlCompacts`.
 - **A tunnel output behind a belt takes over its feed, so that belt is a splice.** `beltCuttable`
   used to require a plain belt on both sides, which left the reported stacked logistic-science
   layout's iron-plate belt at `(24,32)` in place: its north neighbor is a splitter and its south
@@ -302,6 +305,12 @@ baselines, so every finding fails.
   `aSplitterWithoutABeltOnItsBackIsReported`,
   `aBeltCircleIsReportedOnceAtItsFirstTile`,
   `theReportedFusionReactorUrlCompacts`. See `LayoutValidationFlow.kt`.
+- **A split route's start tile never goes through `BeltRouteRules.allowed`.** The route search only
+  judges tiles it expands to; `SplitDeliveryRouter` starts the branch on the splitter's exit, so a
+  foreign belt already pouring into that tile was missed and the branch side-loaded it. The reported
+  stacked logistic-science layout hit this at `(37,24)`: a splitter's output fed a belt the mixed
+  lane also poured into. `sideLoadedByForeign` now checks the exit (and the splitter's own tiles are
+  ignored) before a candidate is accepted. Evidence: `realBlueprintsAreValid` (processing-unit).
 - **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
   corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
   error anywhere rejects every candidate and the pass returns after its first

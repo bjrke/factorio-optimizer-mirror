@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
@@ -22,6 +23,8 @@ private data class RunTile(
     val direction: Direction?,
     val type: Io?,
     val material: Material?,
+    /** Whether a belt fills both lanes; a half or mixed belt is not swallowed by a run. */
+    val full: Boolean,
 )
 
 /** Asserts on the placed entities of a layout dump, which carry their own material. */
@@ -43,6 +46,7 @@ private fun LayoutEntity.runTile() =
             },
         type = if (this is UndergroundBeltEntity) io else (this as? LoaderEntity)?.io,
         material = (this as? TransportEntity)?.material,
+        full = (this as? BeltEntity)?.load?.isFull ?: true,
     )
 
 /**
@@ -144,7 +148,10 @@ private fun forwardProblem(
 }
 
 private fun RunTile.plainBelt(direction: Direction, material: Material?) =
-    name.endsWith("transport-belt") && this.direction == direction && this.material == material
+    name.endsWith("transport-belt") &&
+        this.direction == direction &&
+        this.material == material &&
+        full
 
 private fun List<RunTile>.isImportConnector(entity: RunTile): Boolean {
     val direction = entity.direction ?: return false

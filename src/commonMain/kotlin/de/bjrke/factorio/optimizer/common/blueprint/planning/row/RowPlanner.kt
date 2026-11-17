@@ -14,8 +14,8 @@ internal data class RowUnit(val index: Int, val row: PlannedRow, val side: LineS
 
 /**
  * The plan-level decisions a layout needs before it places anything: the row order, the side every
- * belt should face, and the planned outlet columns. Also the pure sizing helpers
- * (`inserterPattern`) the row placer uses, so no geometry leaks in.
+ * belt should face, the feed side of every material network and the side its producer exits on.
+ * Also the pure sizing helpers (`inserterPattern`) the row placer uses, so no geometry leaks in.
  */
 internal class RowPlanner(
     plan: BlueprintPlan,
@@ -35,8 +35,14 @@ internal class RowPlanner(
     fun preferredOutputSide(unit: RowUnit, material: Material) =
         topology.preferredOutputSide(unit.index, material)
 
-    /** The planned east outlet of [material]'s producer, before any row is placed. */
-    fun outletX(material: Material) = topology.outletX(material)
+    /**
+     * The direction [material]'s consumer belts run: `EAST` fed from the west, `WEST` from the
+     * east.
+     */
+    fun feedDirection(material: Material) = topology.feedSides.feedDirection(material)
+
+    /** The side [material]'s product belt exits on, opposite to its consumers' feed side. */
+    fun productDirection(material: Material) = topology.feedSides.productDirection(material)
 
     fun footprint(production: FactoryProduction) = blueprintMachineFootprint(production.factory)
 

@@ -38,13 +38,37 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
             !facesReservedFeed(coordinate, facing, sink.feed, material)
     }
 
+    /**
+     * True when a belt of another material next to [coordinate] pours into it. A splitter branch
+     * starts on its own exit tile, which the search never checks itself, so the split router asks
+     * this before accepting a candidate; [ignored] are the splitter's own tiles.
+     */
+    fun sideLoadedByForeign(
+        coordinate: Coordinate,
+        material: Material,
+        ignored: Set<Coordinate> = emptySet(),
+    ): Boolean = poursInto(coordinate, material, ignored)
+
     /** True when a surface belt next to [coordinate] pours its load into that tile. */
     private fun sideLoaded(coordinate: Coordinate): Boolean =
+        poursInto(coordinate, material = null, ignored = emptySet())
+
+    /**
+     * Whether a surface belt next to [coordinate] pours into it. A buried entrance does not feed
+     * the tile above its run. With a [material], only a foreign belt counts; [ignored] tiles (a
+     * splitter's own area) are skipped.
+     */
+    private fun poursInto(
+        coordinate: Coordinate,
+        material: Material?,
+        ignored: Set<Coordinate>,
+    ): Boolean =
         coordinate.neighbors.any { neighbor ->
+            if (neighbor in ignored) return@any false
             val belt = board.entityAt(neighbor) as? ConveyorEntity ?: return@any false
-            // a buried entrance does not feed the tile above its run
             if (belt is UndergroundBeltEntity && belt.io == Io.INPUT) return@any false
-            belt.direction == directionBetween(neighbor, coordinate)
+            belt.direction == directionBetween(neighbor, coordinate) &&
+                (material == null || material !in belt.materials)
         }
 
     /**

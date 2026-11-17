@@ -81,6 +81,16 @@ internal class RowTopology(
         }
     }
 
+    /** The feed side of every material on a belt, and the side its producer's product exits on. */
+    val feedSides: FeedSides =
+        FeedSides(
+            inputs = infos.map { it.inputs },
+            rowRights = infos.map { it.right },
+            producerIndex = producerIndex,
+            beltMaterials = plan.beltMaterials,
+            target = plan.target,
+        )
+
     private val parent = MutableList<Int?>(infos.size) { null }
     private val children = List(infos.size) { mutableListOf<Int>() }
     private val branchSide = MutableList<LineSide?>(infos.size) { null }
@@ -275,10 +285,4 @@ internal class RowTopology(
     /** The rows that take [material] from [producer] over a belt. */
     private fun consumersOf(material: Material, producer: Int): List<Int> =
         infos.indices.filter { it != producer && material in infos[it].inputs }
-
-    /** The tile east of the row that puts [material] on a belt, or Far East when none does. */
-    fun outletX(material: Material): Int {
-        val producer = producerIndex[material] ?: return Int.MAX_VALUE
-        return infos[producer].right + 1
-    }
 }

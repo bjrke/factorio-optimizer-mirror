@@ -20,7 +20,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
-import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
@@ -111,7 +110,7 @@ internal class RowPlacer(
             rowInputs(machines.map { it.production }, logistics)
                 .minus(plannedRow.fullyInternalInputs)
         val directions =
-            (inputs.keys - outputs.keys).associateWith { laneDirection(it, inputs.keys) }
+            (inputs.keys - outputs.keys).associateWith { planner.feedDirection(it) ?: EAST }
         val imports = inputs.keys - plan.beltMaterials
         val laneCapacity = logistics.oneLaneCapacity()
         val packing =
@@ -163,8 +162,7 @@ internal class RowPlacer(
         val output = group.materials.firstOrNull { it in rates.outputs }
         val io = if (output != null) Io.OUTPUT else Io.INPUT
         val direction =
-            if (output != null) EAST
-            else group.direction ?: laneDirection(group.materials.first(), rates.inputs.keys)
+            if (output != null) planner.productDirection(output) else group.direction ?: EAST
         val merge =
             if (group.materials.size > 1) {
                 BeltMerge(
@@ -181,7 +179,7 @@ internal class RowPlacer(
             } else null
         val load =
             when {
-                output != null -> productLoad(output, location.side)
+                output != null -> productLoad(output, location.side, direction)
                 merge != null -> merge.load
                 else -> LaneLoad.full(group.materials.single())
             }
@@ -190,14 +188,15 @@ internal class RowPlacer(
 
     /**
      * A product belt is filled from the machine edge only. An inserter drops onto the lane farther
-     * from it: an eastbound belt above the machines (inserters below it) fills its left lane, one
-     * below them (inserters above it) its right lane. The other lane stays free.
+     * from it, in the belt's own left/right frame: an eastbound belt above the machines (inserters
+     * below it) fills its left lane, one below them (inserters above it) its right lane; a
+     * westbound belt flips both. The other lane stays free.
      */
-    private fun productLoad(material: Material, side: LineSide) =
-        when (side) {
-            LineSide.NORTH -> LaneLoad.half(material, left = true)
-            LineSide.SOUTH -> LaneLoad.half(material, left = false)
-        }
+    private fun productLoad(material: Material, side: LineSide, direction: Direction) =
+        LaneLoad.half(
+            material,
+            left = (side == LineSide.NORTH) == (direction == EAST),
+        )
 
     /**
      * Builds a row: a plain production repeats its machine, while a direct-feed band interleaves
@@ -283,17 +282,6 @@ internal class RowPlacer(
             return
         }
         board.placeBelt(coordinate, load, direction)
-    }
-
-    /**
-     * Where a lane is fed: imports from the west. Produced materials split by their producer's
-     * outlet, the left half feeding from the west and the right half from the east, so two trunks
-     * into one row do not have to cross. A lone produced input picks the nearer end.
-     */
-    fun laneDirection(material: Material, solids: Iterable<Material>): Direction {
-        if (material !in plan.beltMaterials) return EAST
-        val produced = solids.filter { it in plan.beltMaterials }.sortedBy { planner.outletX(it) }
-        return if (produced.indexOf(material) < produced.size / 2) EAST else WEST
     }
 
     /**
