@@ -185,6 +185,7 @@ val RouterBasedParams =
                 }
                 blueprintPanel {
                     blueprint = preview.blueprint
+                    placedEntities = preview.placedEntities
                 }
             }
         }

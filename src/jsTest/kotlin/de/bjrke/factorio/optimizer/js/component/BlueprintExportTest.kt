@@ -2,7 +2,12 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinitySettings
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.RequestFilter
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
@@ -14,6 +19,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
@@ -57,6 +63,13 @@ private val plan =
         label = "iron-gear-wheel",
     )
 
+/** One tooltip expectation: the blueprint entity, its lines, and the layout entity behind it. */
+private data class TitleCase(
+    val entity: BlueprintEntity,
+    val expected: List<String>,
+    val placed: LayoutEntity? = null,
+)
+
 class BlueprintExportTest : ComponentTest() {
 
     private val logistics = calculator()
@@ -66,10 +79,14 @@ class BlueprintExportTest : ComponentTest() {
             RowLayout(it.plan, logistics).blueprint()
         }
 
-    private fun renderPanel(outcome: BlueprintPlanResult) =
+    private fun renderPanel(
+        outcome: BlueprintPlanResult,
+        placedEntities: List<LayoutEntity> = emptyList(),
+    ) =
         render(
             blueprintPanel.create {
                 this.blueprint = blueprintOf(outcome)
+                this.placedEntities = placedEntities
             },
         )
 
@@ -81,11 +98,20 @@ class BlueprintExportTest : ComponentTest() {
             },
         )
 
-    private fun renderView(vararg entities: BlueprintEntity) =
-        render(blueprintView.create { blueprint = Blueprint("test", entities = entities.toList()) })
+    private fun renderView(
+        vararg entities: BlueprintEntity,
+        placed: List<LayoutEntity> = emptyList(),
+    ) =
+        render(
+            blueprintView.create {
+                blueprint = Blueprint("test", entities = entities.toList())
+                placedEntities = placed
+            },
+        )
 
-    private fun RenderResult.image(title: String): Element? =
-        container.querySelector("img[title=\"$title\"]")
+    /** The image of [name]; its title is the entity's hover text, so it is queried by `alt`. */
+    private fun RenderResult.image(name: String): Element? =
+        container.querySelector("img[alt=\"$name\"]")
 
     private fun computedTransform(element: Element?) =
         js("(function (el) { return getComputedStyle(el).transform; })")(element)
@@ -274,11 +300,125 @@ class BlueprintExportTest : ComponentTest() {
     }
 
     @Test
+    fun titlesShowTheFieldsTheBlueprintCarries() =
+        assertTableOf(
+            TitleCase(
+                BlueprintEntity(
+                    "assembling-machine-3",
+                    area = Coordinate(0, 0).area(3, 3),
+                    direction = Direction.EAST,
+                    recipe = "iron-gear-wheel",
+                ),
+                listOf(
+                    "#1 assembling-machine-3",
+                    "at (0, 0) 3x3",
+                    "direction: east",
+                    "recipe: iron-gear-wheel",
+                ),
+            ),
+            TitleCase(
+                BlueprintEntity(
+                    "medium-electric-pole",
+                    area = Coordinate(6, 0).area(1, 1),
+                    neighbours = listOf(2, 5),
+                ),
+                listOf("#1 medium-electric-pole", "at (6, 0) 1x1", "wired to: #2, #5"),
+            ),
+            TitleCase(
+                BlueprintEntity(
+                    "infinity-chest",
+                    area = Coordinate(0, 4).area(1, 1),
+                    infinity = InfinitySettings(item = ironPlate),
+                ),
+                listOf("#1 infinity-chest", "at (0, 4) 1x1", "provides: iron-plate"),
+            ),
+            TitleCase(
+                BlueprintEntity(
+                    "steel-chest",
+                    area = Coordinate(8, 4).area(1, 1),
+                    requestFilter = RequestFilter("iron-plate", 50),
+                    bar = 4,
+                ),
+                listOf("#1 steel-chest", "at (8, 4) 1x1", "request: iron-plate x50", "bar: 4"),
+            ),
+        ) { (entity, expected, placed) ->
+            assertEquals(
+                expected.joinToString("\n"),
+                renderView(entity, placed = listOfNotNull(placed))
+                    .image(entity.name)
+                    ?.getAttribute("title"),
+            )
+        }
+
+    @Test
+    fun titlesAddTheFactsOnlyTheLayoutKnows() =
+        assertTableOf(
+            TitleCase(
+                BlueprintEntity(
+                    "express-transport-belt",
+                    area = Coordinate(3, 1).area(1, 1),
+                    direction = Direction.SOUTH,
+                ),
+                listOf(
+                    "#1 express-transport-belt",
+                    "at (3, 1) 1x1",
+                    "direction: south",
+                    "lanes left=iron-plate right=copper-plate",
+                ),
+                placed =
+                    BeltEntity(
+                        Coordinate(3, 1).area(1, 1),
+                        "express-transport-belt",
+                        Direction.SOUTH,
+                        LaneLoad.mixed(ironPlate, copperPlate),
+                    ),
+            ),
+            TitleCase(
+                BlueprintEntity(
+                    "long-handed-inserter",
+                    area = Coordinate(4, 2).area(1, 1),
+                    direction = Direction.WEST,
+                    mirror = true,
+                ),
+                listOf(
+                    "#1 long-handed-inserter",
+                    "at (4, 2) 1x1",
+                    "direction: west",
+                    "mirrored",
+                    "material: copper-plate",
+                    "long-handed",
+                ),
+                placed =
+                    InserterEntity(
+                        Coordinate(4, 2).area(1, 1),
+                        "long-handed-inserter",
+                        copperPlate,
+                        Direction.WEST,
+                        long = true,
+                    ),
+            ),
+        ) { (entity, expected, placed) ->
+            assertEquals(
+                expected.joinToString("\n"),
+                renderView(entity, placed = listOfNotNull(placed))
+                    .image(entity.name)
+                    ?.getAttribute("title"),
+            )
+        }
+
+    @Test
     fun thePanelShowsTheBlueprintWithoutOpeningAnything() {
         val result = renderPanel(BlueprintPlanResult.Planned(plan))
 
+        val image = assertNotNull(result.image(Factory.ASSEMBLING_MACHINE_3.identifier))
+        val title = assertNotNull(image.getAttribute("title"))
         assertAll(
-            { assertNotNull(result.image(Factory.ASSEMBLING_MACHINE_3.identifier)) },
+            {
+                assertEquals(
+                    "#1 ${Factory.ASSEMBLING_MACHINE_3.identifier}",
+                    title.lineSequence().first(),
+                )
+            },
             { assertEquals(null, screen.queryByText(plan.label)) },
         )
     }
@@ -336,10 +476,17 @@ class BlueprintExportTest : ComponentTest() {
             )
 
         val preview = blueprintPreview(result, logistics, 1.0, BeltEnd.CONSTANT_COMBINATOR)
+        val blueprint = assertNotNull(preview.blueprint)
 
         assertAll(
             { assertTrue(preview.outcome is BlueprintPlanResult.Planned) },
-            { assertNotNull(preview.blueprint) },
+            // the tooltip pairs the two lists by index, so their order has to stay identical
+            {
+                assertEquals(
+                    blueprint.entities.map { it.area },
+                    preview.placedEntities.map { it.area },
+                )
+            },
         )
     }
 }

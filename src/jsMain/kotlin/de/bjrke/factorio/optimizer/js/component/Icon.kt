@@ -25,6 +25,13 @@ external interface IconProps : Props {
     var alt: String?
 
     /**
+     * The hover text. Defaults to the label so a plain icon names itself; the blueprint preview
+     * passes the entity's whole description instead, because the icon covers the tile and shadows
+     * any title on its container.
+     */
+    var title: String?
+
+    /**
      * Draws the icon into an explicit box, overriding [size]. Used for non-square footprints, where
      * the icon is stretched to fill the entity's area.
      */
@@ -52,13 +59,14 @@ private val iconX =
         val iconWidth = props.width ?: size.toDouble()
         val iconHeight = props.height ?: size.toDouble()
         val label = props.alt ?: props.name
+        val hoverText = props.title ?: label
         val transform = iconTransform(props.rotation, props.flipHorizontal)
         val layers = iconLayers(props.name)
         if (layers.size == 1) {
             img {
                 src = "icons/${layers.single().file}.png"
                 alt = label
-                title = label
+                title = hoverText
                 width = iconWidth
                 height = iconHeight
                 css {
@@ -68,7 +76,7 @@ private val iconX =
             }
         } else {
             span {
-                title = label
+                title = hoverText
                 css {
                     position = Position.relative
                     display = Display.inlineBlock

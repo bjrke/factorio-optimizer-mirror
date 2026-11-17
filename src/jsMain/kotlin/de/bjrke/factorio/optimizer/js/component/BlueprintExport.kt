@@ -6,6 +6,7 @@ package de.bjrke.factorio.optimizer.js.component
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.blueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
@@ -71,13 +72,18 @@ private fun copyToClipboard(text: String) {
 
 external interface BlueprintViewProps : Props {
     var blueprint: Blueprint
+
+    /** The layout entities behind [blueprint], in the same order, for the hover text. */
+    var placedEntities: List<LayoutEntity>
 }
 
 /**
  * Renders the blueprint as an icon grid inside an SVG, so the whole plan scales down to whatever
  * space the dialog offers. Each entity's icon fills its tiles; a directional entity is rotated to
  * point the way its blueprinted [Direction] runs without changing the blueprint, and one carrying a
- * recipe or material shows that signal centred on top.
+ * recipe or material shows that signal centred on top. Hovering an entity (or its signal) shows its
+ * [blueprintTitle], which is a native tooltip because the icon covers the tile and the SVG scale
+ * would shrink any text drawn inside it.
  */
 internal val blueprintView =
     FC<BlueprintViewProps>("blueprintView") { props ->
@@ -113,6 +119,8 @@ internal val blueprintView =
                         val cellWidth = cell.width * TILE
                         val cellHeight = cell.height * TILE
                         val iconRotation = blueprintDisplayRotation(entity)
+                        val entityTitle =
+                            blueprintTitle(index, entity, props.placedEntities.getOrNull(index))
                         // a quarter turn swaps the icon's box, so the rotated icon still fills the
                         // cell
                         val quarterTurn = iconRotation % 180 != 0
@@ -139,6 +147,7 @@ internal val blueprintView =
                                     width = iconWidth
                                     height = iconHeight
                                     if (iconRotation != 0) rotation = iconRotation
+                                    title = entityTitle
                                 }
                             }
                             blueprintOverlay(entity)?.let { overlay ->
@@ -155,7 +164,10 @@ internal val blueprintView =
                                         width = overlaySize.px
                                         height = overlaySize.px
                                     }
-                                    icon(overlay) { size = overlaySize.toInt() }
+                                    icon(overlay) {
+                                        size = overlaySize.toInt()
+                                        title = entityTitle
+                                    }
                                 }
                             }
                         }
@@ -165,10 +177,15 @@ internal val blueprintView =
         }
     }
 
-/** The blueprint a plan produces, or null when the plan cannot be built. */
+/**
+ * The blueprint a plan produces, or null when the plan cannot be built, plus the layout entities
+ * behind it in the same order as [blueprint]'s entities.
+ */
 internal data class BlueprintPreview(
     val outcome: BlueprintPlanResult,
     val blueprint: Blueprint?,
+    /** The layout facts a tooltip shows; index-aligned with [blueprint]'s entities. */
+    val placedEntities: List<LayoutEntity>,
 )
 
 /**
@@ -183,16 +200,22 @@ internal fun blueprintPreview(
     powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ): BlueprintPreview {
     val outcome = blueprintPlan(result, logistics, normalizeTarget)
+    val layout =
+        (outcome as? BlueprintPlanResult.Planned)?.let {
+            RowLayout(it.plan, logistics, beltEnd, powerPole)
+        }
     return BlueprintPreview(
         outcome,
-        (outcome as? BlueprintPlanResult.Planned)?.let {
-            RowLayout(it.plan, logistics, beltEnd, powerPole).blueprint()
-        },
+        layout?.blueprint(),
+        // build() is idempotent, and the dump keeps the placement order the blueprint maps into,
+        // so the two lists stay index-aligned for the tooltip
+        layout?.layoutDump()?.entities.orEmpty(),
     )
 }
 
 external interface BlueprintPanelProps : Props {
     var blueprint: Blueprint?
+    var placedEntities: List<LayoutEntity>
 }
 
 /**
@@ -207,7 +230,10 @@ internal val blueprintPanel =
                 className = ClassName("blueprint-panel")
                 div {
                     className = ClassName("blueprint-preview")
-                    blueprintView { this.blueprint = blueprint }
+                    blueprintView {
+                        this.blueprint = blueprint
+                        placedEntities = props.placedEntities
+                    }
                 }
             }
         }

@@ -16,6 +16,7 @@ private external interface IconHostProps : Props {
     var name: String
     var size: Int?
     var alt: String?
+    var title: String?
     var width: Double?
     var height: Double?
     var rotation: Int?
@@ -27,6 +28,7 @@ private val iconHost =
         icon(props.name) {
             size = props.size
             alt = props.alt
+            title = props.title
             width = props.width
             height = props.height
             rotation = props.rotation
@@ -46,6 +48,7 @@ class IconTest : ComponentTest() {
         name: String,
         size: Int? = null,
         alt: String? = null,
+        title: String? = null,
         width: Double? = null,
         height: Double? = null,
         rotation: Int? = null,
@@ -56,6 +59,7 @@ class IconTest : ComponentTest() {
                 this.name = name
                 this.size = size
                 this.alt = alt
+                this.title = title
                 this.width = width
                 this.height = height
                 this.rotation = rotation
@@ -138,6 +142,28 @@ class IconTest : ComponentTest() {
         val result = renderIcon("raw-fish-spoiling")
 
         assertEquals(listOf("icons/fish.png", "icons/spoilage.png"), result.sources())
+    }
+
+    @Test
+    fun anExplicitTitleReplacesThePrototypeName() {
+        val plain = renderIcon("space-age", alt = "Space Age", title = "#1 at (0, 0)\nrecipe: x")
+        val layered = renderIcon("scrap-recycling", title = "#2 at (1, 0)")
+
+        assertAll(
+            { assertEquals("Space Age", plain.images().single().getAttribute("alt")) },
+            {
+                assertEquals(
+                    "#1 at (0, 0)\nrecipe: x",
+                    plain.images().single().getAttribute("title"),
+                )
+            },
+            {
+                assertEquals(
+                    "#2 at (1, 0)",
+                    layered.container.querySelector("span")?.getAttribute("title"),
+                )
+            },
+        )
     }
 
     @Test

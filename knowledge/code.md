@@ -121,7 +121,11 @@ CLI (JVM) from one shared core.
 - `src/jsMain` — React web UI (kotlin-wrappers: `react`, the TanStack router
   `tanstack.react.router`, `emotion-react`); entry `js/index.kt`;
   `common/game/production/loadRecipe.kt` pulls the dumps via `@JsModule` and the
-  webpack config in `webpack.config.d/`.
+  webpack config in `webpack.config.d/`. `component/` holds the components; the
+  blueprint preview's hover text is built in `BlueprintTooltip.kt` from the
+  blueprint entity plus the index-aligned `RowLayout.layoutDump()` entity, and it
+  must be passed through `IconProps.title`, because `Icon` falls back to its own
+  label and an icon that covers the tile shadows any title on its container.
 - `src/jvmMain` — CLI entry `jvm/CliOptimizer.kt`, argument parsing
   `jvm/CliArgsParser.kt`; `jvm/common/game/production/loadRecipe.kt`
   loads recipes from a classpath resource. An explicit `--name=value` accepts only
