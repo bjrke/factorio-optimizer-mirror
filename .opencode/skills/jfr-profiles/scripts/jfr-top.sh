@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Summarise a JFR recording produced by ./gradlew jvmTestProfile.
+# Summarise a JFR recording produced by ./gradlew jvmTest -Pprofile.
 #
 # Usage: jfr-top.sh [self|inclusive|alloc|exceptions] [FILE] [-n N]
 #
@@ -55,7 +55,7 @@ if [[ -z $file ]]; then
   file=$(ls -t build/profiles/jvmTest/*.jfr 2>/dev/null | head -1 || true)
 fi
 if [[ -z $file || ! -f $file ]]; then
-  echo "jfr-top: no .jfr found; run ./gradlew jvmTestProfile" >&2
+  echo "jfr-top: no .jfr found; run ./gradlew jvmTest -Pprofile" >&2
   exit 1
 fi
 

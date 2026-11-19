@@ -69,7 +69,7 @@ inserter reaches the near belt, with the lane load still correct.
 
 Each block below is self-contained: copy one as the task prompt.
 
-They come from `./gradlew jvmTestProfile`; the baseline recording is
+They come from `./gradlew jvmTest -Pprofile`; the baseline recording is
 `build/profiles/jvmTest/jvmTest-73260.jfr`. Over the 22 s suite it holds 1,710 CPU samples, 18.6 GB
 of sampled allocation (~850 MB/s) and 102 young GCs (677 ms total, P99 17 ms). By inclusive samples
 the stages split into compaction 526 (31%), routing 394 (23%), band planning 184 (11%), validation
@@ -81,7 +81,7 @@ the stages split into compaction 526 (31%), routing 394 (23%), band planning 184
 Re-measure every block the same way:
 
 ```sh
-./gradlew jvmTestProfile
+./gradlew jvmTest -Pprofile
 S=.opencode/skills/jfr-profiles/scripts/jfr-top.sh
 $S self -n 25 ; $S alloc -n 20
 env -u JAVA_TOOL_OPTIONS jfr view gc-pauses build/profiles/jvmTest/*.jfr

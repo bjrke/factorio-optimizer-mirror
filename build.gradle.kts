@@ -2,8 +2,7 @@ import com.diffplug.spotless.LineEnding
 import de.bjrke.factorio.optimizer.buildlogic.dumpPrototypes
 import de.bjrke.factorio.optimizer.buildlogic.sanitizePrototypes
 import de.bjrke.factorio.optimizer.buildlogic.updateImages
-import org.gradle.api.Transformer
-import org.gradle.api.provider.MapProperty
+import org.gradle.api.internal.tasks.testing.filter.DefaultTestFilter
 
 plugins {
     kotlin("multiplatform") version libs.versions.kotlin
@@ -175,38 +174,47 @@ kotlin {
 
 private val jvmProfileDir = layout.buildDirectory.dir("profiles/jvmTest")
 
-private fun Test.configureRepositoryTest() {
+/**
+ * The whole-material blueprint sweep is a manual stress run that is not part of the normal suites:
+ * it costs minutes, so `jvmTest` skips it unless `-Pbenchmark` is passed. `-Pprofile` attaches JFR
+ * to whatever `jvmTest` runs, so the two can be combined.
+ */
+private val benchmarkTest =
+    "de.bjrke.factorio.optimizer.common.blueprint.printing.BlueprintBenchmarkTest"
+
+tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
-
     reports { html.required.set(true) }
-}
 
-tasks.named<Test>("jvmTest", Test::configureRepositoryTest)
-
-tasks.register<Test>("jvmTestProfile") {
-    group = "profiling"
-    description =
-        "runs jvmTest with a JDK Flight Recorder CPU profile; the merged recording lands in build/profiles/jvmTest"
-
-    val jvmTest = tasks.named<Test>("jvmTest").get()
-    testClassesDirs = jvmTest.testClassesDirs
-    classpath = jvmTest.classpath
-    configureRepositoryTest()
-
-    // A single fork keeps every test case in one recording, so the profile is merged by
-    // construction.
-    maxParallelForks = 1
-    outputs.upToDateWhen { false }
-
-    val profileDir = jvmProfileDir.get().asFile
-    doFirst {
-        profileDir.deleteRecursively()
-        profileDir.mkdirs()
+    if (providers.gradleProperty("benchmark").isPresent) {
+        outputs.upToDateWhen { false }
+    } else {
+        filter { excludeTestsMatching(benchmarkTest) }
     }
-    jvmArgs(
-        "-XX:StartFlightRecording=filename=${profileDir.resolve("jvmTest-%p.jfr")},settings=profile,dumponexit=true",
-        "-XX:FlightRecorderOptions=stackdepth=1024",
-    )
+
+    if (providers.gradleProperty("profile").isPresent) {
+        maxParallelForks = 1
+        outputs.upToDateWhen { false }
+        val profileDir = jvmProfileDir.get().asFile
+        doFirst {
+            profileDir.deleteRecursively()
+            profileDir.mkdirs()
+        }
+        jvmArgs(
+            "-XX:StartFlightRecording=filename=${profileDir.resolve("jvmTest-%p.jfr")},settings=profile,dumponexit=true",
+            "-XX:FlightRecorderOptions=stackdepth=1024",
+        )
+    }
+
+    // A build-script exclude also applies when the run is narrowed with `--tests`, so naming the
+    // sweep directly would still match nothing. Once the task knows its command-line includes,
+    // drop the excludes; `TestFilter` does not expose them, hence the internal cast (see
+    // knowledge/build.md §Traps).
+    doFirst {
+        (filter as? DefaultTestFilter)
+            ?.takeIf { it.commandLineIncludePatterns.isNotEmpty() }
+            ?.setExcludePatterns()
+    }
 }
 
 // Detekt's KMP support registers the type-resolved `detektMainJvm`/`detektTestJvm`

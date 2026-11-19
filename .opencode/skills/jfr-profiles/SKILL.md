@@ -1,11 +1,11 @@
 ---
 name: JFR Profiles
-description: Inspect JDK Flight Recorder (.jfr) profiles from ./gradlew jvmTestProfile — CPU hot methods, allocation sites, exceptions and thread parks, including filtering to de.bjrke with jfr print --json | jq. Use when asked to profile tests, find a hot method, or read a .jfr recording.
+description: Inspect JDK Flight Recorder (.jfr) profiles from ./gradlew jvmTest -Pprofile — CPU hot methods, allocation sites, exceptions and thread parks, including filtering to de.bjrke with jfr print --json | jq. Use when asked to profile tests, find a hot method, or read a .jfr recording.
 ---
 
 # JFR Profiles
 
-`./gradlew jvmTestProfile` runs `jvmTest` with JDK Flight Recorder attached and
+`./gradlew jvmTest -Pprofile` runs `jvmTest` with JDK Flight Recorder attached and
 writes one merged recording to `build/profiles/jvmTest/jvmTest-<pid>.jfr`. The
 JDK's own `jfr` CLI reads it; there is no report generator in this repo.
 
@@ -13,7 +13,7 @@ JDK's own `jfr` CLI reads it; there is no report generator in this repo.
 
 ```sh
 ls -t build/profiles/jvmTest/*.jfr | head -1   # newest
-./gradlew jvmTestProfile                       # fresh run; deletes the directory first
+./gradlew jvmTest -Pprofile                    # fresh run; deletes the directory first
 ```
 
 The task forces `maxParallelForks = 1`, so every test case lands in one file.
@@ -153,7 +153,7 @@ for flame graphs and per-thread timelines.
 
 ## Repo map
 
-- `build.gradle.kts` — the `jvmTestProfile` task and its JFR flags.
+- `build.gradle.kts` — the `jvmTest` `-Pprofile` branch and its JFR flags.
 - `knowledge/build.md` §Profiling — how the recording is produced.
 - `knowledge/decisions.md` — why JFR and CPU-only.
 - `knowledge/build.md` §Traps — JFR recording traps (output directory, stack depth).

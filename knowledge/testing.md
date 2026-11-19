@@ -114,6 +114,13 @@ whenever they apply.
   `spotlessCheck`, Detekt, `jvmTest` and `jsBrowserTest` (headless Chrome), so
   iterate with `./gradlew jvmTest` and finish with `./gradlew spotlessApply check`
   — one invocation, one Gradle process.
+- **The whole-material sweep is opt-in.** `BlueprintBenchmarkTest` (`jvmTest`) runs every
+  curated material across every planet, both game modes and three normalize targets. It
+  costs about ten minutes, so plain `jvmTest` excludes it; run it deliberately with
+  `./gradlew jvmTest -Pbenchmark`, which adds the sweep to the suite (`check -Pbenchmark`
+  therefore runs it too, and `--tests` still narrows the run to one suite). A material with
+  no recipe on a surface is skipped, not failed. Known-broken combinations are subtracted
+  as `knownFailures` cases, so the same material stays covered in every other combination.
 - **A suite that is too heavy for the JS browser belongs in `jvmTest`.** `commonTest`
   runs on both JVM and JS, so a suite there costs a Chrome execution in
   `jsBrowserTest` on every pipeline. The heavy layout and blueprint suites

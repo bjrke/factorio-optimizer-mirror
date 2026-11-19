@@ -26,13 +26,13 @@ profiling.
 
 ## Profiling
 
-`./gradlew jvmTestProfile` reuses the `jvmTest` classpath and attaches JDK Flight
-Recorder (`-XX:StartFlightRecording=…,settings=profile,dumponexit=true`,
+`./gradlew jvmTest -Pprofile` attaches JDK Flight Recorder
+(`-XX:StartFlightRecording=…,settings=profile,dumponexit=true`,
 `-XX:FlightRecorderOptions=stackdepth=1024`). It writes
 `build/profiles/jvmTest/jvmTest-<pid>.jfr` and forces `maxParallelForks = 1`, so
 every test case lands in one recording — that recording *is* the merge across
-test cases. The task deletes the directory before each run and never counts as
-up to date, so a stale profile cannot be mistaken for a fresh one.
+test cases. The property makes the task delete the directory before each run and
+never counts as up to date, so a stale profile cannot be mistaken for a fresh one.
 
 The report is CPU only: self time per method from `jdk.ExecutionSample`. The
 recording also carries `jdk.ThreadPark`, `jdk.ThreadSleep` and monitor events
@@ -294,9 +294,18 @@ on every pipeline and caches `.gradle` as `GRADLE_USER_HOME`.
   files` or `Cannot access output property 'destinationDirectory'`.
 - **A JFR recording is per forked JVM and needs an existing output directory.**
   `-XX:StartFlightRecording=filename=…/jvmTest-%p.jfr` expands `%p` to the PID but
-  does not create `…/profiles/jvmTest`, so `jvmTestProfile` creates it in
-  `doFirst` (and deletes it first, or old PIDs would mix into a "merged" run).
+  does not create `…/profiles/jvmTest`, so the `-Pprofile` branch of `jvmTest`
+  creates it in `doFirst` (and deletes it first, or old PIDs would mix into a
+  "merged" run).
   JFR also truncates stacks at 64 frames by default;
   `-XX:FlightRecorderOptions=stackdepth=1024` is required for deep Kotlin call
   chains, and `jfr view`/JMC show the caller chain only from the stored depth.
   See §Profiling above.
+- **A build-script test exclude still applies when the run is narrowed with `--tests`.**
+  Gradle ANDs `filter { excludeTestsMatching(…) }` with the command-line includes, so a
+  class excluded for `jvmTest` matches nothing even when `--tests` names it. `jvmTest`
+  therefore clears its exclude patterns in a `doFirst` once the task knows its `--tests`
+  patterns; reading them needs
+  `org.gradle.api.internal.tasks.testing.filter.DefaultTestFilter`, because the public
+  `TestFilter` exposes only the configured patterns. Verified on Gradle 9.8.1: the filter
+  is read in `DefaultTestExecuter.execute`, after the `doFirst` actions.
