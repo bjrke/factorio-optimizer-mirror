@@ -65,6 +65,49 @@ with a link, no belt carries the gear wheel, `failures` is empty and `validateLa
 same URL without the foundry as an unchanged regression case; an inserter case where only a long
 inserter reaches the near belt, with the lane load still correct.
 
+### Lay out a target row whose inputs need more belts than fit
+
+Fix the base-game `exoskeleton-equipment` layout
+`http://localhost:8080/#/1.0/exoskeleton-equipment/-/1/1/10`, which plans 13 recipes and reports
+`row needs 5 solid belt rows, only 4 fit: exoskeleton-equipment` followed by `exoskeleton-equipment
+has no output belt on its row`, so the blueprint has no product belt for its target.
+
+The target recipe takes processing unit, electric engine unit and steel plate, while `MAX_ROW_BELTS`
+in `BlueprintPlan.kt` caps a row at four belts. Whatever the fifth belt is — a side input, a mixed
+belt split back apart, or the product itself — the target's own output must never be the one that
+gets dropped. Either pair inputs that share a lane, direct-feed one of them, or give the product
+belt priority and report the missing input instead.
+
+Add tests: the URL with `failures` empty, `validateLayout` clean and the target's product belt
+present with `exoskeleton-equipment` on it; a row-planner unit case where a target with more inputs
+than `MAX_ROW_BELTS` still reserves its product belt and pairs two inputs on one mixed belt; a case
+where the inputs genuinely cannot fit, which must report the missing input instead of a target
+without an output belt.
+
+### Route the express-splitter plan at normalize 1.0
+
+Fix the Space Age `express-splitter` layout
+`http://localhost:8080/#/1.0/express-splitter/CFSXbmr/1/1/10`, which plans splitter, fast-splitter
+and transport-belt rows in the foundry next to electromagnetic plants making copper cable,
+electronic circuit and advanced circuit, and reports
+
+```
+copper-plate runs into electronic-circuit at Coordinate(x=37, y=99)
+foreign side-load into electronic-circuit at Coordinate(x=37, y=99)
+```
+
+The copper plate delivery to the electromagnetic plants collides with the electronic-circuit row at
+one tile. `DeliveryRouter`/`LayoutRouter` should route the crossing belt under the occupied tile or
+reserve its approach instead of side-loading into the neighbour; a side-load that cannot be avoided
+must be a failure, not a silent merge. `express-splitter` at 0.5 and 2.0 lays out cleanly, so use
+the 1.0 URL as the case.
+
+Add tests: the URL at 1.0 with `failures` empty and `validateLayout` clean, no belt carrying
+copper plate that also loads onto an electronic-circuit row (assert over `Layout.beltMaterials`/
+`beltLoads` next to the colliding tile); the same URL at 0.5 and 2.0 unchanged. Re-add
+`express-splitter` to `nauvisMaterials` (and `exoskeleton-equipment` to `baseGameMaterials` for the
+previous item) so `BlueprintBenchmarkTest` covers them again.
+
 ## Performance findings — prompt-ready
 
 Each block below is self-contained: copy one as the task prompt.

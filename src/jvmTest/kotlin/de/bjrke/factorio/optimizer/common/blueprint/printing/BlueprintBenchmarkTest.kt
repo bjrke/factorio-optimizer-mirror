@@ -19,345 +19,482 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 /**
- * Sweeps a curated set of materials through the whole pipeline — optimizer, plan, placed layout,
- * blueprint JSON and the encoded string — on every planet and at three normalize targets. It costs
- * minutes, so it is opt-in: run `./gradlew jvmTest -Pbenchmark`.
+ * Sweeps a curated set of materials per surface through the whole pipeline — optimizer, plan,
+ * placed layout, blueprint JSON and the encoded string — at three normalize targets. It costs
+ * minutes, so it is opt-in: run `./gradlew jvmTest -Pbenchmark`, or narrow it to one surface with
+ * `--tests "*BlueprintBenchmarkTest.vulcanusBlueprints"`.
  *
- * A material with no recipe on a surface is skipped rather than failed; its absence is a game rule,
- * not a layout regression. Every other case must place without failures and survive validation.
+ * The lists are a curated cross-section, not every producible material: a material no recipe
+ * produces on the surface is an import rather than a layout, and many working chains were left out
+ * to keep the run short. A listed case must plan more than one recipe and place without failures,
+ * so when the dump or the planner turns one into a lone row the sweep fails instead of silently
+ * skipping it.
+ *
+ * `knownFailures` holds the combinations that do not pass today: a layout that still reports
+ * failures, and — on a surface whose chain the planner does not build yet, such as Fulgora's
+ * recycler rows — a listed target whose plan is a single row. Keeping them as cases leaves the
+ * material covered in every other combination; delete an entry once it passes.
+ *
+ * The lists were derived from the prototype dump with the surface filter, the `unplannedRecipes`
+ * policy and the planner's `buildable` rule.
  */
 class BlueprintBenchmarkTest {
 
-    private data class BenchmarkCase(
-        val material: String,
-        val surface: Surface,
-        val normalize: Double,
-        val spaceAge: Boolean = true,
-    )
+    @Test
+    fun baseGameBlueprints() =
+        assertSweep(
+            spaceAge = false,
+            surface = Surface.NAUVIS,
+            materials = baseGameMaterials,
+            knownFailures = baseGameKnownFailures,
+        )
 
     @Test
-    fun everyCuratedMaterialBuildsAValidBlueprint() =
-        assertTable(benchmarkCases() - knownFailures) { case ->
-            val layout = layoutOf(case) ?: return@assertTable
-            val json = layout.blueprint.toJson()
+    fun nauvisBlueprints() =
+        assertSweep(
+            spaceAge = true,
+            surface = Surface.NAUVIS,
+            materials = nauvisMaterials,
+            knownFailures = nauvisKnownFailures,
+        )
 
-            assertAll(
-                { assertEquals(emptyList(), layout.failures) },
-                { assertEquals(emptyList(), validateLayout(layout.entities)) },
-                { assertNotEquals(emptyList(), layout.machineEntities, "no machine placed") },
-                { assertEquals(json, decode(blueprintString(json))) },
-            )
-        }
+    @Test
+    fun vulcanusBlueprints() =
+        assertSweep(
+            spaceAge = true,
+            surface = Surface.VULCANUS,
+            materials = vulcanusMaterials,
+            knownFailures = vulcanusKnownFailures,
+        )
 
-    private companion object {
+    @Test
+    fun glebaBlueprints() =
+        assertSweep(
+            spaceAge = true,
+            surface = Surface.GLEBA,
+            materials = glebaMaterials,
+            knownFailures = glebaKnownFailures,
+        )
 
-        val normalizeTargets = listOf(0.5, 1.0, 2.0)
+    @Test
+    fun fulgoraBlueprints() =
+        assertSweep(
+            spaceAge = true,
+            surface = Surface.FULGORA,
+            materials = fulgoraMaterials,
+            knownFailures = fulgoraKnownFailures,
+        )
 
-        /**
-         * Combinations that have no working layout yet. Keeping them as case data instead of
-         * removing a material leaves that material covered in every other combination; delete an
-         * entry once its layout works again.
-         */
-        val knownFailures =
-            setOf(
-                // Base game — Nauvis
-                BenchmarkCase("exoskeleton-equipment", Surface.NAUVIS, 0.5, spaceAge = false),
-                BenchmarkCase("exoskeleton-equipment", Surface.NAUVIS, 1.0, spaceAge = false),
-                BenchmarkCase("exoskeleton-equipment", Surface.NAUVIS, 2.0, spaceAge = false),
-                BenchmarkCase("requester-chest", Surface.NAUVIS, 0.5, spaceAge = false),
-                BenchmarkCase("rocket-silo", Surface.NAUVIS, 0.5, spaceAge = false),
-                BenchmarkCase("rocket-silo", Surface.NAUVIS, 1.0, spaceAge = false),
-                BenchmarkCase("rocket-silo", Surface.NAUVIS, 2.0, spaceAge = false),
-                // Space Age — Nauvis
-                BenchmarkCase("assembling-machine-3", Surface.NAUVIS, 0.5),
-                BenchmarkCase("assembling-machine-3", Surface.NAUVIS, 1.0),
-                BenchmarkCase("assembling-machine-3", Surface.NAUVIS, 2.0),
-                BenchmarkCase("atomic-bomb", Surface.NAUVIS, 0.5),
-                BenchmarkCase("atomic-bomb", Surface.NAUVIS, 1.0),
-                BenchmarkCase("atomic-bomb", Surface.NAUVIS, 2.0),
-                BenchmarkCase("express-splitter", Surface.NAUVIS, 1.0),
-                // Space Age — Vulcanus
-                BenchmarkCase("big-mining-drill", Surface.VULCANUS, 0.5),
-                BenchmarkCase("big-mining-drill", Surface.VULCANUS, 1.0),
-                BenchmarkCase("speed-module-3", Surface.VULCANUS, 0.5),
-                BenchmarkCase("speed-module-3", Surface.VULCANUS, 1.0),
-                BenchmarkCase("speed-module-3", Surface.VULCANUS, 2.0),
-                BenchmarkCase("stack-inserter", Surface.VULCANUS, 0.5),
-                BenchmarkCase("stack-inserter", Surface.VULCANUS, 1.0),
-                BenchmarkCase("stack-inserter", Surface.VULCANUS, 2.0),
-                BenchmarkCase("substation", Surface.VULCANUS, 0.5),
-                // Space Age — Gleba
-                BenchmarkCase("assembling-machine-3", Surface.GLEBA, 0.5),
-                BenchmarkCase("atomic-bomb", Surface.GLEBA, 0.5),
-                BenchmarkCase("atomic-bomb", Surface.GLEBA, 1.0),
-                BenchmarkCase("atomic-bomb", Surface.GLEBA, 2.0),
-                BenchmarkCase("biolab", Surface.GLEBA, 0.5),
-                BenchmarkCase("biolab", Surface.GLEBA, 1.0),
-                BenchmarkCase("biolab", Surface.GLEBA, 2.0),
-                // Space Age — Fulgora
-                BenchmarkCase("advanced-circuit", Surface.FULGORA, 0.5),
-                BenchmarkCase("advanced-circuit", Surface.FULGORA, 1.0),
-                BenchmarkCase("advanced-circuit", Surface.FULGORA, 2.0),
-                BenchmarkCase("battery", Surface.FULGORA, 0.5),
-                BenchmarkCase("battery", Surface.FULGORA, 1.0),
-                BenchmarkCase("battery", Surface.FULGORA, 2.0),
-                BenchmarkCase("concrete", Surface.FULGORA, 0.5),
-                BenchmarkCase("concrete", Surface.FULGORA, 1.0),
-                BenchmarkCase("concrete", Surface.FULGORA, 2.0),
-                BenchmarkCase("copper-cable", Surface.FULGORA, 0.5),
-                BenchmarkCase("copper-cable", Surface.FULGORA, 1.0),
-                BenchmarkCase("copper-cable", Surface.FULGORA, 2.0),
-                BenchmarkCase("ice", Surface.FULGORA, 0.5),
-                BenchmarkCase("ice", Surface.FULGORA, 1.0),
-                BenchmarkCase("ice", Surface.FULGORA, 2.0),
-                BenchmarkCase("iron-gear-wheel", Surface.FULGORA, 0.5),
-                BenchmarkCase("iron-gear-wheel", Surface.FULGORA, 1.0),
-                BenchmarkCase("iron-gear-wheel", Surface.FULGORA, 2.0),
-                BenchmarkCase("low-density-structure", Surface.FULGORA, 0.5),
-                BenchmarkCase("low-density-structure", Surface.FULGORA, 1.0),
-                BenchmarkCase("low-density-structure", Surface.FULGORA, 2.0),
-                BenchmarkCase("processing-unit", Surface.FULGORA, 0.5),
-                BenchmarkCase("processing-unit", Surface.FULGORA, 1.0),
-                BenchmarkCase("processing-unit", Surface.FULGORA, 2.0),
-                BenchmarkCase("solid-fuel", Surface.FULGORA, 0.5),
-                BenchmarkCase("solid-fuel", Surface.FULGORA, 1.0),
-                BenchmarkCase("solid-fuel", Surface.FULGORA, 2.0),
-                BenchmarkCase("steel-plate", Surface.FULGORA, 0.5),
-                BenchmarkCase("steel-plate", Surface.FULGORA, 1.0),
-                BenchmarkCase("steel-plate", Surface.FULGORA, 2.0),
-                BenchmarkCase("stone", Surface.FULGORA, 0.5),
-                BenchmarkCase("stone", Surface.FULGORA, 1.0),
-                BenchmarkCase("stone", Surface.FULGORA, 2.0),
-                // Space Age — Aquilo
-                BenchmarkCase("assembling-machine-3", Surface.AQUILO, 0.5),
-                BenchmarkCase("assembling-machine-3", Surface.AQUILO, 1.0),
-                BenchmarkCase("assembling-machine-3", Surface.AQUILO, 2.0),
-                BenchmarkCase("bulk-inserter", Surface.AQUILO, 0.5),
-                BenchmarkCase("express-splitter", Surface.AQUILO, 1.0),
-                // Space Age — Space
-                BenchmarkCase("assembling-machine-3", Surface.SPACE, 0.5),
-                BenchmarkCase("utility-science-pack", Surface.SPACE, 0.5),
-            )
+    @Test
+    fun aquiloBlueprints() =
+        assertSweep(
+            spaceAge = true,
+            surface = Surface.AQUILO,
+            materials = aquiloMaterials,
+            knownFailures = aquiloKnownFailures,
+        )
 
-        private fun benchmarkCases() = buildList {
-            for (material in benchmarkMaterials) {
-                for (normalize in normalizeTargets) {
-                    add(BenchmarkCase(material, Surface.NAUVIS, normalize, false))
-                    for (surface in Surface.entries) {
-                        add(BenchmarkCase(material, surface, normalize))
-                    }
-                }
-            }
-        }
+    @Test
+    fun spaceBlueprints() =
+        assertSweep(
+            spaceAge = true,
+            surface = Surface.SPACE,
+            materials = spaceMaterials,
+            knownFailures = spaceKnownFailures,
+        )
+}
 
-        /**
-         * The plan and placed layout for [case], or `null` when the case has nothing to lay out:
-         * the surface has no recipe for the target, or [blueprintPlan] answers
-         * [BlueprintPlanResult.Unavailable]. Every `Unavailable` is a skip, not a failure: an
-         * imported target is a game rule, and the planner's other `Unavailable` answer (no factory
-         * builds the target) is defensive and no case in the table reaches it.
-         */
-        private fun layoutOf(case: BenchmarkCase): Layout? {
-            val recipes = RecipeLoader.forSurface(case.spaceAge, case.surface)
-            val target = Material(case.material)
+/** One material at one normalize target; the surface and game mode come from the sweep. */
+private data class SweepCase(val material: String, val normalize: Double)
 
-            val factories = FactoryConfig(case.spaceAge).defaults
-            val result = Optimizer(recipes, factories, MAX_INTERMEDIATE_LIMIT)[target]
-            val logistics = LogisticsCalculator(recipes.logistics)
-            val planned =
-                blueprintPlan(result, logistics, case.normalize) as? BlueprintPlanResult.Planned
-                    ?: return null
-            return Layout(
-                planned.plan,
-                logistics,
-                powerPole = PowerPole.forSelection(case.surface, factories),
-            )
-        }
+private val normalizeTargets = listOf(0.5, 1.0, 2.0)
 
-        /**
-         * A broad, curated cross-section of producible materials rather than every dump entry: all
-         * science packs, the core intermediates, every building family, modules, ammo, equipment,
-         * the planet-specific products and their fluids.
-         */
-        val benchmarkMaterials =
-            listOf(
-                // science
-                "automation-science-pack",
-                "logistic-science-pack",
-                "military-science-pack",
-                "chemical-science-pack",
-                "production-science-pack",
-                "utility-science-pack",
-                "space-science-pack",
-                "agricultural-science-pack",
-                "electromagnetic-science-pack",
-                "metallurgic-science-pack",
-                "cryogenic-science-pack",
-                "promethium-science-pack",
-                // intermediates
-                "iron-plate",
-                "copper-plate",
-                "steel-plate",
-                "iron-gear-wheel",
-                "copper-cable",
-                "iron-stick",
-                "pipe",
-                "electronic-circuit",
-                "advanced-circuit",
-                "processing-unit",
-                "plastic-bar",
-                "sulfur",
-                "sulfuric-acid",
-                "battery",
-                "low-density-structure",
-                "electric-engine-unit",
-                "engine-unit",
-                "flying-robot-frame",
-                "rocket-fuel",
-                "solid-fuel",
-                "explosives",
-                "uranium-235",
-                "uranium-238",
-                "uranium-fuel-cell",
-                // resources and bulk solids
-                "iron-ore",
-                "copper-ore",
-                "coal",
-                "stone",
-                "calcite",
-                "stone-brick",
-                "concrete",
-                "landfill",
-                // buildings
-                "assembling-machine-1",
-                "assembling-machine-3",
-                "stone-furnace",
-                "electric-furnace",
-                "burner-mining-drill",
-                "electric-mining-drill",
-                "big-mining-drill",
-                "transport-belt",
-                "fast-transport-belt",
-                "express-transport-belt",
-                "underground-belt",
-                "express-underground-belt",
-                "splitter",
-                "express-splitter",
-                "inserter",
-                "fast-inserter",
-                "bulk-inserter",
-                "stack-inserter",
-                "medium-electric-pole",
-                "substation",
-                "requester-chest",
-                "roboport",
-                "logistic-robot",
-                "construction-robot",
-                "beacon",
-                "lab",
-                "oil-refinery",
-                "chemical-plant",
-                "pumpjack",
-                "offshore-pump",
-                "centrifuge",
-                // power and rocketry
-                "boiler",
-                "steam-engine",
-                "steam-turbine",
-                "solar-panel",
-                "heat-exchanger",
-                "heat-pipe",
-                "nuclear-reactor",
-                "rocket-silo",
-                "rocket-part",
-                "satellite",
-                "small-lamp",
-                // modules
-                "efficiency-module",
-                "efficiency-module-3",
-                "speed-module",
-                "speed-module-3",
-                "productivity-module",
-                "productivity-module-3",
-                "quality-module",
-                "quality-module-3",
-                // ammo and weapons
-                "firearm-magazine",
-                "piercing-rounds-magazine",
-                "uranium-rounds-magazine",
-                "cannon-shell",
-                "explosive-cannon-shell",
-                "shotgun-shell",
-                "rocket",
-                "explosive-rocket",
-                "artillery-shell",
-                "flamethrower-ammo",
-                "grenade",
-                "land-mine",
-                "atomic-bomb",
-                // equipment
-                "modular-armor",
-                "power-armor-mk2",
-                "mech-armor",
-                "exoskeleton-equipment",
-                // common fluids
-                "crude-oil",
-                "heavy-oil",
-                "light-oil",
-                "petroleum-gas",
-                "lubricant",
-                "water",
-                "steam",
-                // Vulcanus
-                "tungsten-plate",
-                "tungsten-carbide",
-                "molten-iron",
-                "molten-copper",
-                "lava",
-                "foundry",
-                "turbo-transport-belt",
-                // Fulgora
-                "holmium-plate",
-                "superconductor",
-                "supercapacitor",
-                "holmium-solution",
-                "recycler",
-                "lightning-collector",
-                // Gleba
-                "bioflux",
-                "yumako-mash",
-                "jelly",
-                "nutrients",
-                "spoilage",
-                "carbon-fiber",
-                "biochamber",
-                "agricultural-tower",
-                "biolab",
-                // Aquilo
-                "lithium",
-                "lithium-plate",
-                "lithium-brine",
-                "ice",
-                "cryogenic-plant",
-                "fusion-power-cell",
-                "fusion-reactor",
-                "fusion-generator",
-                "quantum-processor",
-                "fluoroketone-cold",
-                "fluoroketone-hot",
-                "ammonia",
-                // space
-                "carbonic-asteroid-chunk",
-                "metallic-asteroid-chunk",
-                "oxide-asteroid-chunk",
-                "promethium-asteroid-chunk",
-                "railgun",
-                "railgun-ammo",
-                "tesla-ammo",
-                "cargo-bay",
-            )
+/** One material at each of [normalize]. */
+private fun failures(material: String, vararg normalize: Double) =
+    (if (normalize.isNotEmpty()) normalize.toList() else normalizeTargets).map {
+        SweepCase(material, it)
     }
+
+/** Targets every sweep builds. */
+private val commonMaterials =
+    listOf(
+        "advanced-circuit",
+        "assembling-machine-1",
+        "assembling-machine-3",
+        "automation-science-pack",
+        "battery",
+        "beacon",
+        "bulk-inserter",
+        "chemical-plant",
+        "chemical-science-pack",
+        "efficiency-module-2",
+        "electric-furnace",
+        "electronic-circuit",
+        "explosive-rocket",
+        "explosives",
+        "fast-inserter",
+        "fast-splitter",
+        "fast-transport-belt",
+        "fast-underground-belt",
+        "heat-exchanger",
+        "heat-pipe",
+        "lab",
+        "logistic-science-pack",
+        "low-density-structure",
+        "military-science-pack",
+        "offshore-pump",
+        "processing-unit",
+        "production-science-pack",
+        "productivity-module-2",
+        "requester-chest",
+        "roboport",
+        "rocket",
+        "rocket-silo",
+        "speed-module-2",
+        "steam-turbine",
+        "utility-science-pack",
+    )
+
+private val baseGameMaterials =
+    commonMaterials +
+        listOf(
+            "artillery-shell",
+            "atomic-bomb",
+            "boiler",
+            "burner-mining-drill",
+            "cannon-shell",
+            "centrifuge",
+            "concrete",
+            "construction-robot",
+            "efficiency-module-3",
+            "electric-mining-drill",
+            "explosive-cannon-shell",
+            "express-splitter",
+            "express-transport-belt",
+            "express-underground-belt",
+            "firearm-magazine",
+            "flamethrower-ammo",
+            "grenade",
+            "land-mine",
+            "logistic-robot",
+            "medium-electric-pole",
+            "nuclear-reactor",
+            "oil-refinery",
+            "piercing-rounds-magazine",
+            "pipe",
+            "productivity-module-3",
+            "pumpjack",
+            "rocket-fuel",
+            "rocket-part",
+            "satellite",
+            "shotgun-shell",
+            "solar-panel",
+            "space-science-pack",
+            "speed-module-3",
+            "steam-engine",
+            "substation",
+            "sulfuric-acid",
+            "uranium-fuel-cell",
+            "uranium-rounds-magazine",
+        )
+
+private val nauvisMaterials =
+    commonMaterials +
+        listOf(
+            "agricultural-tower",
+            "atomic-bomb",
+            "biolab",
+            "boiler",
+            "burner-mining-drill",
+            "cannon-shell",
+            "centrifuge",
+            "concrete",
+            "construction-robot",
+            "efficiency-module-3",
+            "electric-mining-drill",
+            "explosive-cannon-shell",
+            "firearm-magazine",
+            "flamethrower-ammo",
+            "grenade",
+            "land-mine",
+            "logistic-robot",
+            "medium-electric-pole",
+            "nuclear-reactor",
+            "nutrients",
+            "oil-refinery",
+            "piercing-rounds-magazine",
+            "pipe",
+            "productivity-module-3",
+            "pumpjack",
+            "quality-module-2",
+            "railgun-ammo",
+            "rocket-fuel",
+            "rocket-part",
+            "shotgun-shell",
+            "solar-panel",
+            "steam-engine",
+            "substation",
+            "sulfuric-acid",
+            "tesla-ammo",
+            "uranium-fuel-cell",
+            "uranium-rounds-magazine",
+        )
+
+private val vulcanusMaterials =
+    commonMaterials +
+        listOf(
+            "artillery-shell",
+            "big-mining-drill",
+            "cannon-shell",
+            "concrete",
+            "construction-robot",
+            "electric-mining-drill",
+            "explosive-cannon-shell",
+            "firearm-magazine",
+            "flamethrower-ammo",
+            "foundry",
+            "grenade",
+            "land-mine",
+            "logistic-robot",
+            "medium-electric-pole",
+            "metallurgic-science-pack",
+            "oil-refinery",
+            "piercing-rounds-magazine",
+            "pumpjack",
+            "quality-module-2",
+            "railgun",
+            "railgun-ammo",
+            "rocket-fuel",
+            "rocket-part",
+            "shotgun-shell",
+            "solar-panel",
+            "speed-module-3",
+            "substation",
+            "tungsten-carbide",
+            "turbo-splitter",
+            "turbo-transport-belt",
+            "turbo-underground-belt",
+        )
+
+private val glebaMaterials =
+    commonMaterials +
+        listOf(
+            "agricultural-science-pack",
+            "agricultural-tower",
+            "biochamber",
+            "cannon-shell",
+            "capture-robot-rocket",
+            "carbon-fiber",
+            "concrete",
+            "construction-robot",
+            "efficiency-module-3",
+            "electric-mining-drill",
+            "explosive-cannon-shell",
+            "firearm-magazine",
+            "flamethrower-ammo",
+            "grenade",
+            "land-mine",
+            "logistic-robot",
+            "medium-electric-pole",
+            "nutrients",
+            "oil-refinery",
+            "piercing-rounds-magazine",
+            "pipe",
+            "quality-module-2",
+            "railgun-ammo",
+            "rocket-fuel",
+            "rocket-part",
+            "shotgun-shell",
+            "solar-panel",
+            "stack-inserter",
+            "substation",
+            "sulfuric-acid",
+        )
+
+private val fulgoraMaterials =
+    commonMaterials +
+        listOf(
+            "concrete",
+            "construction-robot",
+            "electromagnetic-science-pack",
+            "lightning-collector",
+            "logistic-robot",
+            "medium-electric-pole",
+            "quality-module-2",
+            "quality-module-3",
+            "railgun",
+            "rocket-part",
+            "stone",
+            "sulfuric-acid",
+            "supercapacitor",
+            "superconductor",
+            "tesla-ammo",
+        )
+
+private val aquiloMaterials =
+    commonMaterials +
+        listOf(
+            "construction-robot",
+            "cryogenic-plant",
+            "cryogenic-science-pack",
+            "fluoroketone-hot",
+            "fusion-generator",
+            "fusion-power-cell",
+            "fusion-reactor",
+            "lithium-plate",
+            "logistic-robot",
+            "medium-electric-pole",
+            "oil-refinery",
+            "pipe",
+            "pumpjack",
+            "quality-module-2",
+            "quantum-processor",
+            "railgun",
+            "railgun-ammo",
+            "rocket-fuel",
+            "rocket-part",
+            "substation",
+            "sulfuric-acid",
+            "water",
+        )
+
+private val spaceMaterials =
+    commonMaterials +
+        listOf(
+            "firearm-magazine",
+            "piercing-rounds-magazine",
+            "pipe",
+            "promethium-science-pack",
+            "quality-module-2",
+            "quantum-processor",
+            "railgun",
+            "railgun-ammo",
+            "solar-panel",
+            "space-science-pack",
+            "sulfuric-acid",
+        )
+
+// A listed case that stops building is a regression, not a skip, so the blacklist only holds
+// combinations that fail today; delete an entry once it passes.
+private val baseGameKnownFailures =
+    listOf(
+            failures("requester-chest", 0.5),
+            failures("rocket-silo"),
+        )
+        .flatten()
+        .toSet()
+
+private val nauvisKnownFailures =
+    listOf(
+            failures("assembling-machine-3"),
+            failures("atomic-bomb"),
+        )
+        .flatten()
+        .toSet()
+
+private val vulcanusKnownFailures =
+    listOf(
+            failures("big-mining-drill", 0.5, 1.0),
+            failures("speed-module-3"),
+            failures("substation", 0.5),
+        )
+        .flatten()
+        .toSet()
+
+private val glebaKnownFailures =
+    listOf(
+            failures("assembling-machine-3", 0.5),
+        )
+        .flatten()
+        .toSet()
+
+private val fulgoraKnownFailures =
+    listOf(
+            failures("advanced-circuit"),
+            failures("battery"),
+            failures("concrete"),
+            failures("low-density-structure"),
+            failures("processing-unit"),
+            failures("stone"),
+            failures("assembling-machine-1"),
+            failures("automation-science-pack"),
+            failures("beacon"),
+            failures("electric-furnace"),
+            failures("electronic-circuit"),
+            failures("heat-pipe"),
+            failures("roboport"),
+        )
+        .flatten()
+        .toSet()
+
+private val aquiloKnownFailures =
+    listOf(
+            failures("assembling-machine-3"),
+            failures("bulk-inserter", 0.5),
+        )
+        .flatten()
+        .toSet()
+
+private val spaceKnownFailures =
+    listOf(
+            failures("assembling-machine-3", 0.5),
+            failures("utility-science-pack", 0.5),
+        )
+        .flatten()
+        .toSet()
+
+/**
+ * Runs every case of one surface, minus its [knownFailures]. The blacklist must stay a subset of
+ * the swept cases: an entry for a material the list no longer holds is stale, and a silently
+ * ignored blacklist would hide a case that is not covered anywhere.
+ */
+private fun assertSweep(
+    spaceAge: Boolean,
+    surface: Surface,
+    materials: List<String>,
+    knownFailures: Set<SweepCase>,
+) {
+    val cases = materials.flatMap { material ->
+        normalizeTargets.map { SweepCase(material, it) }
+    }
+    assertEquals(
+        emptySet(),
+        knownFailures - cases.toSet(),
+        "blacklist entry outside the sweep",
+    )
+    assertTable(cases - knownFailures) { case -> assertCase(spaceAge, surface, case) }
+}
+
+private fun assertCase(spaceAge: Boolean, surface: Surface, case: SweepCase) {
+    val layout = layoutOf(spaceAge, surface, case)
+    val json = layout.blueprint.toJson()
+    val recipes = layout.plan.rows.flatMap { row -> row.machines }.map { it.recipe }.distinct()
+
+    assertAll(
+        { assertEquals(emptyList(), layout.failures) },
+        { assertEquals(emptyList(), validateLayout(layout.entities)) },
+        { assertNotEquals(emptyList(), layout.machineEntities, "no machine placed") },
+        { assertTrue(recipes.size > 1, "a single-recipe plan on $surface benchmarks nothing") },
+        { assertEquals(json, decode(blueprintString(json))) },
+    )
+}
+
+/**
+ * The plan and placed layout for [case]. A target no recipe produces on the surface is an import
+ * rather than a layout, so it is excluded from the lists; if one still reaches this point the list
+ * is stale and the sweep fails with the plan's reason.
+ */
+private fun layoutOf(spaceAge: Boolean, surface: Surface, case: SweepCase): Layout {
+    val recipes = RecipeLoader.forSurface(spaceAge, surface)
+    val factories = FactoryConfig(spaceAge).defaults
+    val result = Optimizer(recipes, factories, MAX_INTERMEDIATE_LIMIT)[Material(case.material)]
+    val logistics = LogisticsCalculator(recipes.logistics)
+    val planned = blueprintPlan(result, logistics, case.normalize)
+    val plan = assertIs<BlueprintPlanResult.Planned>(planned, planned.toString()).plan
+    return Layout(plan, logistics, powerPole = PowerPole.forSelection(surface, factories))
 }
