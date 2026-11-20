@@ -114,16 +114,19 @@ whenever they apply.
   `spotlessCheck`, Detekt, `jvmTest` and `jsBrowserTest` (headless Chrome), so
   iterate with `./gradlew jvmTest` and finish with `./gradlew spotlessApply check`
   — one invocation, one Gradle process.
-- **The whole-material sweep is opt-in.** `BlueprintBenchmarkTest` (`jvmTest`) runs a
+- **The whole-material sweep is a benchmark, not a verification step.**
+  `BlueprintBenchmarkTest` (`jvmTest`) runs a
   curated material list per surface and game mode (`baseGameBlueprints`, `nauvisBlueprints`,
   `vulcanusBlueprints`, `glebaBlueprints`, `fulgoraBlueprints`, `aquiloBlueprints`,
   `spaceBlueprints`) at three normalize targets. The lists are a subset, not every producible
   material: a material the surface cannot produce (an import) is curated out instead of
   skipped, and working chains are left out to keep the run short. It costs minutes, so
-  plain `jvmTest` excludes it; run it deliberately with `./gradlew jvmTest -Pbenchmark`,
-  which adds the sweep to the suite (`check -Pbenchmark` therefore runs it too), and narrow
-  it with `--tests "*BlueprintBenchmarkTest.vulcanusBlueprints"` — `--tests` drops the
-  exclude. A listed case must plan more than one recipe and fails with the planner's
+  plain `jvmTest` excludes it; `-Pbenchmark` re-adds it (`check -Pbenchmark` therefore runs
+  it too), and `--tests "*BlueprintBenchmarkTest.vulcanusBlueprints"` narrows it
+  (`--tests` drops the exclude). It measures the whole pipeline across the curated
+  layouts; it is **not** the gate for a change and must never be run to verify one — the
+  ordinary `jvmTest`/`check` suites are. Run it only when a benchmark or a curated sweep
+  is the task. A listed case must plan more than one recipe and fails with the planner's
   `Unavailable` reason (the assertion prints it) when it stops building. That surface's
   `knownFailures` subtracts the combinations that do not pass today — a layout that still
   reports failures, or a single-recipe plan whose chain the planner does not build yet

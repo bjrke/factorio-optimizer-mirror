@@ -15,7 +15,7 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
 | `./gradlew jsBrowserDevelopmentRun --continuous` / `jsBrowserProductionRun --continuous` | Web UI dev server |
 | `./gradlew jvmTest` | kotlin-test suites (commonTest + jvmTest); filter with `--tests "*RecipeParserTest*"` |
 | `./gradlew jvmTest -Pprofile` | `jvmTest` with a JDK Flight Recorder CPU profile attached; one merged recording in `build/profiles/jvmTest/`, opened in IntelliJ's JFR viewer, JMC or `jfr view hot-methods` |
-| `./gradlew jvmTest -Pbenchmark` | `jvmTest` plus the opt-in whole-material blueprint sweep; not part of `check` |
+| `./gradlew jvmTest -Pbenchmark` | Benchmark only: adds the minutes-long whole-material blueprint sweep to `jvmTest`; never run it to verify a change |
 | `./gradlew check` | Formatting check + detekt + `jvmTest` + `jsBrowserTest` (headless Chrome); CI runs the same command plus `jsBrowserDistribution` |
 | `./gradlew detekt` | Detekt static analysis (light, whole `src` tree); `check` runs the type-resolved `detektMainJvm`/`detektTestJvm` and the light JS-source-set tasks instead, and fails on any finding |
 | `./gradlew spotlessApply` | Fix formatting (Spotless/ktfmt `kotlinlangStyle`) for `src/**` and the build scripts; run it as `./gradlew spotlessApply check` |
@@ -53,6 +53,12 @@ optimizing Factorio factory layouts. Compiles to a React web app (JS) and a CLI
   - **agent tooling only** (`.opencode/**`) → **no Gradle**; syntax-check plugins
     with `node --check`.
   A branch that mixes both follows the code rule.
+- **The benchmark sweep is never a verification step.** `-Pbenchmark` adds
+  `BlueprintBenchmarkTest`, a minutes-long whole-material sweep over every surface;
+  it benchmarks the pipeline and does not check a change. Verify with plain
+  `./gradlew jvmTest` and finish with `./gradlew spotlessApply check` — both
+  already exclude it. Pass `-Pbenchmark` only when the user asks for a benchmark
+  run.
 - Every behavior change or new logic gets tests **without being asked**; a missing
   test means the change is incomplete.
 - The full rules — the `de.bjrke.test` assertion helpers, collection/emptiness
