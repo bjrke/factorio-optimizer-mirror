@@ -263,10 +263,8 @@ internal class DeliveryPreparation(
      * block this source.
      */
     private fun importSource(material: Material, sink: Sink): Coordinate {
-        val width = connector.width
         // the marker extends west of the feed, so every design starts its belt on the same column
-        val left = IMPORT_FEED - width
-        val columns = left..(left + width)
+        val columns = IMPORT_FEED - connector.width..IMPORT_FEED
         var row = sink.feed.y
         var attempts = 0
         while (
@@ -274,7 +272,7 @@ internal class DeliveryPreparation(
                 attempts++ < MAX_SOURCE_ROW_ATTEMPTS
         ) row++
         imports.markerRows += row
-        connector.placeSolidConnector(material, left, row, input = true)
+        connector.placeSolidConnector(material, IMPORT_FEED, row, input = true)
         val start = Coordinate(IMPORT_FEED, row)
         reserve(start, material)
         imports.importFeeds += ImportFeed(material, start, sink.feed)

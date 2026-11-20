@@ -29,9 +29,10 @@ import de.bjrke.factorio.optimizer.common.core.model.area
 internal class BeltEndConnector(private val board: LayoutBoard, private val beltEnd: BeltEnd) {
 
     /**
-     * How many tiles the solid belt connector occupies left of the feed: three for a label or a
-     * cheat chest, five for a chest the inserters feed. An import places the marker so its east
-     * edge is one tile before [IMPORT_FEED]; the target output places it east of the product belt.
+     * How many tiles the solid belt connector occupies: three for a label or a cheat chest, five
+     * for a chest the inserters feed. It hangs off its east side, so [placeSolidConnector] anchors
+     * it on the tile east of the strip. An import places it so its east edge is one tile before
+     * [IMPORT_FEED]; the target output places it east of the product belt.
      */
     val width
         get() =
@@ -42,31 +43,33 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
             }
 
     /**
-     * Places the selected solid belt connector for [material] on [row], starting at column [left]:
-     * a constant-combinator label, an infinity chest or a chest the inserters feed. [input] marks a
-     * connector that supplies an imported belt, whose first tile is the tunnel input; the target
-     * output passes `false` so a cheat chest loads from the belt instead.
+     * Places the selected solid belt connector for [material] on [row], ending one tile west of
+     * [right]: the strip occupies `right - width until right`. An import passes [IMPORT_FEED], so
+     * every marker design starts its belt on that column; the target output passes the column east
+     * of the strip, so the connector's west tile `right - width` takes the belt before it. [input]
+     * marks a connector that supplies an imported belt, whose first tile is the tunnel input; the
+     * target output passes `false` so a cheat chest loads from the belt instead.
      */
-    fun placeSolidConnector(material: Material, left: Int, row: Int, input: Boolean) {
-        val from = Coordinate(left, row)
-        val to = Coordinate(left + 2, row)
+    fun placeSolidConnector(material: Material, right: Int, row: Int, input: Boolean) {
+        val from = Coordinate(right - 3, row)
+        val to = Coordinate(right - 1, row)
         when (beltEnd) {
             BeltEnd.CONSTANT_COMBINATOR -> {
                 // the label sits above an underground run, so the belt can pass underneath
-                board.placeMarker(Coordinate(left + 1, row), Signal(material))
+                board.placeMarker(Coordinate(right - 2, row), Signal(material))
 
                 board.placeTunnel(material, from, to, EAST)
             }
             BeltEnd.INFINITY_CHEST -> {
                 if (input) {
                     board.placeInfinityChest(from, InfinitySettings(item = material))
-                    board.placeLoader(Coordinate(left + 1, row), EAST, OUTPUT, material)
+                    board.placeLoader(Coordinate(right - 2, row), EAST, OUTPUT, material)
                 } else {
                     board.placeLoader(from, EAST, INPUT, material)
                     board.placeInfinityChest(to, InfinitySettings(removeUnfiltered = true))
                 }
             }
-            else -> placeChestConnector(material, left, row, input)
+            else -> placeChestConnector(material, right, row, input)
         }
     }
 
@@ -75,11 +78,11 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
      * inserter on each side. An input marker feeds the belt out of the chest, an output marker
      * fills the chest from the belt, and the plain wooden and steel chests do both at once.
      */
-    private fun placeChestConnector(material: Material, left: Int, row: Int, input: Boolean) {
+    private fun placeChestConnector(material: Material, right: Int, row: Int, input: Boolean) {
         board.placeTunnel(
             material,
-            Coordinate(left, row),
-            Coordinate(left + 4, row),
+            Coordinate(right - 5, row),
+            Coordinate(right - 1, row),
             EAST,
         )
 
@@ -88,15 +91,15 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
         when {
             beltEnd == BeltEnd.WOODEN_CHEST || beltEnd == BeltEnd.STEEL_CHEST -> {
                 // both inserters face west, so the chest buffers a pass-through belt
-                placeConnectorInserter(material, Coordinate(left + 1, row), WEST)
-                placeConnectorInserter(material, Coordinate(left + 3, row), WEST)
-                placeChest(Coordinate(left + 2, row), bar = 4)
+                placeConnectorInserter(material, Coordinate(right - 4, row), WEST)
+                placeConnectorInserter(material, Coordinate(right - 2, row), WEST)
+                placeChest(Coordinate(right - 3, row), bar = 4)
             }
             input -> {
-                placeConnectorInserter(material, Coordinate(left + 1, row), EAST)
-                placeConnectorInserter(material, Coordinate(left + 3, row), WEST, mirror = true)
+                placeConnectorInserter(material, Coordinate(right - 4, row), EAST)
+                placeConnectorInserter(material, Coordinate(right - 2, row), WEST, mirror = true)
                 placeChest(
-                    Coordinate(left + 2, row),
+                    Coordinate(right - 3, row),
                     requestFilter = RequestFilter(material.prototypeName, count, buffer),
                 )
             }
@@ -104,18 +107,18 @@ internal class BeltEndConnector(private val board: LayoutBoard, private val belt
                 val condition = CircuitCondition(material.prototypeName, "<", 200)
                 placeConnectorInserter(
                     material,
-                    Coordinate(left + 1, row),
+                    Coordinate(right - 4, row),
                     WEST,
                     circuitCondition = condition,
                 )
                 placeConnectorInserter(
                     material,
-                    Coordinate(left + 3, row),
+                    Coordinate(right - 2, row),
                     EAST,
                     circuitCondition = condition,
                 )
                 placeChest(
-                    Coordinate(left + 2, row),
+                    Coordinate(right - 3, row),
                     requestFilter = RequestFilter(material.prototypeName, count, buffer),
                     circuitConditionEnabled = false,
                 )

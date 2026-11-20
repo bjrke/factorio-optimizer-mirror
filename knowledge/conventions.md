@@ -29,7 +29,10 @@ area-specific facts are in the other knowledge files.
   allowed.
   There are **no committed Detekt baselines**, so every finding fails `check`
   directly. Fix a finding by extracting a named responsibility; only suppress a
-  proven false positive, with a written reason.
+  proven false positive, with a written reason. A constructor parameter read only by
+  a property initializer stays a plain parameter: `private val` makes it a field no
+  method reads, which `UnusedPrivateProperty` fails on (e.g. `DeliveryRouter.imports`,
+  which only feeds `preparation`).
 - `TooManyFunctions` allows 11 functions per file/class (Detekt default
   `allowedFunctionsPerFile`/`allowedFunctionsPerClass`). Extracting a long
   method's helpers into one file can replace its finding with a file-level one:

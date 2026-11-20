@@ -161,9 +161,10 @@ plus `snapToWhole`/`epsilonCeil` for whole inserter counts.
 
 A solid belt's end is a `BeltEnd` (`blueprint/layout/BeltEnd.kt`): the constant-combinator
 label (default), the infinity chest, or a chest the inserters feed
-(`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it;
-`BeltEndConnector.width`/`left` keep the routing corridors aligned; a fluid belt
-always keeps the combinator/pipe label. `blueprint/printing/json/BlueprintJson.kt` writes the
+(`buffer`/`storage`/`wooden`/`steel`). `placeSolidConnector` places it, anchored on
+the tile east of its strip (`right`), so `BeltEndConnector.width` and that one
+anchor keep the routing corridors, the trimmer and the fluid marker aligned; a
+fluid belt always keeps the combinator/pipe label. `blueprint/printing/json/BlueprintJson.kt` writes the
 blueprint envelope (`label`, `icons`, `entities`, top-level `wires`). The icon strip holds up to
 four entries: the target (a `fluid` signal when it is a fluid), the factory that builds it, and
 the placed belt and inserter; a fluid-only plan therefore omits unused logistics;
@@ -368,8 +369,8 @@ baselines, so every finding fails.
   `glebaBiochambersDoNotNeedPower`.
 - **`poleWestBound` keeps poles out of the import extension.** The pole pass
   (`bestPoleSpot`, `freeNear`) places a pole only at `x >= poleWestBound`, which
-  `importSource`, `ImportTrimmer.trim()` and the compaction shift raise to the import
-  connector's east edge. A chest marker's inserters sit *inside* that zone, so the
+  `importSource`, `ImportTrimmer.trim()` and the compaction shift raise to the feed tile
+  east of the import connector. A chest marker's inserters sit *inside* that zone, so the
   bound must be skipped when `beltEnd.isChest` at **every** site
   (`DeliveryPreparation`, `ImportTrimmer`, `CompactionPass`) or
   `assertPolesCoverAndConnect` fails for the connector inserters.

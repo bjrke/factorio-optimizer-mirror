@@ -208,8 +208,9 @@ internal class FluidFeeder(
                     break
                 }
                 val segment = fluidRoute(start, EAST, sink, group.material) ?: continue
-                placePath(board, group.material, listOf(start) + segment)
-                network += listOf(start) + segment
+                val nodes = listOf(start) + segment
+                placePath(board, group.material, nodes)
+                network += nodes
                 pending.remove(sink)
                 routed = true
                 break
@@ -306,7 +307,8 @@ internal class FluidFeeder(
         imports.markerRows += row
         // the cheat variant replaces the label with a single infinity pipe: a filter supplies the
         // fluid, while an unfiltered pipe deletes it, which is what a sink needs
-        board.placeFluidSource(beltEnd, Coordinate(source.x - 1, row), material, io)
+        val end = Coordinate(source.x - 1, row)
+        board.placeFluidSource(beltEnd, end, material, io)
         imports.compactionWestBound = maxOf(imports.compactionWestBound, target.x)
         return Coordinate(source.x, row)
     }

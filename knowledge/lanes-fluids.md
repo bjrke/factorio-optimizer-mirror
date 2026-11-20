@@ -68,7 +68,8 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   checked and placed from the same list.
 - `blueprint/planning/plan/ImportExtension.kt` — the shared import bookkeeping: the marker rows
   already claimed, the import feeds to trim, the pinned marker tiles and the
-  pole/compaction west bounds.
+  pole/compaction west bounds. The feeds are also the source of truth for what an
+  import owns; no separate tile index is kept.
 - `blueprint/placing/plumbing/FluidFeeder.kt` — supplies every fluid. `placeImports()` lets
   `blueprint/placing/plumbing/FluidLaneFeed.kt` place a lane for every fluid of every row that gets
   one (north and south side), records the port tiles those lanes reach and leaves
@@ -91,10 +92,16 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
 - `blueprint/placing/routing/ImportTrimmer.kt` — moves every import marker to one common column and
   removes the straight belt prefix in front of it (`lastStraightEast`). Only a
   straight run decides the column; a mixed feed that turns before its merge stays
-  inline instead of dragging every marker west. `connectorClear` walks that column
-  west until the connector replaces only its own marker and straight feed belts, so
-  a foreign entity or a tunnel span never ends up under a loader. Every import marker ends one tile
-  before `IMPORT_FEED` in `blueprint/layout/LayoutBoard.kt`, so its size only changes how far west
+  inline instead of dragging every marker west. `blockedColumns` derives import ownership from the
+  feeds: connector labels lie west of `IMPORT_FEED`, a fluid feed owns its source block, and an
+  eastward belt on a row of `importFeeds` carrying that feed's material is the straight prefix.
+  Everything else is foreign; underground entries count as entities, so a tunnel is blocked by the
+  entries on its other rows even though its span has no entity. The shared column is the feed tile
+  just east of the marker strip — the anchor `BeltEndConnector.placeSolidConnector` takes — so the
+  strip occupies `column - width until column` and the column is capped at `blocked`, keeping every
+  foreign tile right of the strip; when the cap leaves no tile east of `IMPORT_FEED`, the trim falls
+  back to the inline marker. Every import marker ends one tile before `IMPORT_FEED` in
+  `blueprint/layout/LayoutBoard.kt`, so its size only changes how far west
   it reaches and every marker design routes the same feed belt. A **fluid** source block is placed
   on that same column before routing, sharing the solid marker's east edge because a fluid marker
   is a label; `blueprint/placing/routing/FluidFeedLinker.kt` moves it when the solid connector
@@ -154,14 +161,19 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   returns `null` from `lastStraightEast` for it, and only the straight feeds choose the common
   column. Treating the old `start.x - 1` fallback as a real end drags every marker west and the
   layout looks untrimmed.
-- **A trimmed import connector may only replace its own marker and its straight feed belts.**
-  `ImportTrimmer.connectorClear` walks the common column west until every connector tile is free,
-  a feed belt of that material, or one of the marker's own tiles; a foreign entity or a tunnel
-  span keeps the column further west, and an unsafe column falls back to the inline marker.
-  Without the check a marker moved onto a tunnel span leaves a loader above the run (the reported
-  utility-science URL's copper-cable tunnel under the coal import). Evidence:
-  `theReportedUtilityScienceUrlKeepsTheProductRowClear`, `realCheatBlueprintsAreValid`
-  (`assertNoLoaderOverTunnel`).
+- **The trimmed import marker strip must stay left of every foreign entity.**
+  `ImportTrimmer.blockedColumns` returns the westmost entity that its feeds do not explain, and the
+  shared column — the feed tile east of the strip — is capped at `blocked`, so the strip
+  (`column - width until column`) leaves no foreign entity west of or level with the markers. Only
+  the straight prefix counts: an eastward belt on an import feed's row carrying that
+  feed's material is import-owned, while a turn, another material or another row is not. An
+  underground entry is an entity too, which catches a perpendicular tunnel whose span has no
+  entity on the import row; `hasTunnelUnder` is gone. If the cap falls below `IMPORT_FEED + 1`,
+  fall back to the inline marker. Without the cap a marker moved onto a
+  tunnel span leaves a loader above the run (the reported utility-science URL's copper-cable
+  tunnel under the coal import). Evidence: `ImportTrimmerTest`,
+  `theReportedUtilityScienceUrlKeepsTheProductRowClear`,
+  `realCheatBlueprintsAreValid` (`assertNoLoaderOverTunnel`).
 - **The target product row is a routing wall from the placed output belt east, but the
   connector itself must not exist while the other feeds route.** `reserveTargetOutput` only
   calls `LayoutBoard.reserveRow`, so a produced feed may still go around the row's west side

@@ -41,12 +41,13 @@ class LayoutBoardTest {
     fun aTunnelIsRecordedUnderItsSpanAndNotOnItsEnds() {
         val board = newBoard()
         board.markTunnel(Coordinate(5, 3), Coordinate(5, 6), board.names.undergroundBelt)
+        val step = Coordinate(0, 1)
 
         assertAll(
-            { assertTrue(board.hasTunnelUnder(Coordinate(5, 4))) },
-            { assertTrue(board.hasTunnelUnder(Coordinate(5, 5))) },
-            { assertFalse(board.hasTunnelUnder(Coordinate(5, 3))) },
-            { assertFalse(board.hasTunnelUnder(Coordinate(5, 6))) },
+            { assertTrue(board.hasTunnel(Coordinate(5, 4), step, board.names.undergroundBelt)) },
+            { assertTrue(board.hasTunnel(Coordinate(5, 5), step, board.names.undergroundBelt)) },
+            { assertFalse(board.hasTunnel(Coordinate(5, 3), step, board.names.undergroundBelt)) },
+            { assertFalse(board.hasTunnel(Coordinate(5, 6), step, board.names.undergroundBelt)) },
         )
     }
 }

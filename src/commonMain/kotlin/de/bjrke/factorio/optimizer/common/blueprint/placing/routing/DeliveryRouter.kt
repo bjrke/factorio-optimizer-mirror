@@ -173,7 +173,7 @@ internal class DeliveryRouter(
         while (!board.isFree(Coordinate(east - 1, rowY))) east++
         // the product row is no longer a routing wall once the other feeds are fixed
         board.rowReservations.clear()
-        connector.placeSolidConnector(targetMaterial, east, rowY, input = false)
+        connector.placeSolidConnector(targetMaterial, east + connector.width, rowY, input = false)
         val start = endBelt.area.bottomRight.x + 1
         // a loader at [east] takes directly from the belt at [east] - 1; only the tiles before
         // its feed tile need a route

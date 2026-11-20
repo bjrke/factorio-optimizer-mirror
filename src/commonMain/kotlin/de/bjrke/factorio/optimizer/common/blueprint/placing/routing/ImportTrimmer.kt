@@ -4,7 +4,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
-import de.bjrke.factorio.optimizer.common.blueprint.layout.hasTunnelUnder
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltLikeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.fluidSourceTiles
 import de.bjrke.factorio.optimizer.common.blueprint.layout.rebuildTunnels
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
@@ -24,6 +25,10 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
  * row, so the west corridor stays walkable and the player only has to connect one column when
  * placing the blueprint. A fluid marker is a label, so it shares the solid marker's east edge and
  * reaches less far west than a chest marker.
+ *
+ * The shared column is the feed tile just east of the marker strip, the same anchor
+ * [BeltEndConnector.placeSolidConnector] takes, so one column also means one strip: the strip
+ * occupies `column - connector.width until column`.
  */
 internal class ImportTrimmer(
     private val board: LayoutBoard,
@@ -33,44 +38,35 @@ internal class ImportTrimmer(
 ) {
     private val fluidLinker = FluidFeedLinker(board, beltEnd, imports)
 
-    /** The tiles an import's solid connector occupies west of [IMPORT_FEED]. */
-    private val ownMarker = (IMPORT_FEED - connector.width) until IMPORT_FEED
-
     fun trim() {
-        val width = connector.width
         // a mixed feed that turns before its lane cannot be trimmed; it must not drag the common
         // column west for the straight imports, so only the straight runs decide the column
         val straight =
             imports.importFeeds.mapNotNull { feed ->
                 lastStraightEast(feed)?.let { end -> feed to end }
             }
-        val common =
+
+        val trimmable = straight.map { (feed, _) -> feed }
+
+        val trimmedColumn =
             listOfNotNull(
-                    straight.minOfOrNull { (_, end) -> end - width },
+                    straight.minOfOrNull { (_, end) -> end },
                     // the fluid marker and the solid marker share their east edge; its west edge
                     // is the same common column for the solid connector, so one trim aligns both
-                    imports.fluidMarkerEast?.minus(width - 1),
+                    imports.fluidMarkerEast?.plus(1),
                 )
                 .minOrNull()
-        val trimmable = straight.map { it.first }
-        // a connector may only replace its own marker and the straight feed belts; any other
-        // entity or a tunnel span keeps the whole column where it is
-        val safeCommon = common?.let { start ->
-            (start downTo IMPORT_FEED - width + 1).firstOrNull { column ->
-                trimmable.all { feed -> connectorClear(column, feed) }
-            }
-        }
-        val trimmedColumn = safeCommon?.takeIf { trimSolid(trimmable, it, width) }
+                ?.let { start -> blockedColumns()?.let { start.coerceAtMost(it) } ?: start }
+                ?.takeIf { it > IMPORT_FEED }
+                ?.takeIf { trimSolid(trimmable, it) }
         val column = trimmedColumn ?: fallbackColumn()
         // a chest marker is powered, so its poles may sit in the import extension
-        if (!beltEnd.isChest) {
-            imports.poleWestBound = maxOf(imports.poleWestBound, column + width)
-        }
-        fluidLinker.link(column + width - 1)
+        if (!beltEnd.isChest && column > imports.poleWestBound) imports.poleWestBound = column
+
+        fluidLinker.link(column - 1)
         pinSolidConnectors(
             trimmedColumn,
             if (trimmedColumn == null) emptySet() else trimmable.toSet(),
-            width,
         )
         // the old connector marks are gone; re-index the tunnels before stretching
         board.rebuildTunnels()
@@ -80,18 +76,16 @@ internal class ImportTrimmer(
      * Moves the [feeds] connectors to [common], or restores the board and returns false when the
      * moved column breaks the layout.
      */
-    private fun trimSolid(feeds: List<ImportFeed>, common: Int, width: Int): Boolean {
+    private fun trimSolid(feeds: List<ImportFeed>, common: Int): Boolean {
+        val width = connector.width
         val saved = board.placed.toList()
         for (feed in feeds) {
             val (sx, sy) = feed.start
-            for (x in (sx - width) until sx) {
-                board.removeAt(Coordinate(x, sy))
-            }
-            for (x in sx until common + width) {
+            for (x in (sx - width) until common) {
                 board.removeAt(Coordinate(x, sy))
             }
             connector.placeSolidConnector(feed.material, common, sy, input = true)
-            board.reserve(Coordinate(common + width, sy), feed.material)
+            board.reserve(Coordinate(common, sy), feed.material)
         }
         if (validateLayout(board.placed).isEmpty()) return true
         board.replaceAll(saved)
@@ -99,47 +93,49 @@ internal class ImportTrimmer(
     }
 
     /**
-     * Whether [feed]'s connector can sit at [column]: every tile is free, a straight feed belt the
-     * trim removes, or part of the feed's own marker, and no tunnel passes under it.
+     * The westmost column a factory entity occupies. The connector and its labels lie west of
+     * [IMPORT_FEED], a fluid feed owns its source block, and the straight prefix is the eastward
+     * belt run on an import row, so none of them blocks the trim. An underground entry is an entity
+     * too, so a tunnel is seen through the entries on its other rows even though its span has no
+     * entity.
      */
-    private fun connectorClear(column: Int, feed: ImportFeed): Boolean {
-        return (column until column + connector.width).all { x ->
-            val tile = Coordinate(x, feed.start.y)
-            val entity = board.entityAt(tile)
-            val removable =
-                x in ownMarker ||
-                    entity == null ||
-                    (entity is BeltEntity &&
-                        entity.material == feed.material &&
-                        entity.direction == EAST)
-            removable && !board.hasTunnelUnder(tile)
+    private fun blockedColumns(): Int? {
+        val materialsByRow = imports.importFeeds.groupBy({ it.start.y }, { it.material })
+        val fluidTiles = buildSet {
+            for (feed in imports.fluidFeeds) addAll(fluidSourceTiles(feed.source, beltEnd))
         }
+        return board.placed
+            .mapNotNull { entity ->
+                when {
+                    entity.area.bottomRight.x < IMPORT_FEED -> null
+                    entity.area.all { it in fluidTiles } -> null
+                    entity is BeltLikeEntity &&
+                        entity.direction == EAST &&
+                        entity.material in materialsByRow[entity.area.topLeft.y].orEmpty() -> null
+                    else -> entity.area.topLeft.x
+                }
+            }
+            .minOrNull()
     }
 
     /**
      * The column the import markers share when the solids keep theirs: the connector's own west
      * column, or the west edge of the fluid marker column when the plan has no solid imports.
      */
-    private fun fallbackColumn(): Int {
-        return if (imports.importFeeds.isEmpty())
-            imports.fluidMarkerEast?.minus(connector.width - 1) ?: (IMPORT_FEED - connector.width)
-        else IMPORT_FEED - connector.width
-    }
+    private fun fallbackColumn() =
+        if (imports.importFeeds.isEmpty()) imports.fluidMarkerEast?.plus(1) ?: (IMPORT_FEED)
+        else IMPORT_FEED
 
     /**
      * Pins the whole connector, its feed tile and the lane tile that receives it together, so the
      * markers keep one column and a vertical corridor cannot slip between them and the lane.
      */
-    private fun pinSolidConnectors(
-        trimmedColumn: Int?,
-        trimmed: Set<ImportFeed>,
-        width: Int,
-    ) {
+    private fun pinSolidConnectors(trimmedColumn: Int?, trimmed: Set<ImportFeed>) {
+        val width = connector.width
         for (feed in imports.importFeeds) {
-            val connectorStart =
-                if (feed in trimmed && trimmedColumn != null) trimmedColumn
-                else feed.start.x - width
-            for (x in connectorStart..(connectorStart + width)) {
+            val connectorEnd =
+                if (feed in trimmed && trimmedColumn != null) trimmedColumn else feed.start.x
+            for (x in connectorEnd - width..connectorEnd) {
                 imports.pinnedImportTiles += Coordinate(x, feed.start.y)
             }
             laneTile(feed)?.let { imports.pinnedImportTiles += it }
