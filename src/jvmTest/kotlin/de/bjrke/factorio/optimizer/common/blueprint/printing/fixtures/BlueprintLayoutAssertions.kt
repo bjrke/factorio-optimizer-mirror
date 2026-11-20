@@ -8,9 +8,34 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBel
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.test.assertAll
 import kotlin.test.ExperimentalKotlinTestApi
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+
+/**
+ * A blueprint's entities all sit at or east of column zero and at or south of row zero: the import
+ * corridor and the north margin hold the layout origin there, so the string Factorio receives never
+ * carries a negative coordinate.
+ */
+fun assertNonNegativeOrigin(entities: List<LayoutEntity>) =
+    assertAll(
+        {
+            assertContains(
+                0..Int.MAX_VALUE,
+                entities.minOf { it.area.x },
+                "a tile sits west of column zero",
+            )
+        },
+        {
+            assertContains(
+                0..Int.MAX_VALUE,
+                entities.minOf { it.area.y },
+                "a tile sits north of row zero",
+            )
+        },
+    )
 
 /** Invariants of the entity grid a plan produces: overlap, inserters, tunnels and belt merges. */
 @OptIn(ExperimentalKotlinTestApi::class)

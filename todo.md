@@ -180,7 +180,7 @@ churn, and `RowReservations.sections` (`LayoutBoard.kt:165`) is a `Map<Int, Sect
 dozen rows — give it an array too.
 
 Keep the public queries (`entityAt`, `isFree`, `isReserved`, `reservedMaterialAt`) and add int
-overloads so the hot paths stop passing `Coordinate` at all. The west bound `IMPORT_FEED = 0` and
+overloads so the hot paths stop passing `Coordinate` at all. The west bound `IMPORT_FEED` and
 the ability to grow the origin in either direction must survive.
 
 Add tests: a board unit case that places entities across negative coordinates and asserts

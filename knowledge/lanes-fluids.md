@@ -38,7 +38,7 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   machine) and shrinks the scale rather than laying out an overfilled product belt
   (`planning.md`). `beltFor` and `placeLanes` place the lane and its T
   merge; the merge sits outside the pair of lane rows (far north above, near north
-  below, near south above, far south below), at `LANE_MARGIN - EAST_MERGE_OFFSET`
+  below, near south above, far south below), at `FIRST_MACHINE_X - EAST_MERGE_OFFSET`
   (three columns west of the row, so its turn clears a fluid lane on the turn row)
   for an east-fed lane and `row.right + 8` for a west-fed one. `planning/plan/BeltRows.kt` holds the
   greedy packing (`packRowBelts`, `beltRowBudget`): every capacity-safe input pairs, lowest rate

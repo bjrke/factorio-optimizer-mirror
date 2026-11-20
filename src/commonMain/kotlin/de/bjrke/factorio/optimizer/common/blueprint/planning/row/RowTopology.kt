@@ -57,7 +57,7 @@ internal class RowTopology(
                 outputs = rowOutputs(row.machines, logistics).minus(linked),
                 beltMaterials = row.beltMaterials,
                 right =
-                    LANE_MARGIN +
+                    FIRST_MACHINE_X +
                         row.machines.size * size.width +
                         row.links.map { it.gap }.toSet().size - 1,
             )

@@ -21,6 +21,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoDa
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoLoaderOverTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoMergingBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoOverlap
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNonNegativeOrigin
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertSplittersOnlyFeedSurface
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunnelEndsAreFed
@@ -47,9 +48,9 @@ class BlueprintLayoutIntegrationTest {
 
     /**
      * Every real plan's layout once, against every geometry and feed invariant: overlap, dangling
-     * inserters, tunnel ends, splitter feeds, merged materials, stretched runs and one belt source
-     * per material. One build per target, and the table labels a failure with the target that broke
-     * the rule.
+     * inserters, tunnel ends, splitter feeds, merged materials, stretched runs, one belt source per
+     * material and a non-negative origin. One build per target, and the table labels a failure with
+     * the target that broke the rule.
      */
     @Test
     fun realBlueprintsAreValid() =
@@ -81,6 +82,7 @@ class BlueprintLayoutIntegrationTest {
                     )
                 },
                 { assertOneBeltSourcePerMaterial(layout.plan) },
+                { assertNonNegativeOrigin(entities) },
             )
         }
 
@@ -97,6 +99,7 @@ class BlueprintLayoutIntegrationTest {
                 { assertEquals(emptyList(), layout.failures) },
                 { assertNoOverlap(layout.blueprint.entities) },
                 { assertNoLoaderOverTunnel(layout) },
+                { assertNonNegativeOrigin(layout.blueprint.entities) },
             )
         }
 
@@ -468,7 +471,7 @@ class BlueprintLayoutIntegrationTest {
      * centrifuging row now, so it is no longer an import.)
      *
      * The copper plate now shares a mixed lane with iron plate. The mixed merge's straight feeder
-     * sets the common column: its run ends one tile west of the merge at `LANE_MARGIN -
+     * sets the common column: its run ends one tile west of the merge at `FIRST_MACHINE_X -
      * EAST_MERGE_OFFSET`, which is the westmost feed end. Moving the merge a column west (for the
      * compact fluid lane) therefore moves the column and this prefix with it; the markers still
      * share one column.

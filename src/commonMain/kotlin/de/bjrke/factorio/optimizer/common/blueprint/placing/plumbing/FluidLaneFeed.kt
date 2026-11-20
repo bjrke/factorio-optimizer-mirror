@@ -5,9 +5,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FIRST_MACHINE_X
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FluidLane
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FluidLanePlacer
-import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LANE_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlacedMachine
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlannedLane
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.Row
@@ -26,7 +26,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
  * lane head so the connection is a pair of touching underground ends rather than a short surface
  * pipe.
  */
-private const val IMPORT_MARKER_EAST = LANE_MARGIN - 2
+private const val IMPORT_MARKER_EAST = FIRST_MACHINE_X - 2
 
 /** A placed drain lane joined to the feed lane of the same fluid on the same row. */
 internal class LaneConnection(

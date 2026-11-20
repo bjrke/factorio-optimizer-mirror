@@ -42,9 +42,10 @@ one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics
 `planner`, `rowPlacer`, `router`) instead of repeating those collaborators. The
 belt-row and fluid-lane stages are in `lanes-fluids.md`.
 
-- `blueprint/layout/LayoutBoard.kt` — the tile grid, the placed entities, route bounds and
-  the reserve/place/remove primitives, including the `reserveRow` section that makes a
-  product row a wall for surface routes (a crossing tunnels under it). Single-tile entity placement lives in
+- `blueprint/layout/LayoutBoard.kt` — the tile grid (a `Coordinate`-keyed cell map), the placed
+  entities, route bounds and the reserve/place/remove primitives, including the `reserveRow`
+  section that makes a product row a wall for surface routes (a crossing tunnels under it).
+  Single-tile entity placement lives in
   `LayoutPlacement.kt`; `LayoutTunnels.kt` owns the surface tile, the underground
   end and the tunnel, plus `tunnelPlan(from, to)` — the one calculation of a link's
   tiles (surface tiles and run ends, at the material's reach) — which `placeTunnelPlan`
@@ -71,7 +72,8 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   tunneling under it; a long crossing still tunnels. The search region is everything placed plus
   `ROUTE_MARGIN` (3) tiles on the north, south and east side and the fixed `ROUTE_WEST_BOUND` on the
   west — the import feed column (`IMPORT_FEED` in `blueprint/layout/LayoutBoard.kt`), which bounds
-  belts and pipes alike; `LayoutRouter` retries with `WIDE_ROUTE_MARGIN` only when that box has no
+  belts and pipes alike; the north bound is floored at row 0, so even the wide retry never places a
+  route above the top row. `LayoutRouter` retries with `WIDE_ROUTE_MARGIN` only when that box has no
   route, and records the retry in the layout's failures.
 - `blueprint/placing/special/PathPlacer.kt` — `placePath` and the tile roles for plain and
   underground runs; shared by belt and pipe routes. `placePath` rejects a belt path that uses one
@@ -135,9 +137,10 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   turn feeder: a produced feeder on an outer lane feeds the merge from its open side, while an
   import or an inner lane U-turns and enters the turn head-on from beyond it) and pins
   the U-turn group. Every import marker ends one tile before `IMPORT_FEED` in
-  `blueprint/layout/LayoutBoard.kt` and reaches west by its own size, so the marker design only
-  changes the west extent and the belt always starts on the same feed column. A belt route may
-  not use a tile west of that feed column, so a route never enters a marker. A delivery is re-searched with the tiles blocked when its path uses a
+  `blueprint/layout/LayoutBoard.kt` (10 tiles west of `FIRST_MACHINE_X`, the first machine column)
+  and reaches west by its own size, so the marker design only changes the west extent and the belt
+  always starts on the same feed column. A belt route may not use a tile west of that feed column,
+  so a route never enters a marker. A delivery is re-searched with the tiles blocked when its path uses a
   belt tile twice. `SplitDeliveryRouter` inserts the branch splitters,
   `DeliveryNetworks` remembers the produced trunks and `BeltRouteRules` is the
   belt-tile predicate shared by both routes; it never side-loads a mixed or
@@ -204,17 +207,26 @@ baselines, so every finding fails.
   the same class still reads the arrival direction: the advanced-circuit layout needs
   it to tunnel its circuit feed, so do not "fix" it without re-pinning that layout.
   See `BeltRouteRules`.
-- **`LANE_MARGIN` offsets the blueprint, it does not widen it.** The machine rows start at column
-  `LANE_MARGIN`, but `ImportTrimmer` moves every connector to the furthest west column that still has
-  a straight east feed and deletes the prefix, so the finished layout begins at the connector:
-  `advanced-circuit` is 39x22 and `utility-science-pack` 43x105 both with the margin at 40 (the old
-  value) and at 10. Only the x coordinates move, by `LANE_MARGIN - 40`. The constant must hold the
-  widest connector (five tiles for a chest), the merge column at `LANE_MARGIN - EAST_MERGE_OFFSET`
-  and that merge's approach tile, which puts the floor at eight. Tests that pin absolute tiles read
-  the `internal` constant, not a literal. Every import marker ends one tile before `IMPORT_FEED` in
-  `blueprint/layout/LayoutBoard.kt` and reaches west by its own size, so a marker design changes
-  only the west extent of the blueprint; the routed belt starts on the same feed column and has the
-  same length for every design.
+- **The machine rows start at `FIRST_MACHINE_X` (32), not at the import feed column.** They sit ten
+  columns east of `IMPORT_FEED` (22); that corridor holds the import connectors, their feed belts
+  and a mixed lane's merge, so it must hold the widest connector (five tiles for a chest), the
+  merge column at `FIRST_MACHINE_X - EAST_MERGE_OFFSET` and that merge's approach tile, which puts
+  its floor at eight. `ImportTrimmer` moves every connector to the furthest west column that still
+  has a straight east feed and removes the straight feed prefix, so the finished layout begins at
+  the connector, not here. Tests that pin absolute tiles read the `internal` constants, not a
+  literal. Every import marker ends one tile before `IMPORT_FEED` and reaches west by its own size,
+  so a marker design changes only the west extent of the blueprint; the routed belt starts on the
+  same feed column and has the same length for every design. Because `RouteSearch` never steps west
+  of `IMPORT_FEED`, a generic routing test places its tiles from that column on.
+- **Every placed tile keeps a non-negative column and row.** `RowPlacer.placeAll` starts
+  `NORTH_MARGIN` rows south, so the north lanes, the fluid lanes and the route margin stay on
+  non-negative rows instead of at `-3`; `RouteSearch` clamps its north bound at row zero for the
+  same reason, and compaction only removes corridors inside the placed bounds, so it preserves the
+  origin. `FIRST_MACHINE_X` (32) keeps the machine rows east of the import corridor, so the
+  markers, their five-tile chest reach included, stay east of column zero. `LayoutBoard` itself
+  stays a `Coordinate`-keyed map with no band, so it neither rejects a negative tile nor pads the
+  layout; `assertNonNegativeOrigin` runs on the real plans, the cheat plans and every chest marker
+  design in the integration tables, and `LayoutOriginTest` covers the fixture plans.
 - **A route must not need the wide search box.** `RouteSearch` searches north, south and east only
   `ROUTE_MARGIN` (3) tiles past everything placed — one ring lane for the route and one for its turn.
   `LayoutRouter.routeWide` retries with `WIDE_ROUTE_MARGIN` (24) and still appends

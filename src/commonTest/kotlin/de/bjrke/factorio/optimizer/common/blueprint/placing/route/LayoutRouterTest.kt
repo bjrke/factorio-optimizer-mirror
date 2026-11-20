@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.route
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
@@ -24,6 +25,12 @@ import kotlin.test.assertTrue
 
 class LayoutRouterTest {
 
+    /**
+     * A tile east of the router's west bound: it never steps west of [IMPORT_FEED], so the generic
+     * coordinates of these tests start on that column instead of at zero.
+     */
+    private fun tile(x: Int, y: Int) = Coordinate(IMPORT_FEED + x, y)
+
     private fun board() =
         LayoutBoard(
             LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
@@ -40,20 +47,20 @@ class LayoutRouterTest {
     @Test
     fun theTileBesideTheGoalFacesTheGoalNotTheArrival() {
         val board = board()
-        board.placeBelt(Coordinate(3, 3), copperPlate, EAST)
-        val sink = Sink(Coordinate(1, 2), Coordinate(2, 2), WEST)
+        board.placeBelt(tile(3, 3), copperPlate, EAST)
+        val sink = Sink(tile(1, 2), tile(2, 2), WEST)
 
         val route =
             LayoutRouter(board)
                 .findRoute(
-                    Coordinate(3, 0),
+                    tile(3, 0),
                     SOUTH,
                     sink.feed,
                     BeltRouteRules(board).allowed(ironPlate, sink),
                 )
 
         assertEquals(
-            listOf(Coordinate(3, 1), Coordinate(3, 2), Coordinate(2, 2)),
+            listOf(tile(3, 1), tile(3, 2), tile(2, 2)),
             route,
         )
     }
@@ -67,20 +74,20 @@ class LayoutRouterTest {
     @Test
     fun aCornerMayTurnOverAForeignBeltItDoesNotFeed() {
         val board = board()
-        board.placeBelt(Coordinate(5, 3), copperPlate, EAST)
-        val sink = Sink(Coordinate(2, 2), Coordinate(3, 2), WEST)
+        board.placeBelt(tile(5, 3), copperPlate, EAST)
+        val sink = Sink(tile(2, 2), tile(3, 2), WEST)
 
         val route =
             LayoutRouter(board)
                 .findRoute(
-                    Coordinate(5, 0),
+                    tile(5, 0),
                     SOUTH,
                     sink.feed,
                     BeltRouteRules(board).allowed(ironPlate, sink),
                 )
 
         assertEquals(
-            listOf(Coordinate(5, 1), Coordinate(5, 2), Coordinate(4, 2), Coordinate(3, 2)),
+            listOf(tile(5, 1), tile(5, 2), tile(4, 2), tile(3, 2)),
             route,
         )
     }
@@ -95,19 +102,19 @@ class LayoutRouterTest {
     @Test
     fun aBuriedEntranceDoesNotBlockARouteOverItsRun() {
         val board = board()
-        board.placeEnd(copperPlate, Coordinate(3, 3), NORTH, Io.INPUT)
-        val sink = Sink(Coordinate(4, 2), Coordinate(3, 2), EAST)
+        board.placeEnd(copperPlate, tile(3, 3), NORTH, Io.INPUT)
+        val sink = Sink(tile(4, 2), tile(3, 2), EAST)
 
         val route =
             LayoutRouter(board)
                 .findRoute(
-                    Coordinate(1, 2),
+                    tile(1, 2),
                     EAST,
                     sink.feed,
                     BeltRouteRules(board).allowed(ironPlate, sink),
                 )
 
-        assertEquals(listOf(Coordinate(2, 2), Coordinate(3, 2)), route)
+        assertEquals(listOf(tile(2, 2), tile(3, 2)), route)
     }
 
     /**
@@ -133,23 +140,47 @@ class LayoutRouterTest {
             ROUTE_MARGIN to emptyList<String>(),
             ROUTE_MARGIN + 1 to
                 listOf(
-                    "route ${Coordinate(3, 0)} -> ${Coordinate(3, ROUTE_MARGIN + 1)} needed the " +
+                    "route ${tile(3, 0)} -> ${tile(3, ROUTE_MARGIN + 1)} needed the " +
                         "wide search box",
                 ),
         ) { (reach, expected) ->
             val board = board()
             // one belt sets the extent: the compact box ends ROUTE_MARGIN rows below it
-            board.placeBelt(Coordinate(5, 0), ironPlate, EAST)
+            board.placeBelt(tile(5, 0), ironPlate, EAST)
             val failures = mutableListOf<String>()
-            val goal = Coordinate(3, reach)
+            val goal = tile(3, reach)
 
             val route =
                 LayoutRouter(board, failures)
-                    .findRoute(Coordinate(3, 0), SOUTH, goal, allowed = { _, _ -> true })
+                    .findRoute(tile(3, 0), SOUTH, goal, allowed = { _, _ -> true })
 
             assertNotNull(route, "the route lies inside the wide box, so it is still found")
             assertEquals(expected, failures)
         }
+
+    /**
+     * The search region's north bound floors at row zero: a route that only exists above the top
+     * row is not found, so no blueprint tile ever carries a negative y. Without the floor the
+     * compact box would reach [ROUTE_MARGIN] rows past the extent, which starts at zero here.
+     */
+    @Test
+    fun aRouteNeverRunsNorthOfRowZero() {
+        val board = board()
+        board.placeBelt(tile(5, 0), ironPlate, EAST)
+        val goal = tile(2, 0)
+
+        // the only tiles this route may use are the goal and the rows above the top
+        val route =
+            LayoutRouter(board)
+                .findRoute(
+                    tile(5, 0),
+                    NORTH,
+                    goal,
+                    allowed = { candidate, _ -> candidate == goal || candidate.y < 0 },
+                )
+
+        assertNull(route, "a route above row zero is outside the search region")
+    }
 
     /**
      * A route may not reverse back onto the tile it just surfaced on. In the reported
@@ -167,18 +198,20 @@ class LayoutRouterTest {
             )
         val router = LayoutRouter(board)
         // an empty board has no extent, so the route region would be empty; these tiles only set it
-        board.placeBelt(Coordinate(10, 3), ironPlate, EAST)
-        board.placeBelt(Coordinate(20, 20), ironPlate, EAST)
-        val allowed: (Coordinate, Direction) -> Boolean = { tile, _ ->
-            (tile.y == 0 && tile.x in 2..7) || tile == Coordinate(10, 0) || tile == Coordinate(7, 1)
+        board.placeBelt(tile(10, 3), ironPlate, EAST)
+        board.placeBelt(tile(20, 20), ironPlate, EAST)
+        val allowed: (Coordinate, Direction) -> Boolean = { candidate, _ ->
+            (candidate.y == 0 && candidate.x in tile(2, 0).x..tile(7, 0).x) ||
+                candidate == tile(10, 0) ||
+                candidate == tile(7, 1)
         }
 
         val route =
             router.route(
                 RouteRequest(
-                    from = Coordinate(10, 0),
+                    from = tile(10, 0),
                     heading = WEST,
-                    to = Coordinate(7, 1),
+                    to = tile(7, 1),
                     allowed = allowed,
                     profile = router.pipeProfile,
                 ),

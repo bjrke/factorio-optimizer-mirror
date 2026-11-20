@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertConnectedUndergroundBelts
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoOverlap
+import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNonNegativeOrigin
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.chestMarkers
 import de.bjrke.test.assertAll
@@ -12,9 +13,13 @@ import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** The real dumps with each chest belt end: overlap, tunnels, power and the output wire. */
+/** The real dumps with each chest belt end: overlap, origin, tunnels, power and the output wire. */
 class BlueprintBeltEndIntegrationTest {
 
+    /**
+     * Every chest marker design, the five-tile chest included, leaves every tile at or east of
+     * column zero: its marker reaches further west than any other design.
+     */
     @Test
     fun realChestMarkerBlueprintsHaveNoOverlappingEntities() =
         assertTable(chestMarkers) { beltEnd ->
@@ -22,6 +27,7 @@ class BlueprintBeltEndIntegrationTest {
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
                 { assertNoOverlap(layout.blueprint.entities) },
+                { assertNonNegativeOrigin(layout.blueprint.entities) },
             )
         }
 

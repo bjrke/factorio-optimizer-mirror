@@ -9,7 +9,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
-import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LANE_MARGIN
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FIRST_MACHINE_X
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.NORTH_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
@@ -37,10 +38,10 @@ import kotlin.test.assertEquals
  * Characterization of the fluid lane one row of three chemical plants produces today, so a later
  * fluid change can show exactly which tile, direction or glyph moved on purpose.
  *
- * The three machines touch, so their petroleum ports sit at x = LANE_MARGIN, +3 and +6. The lane
- * runs two rows above them: a plain junction pipe over every port, and a pipe-to-ground pair across
- * each two-tile gap, which the player can walk across. Every port is reached by a vertical shaft
- * whose top end stands one row inside the lane and whose bottom end sits on the port tile.
+ * The three machines touch, so their petroleum ports sit at x = FIRST_MACHINE_X, +3 and +6. The
+ * lane runs three rows above them: a plain junction pipe over every port, and a pipe-to-ground pair
+ * across each two-tile gap, which the player can walk across. Every port is reached by a vertical
+ * shaft whose top end stands one row inside the lane and whose bottom end sits on the port tile.
  */
 class BlueprintFluidCharacterizationTest {
 
@@ -70,17 +71,17 @@ class BlueprintFluidCharacterizationTest {
         assertTableOf(
             MachineEntity(
                 Factory.CHEMICAL_PLANT,
-                Coordinate(LANE_MARGIN, 0).area(3, 3),
+                Coordinate(FIRST_MACHINE_X, NORTH_MARGIN).area(3, 3),
                 "solid-fuel-from-petroleum-gas",
             ),
             MachineEntity(
                 Factory.CHEMICAL_PLANT,
-                Coordinate(LANE_MARGIN + 3, 0).area(3, 3),
+                Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN).area(3, 3),
                 "solid-fuel-from-petroleum-gas",
             ),
             MachineEntity(
                 Factory.CHEMICAL_PLANT,
-                Coordinate(LANE_MARGIN + 6, 0).area(3, 3),
+                Coordinate(FIRST_MACHINE_X + 6, NORTH_MARGIN).area(3, 3),
                 "solid-fuel-from-petroleum-gas",
             ),
         ) { expected ->
@@ -94,14 +95,14 @@ class BlueprintFluidCharacterizationTest {
     fun theLanePutsAJunctionAboveEveryPortAndARunAcrossEveryGap() =
         assertTableOf(
             // the plain junction pipes, one above every machine port
-            Coordinate(LANE_MARGIN, -3) to "pipe",
-            Coordinate(LANE_MARGIN + 3, -3) to "pipe",
-            Coordinate(LANE_MARGIN + 6, -3) to "pipe",
+            Coordinate(FIRST_MACHINE_X, NORTH_MARGIN - 3) to "pipe",
+            Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN - 3) to "pipe",
+            Coordinate(FIRST_MACHINE_X + 6, NORTH_MARGIN - 3) to "pipe",
             // the two-tile gap between two ports is a pair of directly adjacent ends
-            Coordinate(LANE_MARGIN + 1, -3) to "pipe-to-ground",
-            Coordinate(LANE_MARGIN + 2, -3) to "pipe-to-ground",
-            Coordinate(LANE_MARGIN + 4, -3) to "pipe-to-ground",
-            Coordinate(LANE_MARGIN + 5, -3) to "pipe-to-ground",
+            Coordinate(FIRST_MACHINE_X + 1, NORTH_MARGIN - 3) to "pipe-to-ground",
+            Coordinate(FIRST_MACHINE_X + 2, NORTH_MARGIN - 3) to "pipe-to-ground",
+            Coordinate(FIRST_MACHINE_X + 4, NORTH_MARGIN - 3) to "pipe-to-ground",
+            Coordinate(FIRST_MACHINE_X + 5, NORTH_MARGIN - 3) to "pipe-to-ground",
         ) { (tile, name) ->
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
@@ -112,10 +113,10 @@ class BlueprintFluidCharacterizationTest {
     @Test
     fun theGapRunsFaceTheJunctionsTheyJoin() =
         assertTableOf(
-            Coordinate(LANE_MARGIN + 1, -3) to INPUT,
-            Coordinate(LANE_MARGIN + 2, -3) to OUTPUT,
-            Coordinate(LANE_MARGIN + 4, -3) to INPUT,
-            Coordinate(LANE_MARGIN + 5, -3) to OUTPUT,
+            Coordinate(FIRST_MACHINE_X + 1, NORTH_MARGIN - 3) to INPUT,
+            Coordinate(FIRST_MACHINE_X + 2, NORTH_MARGIN - 3) to OUTPUT,
+            Coordinate(FIRST_MACHINE_X + 4, NORTH_MARGIN - 3) to INPUT,
+            Coordinate(FIRST_MACHINE_X + 5, NORTH_MARGIN - 3) to OUTPUT,
         ) { (tile, io) ->
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
@@ -126,9 +127,12 @@ class BlueprintFluidCharacterizationTest {
     @Test
     fun everyMachineIsFedThroughItsOwnVerticalShaft() =
         assertTableOf(
-            Coordinate(LANE_MARGIN, -2) to Coordinate(LANE_MARGIN, -1),
-            Coordinate(LANE_MARGIN + 3, -2) to Coordinate(LANE_MARGIN + 3, -1),
-            Coordinate(LANE_MARGIN + 6, -2) to Coordinate(LANE_MARGIN + 6, -1),
+            Coordinate(FIRST_MACHINE_X, NORTH_MARGIN - 2) to
+                Coordinate(FIRST_MACHINE_X, NORTH_MARGIN - 1),
+            Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN - 2) to
+                Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN - 1),
+            Coordinate(FIRST_MACHINE_X + 6, NORTH_MARGIN - 2) to
+                Coordinate(FIRST_MACHINE_X + 6, NORTH_MARGIN - 1),
         ) { (top, port) ->
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },
@@ -149,7 +153,7 @@ class BlueprintFluidCharacterizationTest {
             {
                 assertEquals(
                     MarkerEntity(
-                        Coordinate(LANE_MARGIN - 4, -3).area(),
+                        Coordinate(FIRST_MACHINE_X - 4, NORTH_MARGIN - 3).area(),
                         "constant-combinator",
                         fluidMarker.signal,
                     ),
@@ -166,27 +170,27 @@ class BlueprintFluidCharacterizationTest {
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertEquals(
-                    end(Coordinate(LANE_MARGIN - 5, -3), petroleum, EAST, INPUT),
-                    plumbingAt(Coordinate(LANE_MARGIN - 5, -3)),
+                    end(Coordinate(FIRST_MACHINE_X - 5, NORTH_MARGIN - 3), petroleum, EAST, INPUT),
+                    plumbingAt(Coordinate(FIRST_MACHINE_X - 5, NORTH_MARGIN - 3)),
                 )
             },
             {
                 assertEquals(
-                    end(Coordinate(LANE_MARGIN - 3, -3), petroleum, EAST, OUTPUT),
-                    plumbingAt(Coordinate(LANE_MARGIN - 3, -3)),
+                    end(Coordinate(FIRST_MACHINE_X - 3, NORTH_MARGIN - 3), petroleum, EAST, OUTPUT),
+                    plumbingAt(Coordinate(FIRST_MACHINE_X - 3, NORTH_MARGIN - 3)),
                 )
             },
             // the block ends three tiles west of the lane head; the link is a pair of touching ends
             {
                 assertEquals(
-                    end(Coordinate(LANE_MARGIN - 2, -3), petroleum, EAST, INPUT),
-                    plumbingAt(Coordinate(LANE_MARGIN - 2, -3)),
+                    end(Coordinate(FIRST_MACHINE_X - 2, NORTH_MARGIN - 3), petroleum, EAST, INPUT),
+                    plumbingAt(Coordinate(FIRST_MACHINE_X - 2, NORTH_MARGIN - 3)),
                 )
             },
             {
                 assertEquals(
-                    end(Coordinate(LANE_MARGIN - 1, -3), petroleum, EAST, OUTPUT),
-                    plumbingAt(Coordinate(LANE_MARGIN - 1, -3)),
+                    end(Coordinate(FIRST_MACHINE_X - 1, NORTH_MARGIN - 3), petroleum, EAST, OUTPUT),
+                    plumbingAt(Coordinate(FIRST_MACHINE_X - 1, NORTH_MARGIN - 3)),
                 )
             },
         )
@@ -207,9 +211,9 @@ class BlueprintFluidCharacterizationTest {
             {
                 assertEquals(
                     listOf(
-                        Coordinate(LANE_MARGIN, -3),
-                        Coordinate(LANE_MARGIN + 3, -3),
-                        Coordinate(LANE_MARGIN + 6, -3),
+                        Coordinate(FIRST_MACHINE_X, NORTH_MARGIN - 3),
+                        Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN - 3),
+                        Coordinate(FIRST_MACHINE_X + 6, NORTH_MARGIN - 3),
                     ),
                     pipes,
                 )
@@ -228,23 +232,22 @@ class BlueprintFluidCharacterizationTest {
 
     @Test
     fun theFluidRowDrawingIsStable() {
-        // The source block starts at x = LANE_MARGIN - 5, so the ruler prints "1" at x = 10 and "2"
-        // at x = 20 when LANE_MARGIN is 10. Codes: 1 = the chemical plant, a = petroleum on the
-        // input lane, b = solid fuel on the output belt, o = a pipe-to-ground end, - = a plain
-        // pipe,
+        // The source block starts at x = FIRST_MACHINE_X - 5 = 27, so the ruler prints "3" at
+        // x = 30 and "4" at x = 40. Codes: 1 = the chemical plant, a = petroleum on the input
+        // lane, b = solid fuel on the output belt, o = a pipe-to-ground end, - = a plain pipe,
         // C = a constant combinator, ^ = a product inserter, + = a pole.
         val expected =
             """
             layout 18x8
-                   1         2
-            -3 oCooo-oo-oo-
-            -2      o  o  o
-            -1      o  o  o
-            0      111111111 +
-            1      111111111
-            2      111111111
-            3       ^ +^  ^
-            4      bbbbbbbbbb(C)
+                  3         4
+            14 oCooo-oo-oo-
+            15      o  o  o
+            16      o  o  o
+            17      111111111 +
+            18      111111111
+            19      111111111
+            20       ^ +^  ^
+            21      bbbbbbbbbb(C)
 
             legend
               1 = chemical-plant: solid-fuel-from-petroleum-gas
@@ -287,10 +290,15 @@ class BlueprintFluidCharacterizationTest {
     fun aMachineWithPipesOnBothEdgesIsFedFromItsTopEdge() =
         assertTableOf(
             // machine -> (its top-left corner, the pipe that feeds it)
-            Factory.FOUNDRY to (Coordinate(LANE_MARGIN, 0) to Coordinate(LANE_MARGIN + 3, -1)),
+            Factory.FOUNDRY to
+                (Coordinate(FIRST_MACHINE_X, NORTH_MARGIN) to
+                    Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN - 1)),
             Factory.CRYOGENIC_PLANT to
-                (Coordinate(LANE_MARGIN, 0) to Coordinate(LANE_MARGIN + 2, -1)),
-            Factory.OIL_REFINERY to (Coordinate(LANE_MARGIN, 0) to Coordinate(LANE_MARGIN + 3, -1)),
+                (Coordinate(FIRST_MACHINE_X, NORTH_MARGIN) to
+                    Coordinate(FIRST_MACHINE_X + 2, NORTH_MARGIN - 1)),
+            Factory.OIL_REFINERY to
+                (Coordinate(FIRST_MACHINE_X, NORTH_MARGIN) to
+                    Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN - 1)),
         ) { (factory, expected) ->
             val (machine, port) = expected
             val layout = Layout(fluidRowPlan(factory))

@@ -17,8 +17,13 @@ internal const val PIPE_UNDERGROUND_RANGE = 10
  * The first tile that is not part of an import marker: every imported feed starts here, so the
  * marker design only changes how far west the marker reaches. No route may use a tile west of this
  * column, whatever marker a layout selects.
+ *
+ * It sits ten columns (the west corridor) west of the first machine column (`FIRST_MACHINE_X` in
+ * `RowPlacer`), which keeps the whole layout on non-negative columns: a chest marker reaches five
+ * tiles further west, still east of zero. Tests that pin the column read this constant instead of a
+ * literal.
  */
-internal const val IMPORT_FEED = 0
+internal const val IMPORT_FEED = 22
 
 /** The prototype names derived from the selected belt, inserter and the fixed pipe entities. */
 internal data class LayoutNames(

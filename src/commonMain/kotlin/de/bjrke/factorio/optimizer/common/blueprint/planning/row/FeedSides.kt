@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import kotlin.math.abs
@@ -22,9 +23,9 @@ internal data class FeedNetwork(
  * material is one network of its producer row plus every row that takes it, so its weight is the
  * number of those rows (`consumers + 1`; a 1:1 feed is 2, one producer feeding two rows is 3). Its
  * order is the mean east extent of those rows, which puts a network where its routes live rather
- * than at its producer alone. Imports have no producer row, weigh 1, are keyed 0 and are always
- * [Direction.EAST], so they reserve the low end: once their weight reaches half the total every
- * produced network runs [Direction.WEST].
+ * than at its producer alone. Imports have no producer row, weigh 1, are keyed at the west feed
+ * column and are always [Direction.EAST], so they reserve the low end: once their weight reaches
+ * half the total every produced network runs [Direction.WEST].
  *
  * A producer has one output side, so the split gives every material one feed side for all of its
  * consumer belts. Its product belt exits on the opposite side, where the consumers are fed from.
@@ -56,7 +57,9 @@ internal class FeedSides(
     /** One material's belt network: its producer plus every row that takes it over a belt. */
     private fun networkRows(material: Material) =
         when (val producer = producerIndex[material]) {
-            null -> listOf(0)
+            // an import has no producer, so it is keyed at the west feed column: below every row's
+            // east extent, which keeps the imports on the low end of the order
+            null -> listOf(IMPORT_FEED)
             else ->
                 inputs.indices
                     .filter { it != producer && material in inputs[it] }

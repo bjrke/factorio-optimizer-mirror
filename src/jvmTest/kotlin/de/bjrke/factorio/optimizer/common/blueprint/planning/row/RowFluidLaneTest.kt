@@ -35,7 +35,7 @@ class RowFluidLaneTest {
         val production = planned(batteryRecipe, Factory.CHEMICAL_PLANT)
         val merge =
             BeltMerge(
-                column = LANE_MARGIN - EAST_MERGE_OFFSET,
+                column = FIRST_MACHINE_X - EAST_MERGE_OFFSET,
                 above = true,
                 westMaterial = coal,
                 eastMaterial = copperPlate,
@@ -44,8 +44,8 @@ class RowFluidLaneTest {
         val row =
             Row(
                 plannedRow = PlannedRow.copies(production, 1),
-                machines = listOf(PlacedMachine(production, LANE_MARGIN)),
-                box = Area(Coordinate(LANE_MARGIN, 20), Dimension(3, 3)),
+                machines = listOf(PlacedMachine(production, FIRST_MACHINE_X)),
+                box = Area(Coordinate(FIRST_MACHINE_X, 20), Dimension(3, 3)),
                 lanes =
                     RowLanes(
                         factoryTop = 20,

@@ -75,7 +75,9 @@ internal class RouteSearch(
 
     // the board does not change while one search runs, so the region is fixed up front
     private val eastBound = board.maxX + margin
-    private val northBound = board.minY - margin
+    // the north rows stay non-negative; the floor stops the wide fallback from placing a route
+    // above row zero, so no blueprint tile ever carries a negative y
+    private val northBound = maxOf(0, board.minY - margin)
     private val southBound = board.maxY + margin
 
     private val gScore = mutableMapOf(start to 0)

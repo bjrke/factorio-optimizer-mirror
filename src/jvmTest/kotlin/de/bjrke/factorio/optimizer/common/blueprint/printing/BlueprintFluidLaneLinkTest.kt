@@ -9,6 +9,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FIRST_MACHINE_X
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.NORTH_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
@@ -82,8 +84,9 @@ class BlueprintFluidLaneLinkTest {
                 !it.signal.fluid && it.signal.material == coal
             }
         val belts = layout.entities.filterIsInstance<BeltEntity>()
-        // the mixed merge at (7,8) is fed from the side by its produced feeder at (8,8)
-        val sideLoad = Coordinate(8, 8)
+        // the mixed merge at (FIRST_MACHINE_X - 3, NORTH_MARGIN + 8) is fed from the side by its
+        // produced feeder one column east
+        val sideLoad = Coordinate(FIRST_MACHINE_X - 2, NORTH_MARGIN + 8)
         val plastic =
             layout.entities.filterIsInstance<MachineEntity>().filter {
                 it.recipe == "plastic-bar"

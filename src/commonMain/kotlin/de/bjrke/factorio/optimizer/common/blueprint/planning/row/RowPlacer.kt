@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
@@ -26,17 +27,30 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
 
 /**
- * The column the machine rows start on: the west corridor kept clear for the import connectors,
- * their feed belts and a mixed lane's merge. The import trimmer later moves every connector to the
- * furthest west column with a straight feed and deletes the prefix, so this offsets the blueprint
- * instead of widening it — the finished layout starts at the connector, not here. It must hold the
- * widest connector (five tiles for a chest), the merge column at `LANE_MARGIN - EAST_MERGE_OFFSET`
- * and that merge's approach tile.
+ * The column the machine rows start on: ten columns east of [IMPORT_FEED], the width of the west
+ * corridor. That corridor holds the import connectors, their feed belts and a mixed lane's merge,
+ * so it must hold the widest connector (five tiles for a chest), the merge column
+ * [EAST_MERGE_OFFSET] columns west of the machines and that merge's approach tile, which puts its
+ * floor at eight. Starting the machines east of the import markers keeps every placed tile on a
+ * non-negative column, and the layout grows east from here. The import trimmer later moves every
+ * connector to the furthest west column with a straight feed and removes the straight feed prefix,
+ * so this offsets the blueprint instead of widening it — the finished layout starts at the
+ * connector, not here.
  */
-internal const val LANE_MARGIN = 10
+internal const val FIRST_MACHINE_X = IMPORT_FEED + 10
 
 /** Free rows between two recipe rows, so their belts can be routed between them. */
 private const val ROW_GAP = 17
+
+/**
+ * The first row starts this far south of the top of the coordinate field: the north lanes, the
+ * fluid lanes and the route margin then stay on non-negative rows, so every absolute tile is
+ * positive. It deliberately does not follow [ROW_GAP]: the row spacing may shrink, while this floor
+ * must still hold the three rows of a north lane, a stack of fluid lanes and the router's margin.
+ * Compaction removes empty corridors inside the placed bounds only, so it preserves this lower
+ * bound.
+ */
+internal const val NORTH_MARGIN = 17
 
 /**
  * How far west of the row an east-fed mixed lane starts its T merge. A fluid lane may sit on the
@@ -75,7 +89,7 @@ internal class RowPlacer(
     private val bandInterfaces = BandInterfacePlacer(board, logistics)
 
     fun placeAll() {
-        var y = 0
+        var y = NORTH_MARGIN
         for (unit in planner.units) {
             val row = placeRow(unit, y)
             placedRows += row
@@ -136,7 +150,7 @@ internal class RowPlacer(
         val factoryTop = bandTop + topLanes + 1
         val factoryBottom = factoryTop + size.height - 1
         val rowRight =
-            machines.lastOrNull()?.left?.plus(size.width - 1) ?: (LANE_MARGIN + size.width - 1)
+            machines.lastOrNull()?.left?.plus(size.width - 1) ?: (FIRST_MACHINE_X + size.width - 1)
 
         val belts = placements.map { (location, group) ->
             beltFor(
@@ -167,7 +181,7 @@ internal class RowPlacer(
             if (group.materials.size > 1) {
                 BeltMerge(
                     column =
-                        if (direction == EAST) LANE_MARGIN - EAST_MERGE_OFFSET
+                        if (direction == EAST) FIRST_MACHINE_X - EAST_MERGE_OFFSET
                         else rowRight + WEST_MERGE_OFFSET,
                     above = location.above,
                     westMaterial =
@@ -209,7 +223,7 @@ internal class RowPlacer(
 
         val linkedGaps = plannedRow.links.mapTo(mutableSetOf()) { it.gap }
         val machines = buildList {
-            var left = LANE_MARGIN
+            var left = FIRST_MACHINE_X
             for ((index, production) in plannedRow.machines.withIndex()) {
                 add(PlacedMachine(production, left))
                 left += size.width
@@ -222,7 +236,7 @@ internal class RowPlacer(
             Row(
                 plannedRow = plannedRow,
                 machines = machines,
-                box = Area(Coordinate(LANE_MARGIN, lanes.factoryTop), size),
+                box = Area(Coordinate(FIRST_MACHINE_X, lanes.factoryTop), size),
                 lanes = lanes,
             )
         for (machine in machines) {

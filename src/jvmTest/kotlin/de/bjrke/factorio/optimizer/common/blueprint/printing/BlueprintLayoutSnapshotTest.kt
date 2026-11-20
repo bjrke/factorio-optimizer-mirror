@@ -37,7 +37,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(basePlan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("f32cb513422b28a8") },
+            { layout.assertSignature("9456cba0c247449d") },
         )
     }
 
@@ -46,7 +46,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(basePlan, beltEnd = BeltEnd.BUFFER_CHEST)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("0f32cd4598df8516") },
+            { layout.assertSignature("cd842fe93f9167d2") },
         )
     }
 
@@ -68,7 +68,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("94afe82e2b9791be") },
+            { layout.assertSignature("ecf857b16153ba29") },
         )
     }
 
@@ -77,7 +77,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(sixInputPlan())
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("8ffe66606ab2f45b") },
+            { layout.assertSignature("1fa9f6b83a6ef13a") },
         )
     }
 
@@ -104,7 +104,7 @@ class BlueprintLayoutSnapshotTest {
         val layout = Layout(plan)
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
-            { layout.assertSignature("a1170b4ba7578597") },
+            { layout.assertSignature("daac92cbad217645") },
         )
     }
 
