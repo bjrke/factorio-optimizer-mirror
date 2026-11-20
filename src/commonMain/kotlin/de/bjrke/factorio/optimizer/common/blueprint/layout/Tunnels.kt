@@ -17,23 +17,24 @@ internal class Tunnels {
     }
 
     /**
-     * Identifies an underground run: its axis and its underground prototype (belt tier or pipe).
+     * One tile of an underground run: the tile, the run's axis and its underground prototype (belt
+     * tier or pipe).
      */
-    private data class Key(val axis: Axis, val type: String)
+    private data class Key(val pos: Coordinate, val axis: Axis, val type: String)
 
-    private val under = mutableMapOf<Coordinate, MutableSet<Key>>()
+    private val under = mutableSetOf<Key>()
 
     /** Whether a run of [type] along [step] already passes under [coordinate]. */
-    fun has(coordinate: Coordinate, step: Coordinate, type: String): Boolean =
-        Key(axisOf(step), type) in under[coordinate].orEmpty()
+    fun has(coordinate: Coordinate, step: Coordinate, type: String) =
+        Key(coordinate, axisOf(step), type) in under
 
     /** Records the run from [from] to [to] on every tile it passes under. */
     fun mark(from: Coordinate, to: Coordinate, type: String) {
         val delta = to - from
         val step = delta.direction
-        val key = Key(axisOf(step), type)
+        val axis = axisOf(step)
         for (k in 1 until delta.chebyshevLen) {
-            under.getOrPut(from + step * k) { mutableSetOf() } += key
+            under.add(Key(from + step * k, axis, type))
         }
     }
 

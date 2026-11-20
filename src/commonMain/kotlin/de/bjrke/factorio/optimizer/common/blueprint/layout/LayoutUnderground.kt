@@ -1,15 +1,10 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout
 
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.adjacent
-
-/** The fluid the pipe or pipe-to-ground at [coordinate] carries, if any. */
-internal fun LayoutBoard.fluidAt(coordinate: Coordinate) =
-    (entityAt(coordinate) as? Plumbing)?.material
 
 /** The output end of the underground run [input] feeds, within the material's reach, if any. */
 internal fun LayoutBoard.undergroundOutputOf(input: UndergroundEntity): UndergroundEntity? {
