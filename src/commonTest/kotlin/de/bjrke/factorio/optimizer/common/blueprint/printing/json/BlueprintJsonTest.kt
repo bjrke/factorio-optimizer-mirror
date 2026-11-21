@@ -22,8 +22,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintIcon
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.core.model.Area
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
@@ -176,7 +174,7 @@ class BlueprintJsonTest {
         val entity =
             MachineEntity(
                 Factory.ASSEMBLING_MACHINE_1,
-                Area(Coordinate(1, 2), Dimension(2, 2)),
+                Area(1, 2, 2, 2),
                 "iron-gear-wheel",
             )
         val position = entityJson(entity).getValue("position").jsonObject

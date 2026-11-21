@@ -3,14 +3,13 @@ package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.test.assertTableOf
@@ -26,8 +25,7 @@ private fun belt(x: Int, y: Int, direction: Direction = EAST, material: Material
 /** A splitter facing [direction]; its two tiles lie across that facing. */
 private fun splitter(x: Int, y: Int, direction: Direction) =
     SplitterEntity(
-        if (direction == EAST || direction == WEST) Coordinate(x, y).area(1, 2)
-        else Coordinate(x, y).area(2, 1),
+        if (direction == EAST || direction == WEST) Area(x, y, 1, 2) else Area(x, y, 2, 1),
         SPLITTER,
         ironOre,
         direction,

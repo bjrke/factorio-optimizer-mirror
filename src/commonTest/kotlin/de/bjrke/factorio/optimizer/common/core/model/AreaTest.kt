@@ -43,7 +43,7 @@ class AreaTest {
 
     @Test
     fun neighborsAreTheRingOutsideTheAreaWithoutCorners() {
-        val area = Area(Coordinate(2, 3), Dimension(2, 2))
+        val area = Area(2, 3, 2, 2)
         assertEquals(
             setOf(
                 Coordinate(2, 2),

@@ -24,12 +24,11 @@ fun Coordinate.manhattanDist(b: Coordinate) = abs(x - b.x) + abs(y - b.y)
 /** True when [to] is one tile orthogonally next to this. */
 fun Coordinate.adjacent(to: Coordinate) = manhattanDist(to) == 1
 
-fun Coordinate.area(dimension: Dimension) = Area(this, dimension)
-
-/** The one-tile [Area] at this coordinate; the shared [areaTile] single-tile case. */
-fun Coordinate.area() = areaTile(x, y)
-
-fun Coordinate.area(width: Int, height: Int) = area(Dimension(width, height))
+/**
+ * The one-tile [Area] at this coordinate. It shares [Dimension.ONE] with [areaTile] but builds the
+ * area from this coordinate directly, so a call allocates only the [Area].
+ */
+fun Coordinate.area() = Area(this, Dimension.ONE)
 
 fun Coordinate.north(amount: Int = 1) = Coordinate(x, y - amount)
 

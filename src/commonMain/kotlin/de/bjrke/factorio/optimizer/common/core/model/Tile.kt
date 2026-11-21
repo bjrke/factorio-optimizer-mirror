@@ -78,6 +78,11 @@ data class Dimension(val width: Int, val height: Int) {
         get() = width * height
 
     fun isEmpty() = width == 0 || height == 0
+
+    companion object {
+
+        val ONE = Dimension(1, 1)
+    }
 }
 
 data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordinate> {
@@ -132,11 +137,7 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
 
     override fun containsAll(elements: Collection<Coordinate>) = elements.all(::contains)
 
-    fun grow(amount: Int) =
-        Area(
-            Coordinate(x - amount, y - amount),
-            Dimension(width + amount * 2, height + amount * 2),
-        )
+    fun grow(amount: Int) = Area(x - amount, y - amount, width + amount * 2, height + amount * 2)
 
     /**
      * The tiles orthogonally outside this area: the rows above and below it and the columns to its
@@ -164,10 +165,10 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
 }
 
 /**
- * A one-tile area whose only coordinate is ([x], [y]); the single definition of the one-tile case
- * shared by every one-tile entity and by the no-argument `Coordinate.area()`.
+ * A one-tile area whose only coordinate is ([x], [y]); the one-tile case every one-tile entity
+ * uses. It shares [Dimension.ONE] with the no-argument `Coordinate.area()`.
  */
-fun areaTile(x: Int, y: Int) = Area(x, y, 1, 1)
+fun areaTile(x: Int, y: Int) = Area(Coordinate(x, y), Dimension.ONE)
 
 /**
  * The smallest area that contains every non-empty area of this sequence, or `null` when it holds

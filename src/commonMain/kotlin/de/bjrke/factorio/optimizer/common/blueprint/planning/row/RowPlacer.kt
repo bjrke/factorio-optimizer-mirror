@@ -24,7 +24,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.model.area
 
 /**
  * The column the machine rows start on: ten columns east of [IMPORT_FEED], the width of the west
@@ -243,7 +242,7 @@ internal class RowPlacer(
             board.place(
                 MachineEntity(
                     machine.production.factory,
-                    Coordinate(machine.left, row.factoryTop).area(size),
+                    Area(Coordinate(machine.left, row.factoryTop), size),
                     machine.production.recipe.name,
                     blueprintMachineDirection(machine.production.factory),
                 ),

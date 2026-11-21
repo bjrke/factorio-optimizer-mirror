@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.area
@@ -64,7 +65,7 @@ class PowerPlacerTest {
     private fun poles(board: LayoutBoard) = board.placed.filterIsInstance<PoleEntity>()
 
     private fun machine(factory: Factory) =
-        MachineEntity(factory, Coordinate(4, 4).area(3, 3), recipe = "iron-plate")
+        MachineEntity(factory, Area(4, 4, 3, 3), recipe = "iron-plate")
 
     private fun inserter(topLeft: Coordinate) =
         InserterEntity(

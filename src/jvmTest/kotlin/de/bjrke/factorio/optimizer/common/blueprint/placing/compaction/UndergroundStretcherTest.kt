@@ -15,7 +15,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.placePipe
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeTunnel
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
@@ -111,7 +110,7 @@ class UndergroundStretcherTest {
         board.place(
             MachineEntity(
                 Factory.ASSEMBLING_MACHINE_3,
-                Area(Coordinate(0, 3), Dimension(3, 3)),
+                Area(0, 3, 3, 3),
                 "assembling-machine-3",
             ),
         )
@@ -179,7 +178,7 @@ class UndergroundStretcherTest {
         board.placeBelt(Coordinate(3, 0), ironPlate, EAST)
         board.place(
             SplitterEntity(
-                Area(Coordinate(4, 0), Dimension(1, 2)),
+                Area(4, 0, 1, 2),
                 "fast-splitter",
                 ironPlate,
                 EAST,
@@ -203,7 +202,7 @@ class UndergroundStretcherTest {
         board.placeBelt(Coordinate(3, 0), ironPlate, EAST)
         board.place(
             SplitterEntity(
-                Area(Coordinate(4, 0), Dimension(1, 2)),
+                Area(4, 0, 1, 2),
                 "fast-splitter",
                 copperPlate,
                 EAST,

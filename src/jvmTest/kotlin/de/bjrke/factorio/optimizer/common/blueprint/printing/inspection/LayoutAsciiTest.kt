@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.area
@@ -28,7 +29,7 @@ class LayoutAsciiTest {
                 listOf(
                     MachineEntity(
                         Factory.ASSEMBLING_MACHINE_3,
-                        Coordinate(0, 0).area(2, 2),
+                        Area(0, 0, 2, 2),
                         "advanced-circuit",
                     ),
                     PoleEntity(Coordinate(3, 0).area(), "medium-electric-pole"),

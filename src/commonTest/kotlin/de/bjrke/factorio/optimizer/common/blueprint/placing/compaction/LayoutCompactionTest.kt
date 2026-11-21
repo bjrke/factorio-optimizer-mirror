@@ -12,7 +12,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBel
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
@@ -20,7 +19,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
@@ -50,8 +48,7 @@ private fun belt(x: Int, y: Int, material: Material = ironOre, direction: Direct
 /** A splitter facing [direction]; its two tiles lie across that facing. */
 private fun splitter(x: Int, y: Int, direction: Direction, material: Material = ironOre) =
     SplitterEntity(
-        if (direction == EAST || direction == WEST) Coordinate(x, y).area(1, 2)
-        else Coordinate(x, y).area(2, 1),
+        if (direction == EAST || direction == WEST) Area(x, y, 1, 2) else Area(x, y, 2, 1),
         SPLITTER,
         material,
         direction,
@@ -61,7 +58,7 @@ private fun marker(x: Int, y: Int, material: Material = ironOre) =
     MarkerEntity(areaTile(x, y), MARKER, Signal(material))
 
 private fun machine(x: Int, y: Int) =
-    MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(Coordinate(x, y), Dimension(3, 3)), MACHINE)
+    MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(x, y, 3, 3), MACHINE)
 
 private fun pipe(x: Int, y: Int, fluid: Material = water) = PipeEntity(areaTile(x, y), PIPE, fluid)
 

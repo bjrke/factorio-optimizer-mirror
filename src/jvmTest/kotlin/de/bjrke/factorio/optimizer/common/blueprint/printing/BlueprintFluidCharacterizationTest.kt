@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUnde
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.layoutAscii
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -29,6 +30,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory.CHEMICAL_PLANT
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -51,7 +53,7 @@ class BlueprintFluidCharacterizationTest {
             rows =
                 listOf(
                     PlannedRow.copies(
-                        planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                        planned(solidFuelFromPetroleumGasRecipe, CHEMICAL_PLANT),
                         3,
                     ),
                 ),
@@ -70,18 +72,18 @@ class BlueprintFluidCharacterizationTest {
     fun theMachinesTouchInOneRow() =
         assertTableOf(
             MachineEntity(
-                Factory.CHEMICAL_PLANT,
-                Coordinate(FIRST_MACHINE_X, NORTH_MARGIN).area(3, 3),
+                CHEMICAL_PLANT,
+                Area(FIRST_MACHINE_X, NORTH_MARGIN, 3, 3),
                 "solid-fuel-from-petroleum-gas",
             ),
             MachineEntity(
-                Factory.CHEMICAL_PLANT,
-                Coordinate(FIRST_MACHINE_X + 3, NORTH_MARGIN).area(3, 3),
+                CHEMICAL_PLANT,
+                Area(FIRST_MACHINE_X + 3, NORTH_MARGIN, 3, 3),
                 "solid-fuel-from-petroleum-gas",
             ),
             MachineEntity(
-                Factory.CHEMICAL_PLANT,
-                Coordinate(FIRST_MACHINE_X + 6, NORTH_MARGIN).area(3, 3),
+                CHEMICAL_PLANT,
+                Area(FIRST_MACHINE_X + 6, NORTH_MARGIN, 3, 3),
                 "solid-fuel-from-petroleum-gas",
             ),
         ) { expected ->

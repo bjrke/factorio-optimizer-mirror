@@ -12,7 +12,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PoleEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Signal
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
@@ -65,7 +67,7 @@ internal fun LayoutBoard.placeLoader(
     io: Io,
     material: Material,
 ) {
-    place(LoaderEntity(coordinate.area(2, 1), names.loader, material, io, direction))
+    place(LoaderEntity(Area(coordinate, Dimension(2, 1)), names.loader, material, io, direction))
 }
 
 /** Places a constant-combinator marker (always one tile) showing [signal]. */

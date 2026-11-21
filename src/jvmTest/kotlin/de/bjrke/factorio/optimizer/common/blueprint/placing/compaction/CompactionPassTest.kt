@@ -11,7 +11,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
@@ -39,7 +38,7 @@ class CompactionPassTest {
         board.place(
             MachineEntity(
                 Factory.ASSEMBLING_MACHINE_3,
-                Area(Coordinate(0, 0), Dimension(3, 3)),
+                Area(0, 0, 3, 3),
                 "assembling-machine-3",
             ),
         )

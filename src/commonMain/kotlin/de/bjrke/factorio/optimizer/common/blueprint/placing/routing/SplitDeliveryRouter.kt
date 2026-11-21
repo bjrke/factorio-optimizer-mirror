@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBel
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.pathConflicts
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -17,7 +18,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.adjacent
-import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 
 /** How many split points are routed before the cheapest one is chosen. */
@@ -162,9 +162,9 @@ internal class SplitDeliveryRouter(
     private fun splitterArea(belt: Coordinate, side: Coordinate, direction: Direction) =
         when (direction) {
             EAST,
-            WEST -> Coordinate(belt.x, minOf(belt.y, side.y)).area(1, 2)
+            WEST -> Area(belt.x, minOf(belt.y, side.y), 1, 2)
             NORTH,
-            SOUTH -> Coordinate(minOf(belt.x, side.x), belt.y).area(2, 1)
+            SOUTH -> Area(minOf(belt.x, side.x), belt.y, 2, 1)
         }
 
     /** Replaces the trunk belt at [candidate] with a splitter; its continuations stay in place. */

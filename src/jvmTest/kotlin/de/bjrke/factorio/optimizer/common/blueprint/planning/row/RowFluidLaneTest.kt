@@ -5,8 +5,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Area
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
@@ -45,7 +43,7 @@ class RowFluidLaneTest {
             Row(
                 plannedRow = PlannedRow.copies(production, 1),
                 machines = listOf(PlacedMachine(production, FIRST_MACHINE_X)),
-                box = Area(Coordinate(FIRST_MACHINE_X, 20), Dimension(3, 3)),
+                box = Area(FIRST_MACHINE_X, 20, 3, 3),
                 lanes =
                     RowLanes(
                         factoryTop = 20,

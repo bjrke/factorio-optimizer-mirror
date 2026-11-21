@@ -21,8 +21,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
 import de.bjrke.factorio.optimizer.common.core.model.Area
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.boundingBox
@@ -98,7 +96,7 @@ external interface BlueprintViewProps : Props {
 internal val blueprintView =
     FC<BlueprintViewProps>("blueprintView") { props ->
         val entities = props.blueprint.entities
-        val box = entities.map { it.area }.boundingBox() ?: Area(Coordinate(0, 0), Dimension(1, 1))
+        val box = entities.map { it.area }.boundingBox() ?: Area(0, 0, 1, 1)
 
         val minX = box.x
         val minY = box.y
