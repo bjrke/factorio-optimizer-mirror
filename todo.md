@@ -250,20 +250,3 @@ want a collection. Check every `materials` call site, including `BeltEntity`.
 
 Add tests: a unit case for `carries`/`sameAs` on a full, a half and a mixed lane load, and the
 existing compaction, routing and validation suites unchanged.
-
-### Replace the boxed collections in the flow validation
-
-`validateLayout` runs in the production path, once per candidate width (`LayoutCompaction.kt:93`)
-and once per seam (`CompactionPass.kt:56`), and the validation stage is 145 inclusive samples
-(8.5%). `trimAcyclic` (`LayoutValidationFlow.kt:119-133`) is 24 self samples because `Int` nodes
-are boxed into `ArrayDeque` and `filterTo(mutableSetOf())`; `beltLoops` accounts for 84
-map-allocation samples and `validateOverlaps` 48.
-
-Rewrite the flow pass with `IntArray`-backed structures: an int queue (or the existing
-`IntArray` + index cursor), `IntArray` adjacency instead of `List<List<Int>>` plus
-`HashMap<Int, MutableSet<Int>>` in `circleGroups`, and `BooleanArray` visited sets. Do this on top
-of the dense `LayoutIndex` item, or on its own if the boxing is still worth it after that lands.
-
-Add tests: the existing validation unit cases cover the rules; add one that asserts
-`trimAcyclic`'s result on a graph with a self-loop and one on a two-cycle, and keep the golden
-layout suite unchanged.
