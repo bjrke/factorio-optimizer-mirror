@@ -46,8 +46,8 @@ internal fun LayoutEntity.toJson(entityNumber: Int) = buildJsonObject {
     if (entity is MachineEntity) put("recipe", entity.recipe)
     entity.wireType()?.let { put("type", it.typeName) }
     entity.putSettings(this)
-    if (entity is PoleEntity && entity.neighbours.isNotEmpty()) {
-        put("neighbours", entity.neighbours.neighboursJson())
+    if (entity is PoleEntity && entity.neighbors.isNotEmpty()) {
+        put("neighbours", entity.neighbors.neighborsJson())
     }
     entity.controlBehaviorJson()?.let { put("control_behavior", it) }
 }
@@ -92,7 +92,7 @@ private val Io.typeName: String
             Io.OUTPUT -> "output"
         }
 
-private fun List<Int>.neighboursJson() = buildJsonArray {
+private fun List<Int>.neighborsJson() = buildJsonArray {
     forEach { add(JsonPrimitive(it)) }
 }
 

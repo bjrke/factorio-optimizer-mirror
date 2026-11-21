@@ -26,13 +26,13 @@ private const val SHAFT_MIN_REACH = 2
  */
 internal class FluidLane
 private constructor(
-    /** The lane row: the pipe line's own row, two rows beyond the outermost belt. */
+    /** The lane row: the pipeline's own row, two rows beyond the outermost belt. */
     val laneRow: Int,
     /** The machine port tiles the lane feeds (or drains), left to right. */
     val ports: List<Coordinate>,
     /** The plain pipes of the lane row: one junction per port, west to east. */
     val surface: List<Coordinate>,
-    /** The horizontal runs between neighbouring junctions, input end first. */
+    /** The horizontal runs between neighboring junctions, input end first. */
     val runs: List<Pair<Coordinate, Coordinate>>,
     /** The shafts, north end first; both run south, so [shafts] pairs (top, bottom). */
     val shafts: List<Pair<Coordinate, Coordinate>>,

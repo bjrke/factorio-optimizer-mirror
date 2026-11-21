@@ -71,7 +71,7 @@ private fun isRemovable(
  * same material. Dropping the corner frees the row for the shift and lets the belt behind side-load
  * the lane that moved up. No belt may side-load into the cut tile. Anything other than a plain belt
  * next to it (a loader, an underground end, a machine) stops the corridor, so a shift can never
- * pull a belt off such a neighbour.
+ * pull a belt off such a neighbor.
  *
  * A tunnel output right behind the belt is the one exception: removing the belt lands the output on
  * its tile, so the output takes over the feed and only the straight consumer ahead has to continue

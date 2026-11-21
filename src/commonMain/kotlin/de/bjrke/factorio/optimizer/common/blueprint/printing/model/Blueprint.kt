@@ -27,7 +27,7 @@ private const val MAX_ICONS = 4
  * A planned blueprint: its [label], [icons], the [entities] the layout placed and their [wires].
  *
  * [entities] are the layout's own entities in placement order; an entity's index plus one is the
- * `entity_number` its [wires] and a pole's neighbours refer to. The JSON writer turns them into the
+ * `entity_number` its [wires] and a pole's neighbors refer to. The JSON writer turns them into the
  * wire format, so this model needs no second entity representation.
  */
 data class Blueprint(

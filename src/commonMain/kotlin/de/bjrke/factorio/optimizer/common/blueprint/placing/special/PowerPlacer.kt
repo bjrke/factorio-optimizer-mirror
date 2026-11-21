@@ -186,10 +186,9 @@ internal class PowerPlacer(
                 if (a.value.area.topLeft.distanceSq(b.value.area.topLeft) <= wireReachSq) {
                     val first = board.placed[a.index] as PoleEntity
                     val second = board.placed[b.index] as PoleEntity
-                    board.placed[a.index] =
-                        first.copy(neighbours = first.neighbours + (b.index + 1))
+                    board.placed[a.index] = first.copy(neighbors = first.neighbors + (b.index + 1))
                     board.placed[b.index] =
-                        second.copy(neighbours = second.neighbours + (a.index + 1))
+                        second.copy(neighbors = second.neighbors + (a.index + 1))
                 }
             }
         }

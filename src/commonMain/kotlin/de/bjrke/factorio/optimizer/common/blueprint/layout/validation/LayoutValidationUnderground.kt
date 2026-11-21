@@ -47,9 +47,8 @@ private fun checkBeltFeed(
 ) {
     if (index.isConnectorEnd(input)) return
     val back = input.area.topLeft - input.direction.step
-    val feeder = index.at(back)
     val facesIn =
-        when (feeder) {
+        when (val feeder = index.at(back)) {
             is UndergroundBeltEntity ->
                 feeder.material == input.material &&
                     feeder.io == Io.OUTPUT &&
@@ -80,9 +79,8 @@ private fun checkBeltExit(
 ) {
     if (index.isConnectorEnd(output)) return
     val ahead = output.area.topLeft + output.direction.step
-    val target = index.at(ahead)
     val accepts =
-        when (target) {
+        when (val target = index.at(ahead)) {
             is UndergroundBeltEntity ->
                 target.material == output.material &&
                     target.io == Io.INPUT &&

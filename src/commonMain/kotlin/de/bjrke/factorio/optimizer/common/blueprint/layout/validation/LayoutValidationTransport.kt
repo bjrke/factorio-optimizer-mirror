@@ -11,10 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.joinsAt
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.directionBetween
-import de.bjrke.factorio.optimizer.common.core.model.east
-import de.bjrke.factorio.optimizer.common.core.model.north
-import de.bjrke.factorio.optimizer.common.core.model.south
-import de.bjrke.factorio.optimizer.common.core.model.west
+import de.bjrke.factorio.optimizer.common.core.model.neighbors
 
 /**
  * The belt and pipe checks: a belt must not run into another material's belt, nor take a foreign
@@ -49,7 +46,7 @@ private fun checkConveyor(
     if (conveyor.feedsAhead() && ahead is ConveyorEntity) {
         checkAhead(conveyor, ahead, aheadTile, errors)
     }
-    for (side in fourNeighbours(tile)) {
+    for (side in tile.neighbors) {
         val other = index.at(side) as? ConveyorEntity ?: continue
         // a buried entrance dives instead of feeding the tile it faces
         if (!other.feedsAhead()) continue
@@ -115,7 +112,7 @@ private fun checkPlumbing(
     errors: MutableList<String>,
 ) {
     val tile = plumbing.area.topLeft
-    for (side in fourNeighbours(tile)) {
+    for (side in tile.neighbors) {
         val other = index.at(side) as? Plumbing ?: continue
         // a pipe-to-ground end only joins on its mouth, so two different fluids may share a wall
         if (other.material != plumbing.material && plumbing.joinsAt(side) && other.joinsAt(tile)) {
@@ -123,6 +120,3 @@ private fun checkPlumbing(
         }
     }
 }
-
-private fun fourNeighbours(tile: Coordinate) =
-    listOf(tile.north(), tile.east(), tile.south(), tile.west())

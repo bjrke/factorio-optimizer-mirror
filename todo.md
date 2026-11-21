@@ -19,12 +19,12 @@ four touching electromagnetic plants is only partly connected.
 touch. `prototypeFluidPorts` (`BlueprintMachine.kt`) is written for the single
 `blueprintMachineDirection` orientation: with `Direction.EAST` the heavy oil and holmium solution
 sit on the north/south edges, and both electrolyte outputs on the west/east side edges. A side port
-of an interior machine is covered by the neighbour's footprint, so `FluidFeeder.connectTargetOutput`
+of an interior machine is covered by the neighbor's footprint, so `FluidFeeder.connectTargetOutput`
 (`FluidFeeder.kt:154`) finds the tile neither free nor reserved, returns silently, and only the
 westmost plant gets an electrolyte infinity pipe. The other three machines drain nowhere and the
 layout reports no failure.
 
-Mirror every second plant in the row so the fluid ports of neighbouring machines meet and connect,
+Mirror every second plant in the row so the fluid ports of neighboring machines meet and connect,
 with the fluid inputs moving to the other edge as needed. The port lookup must become per-machine
 orientation-aware instead of assuming one direction for the whole row, and `connectTargetOutput`
 must record a failure instead of returning silently when a machine's output cannot be drained. The
@@ -98,7 +98,7 @@ foreign side-load into electronic-circuit at Coordinate(x=37, y=99)
 
 The copper plate delivery to the electromagnetic plants collides with the electronic-circuit row at
 one tile. `DeliveryRouter`/`LayoutRouter` should route the crossing belt under the occupied tile or
-reserve its approach instead of side-loading into the neighbour; a side-load that cannot be avoided
+reserve its approach instead of side-loading into the neighbor; a side-load that cannot be avoided
 must be a failure, not a silent merge. `express-splitter` at 0.5 and 2.0 lays out cleanly, so use
 the 1.0 URL as the case.
 
@@ -198,7 +198,7 @@ where the 56 `Material.equals` and 27 `String.equals` samples come from; the lis
 
 First make the six `FeedWindow` comparisons identity comparisons (`===`): the machines and the
 link endpoints are the same instances. Then keep the cycle as recipe indices — `search` already
-holds `cycle: IntArray` — and count with an `IntArray` histogram, materialising a
+holds `cycle: IntArray` — and count with an `IntArray` histogram, materializing a
 `FactoryProduction` only for the winning plan. The band bounds (`GROUP_MAX_MACHINES`,
 `MAX_ROW_BELTS`, `MAX_COPIES`) and the rate model stay untouched.
 
@@ -223,7 +223,7 @@ packed key too; keep `RouteNode` only for `reconstructRoute`.
 
 `RouteSearch.kt:131` also computes `surface.neighbors.any(board::isReserved)`, which allocates an
 `ArrayList` plus four `Coordinate`s per expansion (`TileGeometry.kt:53`); replace it with the four
-ordered checks against the int-based board query from the dense-grid item. The documented neighbour
+ordered checks against the int-based board query from the dense-grid item. The documented neighbor
 order (north, east, south, west) and the `MAX_ROUTE_EXPANSIONS` cap stay as they are. Let `MinHeap`
 compare through the element's own `compareTo` when no comparator is passed (`MinHeap.kt:87`), so
 the frontier no longer hops through `naturalOrder()`'s lambda.
@@ -267,4 +267,3 @@ of the dense `LayoutIndex` item, or on its own if the boxing is still worth it a
 Add tests: the existing validation unit cases cover the rules; add one that asserts
 `trimAcyclic`'s result on a graph with a self-loop and one on a two-cycle, and keep the golden
 layout suite unchanged.
-

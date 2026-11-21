@@ -240,7 +240,7 @@ class BlueprintJsonTest {
     }
 
     @Test
-    fun neighboursSerializeAsEntityNumbers() {
+    fun neighborsSerializeAsEntityNumbers() {
         val entity = PoleEntity(areaTile(0, 0), "small-electric-pole", listOf(2, 5))
         val expected = buildJsonArray {
             add(2)

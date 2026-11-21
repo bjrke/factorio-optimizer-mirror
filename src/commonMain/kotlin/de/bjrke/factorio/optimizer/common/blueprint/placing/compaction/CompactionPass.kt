@@ -23,7 +23,7 @@ internal class CompactionPass(
 ) {
 
     fun compact() {
-        // a corridor can look valid before stretching and break a tunnel feed afterwards; rule its
+        // a corridor can look valid before stretching and break a tunnel feed afterward; rule its
         // tiles out of its own orientation and try the next candidate instead of stopping the pass
         val rejectedVertical = mutableSetOf<Coordinate>()
         val rejectedHorizontal = mutableSetOf<Coordinate>()

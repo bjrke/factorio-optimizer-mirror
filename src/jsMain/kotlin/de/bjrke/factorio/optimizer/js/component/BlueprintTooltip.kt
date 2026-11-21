@@ -22,7 +22,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
  * the blueprint cannot carry (belt lanes, the material an inserter moves, the fluid in a pipe).
  *
  * [index] is the entity's position in the blueprint, which is also its one-based `entity_number`
- * and the number wires and neighbours refer to. The position is the area's top-left, the same
+ * and the number wires and neighbors refer to. The position is the area's top-left, the same
  * coordinate the ASCII layout dump uses, so a tooltip can be matched against `--layout` output.
  */
 internal fun blueprintTitle(index: Int, entity: LayoutEntity): String {
@@ -101,8 +101,8 @@ private fun LayoutEntity.inserterLines(): List<String> =
 
 private fun LayoutEntity.poleLine(): String? =
     (this as? PoleEntity)
-        ?.takeIf { it.neighbours.isNotEmpty() }
-        ?.let { "wired to: ${it.neighbours.joinToString { "#$it" }}" }
+        ?.takeIf { it.neighbors.isNotEmpty() }
+        ?.let { "wired to: ${it.neighbors.joinToString { "#$it" }}" }
 
 /**
  * The facts only the placed entity knows. An infinity pipe's fluid is already on its settings line,

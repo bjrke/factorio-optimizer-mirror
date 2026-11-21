@@ -91,12 +91,12 @@ area-specific facts are in the other knowledge files.
 ## Spelling and naming
 
 - Code, KDoc and commit messages use **American English**: `neighbor`, `color`,
-  `center`, `behavior`, `serialize`. Keep an identifier as the game spells it even
-  when it differs: the blueprint key is `neighbours`, so `Blueprint.neighbours`,
-  `PoleEntity.neighbours` and `neighboursJson()` stay British. British spellings in
-  untouched code (`labelled` in `Optimizer`/`Surface`) are not churned just to
-  conform; new identifiers and new prose are American (user instruction,
-  2026-10-24).
+  `center`, `behavior`, `serialize`. Keep a serialized field name as the game
+  spells it: the blueprint JSON key stays `neighbours`, so the Kotlin model and
+  writer are American (`PoleEntity.neighbors`, `neighborsJson()`) without renaming
+  the JSON field. British spellings in untouched code (`labelled` in
+  `Optimizer`/`Surface`) are not churned just to conform; new identifiers and new
+  prose are American (user instruction, 2026-10-24).
 
 ## Reporting an issue
 

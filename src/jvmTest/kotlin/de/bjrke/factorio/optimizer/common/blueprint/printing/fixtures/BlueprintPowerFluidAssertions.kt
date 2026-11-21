@@ -124,11 +124,11 @@ private fun groundPipeLinks(
 ) = buildSet {
     val mouth = mouthOf(pipe)
     val front = pipe.area.topLeft + mouth.step
-    val neighbour = plumbing[front]
+    val neighbor = plumbing[front]
     val connects =
-        neighbour is PipeEntity ||
-            neighbour is InfinityPipeEntity ||
-            (neighbour is PipeToGroundEntity && mouthOf(neighbour) == mouth.opposite())
+        neighbor is PipeEntity ||
+            neighbor is InfinityPipeEntity ||
+            (neighbor is PipeToGroundEntity && mouthOf(neighbor) == mouth.opposite())
     if (connects) add(front)
     // a pipe-to-ground may surface in the next tile; the buried tile is the walkway
     for (distance in 1..PIPE_REACH) {
@@ -164,8 +164,8 @@ fun assertPolesWired(
         components++
 
         ArrayDeque(listOf(number)).drain { current ->
-            for (neighbour in (entities[current - 1] as PoleEntity).neighbours) {
-                if (neighbour in numbers && seen.add(neighbour)) addLast(neighbour)
+            for (neighbor in (entities[current - 1] as PoleEntity).neighbors) {
+                if (neighbor in numbers && seen.add(neighbor)) addLast(neighbor)
             }
         }
     }
@@ -174,7 +174,7 @@ fun assertPolesWired(
             if (poles.size >= 2) {
                 assertEquals(
                     emptyList(),
-                    poles.filter { (it.value as PoleEntity).neighbours.isEmpty() },
+                    poles.filter { (it.value as PoleEntity).neighbors.isEmpty() },
                     "unwired poles",
                 )
             }

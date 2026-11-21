@@ -14,7 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Pole coverage, pole networks and the neighbour list a blueprint needs to rebuild wires. */
+/** Pole coverage, pole networks and the neighbor list a blueprint needs to rebuild wires. */
 class BlueprintPowerIntegrationTest {
 
     @Test
@@ -39,8 +39,11 @@ class BlueprintPowerIntegrationTest {
 
     @Test
     fun assemblingMachine1UsesSmallPoles() {
-        val factories =
-            FactoryConfig().defaults - Factory.ASSEMBLING_MACHINE_3 + Factory.ASSEMBLING_MACHINE_1
+        val factories = buildSet {
+            addAll(FactoryConfig().defaults)
+            remove(Factory.ASSEMBLING_MACHINE_3)
+            add(Factory.ASSEMBLING_MACHINE_1)
+        }
         val layout = Layout("advanced-circuit", factories = factories)
         val entities = layout.blueprint.entities
 
@@ -98,7 +101,7 @@ class BlueprintPowerIntegrationTest {
 
     /**
      * A biochamber runs on nutrients instead of electricity, so its body needs no pole; the
-     * inserters around it still do.
+     * surrounding inserters still do.
      */
     @Test
     fun glebaBiochambersDoNotNeedPower() {

@@ -17,7 +17,7 @@ import web.dom.Element
 
 /**
  * The selection controls are grouped into rows. A line may break between groups, never inside one,
- * so every group is a `nowrap` flex row and neighbouring groups are separate siblings.
+ * so every group is a `nowrap` flex row and neighboring groups are separate siblings.
  */
 class SelectionGroupTest : ComponentTest() {
     private val factoryConfig = FactoryConfig(spaceAge = true)
@@ -107,15 +107,18 @@ class SelectionGroupTest : ComponentTest() {
     }
 
     private fun allGroups() =
-        groups(renderFactorySelector().container) +
-            groups(renderPlanetSelector().container) +
-            groups(renderLogisticsSelector().container) +
-            groups(renderMaterialSelector().container) +
-            groups(renderIntermediateLimit().container) +
-            groups(renderSpaceAgeToggle().container) +
-            groups(renderCopyButton().container)
+        listOf(
+                renderFactorySelector(),
+                renderPlanetSelector(),
+                renderLogisticsSelector(),
+                renderMaterialSelector(),
+                renderIntermediateLimit(),
+                renderSpaceAgeToggle(),
+                renderCopyButton(),
+            )
+            .flatMap { groups(it.container) }
 
-    private fun assertNeighboursAreSiblings(groups: List<Element>) =
+    private fun assertNeighborsAreSiblings(groups: List<Element>) =
         assertEquals(
             emptyList(),
             groups.zipWithNext().filterNot { (left, right) -> left.nextElementSibling === right },
@@ -165,13 +168,13 @@ class SelectionGroupTest : ComponentTest() {
     }
 
     @Test
-    fun neighbouringGroupsAreSeparateSiblings() {
+    fun neighboringGroupsAreSeparateSiblings() {
         val factoryGroups = groups(renderFactorySelector().container)
         val logisticsGroups = groups(renderLogisticsSelector().container)
 
         assertAll(
-            { assertNeighboursAreSiblings(factoryGroups) },
-            { assertNeighboursAreSiblings(logisticsGroups) },
+            { assertNeighborsAreSiblings(factoryGroups) },
+            { assertNeighborsAreSiblings(logisticsGroups) },
         )
     }
 

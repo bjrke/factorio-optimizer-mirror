@@ -84,7 +84,7 @@ private fun plumbingNeighbors(
     val mouth = grounds[tile]
     for (neighbor in tile.neighbors) {
         if (neighbor !in tiles) continue
-        // a plain pipe joins every side, a pipe-to-ground only its mouth; the neighbour must join
+        // a plain pipe joins every side, a pipe-to-ground only its mouth; the neighbor must join
         // back, so two different fluids may stand beside a foreign end without merging
         if (mouth != null && mouth.step != neighbor - tile) continue
         val otherMouth = grounds[neighbor]

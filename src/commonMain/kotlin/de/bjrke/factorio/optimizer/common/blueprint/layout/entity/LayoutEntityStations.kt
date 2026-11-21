@@ -98,7 +98,7 @@ data class PoleEntity(
     override val area: Area,
     override val name: String,
     /** The `entity_number`s this pole is wired to; a blueprint does not rebuild wires by itself. */
-    val neighbours: List<Int> = emptyList(),
+    val neighbors: List<Int> = emptyList(),
 ) : LayoutEntity {
     override fun withArea(area: Area) = copy(area = area)
 }

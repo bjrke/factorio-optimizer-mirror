@@ -20,10 +20,9 @@ enum class PowerPole(val identifier: String) {
          * small pole for an early-game assembling machine 1 on Nauvis, the medium pole otherwise.
          */
         fun forSelection(surface: Surface, factories: Set<Factory>) =
-            when {
-                surface == Surface.SPACE -> NONE
-                surface == Surface.NAUVIS && Factory.ASSEMBLING_MACHINE_1 in factories ->
-                    SMALL_ELECTRIC_POLE
+            when (surface) {
+                Surface.SPACE -> NONE
+                Surface.NAUVIS if Factory.ASSEMBLING_MACHINE_1 in factories -> SMALL_ELECTRIC_POLE
                 else -> MEDIUM_ELECTRIC_POLE
             }
     }
