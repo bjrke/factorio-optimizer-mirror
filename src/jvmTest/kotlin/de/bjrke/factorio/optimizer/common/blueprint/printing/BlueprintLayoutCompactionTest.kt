@@ -34,7 +34,7 @@ class BlueprintLayoutCompactionTest {
         val layout = Layout(basePlan)
         val entities = layout.entities
         // compaction may shift the whole layout, so the import extension is the reference, not x=2
-        val westBound = entities.filterIsInstance<MarkerEntity>().minOf { it.area.topLeft.x } - 1
+        val westBound = entities.filterIsInstance<MarkerEntity>().minOf { it.area.x } - 1
         val belts = entities.filter {
             it.name.contains("transport-belt") || it.name.contains("splitter")
         }
@@ -48,12 +48,7 @@ class BlueprintLayoutCompactionTest {
     @Test
     fun compactionRemovesMostOfTheEmptySpace() {
         val layout = Layout(basePlan)
-        val minX = layout.entities.minOf { it.area.topLeft.x }
-        val maxX = layout.entities.maxOf { it.area.bottomRight.x }
-        val minY = layout.entities.minOf { it.area.topLeft.y }
-        val maxY = layout.entities.maxOf { it.area.bottomRight.y }
-        val width = maxX - minX + 1
-        val height = maxY - minY + 1
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertTrue(width <= 11, "layout is still $width tiles wide") },
@@ -87,9 +82,8 @@ class BlueprintLayoutCompactionTest {
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val mixed = belts.filter { it.load.isMixed }
         // the lane belts start at the machine edge; the merge tiles sit west of it
-        val rowLeft = layout.machineEntities.minOf { it.area.topLeft.x }
-        val laneRows =
-            mixed.filter { it.area.topLeft.x >= rowLeft }.map { it.area.topLeft.y }.distinct()
+        val rowLeft = layout.machineEntities.minOf { it.area.x }
+        val laneRows = mixed.filter { it.area.x >= rowLeft }.map { it.area.y }.distinct()
         val product = belts.filter { it.material == output }
         val carried = belts.flatMap { it.materials }.toSet()
         val budget =

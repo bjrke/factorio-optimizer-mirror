@@ -20,6 +20,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBel
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 
 /** Codes for the materials on belts and in pipes; cycled if a blueprint ever uses more. */
 private const val MATERIAL_CODES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -32,12 +33,14 @@ internal class AsciiBoard(val header: String, val grid: String)
 
 /** Draws the tiles of [entities] below a size line and an x ruler, so a failure can be located. */
 internal fun asciiBoard(entities: List<LayoutEntity>): AsciiBoard {
-    val minX = entities.minOf { it.area.topLeft.x }
-    val minY = entities.minOf { it.area.topLeft.y }
-    val maxX = entities.maxOf { it.area.bottomRight.x }
-    val maxY = entities.maxOf { it.area.bottomRight.y }
-    val width = maxX - minX + 1
-    val height = maxY - minY + 1
+    val box = entities.map { it.area }.boundingBox() ?: throw NoSuchElementException()
+
+    val minX = box.x
+    val minY = box.y
+    val maxX = box.endX - 1
+    val maxY = box.endY - 1
+    val width = box.width
+    val height = box.height
 
     val codes = AsciiCodes(entities)
     val grid = Array(height) { CharArray(width) { ' ' } }

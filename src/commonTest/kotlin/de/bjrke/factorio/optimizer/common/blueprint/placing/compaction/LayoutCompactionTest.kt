@@ -134,7 +134,7 @@ class LayoutCompactionTest {
         val entities =
             listOf(marker(-1, 0), belt(0, 0, ironOre), belt(5, 0, ironPlate), marker(6, 0))
         val result = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
-        val belts = result.entities.filterIsInstance<BeltEntity>().sortedBy { it.area.topLeft.x }
+        val belts = result.entities.filterIsInstance<BeltEntity>().sortedBy { it.area.x }
 
         assertAll(
             { assertTrue(result.width < 4, "a narrower corridor avoids the merge") },
@@ -153,7 +153,7 @@ class LayoutCompactionTest {
     fun differentFluidsAreNeverMerged() {
         val entities = listOf(marker(-1, 0), pipe(0, 0, water), pipe(5, 0, crudeOil), marker(6, 0))
         val result = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
-        val pipes = result.entities.filterIsInstance<PipeEntity>().sortedBy { it.area.topLeft.x }
+        val pipes = result.entities.filterIsInstance<PipeEntity>().sortedBy { it.area.x }
 
         assertAll(
             { assertTrue(result.width < 4, "a narrower corridor avoids the merge") },
@@ -277,14 +277,14 @@ class LayoutCompactionTest {
             {
                 assertEquals(
                     3,
-                    free.entities.filterIsInstance<BeltEntity>().single().area.topLeft.x,
+                    free.entities.filterIsInstance<BeltEntity>().single().area.x,
                     "the unbound seam pulls the belt west of the bound",
                 )
             },
             {
                 assertEquals(
                     4,
-                    bounded.entities.filterIsInstance<BeltEntity>().single().area.topLeft.x,
+                    bounded.entities.filterIsInstance<BeltEntity>().single().area.x,
                     "the bounded seam still moved the belt west of the bound",
                 )
             },
@@ -450,8 +450,7 @@ class LayoutCompactionTest {
 
         val result =
             assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL, pinned = pinned))
-        val group =
-            result.entities.filter { it.area.topLeft.x <= 1 }.map { it.area.topLeft }.toSet()
+        val group = result.entities.filter { it.area.x <= 1 }.map { it.area.topLeft }.toSet()
 
         assertAll(
             { assertEquals(emptyList(), validateLayout(result.entities)) },

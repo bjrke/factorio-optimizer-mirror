@@ -229,7 +229,7 @@ class BlueprintLayoutTest {
         val machines =
             layout.blueprint.entities
                 .filter { it.name == Factory.ASSEMBLING_MACHINE_3.identifier }
-                .sortedBy { it.area.topLeft.x }
+                .sortedBy { it.area.x }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -239,7 +239,7 @@ class BlueprintLayoutTest {
                 assertEquals(
                     emptyList(),
                     machines.zipWithNext().filterNot { (a, b) ->
-                        b.area.topLeft.x - a.area.topLeft.x == 3
+                        b.area.x - a.area.x == 3
                     },
                     machines.toString(),
                 )
@@ -305,17 +305,17 @@ class BlueprintLayoutTest {
             )
         val layout = Layout(twoPlan)
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()
-        val inputRow = machine.area.topLeft.y - 1
+        val inputRow = machine.area.y - 1
         val inputs =
             layout.entities.filterIsInstance<InserterEntity>().filter {
-                it.area.topLeft.y == inputRow
+                it.area.y == inputRow
             }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(1, inputs.size, inputs.toString()) },
             { assertFalse(inputs.single().long) },
-            { assertEquals(2, inputs.single().area.topLeft.x - machine.area.topLeft.x) },
+            { assertEquals(2, inputs.single().area.x - machine.area.x) },
             {
                 assertTrue(
                     layout.beltLoads.values.any { it.materials == setOf(stoneBrick, ironOre) },
@@ -386,11 +386,11 @@ class BlueprintLayoutTest {
         val producer = layout.machineEntities.single { it.recipe == "copper-cable" }
         // compaction may move the outlet into the lane, so take the eastmost belt of the output
         // lane
-        val outletRow = producer.area.bottomRight.y + 2
+        val outletRow = producer.area.endY + 1
         val outlet =
             layout.entities
                 .filterIsInstance<BeltEntity>()
-                .filter { it.material == copperCable && it.area.topLeft.y == outletRow }
+                .filter { it.material == copperCable && it.area.y == outletRow }
                 .map { it.area.topLeft }
                 .maxByOrNull { it.x }
 
@@ -427,22 +427,15 @@ class BlueprintLayoutTest {
         // compaction may shorten a lane, so pick a lane belt instead of a fixed end coordinate;
         // the producer/consumer side decides whether it sits above or below the machine
         fun laneBelt(machine: MachineEntity, material: Material): BeltEntity? {
-            val rows =
-                setOf(
-                    machine.area.topLeft.y - 2,
-                    machine.area.topLeft.y - 3,
-                    machine.area.bottomRight.y + 2,
-                    machine.area.bottomRight.y + 3,
-                )
+            val area = machine.area
+            val rows = setOf(area.y - 2, area.y - 3, area.endY + 1, area.endY + 2)
             return layout.entities
+                .asSequence()
                 .filterIsInstance<BeltEntity>()
-                .filter { it.material == material && it.area.topLeft.y in rows }
+                .filter { it.material == material && it.area.y in rows }
                 .filter { it.direction == EAST || it.direction == WEST }
-                .filter {
-                    it.area.topLeft.x in
-                        (machine.area.xRange.first - 1)..(machine.area.bottomRight.x + 1)
-                }
-                .maxByOrNull { it.area.topLeft.x }
+                .filter { it.area.x in (area.x - 1)..area.endX }
+                .maxByOrNull { it.area.x }
         }
 
         // the plate lane is produced, so it runs west into the machines; the ore lane runs east
@@ -473,16 +466,12 @@ class BlueprintLayoutTest {
         val layout = Layout(basePlan)
         val smeltMachine =
             layout.entities.filterIsInstance<MachineEntity>().single { it.recipe == "iron-plate" }
+        val smelterArea = smeltMachine.area
         val laneRows =
-            setOf(
-                smeltMachine.area.topLeft.y - 2,
-                smeltMachine.area.topLeft.y - 3,
-                smeltMachine.area.bottomRight.y + 2,
-                smeltMachine.area.bottomRight.y + 3,
-            )
+            setOf(smelterArea.y - 2, smelterArea.y - 3, smelterArea.endY + 1, smelterArea.endY + 2)
         val lane =
             layout.entities.filterIsInstance<BeltEntity>().filter {
-                it.material == ironOre && it.area.topLeft.y in laneRows
+                it.material == ironOre && it.area.y in laneRows
             }
 
         // compaction must not pull the factory west of the import lane, which would leave the
@@ -491,8 +480,8 @@ class BlueprintLayoutTest {
             { assertEquals(emptyList(), layout.failures) },
             {
                 assertContains(
-                    lane.map { it.area.topLeft.x },
-                    smeltMachine.area.topLeft.x,
+                    lane.map { it.area.x },
+                    smelterArea.x,
                     message = "the imported lane does not reach the machine edge: $lane",
                 )
             },
@@ -525,7 +514,7 @@ class BlueprintLayoutTest {
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()
         val below =
             layout.blueprint.entities.filter {
-                it.name.endsWith("inserter") && it.area.topLeft.y > machine.area.bottomRight.y
+                it.name.endsWith("inserter") && it.area.y >= machine.area.endY
             }
         assertAll(
             { assertEquals(emptyList(), layout.failures) },

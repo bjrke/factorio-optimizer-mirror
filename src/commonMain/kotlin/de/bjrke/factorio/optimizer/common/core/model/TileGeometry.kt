@@ -31,13 +31,13 @@ fun Coordinate.area() = areaTile(x, y)
 
 fun Coordinate.area(width: Int, height: Int) = area(Dimension(width, height))
 
-fun Coordinate.north(amount: Int = 1) = copy(y = y - amount)
+fun Coordinate.north(amount: Int = 1) = Coordinate(x, y - amount)
 
-fun Coordinate.south(amount: Int = 1) = copy(y = y + amount)
+fun Coordinate.south(amount: Int = 1) = Coordinate(x, y + amount)
 
-fun Coordinate.east(amount: Int = 1) = copy(x = x + amount)
+fun Coordinate.east(amount: Int = 1) = Coordinate(x + amount, y)
 
-fun Coordinate.west(amount: Int = 1) = copy(x = x - amount)
+fun Coordinate.west(amount: Int = 1) = Coordinate(x - amount, y)
 
 val Coordinate.direction: Coordinate
     get() {

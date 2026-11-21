@@ -100,7 +100,7 @@ class BlueprintFluidLaneLinkTest {
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             { assertEquals(emptyList(), fluidNetworkProblems(layout.entities)) },
             // the fluid marker ends on the same east-aligned import column as the solid marker
-            { assertEquals(coalMarker.area.topLeft.x, gasMarker.area.topLeft.x) },
+            { assertEquals(coalMarker.area.x, gasMarker.area.x) },
             {
                 assertEquals(
                     emptyList(),
@@ -114,7 +114,7 @@ class BlueprintFluidLaneLinkTest {
             {
                 assertEquals(
                     emptyList(),
-                    belts.filter { it.area.topLeft.x < gasMarker.area.topLeft.x },
+                    belts.filter { it.area.x < gasMarker.area.x },
                     "a belt runs west of the import markers",
                 )
             },

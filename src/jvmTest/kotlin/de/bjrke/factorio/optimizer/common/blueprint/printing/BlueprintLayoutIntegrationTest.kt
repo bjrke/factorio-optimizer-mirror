@@ -191,12 +191,7 @@ class BlueprintLayoutIntegrationTest {
     @Test
     fun compactionHalvesTheAdvancedCircuitLayout() {
         val layout = Layout(target = "advanced-circuit")
-        val width =
-            layout.entities.maxOf { it.area.bottomRight.x } -
-                layout.entities.minOf { it.area.topLeft.x } + 1
-        val height =
-            layout.entities.maxOf { it.area.bottomRight.y } -
-                layout.entities.minOf { it.area.topLeft.y } + 1
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertTrue(width <= 45, "layout is still $width tiles wide") },
@@ -217,12 +212,8 @@ class BlueprintLayoutIntegrationTest {
             layoutFromUrl(
                 "http://localhost:8080/#/0.041666666667/fusion-reactor-equipment/CFSXbmr/1/1",
             )
-        val width =
-            layout.entities.maxOf { it.area.bottomRight.x } -
-                layout.entities.minOf { it.area.topLeft.x } + 1
-        val height =
-            layout.entities.maxOf { it.area.bottomRight.y } -
-                layout.entities.minOf { it.area.topLeft.y } + 1
+
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertTrue(width <= 52, "layout is still $width tiles wide") },
@@ -245,12 +236,7 @@ class BlueprintLayoutIntegrationTest {
             layoutFromUrl(
                 "http://localhost:8080/#/0.178571428571/utility-science-pack/FSbr/1/1",
             )
-        val width =
-            layout.entities.maxOf { it.area.bottomRight.x } -
-                layout.entities.minOf { it.area.topLeft.x } + 1
-        val height =
-            layout.entities.maxOf { it.area.bottomRight.y } -
-                layout.entities.minOf { it.area.topLeft.y } + 1
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertTrue(width <= 45, "layout is still $width tiles wide") },
@@ -271,10 +257,7 @@ class BlueprintLayoutIntegrationTest {
     fun theReportedRocketSiloUrlCompacts() {
         val layout = layoutFromUrl("http://localhost:8080/#/0.041666666667/rocket-silo/CFSXbmr/1/1")
         val entities = layout.entities
-        val width =
-            entities.maxOf { it.area.bottomRight.x } - entities.minOf { it.area.topLeft.x } + 1
-        val height =
-            entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -294,10 +277,7 @@ class BlueprintLayoutIntegrationTest {
     fun theReportedLogisticScienceUrlCompacts() {
         val layout = layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSXbmr/1/1")
         val entities = layout.entities
-        val width =
-            entities.maxOf { it.area.bottomRight.x } - entities.minOf { it.area.topLeft.x } + 1
-        val height =
-            entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -318,8 +298,7 @@ class BlueprintLayoutIntegrationTest {
         val layout =
             layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSbmr/1/1/10/-")
         val entities = layout.entities
-        val height =
-            entities.maxOf { it.area.bottomRight.y } - entities.minOf { it.area.topLeft.y } + 1
+        val (_, height) = layout.dimension
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -340,11 +319,9 @@ class BlueprintLayoutIntegrationTest {
             )
         val machines = layout.entities.filterIsInstance<MachineEntity>()
         val targetTop =
-            machines.filter { it.recipe == "production-science-pack" }.minOf { it.area.topLeft.y }
-        val moduleTop =
-            machines.filter { it.recipe == "productivity-module" }.minOf { it.area.topLeft.y }
-        val furnaceTop =
-            machines.filter { it.recipe == "electric-furnace" }.minOf { it.area.topLeft.y }
+            machines.filter { it.recipe == "production-science-pack" }.minOf { it.area.y }
+        val moduleTop = machines.filter { it.recipe == "productivity-module" }.minOf { it.area.y }
+        val furnaceTop = machines.filter { it.recipe == "electric-furnace" }.minOf { it.area.y }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -367,19 +344,16 @@ class BlueprintLayoutIntegrationTest {
         val layout = layoutFromUrl("http://localhost:8080/#/2.5/utility-science-pack/CFSXbmr/1/1")
         val entities = layout.entities
         val machines = entities.filterIsInstance<MachineEntity>()
-        val targetTop =
-            machines.filter { it.recipe == "utility-science-pack" }.minOf { it.area.topLeft.y }
-        val robotTop =
-            machines.filter { it.recipe == "flying-robot-frame" }.minOf { it.area.topLeft.y }
-        val processingTop =
-            machines.filter { it.recipe == "processing-unit" }.minOf { it.area.topLeft.y }
+        val targetTop = machines.filter { it.recipe == "utility-science-pack" }.minOf { it.area.y }
+        val robotTop = machines.filter { it.recipe == "flying-robot-frame" }.minOf { it.area.y }
+        val processingTop = machines.filter { it.recipe == "processing-unit" }.minOf { it.area.y }
         val lowDensityTop =
-            machines.filter { it.recipe == "low-density-structure" }.minOf { it.area.topLeft.y }
+            machines.filter { it.recipe == "low-density-structure" }.minOf { it.area.y }
         val productRow =
             entities
                 .filterIsInstance<BeltEntity>()
                 .filter { it.material == Material("utility-science-pack") }
-                .minOf { it.area.topLeft.y }
+                .minOf { it.area.y }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -415,19 +389,14 @@ class BlueprintLayoutIntegrationTest {
                     val solids =
                         recipe.ingredients.keys.filterNot(layout.logistics::isFluid).toSet()
                     if (solids.isEmpty()) return@mapNotNull null
-                    val laneRows =
-                        setOf(
-                            machine.area.topLeft.y - 2,
-                            machine.area.topLeft.y - 3,
-                            machine.area.bottomRight.y + 2,
-                            machine.area.bottomRight.y + 3,
-                        )
+                    val area = machine.area
+                    val laneRows = setOf(area.y - 2, area.y - 3, area.endY + 1, area.endY + 2)
                     val reachesEdge = belts.any {
-                        it.area.topLeft.x == machine.area.topLeft.x &&
-                            it.area.topLeft.y in laneRows &&
+                        it.area.x == area.x &&
+                            it.area.y in laneRows &&
                             it.materials.any { material -> material in solids }
                     }
-                    if (reachesEdge) null else "${machine.recipe}@${machine.area.topLeft}"
+                    if (reachesEdge) null else "${machine.recipe}@${area.topLeft}"
                 }
 
             assertAll(
@@ -492,7 +461,7 @@ class BlueprintLayoutIntegrationTest {
             }
         val machineLeft =
             layout.entities.filterIsInstance<MachineEntity>().minOf {
-                it.area.topLeft.x
+                it.area.x
             }
         val copperChest = inputChests.single { it.settings.item == copperPlate }
 
@@ -509,13 +478,13 @@ class BlueprintLayoutIntegrationTest {
             {
                 assertEquals(
                     1,
-                    inputChests.map { it.area.topLeft.x }.distinct().size,
+                    inputChests.map { it.area.x }.distinct().size,
                     "the import markers do not share one column",
                 )
             },
             {
                 assertTrue(
-                    machineLeft - copperChest.area.topLeft.x <= 8,
+                    machineLeft - copperChest.area.x <= 8,
                     "the import prefix was not trimmed",
                 )
             },
@@ -589,12 +558,7 @@ class BlueprintLayoutIntegrationTest {
         val layout =
             layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
         val blueprintEntities = layout.blueprint.entities
-        val width =
-            layout.entities.maxOf { it.area.bottomRight.x } -
-                layout.entities.minOf { it.area.topLeft.x } + 1
-        val height =
-            layout.entities.maxOf { it.area.bottomRight.y } -
-                layout.entities.minOf { it.area.topLeft.y } + 1
+        val (width, height) = layout.dimension
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },

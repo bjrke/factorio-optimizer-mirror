@@ -86,17 +86,20 @@ internal class LayoutBoard(
     /** Everything placed so far, in placement order. */
     val placed = mutableListOf<LayoutEntity>()
 
-    /** The extent of everything placed, so a route search stays near the blueprint. */
+    /**
+     * The extent of everything placed, so a route search stays near the blueprint: [minX]/[minY]
+     * are the first tile of the extent, [endX]/[endY] the first tile past it, like `Area.endX`.
+     */
     var minX = Int.MAX_VALUE
         private set
 
-    var maxX = Int.MIN_VALUE
+    var endX = Int.MIN_VALUE
         private set
 
     var minY = Int.MAX_VALUE
         private set
 
-    var maxY = Int.MIN_VALUE
+    var endY = Int.MIN_VALUE
         private set
 
     fun entityAt(coordinate: Coordinate) = grid[coordinate]?.entity
@@ -135,9 +138,9 @@ internal class LayoutBoard(
         entity.area.forEach { grid.getOrPut(it) { Cell() }.entity = entity }
         val area = entity.area
         minX = minOf(minX, area.x)
-        maxX = maxOf(maxX, area.bottomRight.x)
+        endX = maxOf(endX, area.endX)
         minY = minOf(minY, area.y)
-        maxY = maxOf(maxY, area.bottomRight.y)
+        endY = maxOf(endY, area.endY)
     }
 
     /** Removes the entity covering [tile], if any, from [placed] and the grid. */
@@ -152,9 +155,9 @@ internal class LayoutBoard(
         placed.clear()
         grid.clear()
         minX = Int.MAX_VALUE
-        maxX = Int.MIN_VALUE
+        endX = Int.MIN_VALUE
         minY = Int.MAX_VALUE
-        maxY = Int.MIN_VALUE
+        endY = Int.MIN_VALUE
         entities.forEach { place(it) }
         rebuildTunnels()
     }

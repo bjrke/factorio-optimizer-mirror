@@ -82,8 +82,8 @@ class BlueprintBeltEndTest {
             layout.entities.filterIsInstance<ChestEntity>().single {
                 it.requestFilter?.name == ironOre.name
             }
-        val row = chest.area.topLeft.y
-        val left = chest.area.topLeft.x - 2
+        val row = chest.area.y
+        val left = chest.area.x - 2
         val byTile = layout.entities.associateBy { it.area.topLeft }
 
         assertAll(
@@ -129,8 +129,8 @@ class BlueprintBeltEndTest {
             layout.entities.filterIsInstance<ChestEntity>().single {
                 it.requestFilter?.name == gear.name
             }
-        val row = chest.area.topLeft.y
-        val left = chest.area.topLeft.x - 2
+        val row = chest.area.y
+        val left = chest.area.x - 2
         val byTile = layout.entities.associateBy { it.area.topLeft }
         val near = byTile[Coordinate(left + 1, row)] as? InserterEntity
         val far = byTile[Coordinate(left + 3, row)] as? InserterEntity

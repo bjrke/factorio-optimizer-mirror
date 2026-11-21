@@ -29,7 +29,7 @@ internal fun blueprintTitle(index: Int, entity: LayoutEntity): String {
     val area = entity.area
     val lines = buildList {
         add("#${index + 1} ${entity.name}")
-        add("at (${area.topLeft.x}, ${area.topLeft.y}) ${area.width}x${area.height}")
+        add("at (${area.x}, ${area.y}) ${area.width}x${area.height}")
         entity.facingDirection
             ?.takeIf { it != Direction.NORTH }
             ?.let {

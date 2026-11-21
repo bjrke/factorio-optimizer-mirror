@@ -105,22 +105,22 @@ class BlueprintFluidPortLayoutTest {
     fun theLightOilHeavyOilLaneMirrorsTheWaterLane() {
         val layout = layoutFromUrl("http://localhost:8080/#/0.03511777708/light-oil/FSXmor/1/1")
         val machine = layout.machine("chemical-plant")
-        val left = machine.area.topLeft.x
-        val top = machine.area.topLeft.y
+        val left = machine.area.x
+        val top = machine.area.y
         val marker =
             layout.entities.filterIsInstance<InfinityPipeEntity>().single {
                 it.material == heavyOil
             }
         val waterMarker =
             layout.entities.filterIsInstance<InfinityPipeEntity>().single { it.material == water }
-        val markerRow = marker.area.topLeft.y
+        val markerRow = marker.area.y
         val pipes = layout.entities.filterIsInstance<Plumbing>().filter { it.material == heavyOil }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             // the same west column as the water marker, one lane further out
-            { assertEquals(waterMarker.area.topLeft.x, marker.area.topLeft.x) },
-            { assertTrue(markerRow < waterMarker.area.topLeft.y) },
+            { assertEquals(waterMarker.area.x, marker.area.x) },
+            { assertTrue(markerRow < waterMarker.area.y) },
             // a junction pipe above the second top corner and a shaft down onto the port
             {
                 assertNotNull(
@@ -157,8 +157,8 @@ class BlueprintFluidPortLayoutTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             // one west column for both lane markers, the heavy lane further out
-            { assertEquals(waterMarker.area.topLeft.x, heavyMarker.area.topLeft.x) },
-            { assertTrue(heavyMarker.area.topLeft.y < waterMarker.area.topLeft.y) },
+            { assertEquals(waterMarker.area.x, heavyMarker.area.x) },
+            { assertTrue(heavyMarker.area.y < waterMarker.area.y) },
             // every machine's second top corner is reached by the lane, not by a routed pipe
             {
                 assertEquals(
@@ -191,12 +191,10 @@ class BlueprintFluidPortLayoutTest {
     fun theElectrolyteOutputKeepsItsWestSource() {
         val layout = layoutFromUrl("http://localhost:8080/#/6/electrolyte/FSXmor/1/1")
         val machine = layout.machine("electromagnetic-plant")
-        val outputRow = machine.area.topLeft.y + 2
+        val outputRow = machine.area.y + 2
         val sources =
             layout.entities.filterIsInstance<InfinityPipeEntity>().filter {
-                it.material == electrolyte &&
-                    it.area.topLeft.y == outputRow &&
-                    it.area.topLeft.x < machine.area.topLeft.x
+                it.material == electrolyte && it.area.y == outputRow && it.area.x < machine.area.x
             }
 
         assertAll(

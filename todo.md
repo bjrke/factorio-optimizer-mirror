@@ -268,22 +268,3 @@ Add tests: the existing validation unit cases cover the rules; add one that asse
 `trimAcyclic`'s result on a graph with a self-loop and one on a two-cycle, and keep the golden
 layout suite unchanged.
 
-### Cut `Coordinate` and `Area` iterator allocation
-
-`Coordinate` alone is 5.65 GB of sampled allocation. 2.5 GB comes from `north`/`south`/`east`/`west`
-(`TileGeometry.kt:34-40`) calling `copy(...)` through `copy$default`; `Coordinate.neighbors`
-(`TileGeometry.kt:53`) adds 639 MB of `getNeighbors` and 706 MB of `Coordinate[]`. `Area.iterator()`
-(`Tile.kt:112`) is an `iterator { }` coroutine builder: 454 MB of `Area$iterator$1` state machines
-plus 652 MB of yielded `Coordinate`s, and `xRange`/`yRange` (`Tile.kt:106-107`) are eager `val`s
-whose `IntRange`s are part of the 324 MB that class accumulates.
-
-Replace the `copy(...)` calls with the constructor, add an `inline fun Area.forEachTile` (or an
-explicit `Iterator`) for internal callers, and stop storing `xRange`/`yRange` per `Area` — expose
-the int bounds for `inline` loops and keep the ranges only for public access. Turning `Coordinate`
-into a `@JvmInline value class` over a packed `Long` would remove the remaining bulk, but it
-changes `copy`, destructuring and default arguments across the codebase, so treat that as a
-separate decision after the array work above lands.
-
-Add tests: an `Area` unit case that iterates a negative and a zero-sized area in the same order as
-today, and the existing geometry/golden suites unchanged.
-

@@ -167,7 +167,7 @@ class BlueprintBandFluidTest {
     /** The machine's top input port at `(1, -1)`, where a lane's port-side shaft has to sit. */
     private fun Layout.portShaft(recipe: String): PipeToGroundEntity? {
         val machine = entities.filterIsInstance<MachineEntity>().single { it.recipe == recipe }
-        val port = Coordinate(machine.area.topLeft.x + 1, machine.area.topLeft.y - 1)
+        val port = Coordinate(machine.area.x + 1, machine.area.y - 1)
         return entities.filterIsInstance<PipeToGroundEntity>().singleOrNull {
             it.area.topLeft == port
         }

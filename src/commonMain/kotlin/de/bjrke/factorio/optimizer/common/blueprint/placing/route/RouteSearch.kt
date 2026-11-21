@@ -73,12 +73,13 @@ internal class RouteSearch(
     private val cheapestTile = profile.costs.cheapestTile
     private val start = RouteNode(from, request.heading, straight = 0)
 
-    // the board does not change while one search runs, so the region is fixed up front
-    private val eastBound = board.maxX + margin
+    // the board does not change while one search runs, so the region is fixed up front; the board
+    // extent is half-open, so its last tile is end - 1 and the margin is added to that tile
+    private val eastBound = board.endX - 1 + margin
     // the north rows stay non-negative; the floor stops the wide fallback from placing a route
     // above row zero, so no blueprint tile ever carries a negative y
     private val northBound = maxOf(0, board.minY - margin)
-    private val southBound = board.maxY + margin
+    private val southBound = board.endY - 1 + margin
 
     private val gScore = mutableMapOf(start to 0)
     private val previous = mutableMapOf<RouteNode, RouteNode>()

@@ -20,8 +20,12 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
+import de.bjrke.factorio.optimizer.common.core.model.Area
+import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import emotion.react.css
 import react.FC
@@ -94,12 +98,12 @@ external interface BlueprintViewProps : Props {
 internal val blueprintView =
     FC<BlueprintViewProps>("blueprintView") { props ->
         val entities = props.blueprint.entities
-        val minX = entities.minOfOrNull { it.area.topLeft.x } ?: 0
-        val minY = entities.minOfOrNull { it.area.topLeft.y } ?: 0
-        val maxX = entities.maxOfOrNull { it.area.bottomRight.x } ?: 0
-        val maxY = entities.maxOfOrNull { it.area.bottomRight.y } ?: 0
-        val gridWidth = (1 + maxX - minX) * TILE
-        val gridHeight = (1 + maxY - minY) * TILE
+        val box = entities.map { it.area }.boundingBox() ?: Area(Coordinate(0, 0), Dimension(1, 1))
+
+        val minX = box.x
+        val minY = box.y
+        val gridWidth = box.width * TILE
+        val gridHeight = box.height * TILE
 
         svg {
             viewBox = "0 0 $gridWidth $gridHeight"
@@ -135,8 +139,8 @@ internal val blueprintView =
                             key = Key(index.toString())
                             css {
                                 position = Position.absolute
-                                left = ((cell.topLeft.x - minX) * TILE).px
-                                top = ((cell.topLeft.y - minY) * TILE).px
+                                left = ((cell.x - minX) * TILE).px
+                                top = ((cell.y - minY) * TILE).px
                                 width = cellWidth.px
                                 height = cellHeight.px
                             }

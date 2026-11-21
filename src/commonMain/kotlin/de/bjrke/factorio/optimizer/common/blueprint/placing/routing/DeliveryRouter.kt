@@ -162,19 +162,19 @@ internal class DeliveryRouter(
             board.placed
                 .filterIsInstance<BeltEntity>()
                 .filter { it.material == targetMaterial }
-                .maxByOrNull { it.area.bottomRight.x }
+                .maxByOrNull { it.area.endX }
                 ?: run {
                     failures += "${targetMaterial.name} has no output belt on its row"
                     return
                 }
-        val rowY = endBelt.area.topLeft.y
+        val rowY = endBelt.area.y
         // the connector's feed tile must be free for the connecting belt
-        var east = board.maxX + 1
+        var east = board.endX
         while (!board.isFree(Coordinate(east - 1, rowY))) east++
         // the product row is no longer a routing wall once the other feeds are fixed
         board.rowReservations.clear()
         connector.placeSolidConnector(targetMaterial, east + connector.width, rowY, input = false)
-        val start = endBelt.area.bottomRight.x + 1
+        val start = endBelt.area.endX
         // a loader at [east] takes directly from the belt at [east] - 1; only the tiles before
         // its feed tile need a route
         if (start < east) {
@@ -188,9 +188,7 @@ internal class DeliveryRouter(
         }
         val connectorEnd = east + connector.width
         val eastOfConnector =
-            board.placed.filterIsInstance<ConveyorEntity>().filter {
-                it.area.topLeft.x >= connectorEnd
-            }
+            board.placed.filterIsInstance<ConveyorEntity>().filter { it.area.x >= connectorEnd }
         if (eastOfConnector.isNotEmpty()) {
             failures += "${targetMaterial.name} has a belt east of its output connector"
         }

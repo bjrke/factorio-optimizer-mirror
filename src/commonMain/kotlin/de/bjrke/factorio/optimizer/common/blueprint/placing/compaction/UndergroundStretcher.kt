@@ -22,7 +22,6 @@ import de.bjrke.factorio.optimizer.common.core.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
-import de.bjrke.factorio.optimizer.common.core.model.neighbors
 
 /**
  * Grows underground runs along their own straight surface run, up to the tier's reach. It runs
@@ -62,10 +61,8 @@ internal class UndergroundStretcher(private val board: LayoutBoard) {
      */
     private fun portTiles() = buildSet {
         for (machine in board.placed.filterIsInstance<MachineEntity>()) {
-            for (tile in machine.area) {
-                for (neighbor in tile.neighbors) {
-                    if (board.entityAt(neighbor) is PipeEntity) add(neighbor)
-                }
+            for (neighbor in machine.area.neighbors()) {
+                if (board.entityAt(neighbor) is PipeEntity) add(neighbor)
             }
         }
     }

@@ -160,8 +160,8 @@ class BlueprintFluidLayoutTest {
             )
         val layout = Layout(fluidPlan)
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()
-        val left = machine.area.topLeft.x
-        val top = machine.area.topLeft.y
+        val left = machine.area.x
+        val top = machine.area.y
         // the prototype's top pipe is a BOTH port at (1, -1), which the lane above feeds
         val port = Coordinate(left + 1, top - 1)
 
@@ -200,19 +200,19 @@ class BlueprintFluidLayoutTest {
         val solidImport = markers.single { it.signal.material == coal }
         val fluidMarker = markers.single { it.signal.fluid }
         val machine = layout.entities.filterIsInstance<MachineEntity>().single()
-        val laneRow = fluidMarker.area.topLeft.y
+        val laneRow = fluidMarker.area.y
 
         assertAll(
             // the constant combinator sits in the same west column as the solid marker's
-            { assertEquals(solidImport.area.topLeft.x, fluidMarker.area.topLeft.x) },
+            { assertEquals(solidImport.area.x, fluidMarker.area.x) },
             // the marker's output is joined to the lane head along its own row, underground
             {
                 assertNotNull(
                     layout.entities.firstOrNull {
                         it is PipeToGroundEntity &&
-                            it.area.topLeft.y == laneRow &&
-                            it.area.topLeft.x > fluidMarker.area.topLeft.x &&
-                            it.area.topLeft.x < machine.area.topLeft.x
+                            it.area.y == laneRow &&
+                            it.area.x > fluidMarker.area.x &&
+                            it.area.x < machine.area.x
                     },
                     "no underground link between the fluid marker and the lane head",
                 )
@@ -390,7 +390,7 @@ class BlueprintFluidLayoutTest {
             // the trimmer relocates the sink marker but must keep it unfiltered
             { assertNull(sink.settings) },
             // it ends on the east edge of the solid import's three-tile connector
-            { assertEquals(solidImport.area.topLeft.x + 2, sink.area.topLeft.x) },
+            { assertEquals(solidImport.area.x + 2, sink.area.x) },
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
         )
@@ -445,8 +445,8 @@ class BlueprintFluidLayoutTest {
             )
         val layout = Layout(fluidPlan)
         val machines = layout.entities.filterIsInstance<MachineEntity>()
-        val machineTop = machines.minOf { it.area.topLeft.y }
-        val machineLeft = machines.minOf { it.area.topLeft.x }
+        val machineTop = machines.minOf { it.area.y }
+        val machineLeft = machines.minOf { it.area.x }
         val fluidMarkers =
             layout.entities.filterIsInstance<MarkerEntity>().filter { it.signal.fluid }
         val waterMarker = fluidMarkers.single { it.signal.material == water }
@@ -458,15 +458,14 @@ class BlueprintFluidLayoutTest {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             // both lane markers sit in one west column, the second lane one row further out ...
-            { assertEquals(waterMarker.area.topLeft.x, secondMarker.area.topLeft.x) },
-            { assertTrue(secondMarker.area.topLeft.y < waterMarker.area.topLeft.y) },
+            { assertEquals(waterMarker.area.x, secondMarker.area.x) },
+            { assertTrue(secondMarker.area.y < waterMarker.area.y) },
             // ... with a junction above the machine's second top corner and a shaft down to it
             {
                 assertTrue(
                     secondPipes.any {
                         it is PipeEntity &&
-                            it.area.topLeft ==
-                                Coordinate(machineLeft + 2, secondMarker.area.topLeft.y)
+                            it.area.topLeft == Coordinate(machineLeft + 2, secondMarker.area.y)
                     },
                     "the second fluid got no lane junction",
                 )

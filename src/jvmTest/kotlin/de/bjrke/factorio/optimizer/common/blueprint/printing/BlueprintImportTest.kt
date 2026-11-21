@@ -87,7 +87,7 @@ class BlueprintImportTest {
                 val route =
                     layout.entities
                         .filterIsInstance<ConveyorEntity>()
-                        .filter { it.material == ironOre && it.area.topLeft.x >= feed }
+                        .filter { it.material == ironOre && it.area.x >= feed }
                         .map { Triple(it.area.topLeft, it.name, it.direction) }
                         .toSet()
                 feed to route
@@ -137,13 +137,13 @@ class BlueprintImportTest {
                     entities
                         .filterIsInstance<TransportEntity>()
                         .filter { it.material == ironOre }
-                        .minBy { it.area.topLeft.x }
+                        .minBy { it.area.x }
                         .area
                         .topLeft
                         .y
                 entities
                     .filterIsInstance<ChestEntity>()
-                    .single { it.area.topLeft.y == row }
+                    .single { it.area.y == row }
                     .area
                     .topLeft
                     .x + 3
@@ -190,7 +190,7 @@ class BlueprintImportTest {
             {
                 assertEquals(
                     emptyList(),
-                    poles.filterNot { it.area.topLeft.x >= marker.area.topLeft.x + 2 },
+                    poles.filterNot { it.area.x >= marker.area.x + 2 },
                     "a pole sits in the import extension: $poles",
                 )
             },
@@ -231,14 +231,14 @@ class BlueprintImportTest {
             {
                 assertEquals(
                     emptyList(),
-                    markers.map { it.area.topLeft.x }.distinct().drop(1),
+                    markers.map { it.area.x }.distinct().drop(1),
                     "import markers share one column",
                 )
             },
             {
                 assertEquals(
                     emptyList(),
-                    markers.filterNot { it.area.topLeft.x < machine.area.topLeft.x },
+                    markers.filterNot { it.area.x < machine.area.x },
                 )
             },
             { assertEquals(emptyList(), layout.failures) },
@@ -280,15 +280,15 @@ class BlueprintImportTest {
             layout.entities.filterIsInstance<MarkerEntity>().single {
                 it.signal.material == plasticBar
             }
-        val laneRow = marker.area.topLeft.y
+        val laneRow = marker.area.y
         val lane =
             layout.entities.filterIsInstance<BeltEntity>().filter {
-                plasticBar in it.load.materials && it.area.topLeft.y == laneRow
+                plasticBar in it.load.materials && it.area.y == laneRow
             }
         // a mixed input's marker may sit on the merge row rather than a lane row; what matters is
         // that its own feed tile still runs unbroken from the connector: a hole would mean
         // compaction cut a belt out of it
-        val byColumn = lane.map { it.area.topLeft.x }
+        val byColumn = lane.map { it.area.x }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
@@ -336,14 +336,14 @@ class BlueprintImportTest {
                 .area
         val laneRows =
             setOf(
-                machineArea.topLeft.y - 2,
-                machineArea.topLeft.y - 3,
-                machineArea.bottomRight.y + 2,
-                machineArea.bottomRight.y + 3,
+                machineArea.y - 2,
+                machineArea.y - 3,
+                machineArea.endY + 1,
+                machineArea.endY + 2,
             )
         val mixed =
             layout.entities.filterIsInstance<BeltEntity>().filter {
-                it.area.topLeft.y in laneRows && it.load.materials == setOf(copperCable, ironPlate)
+                it.area.y in laneRows && it.load.materials == setOf(copperCable, ironPlate)
             }
 
         assertAll(

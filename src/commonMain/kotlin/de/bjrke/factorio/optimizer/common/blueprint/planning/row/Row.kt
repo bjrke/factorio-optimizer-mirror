@@ -147,10 +147,10 @@ internal class Row(
         get() = machines.size
 
     val left
-        get() = box.topLeft.x
+        get() = box.x
 
     val factoryTop
-        get() = box.topLeft.y
+        get() = box.y
 
     val width
         get() = box.width

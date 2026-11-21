@@ -27,29 +27,26 @@ class BlueprintLayoutMergeTest {
         val layout = layoutFromUrl(REPORTED_URL)
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val machines = layout.entities.filterIsInstance<MachineEntity>()
-        val circuitTop =
-            machines.filter { it.recipe == "advanced-circuit" }.minOf { it.area.topLeft.y }
-        val machineLeft =
-            machines.filter { it.recipe == "advanced-circuit" }.minOf { it.area.topLeft.x }
+        val circuitTop = machines.filter { it.recipe == "advanced-circuit" }.minOf { it.area.y }
+        val machineLeft = machines.filter { it.recipe == "advanced-circuit" }.minOf { it.area.x }
         // the far north input lane of the circuit row
         val laneY = circuitTop - 3
         val lane =
             assertNotNull(
-                belts.firstOrNull { it.area.topLeft.y == laneY && it.load.isMixed },
+                belts.firstOrNull { it.area.y == laneY && it.load.isMixed },
                 "no mixed lane above the circuit row",
             )
         val merge =
             assertNotNull(
-                belts.firstOrNull { it.area.topLeft.y == laneY - 1 && it.load.isMixed },
+                belts.firstOrNull { it.area.y == laneY - 1 && it.load.isMixed },
                 "no mixed merge above the lane",
             )
         val feedDirection = if (lane.direction == EAST) WEST else EAST
-        val feedX =
-            if (lane.direction == EAST) merge.area.topLeft.x + 1 else merge.area.topLeft.x - 1
+        val feedX = if (lane.direction == EAST) merge.area.x + 1 else merge.area.x - 1
         val feed =
             assertNotNull(
                 belts.firstOrNull {
-                    it.area.topLeft == Coordinate(feedX, merge.area.topLeft.y) &&
+                    it.area.topLeft == Coordinate(feedX, merge.area.y) &&
                         it.load.isFull &&
                         !it.load.isMixed &&
                         it.material == plastic
@@ -62,7 +59,7 @@ class BlueprintLayoutMergeTest {
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             { assertEquals(setOf(ironPlate, plastic), lane.load.materials) },
             { assertEquals(feedDirection, feed.direction) },
-            { assertTrue(feed.area.topLeft.x < machineLeft, "the feed joins downstream") },
+            { assertTrue(feed.area.x < machineLeft, "the feed joins downstream") },
             { assertEquals(setOf(ironPlate, plastic), merge.load.materials) },
         )
     }
@@ -78,25 +75,25 @@ class BlueprintLayoutMergeTest {
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val machines = layout.entities.filterIsInstance<MachineEntity>()
         val chemBottom =
-            machines.filter { it.recipe == "chemical-science-pack" }.maxOf { it.area.bottomRight.y }
+            machines.filter { it.recipe == "chemical-science-pack" }.maxOf { it.area.endY }
         val lane =
             assertNotNull(
                 belts
-                    .filter { it.area.topLeft.y > chemBottom && it.load.isMixed }
-                    .minByOrNull { it.area.topLeft.y },
+                    .filter { it.area.y >= chemBottom && it.load.isMixed }
+                    .minByOrNull { it.area.y },
                 "no mixed lane below the chemical-science row",
             )
         val merge =
             assertNotNull(
                 belts.firstOrNull {
-                    it.area.topLeft.y == lane.area.topLeft.y + 1 && it.load.isMixed
+                    it.area.y == lane.area.y + 1 && it.load.isMixed
                 },
                 "no mixed merge below the lane",
             )
         val feed =
             assertNotNull(
                 belts.firstOrNull {
-                    it.area.topLeft == Coordinate(merge.area.topLeft.x + 1, merge.area.topLeft.y) &&
+                    it.area.topLeft == Coordinate(merge.area.x + 1, merge.area.y) &&
                         it.load.isFull &&
                         !it.load.isMixed
                 },
@@ -105,7 +102,7 @@ class BlueprintLayoutMergeTest {
         val straight =
             assertNotNull(
                 belts.firstOrNull {
-                    it.area.topLeft == Coordinate(merge.area.topLeft.x - 1, merge.area.topLeft.y)
+                    it.area.topLeft == Coordinate(merge.area.x - 1, merge.area.y)
                 },
                 "the straight feeder does not reach the merge",
             )

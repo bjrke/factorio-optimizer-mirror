@@ -72,7 +72,7 @@ private class ImportFixture(
             else ->
                 board.placed
                     .filterIsInstance<ChestEntity>()
-                    .single { it.area.topLeft.y == ROW }
+                    .single { it.area.y == ROW }
                     .area
                     .topLeft
                     .x + 3

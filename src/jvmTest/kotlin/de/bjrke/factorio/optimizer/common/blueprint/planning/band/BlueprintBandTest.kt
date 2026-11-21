@@ -48,18 +48,18 @@ class BlueprintBandTest {
         val machines = blueprintEntities.filter {
             it.name == Factory.ASSEMBLING_MACHINE_3.identifier
         }
-        val left = machines.minBy { it.area.topLeft.x }
-        val gap = left.area.topLeft.x + left.area.dimension.width
+        val left = machines.minBy { it.area.x }
+        val gap = left.area.endX
         val interfaces =
             blueprintEntities
                 .filterIsInstance<InserterEntity>()
                 .filter { it.name == InserterTier.FAST_INSERTER.identifier }
-                .filter { it.area.topLeft.x == gap }
+                .filter { it.area.x == gap }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(2, machines.size) },
-            { assertEquals(1, machines.map { it.area.topLeft.y }.distinct().size) },
+            { assertEquals(1, machines.map { it.area.y }.distinct().size) },
             // the inserter picks the plate up on the east side, where the producer stands
             {
                 assertEquals(

@@ -26,15 +26,11 @@ class BlueprintProductRowTest {
             )
         val target = Material("utility-science-pack")
         val belts = layout.entities.filterIsInstance<BeltEntity>()
-        val productRow = belts.filter { it.material == target }.maxOf { it.area.topLeft.y }
+        val productRow = belts.filter { it.material == target }.maxOf { it.area.y }
         val productEnd =
-            belts
-                .filter { it.material == target && it.area.topLeft.y == productRow }
-                .maxOf { it.area.topLeft.x }
+            belts.filter { it.material == target && it.area.y == productRow }.maxOf { it.area.x }
         val foreignOnRow = belts.filter {
-            it.area.topLeft.y == productRow &&
-                it.area.topLeft.x > productEnd &&
-                it.material != target
+            it.area.y == productRow && it.area.x > productEnd && it.material != target
         }
         val outputLoader =
             layout.entities.filterIsInstance<LoaderEntity>().filter {
@@ -42,8 +38,7 @@ class BlueprintProductRowTest {
             }
         val eastOfLoader =
             layout.entities.filterIsInstance<ConveyorEntity>().filter { conveyor ->
-                outputLoader.any { it.area.topLeft.x <= conveyor.area.topLeft.x } &&
-                    conveyor.material != target
+                outputLoader.any { it.area.x <= conveyor.area.x } && conveyor.material != target
             }
 
         assertAll(

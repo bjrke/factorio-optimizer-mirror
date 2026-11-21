@@ -53,8 +53,8 @@ internal fun LayoutEntity.toJson(entityNumber: Int) = buildJsonObject {
 }
 
 private fun LayoutEntity.positionJson() = buildJsonObject {
-    put("x", jsonNumber(area.topLeft.x + area.width / 2.0))
-    put("y", jsonNumber(area.topLeft.y + area.height / 2.0))
+    put("x", jsonNumber(area.x + area.width / 2.0))
+    put("y", jsonNumber(area.y + area.height / 2.0))
 }
 
 /** An underground belt and a loader write their input/output side; a pipe-to-ground has none. */

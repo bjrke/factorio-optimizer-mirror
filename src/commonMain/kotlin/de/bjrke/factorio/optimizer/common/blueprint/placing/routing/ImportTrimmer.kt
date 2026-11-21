@@ -107,12 +107,12 @@ internal class ImportTrimmer(
         return board.placed
             .mapNotNull { entity ->
                 when {
-                    entity.area.bottomRight.x < IMPORT_FEED -> null
+                    entity.area.endX <= IMPORT_FEED -> null
                     entity.area.all { it in fluidTiles } -> null
                     entity is BeltLikeEntity &&
                         entity.direction == EAST &&
-                        entity.material in materialsByRow[entity.area.topLeft.y].orEmpty() -> null
-                    else -> entity.area.topLeft.x
+                        entity.material in materialsByRow[entity.area.y].orEmpty() -> null
+                    else -> entity.area.x
                 }
             }
             .minOrNull()

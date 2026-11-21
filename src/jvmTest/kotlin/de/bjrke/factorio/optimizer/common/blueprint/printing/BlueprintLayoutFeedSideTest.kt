@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -26,7 +27,7 @@ class BlueprintLayoutFeedSideTest {
         val machines = entities.filterIsInstance<MachineEntity>()
         val belts = entities.filterIsInstance<BeltEntity>()
         val scienceTop =
-            machines.filter { it.recipe == "logistic-science-pack" }.minOf { it.area.topLeft.y }
+            machines.filter { it.recipe == "logistic-science-pack" }.minOf { it.area.y }
         val foundry = machines.single { it.recipe == "transport-belt" }
         val circuit = machines.single { it.recipe == "electronic-circuit" }
 
@@ -34,28 +35,14 @@ class BlueprintLayoutFeedSideTest {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
             { assertMixedLane(belts, scienceTop - 2, Direction.WEST) },
-            {
-                assertProductRow(
-                    belts,
-                    "transport-belt",
-                    foundry.area.topLeft.y - 2,
-                    Direction.EAST,
-                )
-            },
-            {
-                assertProductRow(
-                    belts,
-                    "electronic-circuit",
-                    circuit.area.bottomRight.y + 2,
-                    Direction.EAST,
-                )
-            },
+            { assertProductRow(belts, "transport-belt", foundry.area.y - 2, EAST) },
+            { assertProductRow(belts, "electronic-circuit", circuit.area.endY + 1, EAST) },
         )
     }
 
     /** A row's mixed input lane: present, and fed from the end [direction] names. */
     private fun assertMixedLane(belts: List<BeltEntity>, y: Int, direction: Direction) {
-        val lane = belts.filter { it.load.isMixed && it.area.topLeft.y == y }
+        val lane = belts.filter { it.load.isMixed && it.area.y == y }
         assertAll(
             { assertTrue(lane.isNotEmpty(), "no mixed lane on row $y") },
             {
@@ -76,7 +63,7 @@ class BlueprintLayoutFeedSideTest {
         direction: Direction,
     ) {
         val product = belts.filter {
-            it.material == Material(material) && !it.load.isFull && it.area.topLeft.y == y
+            it.material == Material(material) && !it.load.isFull && it.area.y == y
         }
         assertAll(
             { assertTrue(product.isNotEmpty(), "no $material product belt on row $y") },

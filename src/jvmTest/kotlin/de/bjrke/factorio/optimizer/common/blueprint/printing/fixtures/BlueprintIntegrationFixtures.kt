@@ -22,6 +22,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluid
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
@@ -38,6 +39,7 @@ import java.util.*
 import java.util.zip.Inflater
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 /** Plans, logistics and blueprint decoding for the JVM integration suites, keyed by target name. */
 val chestMarkers =
@@ -267,6 +269,9 @@ data class Layout(
                 .firstOrNull { machine.area.topLeft + it.tile == tile }
                 ?.let { factory to it }
         }
+
+    val dimension
+        get() = assertNotNull(entities.map { it.area }.boundingBox()).dimension
 }
 
 /** A loader is two tiles long, so neither tile may sit above a tunnel span. */

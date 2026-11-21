@@ -74,11 +74,10 @@ data class Dimension(val width: Int, val height: Int) {
         require(height >= 0) { "height $height should not be negative" }
     }
 
-    val size = width * height
+    val size
+        get() = width * height
 
-    private val empty = size == 0
-
-    fun isEmpty() = empty
+    fun isEmpty() = width == 0 || height == 0
 }
 
 data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordinate> {
@@ -91,9 +90,13 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
     inline val y
         get() = topLeft.y
 
-    val bottomRight by lazy {
-        Coordinate(x + width - 1, y + height - 1)
-    }
+    /** The first column past the tiles: `endX - x == width`, so the columns are `x until endX`. */
+    inline val endX
+        get() = x + width
+
+    /** The first row past the tiles, the row counterpart of [endX]: `y until endY` is [height]. */
+    inline val endY
+        get() = y + height
 
     inline val width
         get() = dimension.width
@@ -103,15 +106,29 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
 
     override fun isEmpty() = dimension.isEmpty()
 
-    val xRange = x until x + width
-    val yRange = y until y + height
-
     override fun contains(element: Coordinate) =
-        xRange.contains(element.x) && yRange.contains(element.y)
+        element.x >= x && element.y >= y && element.x < endX && element.y < endY
 
-    override fun iterator() = iterator {
-        for (x in xRange) for (y in yRange) yield(Coordinate(x, y))
-    }
+    override fun iterator() =
+        object : Iterator<Coordinate> {
+            private val endX = this@Area.endX
+            private val endY = this@Area.endY
+            private var nextX = x
+            private var nextY = y
+
+            override fun hasNext() = nextX < endX && nextY < endY
+
+            override fun next(): Coordinate {
+                if (!hasNext()) throw NoSuchElementException()
+                val tile = Coordinate(nextX, nextY)
+                nextY++
+                if (nextY >= endY) {
+                    nextY = y
+                    nextX++
+                }
+                return tile
+            }
+        }
 
     override fun containsAll(elements: Collection<Coordinate>) = elements.all(::contains)
 
@@ -120,10 +137,66 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
             Coordinate(x - amount, y - amount),
             Dimension(width + amount * 2, height + amount * 2),
         )
+
+    /**
+     * The tiles orthogonally outside this area: the rows above and below it and the columns to its
+     * left and right. Corners and the area's own tiles are not included, so a caller that scans the
+     * ring around a machine sees each port tile once. An empty area has no neighbors.
+     */
+    fun neighbors() =
+        if (isEmpty()) emptySet()
+        else
+            buildSet {
+                for (nx in x until endX) {
+                    add(Coordinate(nx, y - 1))
+                    add(Coordinate(nx, endY))
+                }
+                for (ny in y until endY) {
+                    add(Coordinate(x - 1, ny))
+                    add(Coordinate(endX, ny))
+                }
+            }
+
+    companion object {
+        operator fun invoke(x: Int, y: Int, width: Int, height: Int) =
+            Area(Coordinate(x, y), Dimension(width, height))
+    }
 }
 
 /**
  * A one-tile area whose only coordinate is ([x], [y]); the single definition of the one-tile case
  * shared by every one-tile entity and by the no-argument `Coordinate.area()`.
  */
-fun areaTile(x: Int, y: Int) = Area(Coordinate(x, y), Dimension(1, 1))
+fun areaTile(x: Int, y: Int) = Area(x, y, 1, 1)
+
+/**
+ * The smallest area that contains every non-empty area of this sequence, or `null` when it holds
+ * none. An empty area covers no tile, so it is skipped instead of widening the box.
+ */
+tailrec fun Iterator<Area>.boundingBox(): Area? {
+    if (!hasNext()) return null
+
+    val first = next()
+    if (first.isEmpty()) return boundingBox()
+
+    var x = first.x
+    var y = first.y
+    var endX = first.endX
+    var endY = first.endY
+
+    for (next in this) {
+        if (next.isEmpty()) continue
+        if (next.x < x) x = next.x
+        if (next.y < y) y = next.y
+        if (next.endX > endX) endX = next.endX
+        if (next.endY > endY) endY = next.endY
+    }
+
+    return Area(x, y, endX - x, endY - y)
+}
+
+/**
+ * The smallest area that contains every non-empty area of this sequence, or `null` when it holds
+ * none. An empty area covers no tile, so it is skipped instead of widening the box.
+ */
+fun Iterable<Area>.boundingBox() = iterator().boundingBox()
