@@ -32,6 +32,7 @@ import de.bjrke.factorio.optimizer.js.component.appFooter
 import de.bjrke.factorio.optimizer.js.component.blueprintCopyButton
 import de.bjrke.factorio.optimizer.js.component.blueprintPanel
 import de.bjrke.factorio.optimizer.js.component.blueprintPreview
+import de.bjrke.factorio.optimizer.js.component.planFailurePanel
 import de.bjrke.factorio.optimizer.js.component.urlFactorySelector
 import de.bjrke.factorio.optimizer.js.component.urlIntermediateLimitInput
 import de.bjrke.factorio.optimizer.js.component.urlLogisticsSelector
@@ -245,6 +246,7 @@ private fun createAppRouter() =
             RouterOptions(
                 routeTree = rootRoute,
                 history = createHashHistory(),
+                defaultErrorComponent = planFailurePanel,
             ),
         )
     }

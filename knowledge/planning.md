@@ -232,6 +232,17 @@ nutrients per second at its dump energy usage.
   passes. Keep the `-EPS` form when touching `makeFeasible`, and check the optimizer
   suites (`OptimizerMachineTest`, the blueprint integration suites), not just the LP
   unit test.
+- **A badly scaled row needs unit normalization, and only as a retry.**
+  `LinearProgram` compares reduced costs against an absolute `EPSILON`, so a matrix
+  whose rows span orders of magnitude — `uranium-processing` yields 5.8e-4
+  uranium-235/s per machine next to a boiler's 2000 steam — can report a feasible,
+  bounded program as `Unbounded`. `Optimizer.solve` therefore retries the whole
+  two-stage solve with `normalizeRows = true`, which divides each row by its largest
+  entry. The raw solve runs first because normalizing changes the pivot path and
+  which of several equally optimal vertices a tie resolves to: an always-on
+  normalization flipped Gleba's spoilage source from jellynut to yumako. Evidence:
+  `OptimizerUraniumTest` plans `atomic-bomb` and `nuclear-fuel` at
+  `MAX_INTERMEDIATE_LIMIT`.
 - **A non-stacking inserter leaves its belt unstacked.** `LogisticsCalculator.beltStack` is the
   requested research level, but `inserterBeltStack` and `oneLaneCapacity()` use it only when the
   selected inserter has `stacksOnBelt`; a fast or bulk inserter places single items. A direct-output

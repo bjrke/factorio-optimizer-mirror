@@ -448,13 +448,7 @@ private val baseGameKnownFailures =
         .flatten()
         .toSet()
 
-private val nauvisKnownFailures =
-    listOf(
-            failures("assembling-machine-3"),
-            failures("atomic-bomb"),
-        )
-        .flatten()
-        .toSet()
+private val nauvisKnownFailures = listOf(failures("assembling-machine-3")).flatten().toSet()
 
 private val vulcanusKnownFailures =
     listOf(
@@ -534,10 +528,6 @@ private fun assertSweep(
  * fixed, so delete its entry; when the last entry goes, delete this test method too, which is why
  * the empty set fails instead of passing silently.
  *
- * [Throwable] is deliberate for now: one listed case fails with an `IllegalStateException` rather
- * than an `AssertionError`. Narrow this to `AssertionError` once that case is fixed and removed.
- * The cost is that an unrelated crash also counts as a known failure.
- *
  * Only [assertSweep] checks that the blacklist stays inside the material list; this helper does not
  * receive the list, so running it alone cannot detect a stale entry.
  */
@@ -548,7 +538,7 @@ private fun assertKnownFailures(
 ) {
     assertNotEquals(emptySet(), knownFailures, "no failures to test; delete this test")
     assertTable(knownFailures) { case ->
-        assertThrows<Throwable> { assertCase(spaceAge, surface, case) }
+        assertThrows<AssertionError> { assertCase(spaceAge, surface, case) }
     }
 }
 

@@ -213,7 +213,8 @@ class Optimizer(
 
     /**
      * Solves the material balance as a linear program minimizing, in order, imported materials and
-     * total machines. Returns `null` if the program is infeasible.
+     * total machines. Returns `null` when no stage finds an optimum, including after the retry on a
+     * unit-normalized copy of the matrix.
      *
      * Each objective is a separate program: the next stage constrains the previous one to its
      * optimum (plus [SLACK]) and minimizes the next. This lexicographic optimum removes the
@@ -258,19 +259,35 @@ class Optimizer(
             extraRows: List<DoubleArray>,
             extraBounds: List<Double>,
             cost: DoubleArray,
+            normalizeRows: Boolean,
         ): LinearProgramResult.Optimal? {
             val result =
                 LinearProgram(
                         (demandRows.toList() + extraRows).toTypedArray(),
                         (demandBounds.toList() + extraBounds).toDoubleArray(),
                         cost,
+                        normalizeRows,
                     )
                     .minimize()
             return result as? LinearProgramResult.Optimal
         }
 
-        val imports = stage(emptyList(), emptyList(), importRow) ?: return null
-        return stage(listOf(importRow), listOf(imports.value + SLACK), machineRow)?.solution
+        fun twoStage(normalizeRows: Boolean): DoubleArray? {
+            val imports = stage(emptyList(), emptyList(), importRow, normalizeRows) ?: return null
+            return stage(
+                    listOf(importRow),
+                    listOf(imports.value + SLACK),
+                    machineRow,
+                    normalizeRows,
+                )
+                ?.solution
+        }
+
+        // a badly scaled matrix can make the simplex report a bounded, feasible program as
+        // unbounded; the rows' scale spread (uranium processing next to a boiler's 2000 steam) is
+        // inherent, so retry the unit-normalized copy. The raw solve runs first to keep the vertex
+        // choice of every plan that already works.
+        return twoStage(normalizeRows = false) ?: twoStage(normalizeRows = true)
     }
 
     /** Builds the per-recipe machine counts from the LP solution, one entry per running recipe. */

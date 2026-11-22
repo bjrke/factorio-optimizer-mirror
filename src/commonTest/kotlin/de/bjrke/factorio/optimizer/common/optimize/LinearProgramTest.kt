@@ -12,7 +12,8 @@ class LinearProgramTest {
         a: Array<DoubleArray>,
         b: DoubleArray,
         c: DoubleArray,
-    ) = LinearProgram(a, b, c).minimize()
+        normalizeRows: Boolean = false,
+    ) = LinearProgram(a, b, c, normalizeRows).minimize()
 
     @Test
     fun minimizesASingleVariable() {
@@ -84,5 +85,24 @@ class LinearProgramTest {
             solve(arrayOf(doubleArrayOf(0.0, 1.0)), doubleArrayOf(1.0), doubleArrayOf(-1.0, 0.0))
 
         assertIs<LinearProgramResult.Unbounded>(result)
+    }
+
+    @Test
+    fun aRowThatMixesRateScalesKeepsItsOptimum() {
+        // the optimizer's rows mix uranium processing's 5.8e-4/s with demands of 2.5/s; dividing a
+        // constraint by a positive factor is the same constraint and must not move the optimum
+        val rows = arrayOf(doubleArrayOf(-1e6, -1e-6))
+        val bounds = doubleArrayOf(-1.0)
+        val cost = doubleArrayOf(1.0, 1.0)
+        val raw = solve(rows, bounds, cost) as LinearProgramResult.Optimal
+        val normalized =
+            solve(rows, bounds, cost, normalizeRows = true) as LinearProgramResult.Optimal
+
+        assertAll(
+            { assertEquals(1e-6, raw.value, TOLERANCE) },
+            { assertEquals(raw.value, normalized.value, TOLERANCE) },
+            { assertEquals(raw.solution[0], normalized.solution[0], TOLERANCE) },
+            { assertEquals(raw.solution[1], normalized.solution[1], TOLERANCE) },
+        )
     }
 }

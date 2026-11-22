@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
 import de.bjrke.factorio.optimizer.common.util.EPSILON
+import kotlin.math.absoluteValue
+import kotlin.math.max
 
 private const val EPS = EPSILON
 
@@ -29,11 +31,17 @@ sealed interface LinearProgramResult {
  * variable of phase one and the second-to-last objective row its auxiliary objective. Pivoting is
  * deterministic (smallest variable index breaks ties) so the same input always yields the same
  * vertex.
+ *
+ * [normalizeRows] divides every constraint row by its largest absolute entry first. That is
+ * mathematically neutral, but it changes the pivot path and therefore which of several equally
+ * optimal vertices the solver returns; callers that pin a plan should solve raw first and ask for
+ * the normalized matrix only when the raw solve is not [LinearProgramResult.Optimal].
  */
 class LinearProgram(
     a: Array<DoubleArray>,
     b: DoubleArray,
     c: DoubleArray,
+    normalizeRows: Boolean = false,
 ) {
     private val rows = b.size
     private val columns = c.size
@@ -47,16 +55,39 @@ class LinearProgram(
     /** Index of the non-basic variable per column; `-1` is the artificial variable. */
     private val nonBasic = IntArray(lastCol) { it }.also { it[columns] = -1 }
 
+    /**
+     * The factor each constraint row is divided by: its largest absolute entry, the right-hand side
+     * included, or 1 when [normalizeRows] is off. Multiplying an inequality by a positive factor
+     * leaves the feasible set and the solution unchanged, so this only improves the conditioning.
+     *
+     * The plan's rates span several orders of magnitude — uranium processing yields 5.8e-4
+     * uranium-235 per second per machine, while a boiler recipe moves 2000 steam — and the phase
+     * tests below compare reduced costs against an absolute [EPSILON]. Unnormalized, a
+     * rounding-sized reduced cost on such a matrix looks like a real improvement direction with no
+     * blocking row, and the simplex reports a feasible, bounded program as unbounded.
+     */
+    private val rowScales =
+        DoubleArray(rows) { row ->
+            if (!normalizeRows) 1.0
+            else
+                max(
+                        b[row].absoluteValue,
+                        a.getOrNull(row)?.maxOfOrNull { it.absoluteValue } ?: 0.0,
+                    )
+                    .takeIf { it > 0.0 } ?: 1.0
+        }
+
     private val tableau =
         Array(lastRow + 1) { i ->
+                val scale = rowScales.getOrNull(i) ?: 1.0
                 DoubleArray(lastCol + 1) { j ->
-                    a.getOrNull(i)?.getOrNull(j) ?: 0.0
+                    (a.getOrNull(i)?.getOrNull(j) ?: 0.0) / scale
                 }
             }
             .also {
                 for (i in 0 until rows) {
                     it[i][columns] = -1.0
-                    it[i][lastCol] = b[i]
+                    it[i][lastCol] = b[i] / rowScales[i]
                 }
                 for (j in 0 until columns) {
                     // objective row stores c so that the tableau maximizes -c·x, i.e. minimizes c·x
