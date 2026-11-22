@@ -84,30 +84,6 @@ than `MAX_ROW_BELTS` still reserves its product belt and pairs two inputs on one
 where the inputs genuinely cannot fit, which must report the missing input instead of a target
 without an output belt.
 
-### Route the express-splitter plan at normalize 1.0
-
-Fix the Space Age `express-splitter` layout
-`http://localhost:8080/#/1.0/express-splitter/CFSXbmr/1/1/10`, which plans splitter, fast-splitter
-and transport-belt rows in the foundry next to electromagnetic plants making copper cable,
-electronic circuit and advanced circuit, and reports
-
-```
-copper-plate runs into electronic-circuit at Coordinate(x=37, y=99)
-foreign side-load into electronic-circuit at Coordinate(x=37, y=99)
-```
-
-The copper plate delivery to the electromagnetic plants collides with the electronic-circuit row at
-one tile. `DeliveryRouter`/`LayoutRouter` should route the crossing belt under the occupied tile or
-reserve its approach instead of side-loading into the neighbor; a side-load that cannot be avoided
-must be a failure, not a silent merge. `express-splitter` at 0.5 and 2.0 lays out cleanly, so use
-the 1.0 URL as the case.
-
-Add tests: the URL at 1.0 with `failures` empty and `validateLayout` clean, no belt carrying
-copper plate that also loads onto an electronic-circuit row (assert over `Layout.beltMaterials`/
-`beltLoads` next to the colliding tile); the same URL at 0.5 and 2.0 unchanged. Re-add
-`express-splitter` to `nauvisMaterials` (and `exoskeleton-equipment` to `baseGameMaterials` for the
-previous item) so `BlueprintBenchmarkTest` covers them again.
-
 ## Performance findings — prompt-ready
 
 Each block below is self-contained: copy one as the task prompt.

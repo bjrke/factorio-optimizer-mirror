@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityPipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
@@ -31,6 +32,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.test.TOLERANCE
@@ -64,6 +66,7 @@ class BlueprintLayoutIntegrationTest {
             "copper-cable",
             "iron-gear-wheel",
             "inserter",
+            "express-splitter",
         ) { target ->
             val layout = Layout(target)
             val entities = layout.blueprint.entities
@@ -266,6 +269,34 @@ class BlueprintLayoutIntegrationTest {
             { assertTrue(height <= 125, "layout is still $height rows tall") },
             { assertNoPlannedMaterialIsImported(layout.plan) },
             { assertContains(layout.plan.beltMaterials, Material("rocket-silo")) },
+        )
+    }
+
+    /**
+     * The reported express-splitter layout put a splitter on the electronic-circuit trunk whose
+     * other input tile was fed by the copper-plate belt, so the splitter merged the plate into the
+     * circuit branch: `validateLayout` reported both a run-into and a foreign side-load, and the
+     * broken layout never compacted.
+     */
+    @Test
+    fun theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1.0/express-splitter/CFLSXbmr/1/1/50")
+        val conveyors = layout.entities.filterIsInstance<ConveyorEntity>()
+        val copperIntoCircuit =
+            layout.entities
+                .filterIsInstance<BeltEntity>()
+                .filter { copperPlate in it.load.materials }
+                .filter { belt ->
+                    val ahead = belt.area.topLeft + belt.direction.step
+                    conveyors.any {
+                        it.area.topLeft == ahead && electronicCircuit in it.materials
+                    }
+                }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertEquals(emptyList(), copperIntoCircuit) },
         )
     }
 

@@ -96,7 +96,11 @@ internal class SplitDeliveryRouter(
             if (from.adjacent(to)) 1 else from.manhattanDist(to) + SPLIT_TUNNEL_PENALTY
         }
 
-    /** Every belt tile where a splitter fits: straight trunk, a free side and a free exit. */
+    /**
+     * Every belt tile where a splitter fits: straight trunk, a free side, a free exit and no
+     * foreign belt pouring into either splitter tile. A splitter takes items on both back tiles, so
+     * a foreign feeder on the second one would merge its material into the split.
+     */
     private fun splitCandidates(material: Material): List<SplitCandidate> {
         val tiles = networks[material]
         return tiles.flatMap { tile ->
@@ -118,6 +122,12 @@ internal class SplitDeliveryRouter(
                 }
                 val area = splitterArea(tile, side, direction)
                 if (!area.all { it == tile || board.isFree(it) }) return@mapNotNull null
+                // only the trunk's own back tile is covered by fedStraight; a belt pouring into
+                // the splitter's other tile would merge its material into the branch
+                val splitterTiles = setOf(tile, side)
+                if (splitterTiles.any { rules.sideLoadedByForeign(it, material, splitterTiles) }) {
+                    return@mapNotNull null
+                }
                 SplitCandidate(tile, side, exit, direction)
             }
         }

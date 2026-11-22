@@ -324,6 +324,14 @@ baselines, so every finding fails.
   stacked logistic-science layout hit this at `(37,24)`: a splitter's output fed a belt the mixed
   lane also poured into. `sideLoadedByForeign` now checks the exit (and the splitter's own tiles are
   ignored) before a candidate is accepted. Evidence: `realBlueprintsAreValid` (processing-unit).
+- **A splitter takes items on both back tiles, so a foreign feeder on the second one merges.**
+  `SplitDeliveryRouter.splitCandidates` only checked the trunk's back tile (`fedStraight`) and the
+  candidate's side and exit tiles, never the splitter's other input tile. The reported
+  express-splitter layout (both belt lanes, full production graph) put a splitter on the
+  electronic-circuit trunk with the copper-plate belt feeding its second input at `(59,116)`, so
+  `validateLayout` reported `copper-plate runs into electronic-circuit` and compaction stayed off.
+  A candidate now rejects any foreign belt pouring into either splitter tile. Evidence:
+  `theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters`, `realBlueprintsAreValid`.
 - **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
   corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
   error anywhere rejects every candidate and the pass returns after its first
