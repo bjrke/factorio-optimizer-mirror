@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
@@ -112,13 +113,24 @@ class DeliveryPreparationTest {
                 sources = emptyList(),
                 label = "missing circuit source",
             )
+        val failures = preparedFailures(plan)
+
+        assertTrue(
+            failures.any {
+                "electronic-circuit" in it.message && "no producer row" in it.message
+            } && failures.all { !it.area.isEmpty() },
+            failures.toString(),
+        )
+    }
+
+    /** Runs [DeliveryPreparation] on [plan] and returns the failures it reported. */
+    private fun preparedFailures(plan: BlueprintPlan): MutableList<LayoutIssue> {
         val board = board()
         val planner = RowPlanner(plan, logistics)
         val rowPlacer = RowPlacer(board, plan, logistics, planner)
         val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, LayoutRouter(board))
         rowPlacer.placeAll()
-        val failures = mutableListOf<String>()
-
+        val failures = mutableListOf<LayoutIssue>()
         DeliveryPreparation(
                 stage,
                 BeltEndConnector(board, BeltEnd.CONSTANT_COMBINATOR),
@@ -127,11 +139,7 @@ class DeliveryPreparationTest {
                 failures,
             )
             .prepareDeliveries()
-
-        assertTrue(
-            failures.any { "electronic-circuit" in it && "no producer row" in it },
-            failures.toString(),
-        )
+        return failures
     }
 
     @Test

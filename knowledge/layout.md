@@ -29,10 +29,13 @@ splitter to be fed on its back face, and no belt to circle back into itself
 entrance or exit orphaned (connector ends are recognized by their 2/4-tile partner
 pattern).
 `RowLayout.layoutDump()` is the one read-back of a finished layout
-(`LayoutDump`: placed `LayoutEntity`s plus failure strings); row-budget and target-output
+(`LayoutDump`: placed `LayoutEntity`s plus `LayoutIssue`s, each a message with the `Area` it
+blames); row-budget and target-output
 failures, route failures and any `validateLayout` errors of the finished layout share that list,
 so a pre-existing error that switches compaction off is reported instead of silently shipping an
-uncompacted layout. The CLI's `--layout` renders it and the `jvmTest` suites assert
+uncompacted layout. `RowLayout.issues` exposes the same list to the web preview, which draws a red
+box over every issue's area and shows the message on hover. The CLI's `--layout` renders the dump
+and the `jvmTest` suites assert
 on it through the `Layout` fixture in
 `jvmTest/…/common/blueprint/printing/fixtures/BlueprintIntegrationFixtures.kt`, so `RowLayout`
 is `internal` and keeps its accessors private.
@@ -407,3 +410,12 @@ baselines, so every finding fails.
   the final placed entities and `Blueprint.toJson()` emits the array; pole copper
   wires are the same idea, stored per pole in `neighbours`. Verified by generating
   and decoding a `buffer-chest` layout: `wires: [[29,1,31,1],[30,1,31,1]]`.
+- **A failing layout keeps its pre-trim, pre-compaction coordinates.** A `LayoutIssue` stores the
+  `Area` it was found on, so the preview can paint it over the final blueprint. `ImportTrimmer`
+  moves the import markers and removes their prefix, and each `CompactionPass` seam shifts only
+  the tiles beyond its corridor, so the recorded area would no longer name the same machines or
+  belt. `RowLayout` therefore skips both passes once `failures` is non-empty; only already-failing
+  layouts stay uncompacted. Translating the areas is not equivalent: a corridor can straddle an
+  area or delete the tile it names. Evidence:
+  `aRowThatCannotFitReportsTheMissingMaterials` checks that the row issue still contains its
+  machine and that the import markers are still at the untrimmed column.

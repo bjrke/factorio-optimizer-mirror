@@ -2,6 +2,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConnector
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportFeed
@@ -69,7 +71,7 @@ internal class DeliveryPreparation(
     private val connector: BeltEndConnector,
     private val imports: ImportExtension,
     private val beltEnd: BeltEnd,
-    private val failures: MutableList<String> = mutableListOf(),
+    private val failures: MutableList<LayoutIssue> = mutableListOf(),
 ) {
     private val board = stage.board
     private val plan = stage.plan
@@ -156,8 +158,11 @@ internal class DeliveryPreparation(
                 // RowPlacer left the U-turn tiles out, so without an upstream tile there is no
                 // feed. Keep the straight half and report the lost turn material.
                 failures +=
-                    "${merge.turnMaterial.name} has no free side-load tile on the mixed belt " +
-                        "at (${merge.column}, ${belt.y})"
+                    Coordinate(merge.column, belt.y)
+                        .issue(
+                            "${merge.turnMaterial.name} has no free side-load tile on the mixed belt " +
+                                "at (${merge.column}, ${belt.y})",
+                        )
                 return@flatMapIndexed sinksOf(row, belt, uniqueHeadOn, sideLoadFeed = null)
                     .filter { (material, _) -> material != merge.turnMaterial }
                     .map { (material, sink) -> Triple(material, row, sink) }
@@ -200,13 +205,21 @@ internal class DeliveryPreparation(
     ) = produced.flatMap { (material, list) ->
         val producerRow = rowPlacer.producerRow(material)
         if (producerRow == null) {
-            failures += "${material.name} has no producer row"
+            failures +=
+                list
+                    .first()
+                    .third
+                    .target
+                    .issue(
+                        "${material.name} has no producer row",
+                    )
             return@flatMap emptyList()
         }
         val outputBelt =
             producerRow.belts.firstOrNull { it.io == Io.OUTPUT && it.material == material }
         if (outputBelt == null) {
-            failures += "${material.name} has no output belt on its producer row"
+            failures +=
+                producerRow.box.issue("${material.name} has no output belt on its producer row")
             return@flatMap emptyList()
         }
 
@@ -252,7 +265,7 @@ internal class DeliveryPreparation(
                 Source(start, WEST)
             }
             else -> {
-                failures += "did not expect a belt to $direction"
+                failures += row.box.issue("did not expect a belt to $direction")
                 null
             }
         }

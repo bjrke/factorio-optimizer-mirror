@@ -1,10 +1,12 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.pathConflicts
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
@@ -35,7 +37,7 @@ internal class SplitDeliveryRouter(
     private val router: LayoutRouter,
     private val networks: DeliveryNetworks,
     private val rules: BeltRouteRules,
-    private val failures: MutableList<String>,
+    private val failures: MutableList<LayoutIssue>,
 ) {
 
     /** A place where a splitter can be inserted into a produced material's belt. */
@@ -76,7 +78,7 @@ internal class SplitDeliveryRouter(
         val (candidate, segment) =
             best
                 ?: run {
-                    failures += "${material.name} to ${sink.feed} (no split)"
+                    failures += sink.feed.issue("${material.name} to ${sink.feed} (no split)")
                     return false
                 }
 

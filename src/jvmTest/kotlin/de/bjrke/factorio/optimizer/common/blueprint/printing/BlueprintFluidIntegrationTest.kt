@@ -33,7 +33,7 @@ class BlueprintFluidIntegrationTest {
             val layout = Layout(target)
             val plumbing =
                 validateLayout(layout.entities).filter {
-                    it.contains("fluid") || it.contains("unpaired")
+                    it.message.contains("fluid") || it.message.contains("unpaired")
                 }
             assertAll(
                 { assertEquals(emptyList(), layout.failures) },

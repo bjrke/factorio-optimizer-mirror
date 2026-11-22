@@ -1,11 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestLikeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.TransportEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 
 /**
  * Every inserter needs a source behind it and a drop in front of it, both a machine, a transport or
@@ -14,7 +16,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.TransportEntit
 internal fun validateInserters(
     index: LayoutIndex,
     entities: List<LayoutEntity>,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     for (inserter in entities.filterIsInstance<InserterEntity>()) {
         checkInserter(inserter, index, errors)
@@ -24,7 +26,7 @@ internal fun validateInserters(
 private fun checkInserter(
     inserter: InserterEntity,
     index: LayoutIndex,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     val tile = inserter.area.topLeft
     // a long inserter reaches one tile further, but still drops right beside itself
@@ -36,28 +38,32 @@ private fun checkInserter(
 private fun checkSource(
     source: LayoutEntity?,
     inserter: InserterEntity,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     if (!canHold(source)) {
-        errors += "inserter at ${inserter.area.topLeft} has no source"
+        errors += inserter.area.issue("inserter at ${inserter.area.topLeft} has no source")
     } else if (source is TransportEntity && inserter.material !in source.materials) {
         errors +=
-            "inserter at ${inserter.area.topLeft} draws ${source.material.name} " +
-                "instead of ${inserter.material.name}"
+            inserter.area.issue(
+                "inserter at ${inserter.area.topLeft} draws ${source.material.name} " +
+                    "instead of ${inserter.material.name}",
+            )
     }
 }
 
 private fun checkDrop(
     drop: LayoutEntity?,
     inserter: InserterEntity,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     if (!canHold(drop)) {
-        errors += "inserter at ${inserter.area.topLeft} has no drop"
+        errors += inserter.area.issue("inserter at ${inserter.area.topLeft} has no drop")
     } else if (drop is TransportEntity && inserter.material !in drop.materials) {
         errors +=
-            "inserter at ${inserter.area.topLeft} drops ${drop.material.name} " +
-                "instead of ${inserter.material.name}"
+            inserter.area.issue(
+                "inserter at ${inserter.area.topLeft} drops ${drop.material.name} " +
+                    "instead of ${inserter.material.name}",
+            )
     }
 }
 

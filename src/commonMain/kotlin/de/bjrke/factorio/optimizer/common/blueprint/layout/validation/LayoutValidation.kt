@@ -1,7 +1,9 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 
 /**
@@ -14,8 +16,8 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
  * `LayoutValidationUnderground.kt`, `LayoutValidationInserter.kt`, `LayoutValidationFlow.kt`) and
  * appends to the shared error list; their order is the order the errors are reported in.
  */
-internal fun validateLayout(entities: List<LayoutEntity>): List<String> {
-    val errors = mutableListOf<String>()
+internal fun validateLayout(entities: List<LayoutEntity>): List<LayoutIssue> {
+    val errors = mutableListOf<LayoutIssue>()
     val index = validateOverlaps(entities, errors)
     validateMaterials(index, entities, errors)
     validateUndergrounds(index, entities, errors)
@@ -30,13 +32,13 @@ internal fun validateLayout(entities: List<LayoutEntity>): List<String> {
  */
 private fun validateOverlaps(
     entities: List<LayoutEntity>,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ): LayoutIndex {
     val tiles = HashMap<Coordinate, LayoutEntity>()
     for (entity in entities) {
         for (tile in entity.area) {
             val previous = tiles.put(tile, entity)
-            if (previous != null && previous !== entity) errors += "overlap at $tile"
+            if (previous != null && previous !== entity) errors += tile.issue("overlap at $tile")
         }
     }
     return LayoutIndex(entities)

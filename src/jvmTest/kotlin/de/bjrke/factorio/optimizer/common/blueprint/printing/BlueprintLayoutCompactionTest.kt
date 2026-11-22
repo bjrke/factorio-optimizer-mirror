@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
@@ -183,7 +185,33 @@ class BlueprintLayoutCompactionTest {
             {
                 assertNotNull(layout.failures.firstOrNull(), "a row that cannot fit must report it")
             },
-            { assertContains(layout.failures, "output has no output belt on its row") },
+            {
+                assertContains(
+                    layout.failures.map { it.message },
+                    "output has no output belt on its row",
+                )
+            },
+            {
+                assertTrue(
+                    layout.failures.all { !it.area.isEmpty() },
+                    "every reported issue must name the area the preview marks",
+                )
+            },
+            {
+                val rowIssue = layout.failures.first { "solid belt rows" in it.message }
+                val machines = layout.entities.filterIsInstance<MachineEntity>()
+                assertTrue(
+                    machines.any { it.area.topLeft in rowIssue.area },
+                    "the reported row must still contain its machines after layout optimizations",
+                )
+            },
+            {
+                val markers = layout.entities.filterIsInstance<MarkerEntity>()
+                assertTrue(
+                    markers.any { it.area.x == IMPORT_FEED - 2 },
+                    "a failing layout must keep its import markers at the untrimmed column",
+                )
+            },
         )
     }
 }

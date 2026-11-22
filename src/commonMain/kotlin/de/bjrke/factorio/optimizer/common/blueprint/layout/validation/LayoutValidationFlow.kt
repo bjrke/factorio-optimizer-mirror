@@ -1,15 +1,19 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 
 /**
  * The belt-flow checks: a splitter has to be fed from its back, and no belt may run in a circle
@@ -20,16 +24,16 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 internal fun validateBeltFlow(
     index: LayoutIndex,
     entities: List<LayoutEntity>,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     val conveyors = entities.filterIsInstance<ConveyorEntity>()
     for (splitter in conveyors.filterIsInstance<SplitterEntity>()) {
         if (!splitter.isFed(index)) {
-            errors += "splitter at ${splitter.area.topLeft} has no input"
+            errors += splitter.area.issue("splitter at ${splitter.area.topLeft} has no input")
         }
     }
     for (loop in beltLoops(conveyors, index)) {
-        errors += "${loop.material.name} belt loops back at ${loop.tile}"
+        errors += LayoutIssue("${loop.material.name} belt loops back at ${loop.tile}", loop.area)
     }
 }
 
@@ -70,8 +74,10 @@ private fun ConveyorEntity.outlets(index: LayoutIndex): List<Coordinate> {
     }
 }
 
-/** One closing belt circle: the material it carries and the first tile it covers. */
-private class BeltLoop(val material: Material, val tile: Coordinate)
+/**
+ * One closing belt circle: the material it carries, the first tile it covers, and its whole box.
+ */
+private class BeltLoop(val material: Material, val tile: Coordinate, val area: Area)
 
 /**
  * Every belt circle, reported once by its north-west tile. A circle only exists where a route hands
@@ -106,7 +112,11 @@ private fun beltLoops(conveyors: List<ConveyorEntity>, index: LayoutIndex): List
         .map { group ->
             val tiles = group.flatMap { conveyors[it].area }
             val tile = tiles.minWith(compareBy({ it.x }, { it.y }))
-            BeltLoop(conveyors[group.first { tile in conveyors[it].area }].material, tile)
+            BeltLoop(
+                conveyors[group.first { tile in conveyors[it].area }].material,
+                tile,
+                tiles.map { it.area() }.boundingBox() ?: tile.area(),
+            )
         }
         .sortedWith(compareBy({ it.tile.y }, { it.tile.x }))
 }

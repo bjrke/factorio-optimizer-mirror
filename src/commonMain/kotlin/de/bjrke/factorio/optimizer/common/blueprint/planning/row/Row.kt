@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.core.model.Area
+import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
@@ -16,6 +17,10 @@ import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 
 /** One machine of a row: the production it builds and the column it starts on. */
 internal class PlacedMachine(val production: FactoryProduction, val left: Int)
+
+/** The footprint [this] machine covers inside [row]; a row's box is one machine's footprint. */
+internal fun PlacedMachine.machineArea(row: Row) =
+    Area(Coordinate(left, row.factoryTop), row.box.dimension)
 
 /**
  * The T merge that turns two single-material feeds into one mixed lane.

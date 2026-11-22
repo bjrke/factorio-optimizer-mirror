@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.printing.inspection
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
@@ -53,7 +54,7 @@ class LayoutAsciiTest {
                         Signal(copperPlate),
                     ),
                 ),
-            failures = listOf("water to (2, 3) (no route)"),
+            failures = listOf(LayoutIssue("water to (2, 3) (no route)", Area(2, 3, 1, 1))),
         )
 
     private val ascii = layoutAscii(layout)

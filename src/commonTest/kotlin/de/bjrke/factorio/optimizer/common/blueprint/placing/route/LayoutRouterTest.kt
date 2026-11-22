@@ -2,11 +2,13 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.route
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeEnd
 import de.bjrke.factorio.optimizer.common.blueprint.placing.routing.BeltRouteRules
 import de.bjrke.factorio.optimizer.common.blueprint.placing.routing.Sink
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -137,17 +139,20 @@ class LayoutRouterTest {
     @Test
     fun aRoutePastTheCompactBoxIsFoundButReported() =
         assertTableOf(
-            ROUTE_MARGIN to emptyList<String>(),
+            ROUTE_MARGIN to emptyList<LayoutIssue>(),
             ROUTE_MARGIN + 1 to
                 listOf(
-                    "route ${tile(3, 0)} -> ${tile(3, ROUTE_MARGIN + 1)} needed the " +
-                        "wide search box",
+                    LayoutIssue(
+                        "route ${tile(3, 0)} -> ${tile(3, ROUTE_MARGIN + 1)} needed the " +
+                            "wide search box",
+                        Area(tile(3, 0).x, 0, 1, ROUTE_MARGIN + 2),
+                    ),
                 ),
         ) { (reach, expected) ->
             val board = board()
             // one belt sets the extent: the compact box ends ROUTE_MARGIN rows below it
             board.placeBelt(tile(5, 0), ironPlate, EAST)
-            val failures = mutableListOf<String>()
+            val failures = mutableListOf<LayoutIssue>()
             val goal = tile(3, reach)
 
             val route =

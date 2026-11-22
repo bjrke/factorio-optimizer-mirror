@@ -1,9 +1,11 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeSurface
 import de.bjrke.factorio.optimizer.common.blueprint.layout.reserveRow
@@ -11,11 +13,13 @@ import de.bjrke.factorio.optimizer.common.blueprint.placing.special.BeltEndConne
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LayoutStage
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 
 /** How often one delivery is routed again after a path wanted two facings on one belt tile. */
 private const val ROUTE_ATTEMPTS = 4
@@ -33,7 +37,7 @@ internal class DeliveryRouter(
     private val connector: BeltEndConnector,
     imports: ImportExtension,
     beltEnd: BeltEnd,
-    private val failures: MutableList<String>,
+    private val failures: MutableList<LayoutIssue>,
 ) {
     private val board = stage.board
     private val plan = stage.plan
@@ -95,7 +99,7 @@ internal class DeliveryRouter(
         load: LaneLoad? = null,
     ): Boolean {
         if (!board.isFree(start)) {
-            failures += "${material.name} from $start (start blocked)"
+            failures += start.issue("${material.name} from $start (start blocked)")
             return false
         }
         if (start == sink.feed) {
@@ -134,7 +138,7 @@ internal class DeliveryRouter(
     }
 
     private fun fail(material: Material, sink: Sink): Boolean {
-        failures += "${material.name} to ${sink.feed} (no route)"
+        failures += sink.feed.issue("${material.name} to ${sink.feed} (no route)")
         return false
     }
 
@@ -158,13 +162,16 @@ internal class DeliveryRouter(
         val targetMaterial = plan.target
         // a fluid target leaves through the pipe output FluidFeeder places
         if (board.isFluid(targetMaterial)) return
+        val row = rowPlacer.producerRow(targetMaterial)
         val endBelt =
             board.placed
                 .filterIsInstance<BeltEntity>()
                 .filter { it.material == targetMaterial }
                 .maxByOrNull { it.area.endX }
                 ?: run {
-                    failures += "${targetMaterial.name} has no output belt on its row"
+                    val area =
+                        row?.box ?: board.placed.map { it.area }.boundingBox() ?: Area(0, 0, 1, 1)
+                    failures += area.issue("${targetMaterial.name} has no output belt on its row")
                     return
                 }
         val rowY = endBelt.area.y
@@ -190,7 +197,8 @@ internal class DeliveryRouter(
         val eastOfConnector =
             board.placed.filterIsInstance<ConveyorEntity>().filter { it.area.x >= connectorEnd }
         if (eastOfConnector.isNotEmpty()) {
-            failures += "${targetMaterial.name} has a belt east of its output connector"
+            val area = eastOfConnector.map { it.area }.boundingBox() ?: endBelt.area
+            failures += area.issue("${targetMaterial.name} has a belt east of its output connector")
         }
     }
 }

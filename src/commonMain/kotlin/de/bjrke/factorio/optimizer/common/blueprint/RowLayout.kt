@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
@@ -56,9 +57,10 @@ internal class RowLayout(
 
     /**
      * What the layout could not do: an input whose belt did not route, or a route that only exists
-     * outside the compact search box. A non-empty list means the layout needs attention.
+     * outside the compact search box. Each entry carries the area it blames, so the web preview can
+     * mark it; a non-empty list means the layout needs attention.
      */
-    private val failures = mutableListOf<String>()
+    private val failures = mutableListOf<LayoutIssue>()
 
     private val router = LayoutRouter(board, failures)
 
@@ -100,11 +102,13 @@ internal class RowLayout(
             deliveryRouter.routeProduced(deliveries.produced)
             fluidFeeder.connectLanes()
             fluidFeeder.placeTargetOutput()
-            // the markers may move now that the routes are fixed; then the layout is compacted
-            // before electricity, so poles and wires are placed on the final geometry
-            importTrimmer.trim()
+            // a failure recorded before these passes names a tile on the current board; the import
+            // trim and compaction move those tiles, so keep the failing layout in the coordinates
+            // its issues were found in
+            val canOptimize = failures.isEmpty()
+            if (canOptimize) importTrimmer.trim()
             stretchUndergroundRuns()
-            compactionPass.compact()
+            if (canOptimize) compactionPass.compact()
             // the product connector goes last so compaction cannot drag it back over the routes
             deliveryRouter.placeTargetOutput()
             PowerPlacer(board, imports.poleWestBound, powerPole, poleStats).place()
@@ -115,6 +119,16 @@ internal class RowLayout(
     }
 
     private fun stretchUndergroundRuns() = UndergroundStretcher(board).stretchAll()
+
+    /**
+     * The failures the preview marks, each with the area it blames; builds the layout like
+     * [blueprint].
+     */
+    internal val issues: List<LayoutIssue>
+        get() {
+            build()
+            return failures.toList()
+        }
 
     /** The placed entities and the feed routes that failed, for the CLI's text layout. */
     internal fun layoutDump(): LayoutDump {

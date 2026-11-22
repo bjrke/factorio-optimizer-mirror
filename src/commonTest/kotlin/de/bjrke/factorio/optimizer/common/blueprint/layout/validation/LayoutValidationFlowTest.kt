@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
@@ -31,6 +32,13 @@ private fun splitter(x: Int, y: Int, direction: Direction) =
         direction,
     )
 
+/** One splitter case: the entities, the reported message and the area that message must blame. */
+private data class SplitterCase(
+    val entities: List<LayoutEntity>,
+    val message: String,
+    val area: Area,
+)
+
 class LayoutValidationFlowTest {
 
     /**
@@ -41,12 +49,21 @@ class LayoutValidationFlowTest {
     @Test
     fun aSplitterWithoutABeltOnItsBackIsReported() =
         assertTableOf(
-            listOf(splitter(2, 0, EAST), belt(3, 0)) to
-                listOf("splitter at Coordinate(x=2, y=0) has no input"),
-            listOf(belt(2, 0, SOUTH), splitter(2, 1, EAST), belt(3, 1)) to
-                listOf("splitter at Coordinate(x=2, y=1) has no input"),
-        ) { (entities, expected) ->
-            assertEquals(expected, validateLayout(entities))
+            SplitterCase(
+                listOf(splitter(2, 0, EAST), belt(3, 0)),
+                "splitter at Coordinate(x=2, y=0) has no input",
+                Area(2, 0, 1, 2),
+            ),
+            SplitterCase(
+                listOf(belt(2, 0, SOUTH), splitter(2, 1, EAST), belt(3, 1)),
+                "splitter at Coordinate(x=2, y=1) has no input",
+                Area(2, 1, 1, 2),
+            ),
+        ) { case ->
+            assertEquals(
+                listOf(LayoutIssue(case.message, case.area)),
+                validateLayout(case.entities),
+            )
         }
 
     @Test
@@ -84,7 +101,12 @@ class LayoutValidationFlowTest {
             )
 
         assertEquals(
-            listOf("iron-ore belt loops back at Coordinate(x=0, y=0)"),
+            listOf(
+                LayoutIssue(
+                    "iron-ore belt loops back at Coordinate(x=0, y=0)",
+                    Area(0, 0, 3, 3),
+                ),
+            ),
             validateLayout(circle),
         )
     }

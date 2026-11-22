@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestLikeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
@@ -10,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 
@@ -23,11 +25,14 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 internal fun validateUndergrounds(
     index: LayoutIndex,
     entities: List<LayoutEntity>,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     for (input in entities.filterIsInstance<UndergroundEntity>().filter { it.io == Io.INPUT }) {
         if (findUndergroundOutput(index, input) == null) {
-            errors += "unpaired ${input.material.name} underground at ${input.area.topLeft}"
+            errors +=
+                input.area.issue(
+                    "unpaired ${input.material.name} underground at ${input.area.topLeft}",
+                )
         }
         if (input is UndergroundBeltEntity) checkBeltFeed(index, input, errors)
     }
@@ -43,7 +48,7 @@ internal fun validateUndergrounds(
 private fun checkBeltFeed(
     index: LayoutIndex,
     input: UndergroundBeltEntity,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     if (index.isConnectorEnd(input)) return
     val back = input.area.topLeft - input.direction.step
@@ -63,8 +68,10 @@ private fun checkBeltFeed(
         }
     if (!facesIn) {
         errors +=
-            "underground ${input.material.name} input at ${input.area.topLeft} " +
-                "is not fed straight from $back"
+            input.area.issue(
+                "underground ${input.material.name} input at ${input.area.topLeft} " +
+                    "is not fed straight from $back",
+            )
     }
 }
 
@@ -75,7 +82,7 @@ private fun checkBeltFeed(
 private fun checkBeltExit(
     index: LayoutIndex,
     output: UndergroundBeltEntity,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     if (index.isConnectorEnd(output)) return
     val ahead = output.area.topLeft + output.direction.step
@@ -93,8 +100,10 @@ private fun checkBeltExit(
         }
     if (!accepts) {
         errors +=
-            "underground ${output.material.name} output at ${output.area.topLeft} " +
-                "leads nowhere at $ahead"
+            output.area.issue(
+                "underground ${output.material.name} output at ${output.area.topLeft} " +
+                    "leads nowhere at $ahead",
+            )
     }
 }
 

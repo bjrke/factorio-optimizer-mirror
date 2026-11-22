@@ -1,12 +1,14 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.joinsAt
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -21,7 +23,7 @@ import de.bjrke.factorio.optimizer.common.core.model.neighbors
 internal fun validateMaterials(
     index: LayoutIndex,
     entities: List<LayoutEntity>,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     for (entity in entities) {
         if (entity is ConveyorEntity) checkConveyor(entity, index, errors)
@@ -38,7 +40,7 @@ private fun ConveyorEntity.feedsAhead() = this !is UndergroundBeltEntity || io !
 private fun checkConveyor(
     conveyor: ConveyorEntity,
     index: LayoutIndex,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     val tile = conveyor.area.topLeft
     val aheadTile = tile + conveyor.direction.step
@@ -60,18 +62,24 @@ private fun checkAhead(
     conveyor: ConveyorEntity,
     ahead: ConveyorEntity,
     aheadTile: Coordinate,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     when (ahead.direction) {
         conveyor.direction -> {
             if (ahead.materials != conveyor.materials) {
                 errors +=
-                    "${conveyor.material.name} runs into " + "${ahead.material.name} at $aheadTile"
+                    aheadTile.issue(
+                        "${conveyor.material.name} runs into " +
+                            "${ahead.material.name} at $aheadTile",
+                    )
             }
         }
         conveyor.direction.opposite() ->
             errors +=
-                "${conveyor.material.name} runs head-on into ${ahead.material.name} at $aheadTile"
+                aheadTile.issue(
+                    "${conveyor.material.name} runs head-on into ${ahead.material.name} " +
+                        "at $aheadTile",
+                )
         else -> {
             // a turn with the same load is fine (the mixed merge tile into its lane head)
             if (ahead.materials == conveyor.materials) return
@@ -81,8 +89,10 @@ private fun checkAhead(
                     .laneAt(ahead.direction, directionBetween(aheadTile, conveyor.area.topLeft))
             if (lane != conveyor.material) {
                 errors +=
-                    "${conveyor.material.name} side-loads " +
-                        "${lane?.name ?: "the empty lane"} at $aheadTile"
+                    aheadTile.issue(
+                        "${conveyor.material.name} side-loads " +
+                            "${lane?.name ?: "the empty lane"} at $aheadTile",
+                    )
             }
         }
     }
@@ -94,12 +104,12 @@ private fun checkSideLoad(
     other: ConveyorEntity,
     tile: Coordinate,
     side: Coordinate,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     if (other.materials == conveyor.materials) return
     val lane = conveyor.laneLoad().laneAt(conveyor.direction, directionBetween(tile, side))
     if (lane != other.material) {
-        errors += "foreign side-load into ${conveyor.material.name} at $tile"
+        errors += tile.issue("foreign side-load into ${conveyor.material.name} at $tile")
     }
 }
 
@@ -109,14 +119,17 @@ private fun ConveyorEntity.laneLoad(): LaneLoad =
 private fun checkPlumbing(
     plumbing: Plumbing,
     index: LayoutIndex,
-    errors: MutableList<String>,
+    errors: MutableList<LayoutIssue>,
 ) {
     val tile = plumbing.area.topLeft
     for (side in tile.neighbors) {
         val other = index.at(side) as? Plumbing ?: continue
         // a pipe-to-ground end only joins on its mouth, so two different fluids may share a wall
         if (other.material != plumbing.material && plumbing.joinsAt(side) && other.joinsAt(tile)) {
-            errors += "fluids ${plumbing.material.name} and ${other.material.name} touch at $side"
+            errors +=
+                side.issue(
+                    "fluids ${plumbing.material.name} and ${other.material.name} touch at $side",
+                )
         }
     }
 }

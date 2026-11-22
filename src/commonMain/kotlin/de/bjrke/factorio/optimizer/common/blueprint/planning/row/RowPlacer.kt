@@ -2,8 +2,10 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltGroup
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltPackRequest
@@ -78,7 +80,7 @@ internal class RowPlacer(
     private val plan: BlueprintPlan,
     private val logistics: LogisticsCalculator,
     private val planner: RowPlanner,
-    private val failures: MutableList<String> = mutableListOf(),
+    private val failures: MutableList<LayoutIssue> = mutableListOf(),
 ) {
 
     /** Every row once, in placement order; a band row serves all of its productions. */
@@ -136,11 +138,6 @@ internal class RowPlacer(
                 ),
             )
         val groups = packing.groups
-        if (!packing.fits) {
-            failures +=
-                "row needs ${groups.size} solid belt rows, only $MAX_ROW_BELTS fit: " +
-                    groups.drop(MAX_ROW_BELTS).flatMap { it.materials }.joinToString { it.name }
-        }
 
         val rates = RowRates(inputs, outputs, logistics.oneLaneCapacity())
         val placements = assignRowBelts(planner, unit, groups, rates)
@@ -150,6 +147,24 @@ internal class RowPlacer(
         val factoryBottom = factoryTop + size.height - 1
         val rowRight =
             machines.lastOrNull()?.left?.plus(size.width - 1) ?: (FIRST_MACHINE_X + size.width - 1)
+
+        if (!packing.fits) {
+            // the box covers the machines and the belt rows above them, which is where the row
+            // runs out of room
+            val area =
+                Area(
+                    Coordinate(FIRST_MACHINE_X, bandTop),
+                    Dimension(rowRight - FIRST_MACHINE_X + 1, factoryBottom - bandTop + 1),
+                )
+            failures +=
+                area.issue(
+                    "row needs ${groups.size} solid belt rows, only $MAX_ROW_BELTS fit: " +
+                        groups
+                            .drop(MAX_ROW_BELTS)
+                            .flatMap { it.materials }
+                            .joinToString { it.name },
+                )
+        }
 
         val belts = placements.map { (location, group) ->
             beltFor(
@@ -306,7 +321,7 @@ internal class RowPlacer(
 
     private fun placeMergeBelt(coordinate: Coordinate, load: LaneLoad, direction: Direction) {
         if (!board.isFree(coordinate)) {
-            failures += "merge tile $coordinate is already occupied"
+            failures += coordinate.issue("merge tile $coordinate is already occupied")
             return
         }
         board.placeBelt(coordinate, load, direction)

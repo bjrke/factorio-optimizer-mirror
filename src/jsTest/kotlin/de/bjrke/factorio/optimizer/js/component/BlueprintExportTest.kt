@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
@@ -87,8 +88,16 @@ class BlueprintExportTest : ComponentTest() {
             RowLayout(it.plan, logistics).blueprint()
         }
 
-    private fun renderPanel(outcome: BlueprintPlanResult) =
-        render(blueprintPanel.create { blueprint = blueprintOf(outcome) })
+    private fun renderPanel(
+        outcome: BlueprintPlanResult,
+        layoutIssues: List<LayoutIssue> = emptyList(),
+    ) =
+        render(
+            blueprintPanel.create {
+                blueprint = blueprintOf(outcome)
+                issues = layoutIssues
+            },
+        )
 
     private fun renderCopyButton(outcome: BlueprintPlanResult) =
         render(
@@ -98,10 +107,14 @@ class BlueprintExportTest : ComponentTest() {
             },
         )
 
-    private fun renderView(vararg entities: LayoutEntity) =
+    private fun renderView(
+        vararg entities: LayoutEntity,
+        layoutIssues: List<LayoutIssue> = emptyList(),
+    ) =
         render(
             blueprintView.create {
                 blueprint = Blueprint("test", entities = entities.toList())
+                issues = layoutIssues
             },
         )
 
@@ -109,11 +122,26 @@ class BlueprintExportTest : ComponentTest() {
     private fun RenderResult.image(name: String): Element? =
         container.querySelector("img[alt=\"$name\"]")
 
+    /** The red layout-issue boxes drawn over the tiles, in render order. */
+    private fun RenderResult.issues(): List<Element> {
+        val nodes = container.querySelectorAll("div[title]")
+        return (0 until nodes.length).mapNotNull { nodes.item(it) }
+    }
+
     private fun computedTransform(element: Element?) =
         js("(function (el) { return getComputedStyle(el).transform; })")(element)
 
     private fun computedLeft(element: Element?) =
         js("(function (el) { return getComputedStyle(el).left; })")(element)
+
+    private fun computedWidth(element: Element?) =
+        js("(function (el) { return getComputedStyle(el).width; })")(element)
+
+    private fun computedBorderColor(element: Element?) =
+        js("(function (el) { return getComputedStyle(el).borderTopColor; })")(element)
+
+    private fun computedBackground(element: Element?) =
+        js("(function (el) { return getComputedStyle(el).backgroundColor; })")(element)
 
     @Test
     fun displayRotationTurnsEachDirectionalIconToItsBlueprintDirection() =
@@ -426,6 +454,77 @@ class BlueprintExportTest : ComponentTest() {
     }
 
     @Test
+    fun anIssueDrawsARedBoxOverItsAreaWithTheMessageOnHover() {
+        val result =
+            renderView(
+                BeltEntity(Area(0, 0, 1, 1), "transport-belt", ironPlate, EAST),
+                layoutIssues =
+                    listOf(
+                        LayoutIssue("belt has no input", Area(0, 0, 1, 1)),
+                        LayoutIssue("no route to (2, 0)", Area(2, 0, 2, 1)),
+                    ),
+            )
+
+        val issues = result.issues()
+        assertAll(
+            { assertEquals(2, issues.size) },
+            { assertEquals("belt has no input", issues[0].getAttribute("title")) },
+            { assertEquals("no route to (2, 0)", issues[1].getAttribute("title")) },
+            { assertEquals("0px", computedLeft(issues[0])) },
+            { assertEquals("48px", computedLeft(issues[1])) },
+            { assertEquals("48px", computedWidth(issues[1])) },
+            { assertEquals("rgb(215, 38, 38)", computedBorderColor(issues[0])) },
+            { assertEquals("rgba(215, 38, 38, 0.08)", computedBackground(issues[0])) },
+        )
+    }
+
+    @Test
+    fun issuesOnTheSameAreaShareOneBox() {
+        val result =
+            renderView(
+                BeltEntity(Area(0, 0, 1, 1), "transport-belt", ironPlate, EAST),
+                layoutIssues =
+                    listOf(
+                        LayoutIssue("first", Area(0, 0, 1, 1)),
+                        LayoutIssue("second", Area(0, 0, 1, 1)),
+                    ),
+            )
+
+        val issues = result.issues()
+        assertAll(
+            { assertEquals(1, issues.size) },
+            { assertEquals("first\nsecond", issues[0].getAttribute("title")) },
+        )
+    }
+
+    @Test
+    fun anIssueOutsideTheEntitiesStillFitsInThePreview() {
+        val result =
+            renderView(
+                BeltEntity(Area(0, 0, 1, 1), "transport-belt", ironPlate, EAST),
+                layoutIssues = listOf(LayoutIssue("missing", Area(2, 0, 1, 1))),
+            )
+
+        val issue = assertNotNull(result.issues().singleOrNull())
+        val svg = assertNotNull(result.container.querySelector("svg"))
+        assertAll(
+            { assertEquals("0 0 72 24", svg.getAttribute("viewBox")) },
+            { assertEquals("48px", computedLeft(issue)) },
+        )
+    }
+
+    @Test
+    fun thePanelMarksTheIssuesItIsGiven() {
+        val result =
+            renderPanel(
+                BlueprintPlanResult.Planned(plan),
+                listOf(LayoutIssue("missing", Area(0, 0, 1, 1))),
+            )
+
+        assertEquals(1, result.issues().size)
+    }
+
+    @Test
     fun thePreviewIsBuiltFromThePlan() {
         val result =
             OptimizationResult(
@@ -452,6 +551,7 @@ class BlueprintExportTest : ComponentTest() {
 
         assertAll(
             { assertEquals(placed, blueprint.entities) },
+            { assertEquals(emptyList(), preview.issues) },
         )
     }
 }

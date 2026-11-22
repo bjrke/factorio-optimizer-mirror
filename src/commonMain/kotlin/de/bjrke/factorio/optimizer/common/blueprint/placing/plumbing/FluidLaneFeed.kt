@@ -3,6 +3,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.IMPORT_FEED
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FIRST_MACHINE_X
@@ -12,7 +14,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlacedMachine
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlannedLane
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.Row
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowFluidLane
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.core.model.Dimension
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
@@ -55,7 +59,7 @@ internal class FluidLaneFeed(
     private val imports: ImportExtension,
     beltEnd: BeltEnd,
     private val logistics: LogisticsCalculator,
-    private val failures: MutableList<String>,
+    private val failures: MutableList<LayoutIssue>,
 ) {
     private val placer = FluidLanePlacer(board, imports, beltEnd)
     private val model = RowFluidLane(logistics)
@@ -109,9 +113,17 @@ internal class FluidLaneFeed(
                 placer.place(spec.planned, spec.side, spec.io, end)
                     ?: run {
                         if (spec.io == Io.OUTPUT) {
+                            val laneRow = spec.planned.lane.laneRow
+                            val area =
+                                Area(
+                                    Coordinate(spec.row.left, laneRow),
+                                    Dimension(spec.row.width, 1),
+                                )
                             failures +=
-                                "${spec.planned.material.name} drain lane on row " +
-                                    "${spec.planned.lane.laneRow} (no room for a source block)"
+                                area.issue(
+                                    "${spec.planned.material.name} drain lane on row $laneRow " +
+                                        "(no room for a source block)",
+                                )
                         }
                         continue
                     }

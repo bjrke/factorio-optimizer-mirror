@@ -1,9 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.route
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.PIPE_UNDERGROUND_RANGE
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 
 /**
  * The weighted A* router shared by belts and pipes. It only asks the [board] what a tile holds and
@@ -12,7 +16,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 internal class LayoutRouter(
     private val board: LayoutBoard,
     /** The layout's failure list; a route that only fits the wide box is recorded here. */
-    private val failures: MutableList<String> = mutableListOf(),
+    private val failures: MutableList<LayoutIssue> = mutableListOf(),
 ) {
 
     /**
@@ -105,7 +109,8 @@ internal class LayoutRouter(
      */
     private fun routeWide(request: RouteRequest): List<Coordinate>? {
         val wide = RouteSearch(board, request, WIDE_ROUTE_MARGIN).find() ?: return null
-        failures += "route ${request.from} -> ${request.to} needed the wide search box"
+        val area = listOf(request.from.area(), request.to.area()).boundingBox() ?: request.to.area()
+        failures += area.issue("route ${request.from} -> ${request.to} needed the wide search box")
         return wide
     }
 }

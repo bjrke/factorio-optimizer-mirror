@@ -18,7 +18,7 @@ internal fun layoutAscii(dump: LayoutDump): String {
         append(asciiLegend(dump.entities))
         if (dump.failures.isNotEmpty()) {
             append("\nfailures (${dump.failures.size})\n")
-            dump.failures.forEach { append("  $it\n") }
+            dump.failures.forEach { append("  ${it.message}\n") }
         }
     }
 }

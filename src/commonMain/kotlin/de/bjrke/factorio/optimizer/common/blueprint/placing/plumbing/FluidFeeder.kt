@@ -2,8 +2,10 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.plumbing
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.FLUID_SOURCE_WIDTH
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.canPlacePipes
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeFluidSource
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.RouteRequest
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.placePath
@@ -17,6 +19,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluid
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LayoutStage
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.PlacedMachine
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.Row
+import de.bjrke.factorio.optimizer.common.blueprint.planning.row.machineArea
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -25,6 +28,8 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 
@@ -44,7 +49,7 @@ internal class FluidFeeder(
     stage: LayoutStage,
     private val beltEnd: BeltEnd,
     private val imports: ImportExtension,
-    private val failures: MutableList<String>,
+    private val failures: MutableList<LayoutIssue>,
 ) {
     private val board = stage.board
     private val plan = stage.plan
@@ -81,8 +86,12 @@ internal class FluidFeeder(
                     val port = fluidEdge(row, machine, material, fed.keys)
                     if (port == null) {
                         failures +=
-                            "${material.name} to ${machine.production.factory.identifier} " +
-                                "(no fluid port)"
+                            machine
+                                .machineArea(row)
+                                .issue(
+                                    "${material.name} to " +
+                                        "${machine.production.factory.identifier} (no fluid port)",
+                                )
                         continue
                     }
                     fed[material] = port
@@ -124,9 +133,14 @@ internal class FluidFeeder(
             val segment =
                 fluidRoute(connection.drainTail, EAST, connection.feedTail, connection.material)
             if (segment == null) {
+                val area =
+                    listOf(connection.drainTail.area(), connection.feedTail.area()).boundingBox()
+                        ?: connection.drainTail.area()
                 failures +=
-                    "${connection.material.name} from its drain lane " +
-                        "(no pipe route to its feed lane)"
+                    area.issue(
+                        "${connection.material.name} from its drain lane " +
+                            "(no pipe route to its feed lane)",
+                    )
                 continue
             }
             placePath(board, connection.material, listOf(connection.drainTail) + segment)
@@ -167,8 +181,10 @@ internal class FluidFeeder(
         val segment = fluidRoute(source, EAST, coordinate, plan.target)
         if (segment == null) {
             failures +=
-                "${plan.target.name} from ${machine.production.factory.identifier} " +
-                    "(no pipe route)"
+                coordinate.issue(
+                    "${plan.target.name} from ${machine.production.factory.identifier} " +
+                        "(no pipe route)",
+                )
             return
         }
         placePath(board, plan.target, listOf(source) + segment)
@@ -216,7 +232,7 @@ internal class FluidFeeder(
                 break
             }
             if (!routed) {
-                failures += "${group.material.name} to $sink (no pipe route)"
+                failures += sink.issue("${group.material.name} to $sink (no pipe route)")
                 pending.remove(sink)
             }
         }

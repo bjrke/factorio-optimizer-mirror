@@ -5,6 +5,7 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.RowLayout
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
@@ -33,8 +34,11 @@ import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.div
 import react.dom.svg.ReactSVG.foreignObject
 import react.dom.svg.ReactSVG.svg
+import web.cssom.Border
+import web.cssom.BoxSizing
 import web.cssom.ClassName
 import web.cssom.Display
+import web.cssom.LineStyle
 import web.cssom.Position
 import web.cssom.pct
 import web.cssom.px
@@ -83,6 +87,7 @@ private fun copyToClipboard(text: String) {
 
 external interface BlueprintViewProps : Props {
     var blueprint: Blueprint
+    var issues: List<LayoutIssue>
 }
 
 /**
@@ -92,11 +97,18 @@ external interface BlueprintViewProps : Props {
  * recipe or material shows that signal centred on top. Hovering an entity (or its signal) shows its
  * [blueprintTitle], which is a native tooltip because the icon covers the tile and the SVG scale
  * would shrink any text drawn inside it.
+ *
+ * A layout [LayoutIssue] draws a translucent red box over the area it blames; issues that share an
+ * area share one box, and its native tooltip lists their messages. The boxes come after the icons,
+ * so they paint above them, and they are part of the bounding box so an issue outside every entity
+ * is still visible instead of being clipped.
  */
 internal val blueprintView =
     FC<BlueprintViewProps>("blueprintView") { props ->
         val entities = props.blueprint.entities
-        val box = entities.map { it.area }.boundingBox() ?: Area(0, 0, 1, 1)
+        val issues = props.issues
+        val boxes = entities.map { it.area } + issues.map { it.area }
+        val box = boxes.boundingBox() ?: Area(0, 0, 1, 1)
 
         val minX = box.x
         val minY = box.y
@@ -179,13 +191,40 @@ internal val blueprintView =
                             }
                         }
                     }
+                    for ((area, areaIssues) in issues.groupBy { it.area }) {
+                        val issueWidth = area.width * TILE
+                        val issueHeight = area.height * TILE
+                        div {
+                            key = Key("issue-${area.x},${area.y}")
+                            title = areaIssues.map { it.message }.distinct().joinToString("\n")
+                            css {
+                                position = Position.absolute
+                                left = ((area.x - minX) * TILE).px
+                                top = ((area.y - minY) * TILE).px
+                                width = issueWidth.px
+                                height = issueHeight.px
+                                boxSizing = BoxSizing.borderBox
+                                border =
+                                    Border(
+                                        2.px,
+                                        LineStyle.solid,
+                                        web.cssom.Color("rgb(215, 38, 38)"),
+                                    )
+                                backgroundColor = web.cssom.Color("rgba(215, 38, 38, 0.08)")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-/** The blueprint a plan produces, or null when the plan cannot be built. */
-internal data class BlueprintPreview(val outcome: BlueprintPlanResult, val blueprint: Blueprint?)
+/** The blueprint a plan produces, its layout issues, and null when the plan cannot be built. */
+internal data class BlueprintPreview(
+    val outcome: BlueprintPlanResult,
+    val blueprint: Blueprint?,
+    val issues: List<LayoutIssue>,
+)
 
 /**
  * Plans and lays out the blueprint for [result] once, so the always-visible panel does not rerun
@@ -199,16 +238,16 @@ internal fun blueprintPreview(
     powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ): BlueprintPreview {
     val outcome = blueprintPlan(result, logistics, normalizeTarget)
-    return BlueprintPreview(
-        outcome,
+    val layout =
         (outcome as? BlueprintPlanResult.Planned)?.let {
-            RowLayout(it.plan, logistics, beltEnd, powerPole).blueprint()
-        },
-    )
+            RowLayout(it.plan, logistics, beltEnd, powerPole)
+        }
+    return BlueprintPreview(outcome, layout?.blueprint(), layout?.issues.orEmpty())
 }
 
 external interface BlueprintPanelProps : Props {
     var blueprint: Blueprint?
+    var issues: List<LayoutIssue>
 }
 
 /**
@@ -223,7 +262,10 @@ internal val blueprintPanel =
                 className = ClassName("blueprint-panel")
                 div {
                     className = ClassName("blueprint-preview")
-                    blueprintView { this.blueprint = blueprint }
+                    blueprintView {
+                        this.blueprint = blueprint
+                        this.issues = props.issues
+                    }
                 }
             }
         }
