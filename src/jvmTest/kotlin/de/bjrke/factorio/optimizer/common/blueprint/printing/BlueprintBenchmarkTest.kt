@@ -22,6 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.assertThrows
 
 /**
  * Sweeps a curated set of materials per surface through the whole pipeline — optimizer, plan,
@@ -38,7 +39,9 @@ import kotlin.test.assertTrue
  * `knownFailures` holds the combinations that do not pass today: a layout that still reports
  * failures, and — on a surface whose chain the planner does not build yet, such as Fulgora's
  * recycler rows — a listed target whose plan is a single row. Keeping them as cases leaves the
- * material covered in every other combination; delete an entry once it passes.
+ * material covered in every other combination; delete an entry once it passes. The passing sweep
+ * ([assertSweep]) runs everything else, and [assertKnownFailures] requires each listed combination
+ * to still fail, so the pair covers every case.
  *
  * The lists were derived from the prototype dump with the surface filter, the `unplannedRecipes`
  * policy and the planner's `buildable` rule.
@@ -105,6 +108,62 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.SPACE,
             materials = spaceMaterials,
+            knownFailures = spaceKnownFailures,
+        )
+
+    @Test
+    fun baseGameBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = false,
+            surface = Surface.NAUVIS,
+            knownFailures = baseGameKnownFailures,
+        )
+
+    @Test
+    fun nauvisBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = true,
+            surface = Surface.NAUVIS,
+            knownFailures = nauvisKnownFailures,
+        )
+
+    @Test
+    fun vulcanusBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = true,
+            surface = Surface.VULCANUS,
+            knownFailures = vulcanusKnownFailures,
+        )
+
+    @Test
+    fun glebaBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = true,
+            surface = Surface.GLEBA,
+            knownFailures = glebaKnownFailures,
+        )
+
+    @Test
+    fun fulgoraBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = true,
+            surface = Surface.FULGORA,
+            knownFailures = fulgoraKnownFailures,
+        )
+
+    @Test
+    fun aquiloBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = true,
+            surface = Surface.AQUILO,
+            knownFailures = aquiloKnownFailures,
+        )
+
+    @Test
+    fun spaceBlueprintFailures() =
+        assertKnownFailures(
+            spaceAge = true,
+            surface = Surface.SPACE,
             knownFailures = spaceKnownFailures,
         )
 }
@@ -399,7 +458,6 @@ private val nauvisKnownFailures =
 
 private val vulcanusKnownFailures =
     listOf(
-            failures("big-mining-drill", 0.5, 1.0),
             failures("speed-module-3"),
             failures("substation", 0.5),
         )
@@ -451,7 +509,8 @@ private val spaceKnownFailures =
 /**
  * Runs every case of one surface, minus its [knownFailures]. The blacklist must stay a subset of
  * the swept cases: an entry for a material the list no longer holds is stale, and a silently
- * ignored blacklist would hide a case that is not covered anywhere.
+ * ignored blacklist would hide a case that is not covered anywhere. The excluded cases are re-run
+ * by [assertKnownFailures].
  */
 private fun assertSweep(
     spaceAge: Boolean,
@@ -468,6 +527,29 @@ private fun assertSweep(
         "blacklist entry outside the sweep",
     )
     assertTable(cases - knownFailures) { case -> assertCase(spaceAge, surface, case) }
+}
+
+/**
+ * Runs [knownFailures] and requires every case to still fail. A case that starts passing has been
+ * fixed, so delete its entry; when the last entry goes, delete this test method too, which is why
+ * the empty set fails instead of passing silently.
+ *
+ * [Throwable] is deliberate for now: one listed case fails with an `IllegalStateException` rather
+ * than an `AssertionError`. Narrow this to `AssertionError` once that case is fixed and removed.
+ * The cost is that an unrelated crash also counts as a known failure.
+ *
+ * Only [assertSweep] checks that the blacklist stays inside the material list; this helper does not
+ * receive the list, so running it alone cannot detect a stale entry.
+ */
+private fun assertKnownFailures(
+    spaceAge: Boolean,
+    surface: Surface,
+    knownFailures: Set<SweepCase>,
+) {
+    assertNotEquals(emptySet(), knownFailures, "no failures to test; delete this test")
+    assertTable(knownFailures) { case ->
+        assertThrows<Throwable> { assertCase(spaceAge, surface, case) }
+    }
 }
 
 private fun assertCase(spaceAge: Boolean, surface: Surface, case: SweepCase) {
