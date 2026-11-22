@@ -301,6 +301,25 @@ class BlueprintLayoutIntegrationTest {
     }
 
     /**
+     * The reported express-splitter layout left its empty band at rows 63-68 in place: the
+     * horizontal seam slipped under the plastic-bar tunnel output to save one belt tile, cut
+     * through the tunnel's span, and moved the entrance but not the exit, so every candidate was
+     * rejected as an unpaired underground. A seam may no longer run along a span, so the band goes
+     * in one six-row corridor.
+     */
+    @Test
+    fun theReportedExpressSplitterUrlCompactsItsEmptyBand() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1.0/express-splitter/CFLSXbmr/1/1/50")
+        val (_, height) = layout.dimension
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertTrue(height <= 91, "layout is still $height rows tall") },
+        )
+    }
+
+    /**
      * The reported logistic-science layout still compacts to a bounded size. Its mix merge sits
      * east of the row, so it is wider than the old west-merge layout.
      */

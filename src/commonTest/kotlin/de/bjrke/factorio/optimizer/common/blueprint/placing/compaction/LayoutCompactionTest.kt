@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.compaction
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
@@ -123,6 +124,43 @@ class LayoutCompactionTest {
             { assertEquals(2, machines.size) },
             { assertEquals(3, machines[1].area.y, "the lower machine slides up to the upper one") },
             { assertEquals(emptyList(), validateLayout(result.entities)) },
+        )
+    }
+
+    /**
+     * A seam that runs along an underground run must not cut through its span: the entrance and the
+     * exit would end up on different sides of the corridor and one would be left unpaired. A seam
+     * crossing the run may still shorten it, so the span stays removable there.
+     */
+    @Test
+    fun aSeamDoesNotCutThroughAParallelUndergroundSpan() {
+        val entities = listOf(underground(0, 0, EAST, Io.INPUT), underground(5, 0, EAST, Io.OUTPUT))
+        val index = LayoutIndex(entities)
+        fun grid(orientation: SeamOrientation) =
+            SeamGrid(
+                orientation,
+                if (orientation == SeamOrientation.VERTICAL) index.minY..index.maxY
+                else index.minX..index.maxX,
+                if (orientation == SeamOrientation.VERTICAL) index.minX..index.maxX
+                else index.minY..index.maxY,
+                index,
+                emptySet(),
+            )
+        val span = Coordinate(3, 0)
+
+        assertAll(
+            {
+                assertNull(
+                    grid(SeamOrientation.HORIZONTAL).runs[span],
+                    "a seam along the run cuts its span",
+                )
+            },
+            {
+                assertNotNull(
+                    grid(SeamOrientation.VERTICAL).runs[span],
+                    "a seam across the run may shorten it",
+                )
+            },
         )
     }
 

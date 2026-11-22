@@ -177,7 +177,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.placing.routing | 8 |
 | blueprint.placing.plumbing | 2 |
 | blueprint.placing.special | 4 |
-| blueprint.placing.compaction | 4 |
+| blueprint.placing.compaction | 5 |
 | blueprint.printing.model | 1 |
 | blueprint.printing.json | 3 |
 | blueprint.printing.inspection | 3 |

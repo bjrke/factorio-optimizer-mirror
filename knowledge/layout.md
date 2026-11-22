@@ -118,7 +118,8 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program; a belt is
   spliceable when both sides of the cut continue it, when it is a corner, or when a same-material
   tunnel output behind it takes over its feed (`beltCuttable`); `CorridorShift` (in
-  `LayoutCompaction.kt`) cuts one corridor and moves the far side.
+  `LayoutCompaction.kt`) cuts one corridor and moves the far side. `UndergroundSpans.kt` walls off
+  a tunnel's span when the seam runs along it, so both ends stay on the same side.
 - `blueprint/placing/special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry. The pole comes from `PowerPole.forSelection`: none in space, the small pole for
   an early-game assembling machine 1 on Nauvis, the medium pole otherwise. A burner machine is
@@ -332,6 +333,17 @@ baselines, so every finding fails.
   `validateLayout` reported `copper-plate runs into electronic-circuit` and compaction stayed off.
   A candidate now rejects any foreign belt pouring into either splitter tile. Evidence:
   `theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters`, `realBlueprintsAreValid`.
+- **A seam must not run along an underground run's span.** `SeamSearch` prices only the one tile
+  the seam passes through per column, not the `width` tiles the corridor removes, so a winding
+  seam that dips past a tunnel output can look cheaper than the straight one. The reported
+  express-splitter layout slipped under the plastic-bar exit at `(65,71)`, cut the span
+  `(59..64,71)`, and moved the entrance at `(58,71)` but not the exit; `validateLayout` reported
+  `unpaired plastic-bar underground`, and the rejected seam's own tiles then blocked the straight
+  row-63 corridor, leaving the six empty rows in place. `parallelUndergroundSpans` now treats a
+  span the seam runs *along* as a wall, so the seam must stay above or below the run and both ends
+  move together. A run across the seam stays cuttable: shortening a tunnel still pairs.
+  Evidence: `aSeamDoesNotCutThroughAParallelUndergroundSpan`,
+  `theReportedExpressSplitterUrlCompactsItsEmptyBand`.
 - **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
   corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
   error anywhere rejects every candidate and the pass returns after its first

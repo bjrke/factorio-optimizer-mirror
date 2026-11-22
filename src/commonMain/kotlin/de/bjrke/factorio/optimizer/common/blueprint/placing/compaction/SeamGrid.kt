@@ -185,11 +185,12 @@ internal class SeamGrid(
     val cost = HashMap<Coordinate, Int>()
 
     init {
+        val blocked = forbidden + parallelUndergroundSpans(index, orientation)
         for (primary in primaryRange) {
             var secondary = secondaryRange.first
             while (secondary <= secondaryRange.last) {
                 val tile = tileAt(orientation, primary, secondary)
-                if (!isRemovable(index, tile, orientation, forbidden)) {
+                if (!isRemovable(index, tile, orientation, blocked)) {
                     secondary++
                     continue
                 }
@@ -200,7 +201,7 @@ internal class SeamGrid(
                             index,
                             tileAt(orientation, primary, secondary + 1),
                             orientation,
-                            forbidden,
+                            blocked,
                         )
                 ) {
                     secondary++
