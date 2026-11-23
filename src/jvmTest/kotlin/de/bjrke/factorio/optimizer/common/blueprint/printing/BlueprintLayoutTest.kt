@@ -189,7 +189,7 @@ class BlueprintLayoutTest {
                             3,
                         ),
                     ),
-                sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironPlate, fluid = false)),
                 label = "iron-gear-wheel",
             )
 
@@ -222,7 +222,7 @@ class BlueprintLayoutTest {
                             3,
                         ),
                     ),
-                sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironPlate, fluid = false)),
                 label = "iron-gear-wheel",
             )
         val layout = Layout(row)
@@ -264,8 +264,8 @@ class BlueprintLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(copperCable, 1.0, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(copperCable, fluid = false),
                     ),
                 label = "electronic-circuit",
             )
@@ -297,9 +297,9 @@ class BlueprintLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(stoneBrick, 1.0, fluid = false),
-                        PlannedSource(ironOre, 1.0, fluid = false),
-                        PlannedSource(water, 1.0, fluid = true),
+                        PlannedSource(stoneBrick, fluid = false),
+                        PlannedSource(ironOre, fluid = false),
+                        PlannedSource(water, fluid = true),
                     ),
                 label = "concrete",
             )
@@ -346,9 +346,9 @@ class BlueprintLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(copperPlate, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(wood, 1.0, fluid = false),
+                        PlannedSource(copperPlate, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(wood, fluid = false),
                     ),
                 label = "electronic-circuit",
             )
@@ -375,9 +375,9 @@ class BlueprintLayoutTest {
                 rows = listOf(row1, row2, row3),
                 sources =
                     listOf(
-                        PlannedSource(copperPlate, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(wood, 1.0, fluid = false),
+                        PlannedSource(copperPlate, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(wood, fluid = false),
                     ),
                 label = "electronic-circuit",
             )
@@ -502,9 +502,9 @@ class BlueprintLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(steelPlate, 1.0, fluid = false),
-                        PlannedSource(gear, 1.0, fluid = false),
-                        PlannedSource(pipe, 1.0, fluid = false),
+                        PlannedSource(steelPlate, fluid = false),
+                        PlannedSource(gear, fluid = false),
+                        PlannedSource(pipe, fluid = false),
                     ),
                 label = "engine-unit",
             )

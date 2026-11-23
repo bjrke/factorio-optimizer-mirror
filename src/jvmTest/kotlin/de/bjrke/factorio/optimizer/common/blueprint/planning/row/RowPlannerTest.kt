@@ -104,8 +104,8 @@ class RowPlannerTest {
                 rows = listOf(circuit, cable, target, belt, gearRow),
                 sources =
                     listOf(
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(copperPlate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(copperPlate, fluid = false),
                     ),
                 label = "splitter",
             )

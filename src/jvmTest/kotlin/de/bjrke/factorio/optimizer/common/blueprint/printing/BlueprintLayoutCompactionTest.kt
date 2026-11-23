@@ -77,7 +77,7 @@ class BlueprintLayoutCompactionTest {
             BlueprintPlan(
                 target = output,
                 rows = listOf(PlannedRow.copies(production, 1)),
-                sources = inputs.map { PlannedSource(it, 1.0, fluid = false) },
+                sources = inputs.map { PlannedSource(it, fluid = false) },
                 label = "six-inputs",
             )
         val layout = Layout(plan)
@@ -142,7 +142,7 @@ class BlueprintLayoutCompactionTest {
                             planned(consumerRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
-                sources = listOf(PlannedSource(ore, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ore, fluid = false)),
                 label = "consumer",
             )
 
@@ -176,7 +176,7 @@ class BlueprintLayoutCompactionTest {
                 BlueprintPlan(
                     target = output,
                     rows = listOf(PlannedRow.copies(production, 1)),
-                    sources = inputs.map { PlannedSource(it, 1.0, fluid = false) },
+                    sources = inputs.map { PlannedSource(it, fluid = false) },
                     label = "seven-inputs",
                 ),
             )

@@ -56,11 +56,11 @@ internal fun beltRowBudget(
     val materials = (inputs.keys + outputs.keys).toSet()
     val pairs = max(0, materials.size - MAX_ROW_BELTS)
     val pairable = inputs.keys - outputs.keys
-    val capacitySafe = pairable.count { material -> inputs.getValue(material) <= pairCapacity }
+    val capacitySafe = pairable.filter { material -> inputs.getValue(material) <= pairCapacity }
     return BeltRowBudget(
         materialCount = materials.size,
         pairsNeeded = pairs,
-        capacitySafePairs = capacitySafe / MAX_MATERIALS_PER_BELT,
+        capacitySafePairs = capacitySafe.size / MAX_MATERIALS_PER_BELT,
         pairablePairs = pairable.size / MAX_MATERIALS_PER_BELT,
         allowOverCapacityPairs = allowOverCapacityPairs,
     )
@@ -72,11 +72,10 @@ internal fun pairsNeeded(materialCount: Int) = max(0, materialCount - MAX_ROW_BE
 /** One belt row: a single material, or a pair with the direction its merge feeds from. */
 internal class BeltGroup(val materials: List<Material>, val direction: Direction?)
 
-/** The rows a plan places, and whether every material fits the four belt rows. */
-internal data class BeltPacking(val groups: List<BeltGroup>) {
-    val fits: Boolean
-        get() = groups.size <= MAX_ROW_BELTS
-}
+/**
+ * Whether [this] group list fits the [MAX_ROW_BELTS] belt rows a row may use beside the machines.
+ */
+internal fun List<BeltGroup>.fits() = size <= MAX_ROW_BELTS
 
 /** One row's solid inputs and outputs with the lane capacity their packing may use. */
 internal data class RowBeltRates(
@@ -109,7 +108,7 @@ internal data class BeltPackRequest(
  * takes both materials. A multi-recipe band may not, so the band search rejects it and the recipes
  * become their own rows. That last-resort pair may combine any two remaining inputs.
  */
-internal fun packRowBelts(request: BeltPackRequest): BeltPacking {
+internal fun packRowBelts(request: BeltPackRequest): List<BeltGroup> {
     val inputs = request.rates.inputs
     val outputs = request.rates.outputs
     val directions = request.directions
@@ -131,7 +130,7 @@ internal fun packRowBelts(request: BeltPackRequest): BeltPacking {
                 .take(needed - pairs.size)
                 .map { pairGroup(it[0], it[1], directions, imports, inputs) }
     }
-    return BeltPacking(groupMaterials(solids, pairs, inputs, outputs, directions))
+    return groupMaterials(solids, pairs, inputs, outputs, directions)
 }
 
 private fun pairAll(

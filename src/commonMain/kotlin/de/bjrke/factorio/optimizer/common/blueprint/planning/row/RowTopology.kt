@@ -53,6 +53,9 @@ internal class RowTopology(
             val size = blueprintMachineFootprint(row.machines.first().factory)
             RowInfo(
                 row = row,
+                // The topology keeps the whole-machine rates: they only rank producers and pick a
+                // side, and scaling them changes the row order enough to separate power networks.
+                // The scaled rates drive the belts, not the graph (`BlueprintPlan.machineRate`).
                 inputs = rowInputs(row.machines, logistics).minus(row.fullyInternalInputs),
                 outputs = rowOutputs(row.machines, logistics).minus(linked),
                 beltMaterials = row.beltMaterials,

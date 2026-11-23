@@ -47,9 +47,9 @@ class BlueprintBandFluidTest {
 
     private val engineSources =
         listOf(
-            PlannedSource(steelPlate, 1.0, fluid = false),
-            PlannedSource(gear, 1.0, fluid = false),
-            PlannedSource(pipe, 1.0, fluid = false),
+            PlannedSource(steelPlate, fluid = false),
+            PlannedSource(gear, fluid = false),
+            PlannedSource(pipe, fluid = false),
         )
 
     @Test
@@ -65,8 +65,8 @@ class BlueprintBandFluidTest {
         val sources =
             engineSources +
                 listOf(
-                    PlannedSource(electronicCircuit, 1.0, fluid = false),
-                    PlannedSource(lubricant, 1.0, fluid = true),
+                    PlannedSource(electronicCircuit, fluid = false),
+                    PlannedSource(lubricant, fluid = true),
                 )
         val plan =
             BlueprintPlan(
@@ -96,11 +96,11 @@ class BlueprintBandFluidTest {
             )
         val sources =
             listOf(
-                PlannedSource(engineUnit, 1.0, fluid = false),
-                PlannedSource(electronicCircuit, 1.0, fluid = false),
-                PlannedSource(battery, 1.0, fluid = false),
-                PlannedSource(steelPlate, 1.0, fluid = false),
-                PlannedSource(lubricant, 1.0, fluid = true),
+                PlannedSource(engineUnit, fluid = false),
+                PlannedSource(electronicCircuit, fluid = false),
+                PlannedSource(battery, fluid = false),
+                PlannedSource(steelPlate, fluid = false),
+                PlannedSource(lubricant, fluid = true),
             )
         val plan =
             BlueprintPlan(
@@ -125,9 +125,9 @@ class BlueprintBandFluidTest {
         val links = listOf(PlannedLink(0, ironPlate, 1.0, producerIsLeft = true))
         val sources =
             listOf(
-                PlannedSource(ironOre, 1.0, fluid = false),
-                PlannedSource(sulfur, 1.0, fluid = false),
-                PlannedSource(water, 1.0, fluid = true),
+                PlannedSource(ironOre, fluid = false),
+                PlannedSource(sulfur, fluid = false),
+                PlannedSource(water, fluid = true),
             )
         val plan =
             BlueprintPlan(

@@ -13,6 +13,15 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /**
+ * The plan-time band search policy: materials that seed the search first because their belt lane is
+ * too small, and recipe sets the finished plan could not pack and must not band.
+ */
+internal data class BandPolicy(
+    val forcedMaterials: Set<Material> = emptySet(),
+    val rejectedGroups: Set<Set<Recipe>> = emptySet(),
+)
+
+/**
  * The rows a plan builds; a plain row repeats one recipe, a band interleaves several.
  *
  * [beltRates] is the rate each solid output has to carry over a belt at the drawn scale: the
@@ -29,12 +38,13 @@ internal data class DirectFeed(
     val rows: List<PlannedRow>,
     val beltRates: Map<Material, Double>,
     val bandOverflow: Map<Material, Double> = emptyMap(),
+    val overCapacityOutputs: Map<Material, Double>,
 )
 
 /** Splits the plan into band rows, the target row and the remaining belted rows. */
-internal fun DirectFeedContext.build(forcedMaterials: Set<Material> = emptySet()): DirectFeed {
+internal fun DirectFeedContext.build(): DirectFeed {
     val candidates = candidateLinks()
-    val bandPlans = maximalGroups(candidates, forcedMaterials)
+    val bandPlans = maximalGroups(candidates)
     val bands = buildBands(bandPlans)
     val grouped = bandPlans.flatMap { it.feeds }.map { it.link }.toSet()
     val built = bands.flatMap { it.machines }.groupingBy { it }.eachCount()
@@ -45,15 +55,15 @@ internal fun DirectFeedContext.build(forcedMaterials: Set<Material> = emptySet()
             .sortedBy { it.recipe.name }
             .mapNotNull { belted(it, demand.perRecipe, onBelt, built) }
     val rows = bands + targetRow(built) + beltedBands(belted)
-    return DirectFeed(
-        rows,
-        demand.perMaterial,
+    val bandOverflow =
         bandOverflow(
             candidates,
-            forcedMaterials,
             rows.flatMapTo(mutableSetOf()) { row -> row.links.map { it.material } },
-        ),
-    )
+        )
+    val beltRates = demand.perMaterial
+    val overCapacityOutputs = overCapacityOutputs(rows, beltRates)
+
+    return DirectFeed(rows, beltRates, bandOverflow, overCapacityOutputs)
 }
 
 /**
@@ -64,21 +74,18 @@ internal fun DirectFeedContext.build(forcedMaterials: Set<Material> = emptySet()
  */
 private fun DirectFeedContext.bandOverflow(
     candidates: List<FeedLink>,
-    forcedMaterials: Set<Material>,
     bandedMaterials: Set<Material>,
-): Map<Material, Double> {
+) = buildMap {
     val budget = maxBandMachines(links = 1)
-    return buildMap {
-        for (material in forcedMaterials) {
-            if (material in bandedMaterials) continue
-            val link = candidates.firstOrNull { it.material == material } ?: continue
-            val needs = groupNeeds(listOf(link)) ?: continue
-            val machines =
-                needs.values.sumOf { need ->
-                    ceil(max(1.0, need) - FEED_EPSILON).toInt()
-                }
-            if (machines > budget) put(material, machines.toDouble() / budget)
-        }
+    for (material in policy.forcedMaterials) {
+        if (material in bandedMaterials) continue
+        val link = candidates.firstOrNull { it.material == material } ?: continue
+        val needs = groupNeeds(listOf(link)) ?: continue
+        val machines =
+            needs.values.sumOf { need ->
+                ceil(max(1.0, need) - FEED_EPSILON).toInt()
+            }
+        if (machines > budget) put(material, machines.toDouble() / budget)
     }
 }
 
@@ -105,6 +112,7 @@ private fun DirectFeedContext.beltedBands(rows: List<PlannedRow>): List<PlannedR
             logistics,
             scale = 1.0,
             consumerScope = scope,
+            policy = BandPolicy(rejectedGroups = policy.rejectedGroups),
         )
     val plans = context.maximalGroups(context.linksBetween(productions.values))
     if (plans.isEmpty()) return rows
@@ -245,20 +253,23 @@ private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>): Lis
  * at the rate the plan was drawn for. Anything that does not fit a band keeps its plan machine
  * count and stays belted.
  *
- * [forcedMaterials] are the materials whose delivered belt rate exceeds one lane: their links seed
+ * [forcedMaterials] are the materials whose delivered belt rate exceeds one lane; their links seed
  * the band search first, so the plan direct-feeds them instead of thinning every row.
+ * [rejectedGroups] are the recipe sets the finished plan could not pack; they stay belted.
  */
 internal fun directFeed(
     targetProduction: FactoryProduction,
     factories: Map<Recipe, FactoryProduction>,
     logistics: LogisticsCalculator,
     scale: Double = 1.0,
-    forcedMaterials: Set<Material> = emptySet(),
+    policy: BandPolicy = BandPolicy(),
 ) =
     DirectFeedContext(
             targetProduction,
             factories,
             logistics,
             scale,
+            null,
+            policy,
         )
-        .build(forcedMaterials)
+        .build()

@@ -60,7 +60,7 @@ class RowPlacerTest {
                             3,
                         ),
                     ),
-                sources = listOf(PlannedSource(ironPlate, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironPlate, fluid = false)),
                 label = "iron-gear-wheel",
             )
 
@@ -95,7 +95,7 @@ class RowPlacerTest {
                                 ),
                         ),
                     ),
-                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironOre, fluid = false)),
                 label = "iron-gear-wheel",
             )
 
@@ -175,8 +175,8 @@ class RowPlacerTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(copperCable, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
+                        PlannedSource(copperCable, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
                     ),
                 label = "electronic-circuit",
             )
@@ -209,8 +209,8 @@ class RowPlacerTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(copperCable, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
+                        PlannedSource(copperCable, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
                     ),
                 label = "electronic-circuit",
             )
@@ -258,9 +258,9 @@ class RowPlacerTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(gear, 1.0, fluid = false),
-                        PlannedSource(electronicCircuit, 1.0, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(gear, fluid = false),
+                        PlannedSource(electronicCircuit, fluid = false),
                     ),
                 label = "productivity-ranking",
             )
@@ -309,9 +309,9 @@ class RowPlacerTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(pipe, 1.0, fluid = false),
-                        PlannedSource(steelPlate, 1.0, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(pipe, fluid = false),
+                        PlannedSource(steelPlate, fluid = false),
                     ),
                 label = "band",
             )

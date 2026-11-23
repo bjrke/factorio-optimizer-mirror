@@ -54,7 +54,6 @@ class BlueprintBenchmarkTest {
             spaceAge = false,
             surface = Surface.NAUVIS,
             materials = baseGameMaterials,
-            knownFailures = baseGameKnownFailures,
         )
 
     @Test
@@ -63,7 +62,6 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.NAUVIS,
             materials = nauvisMaterials,
-            knownFailures = nauvisKnownFailures,
         )
 
     @Test
@@ -72,7 +70,6 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.VULCANUS,
             materials = vulcanusMaterials,
-            knownFailures = vulcanusKnownFailures,
         )
 
     @Test
@@ -81,7 +78,6 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.GLEBA,
             materials = glebaMaterials,
-            knownFailures = glebaKnownFailures,
         )
 
     @Test
@@ -99,7 +95,6 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.AQUILO,
             materials = aquiloMaterials,
-            knownFailures = aquiloKnownFailures,
         )
 
     @Test
@@ -108,39 +103,6 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.SPACE,
             materials = spaceMaterials,
-            knownFailures = spaceKnownFailures,
-        )
-
-    @Test
-    fun baseGameBlueprintFailures() =
-        assertKnownFailures(
-            spaceAge = false,
-            surface = Surface.NAUVIS,
-            knownFailures = baseGameKnownFailures,
-        )
-
-    @Test
-    fun nauvisBlueprintFailures() =
-        assertKnownFailures(
-            spaceAge = true,
-            surface = Surface.NAUVIS,
-            knownFailures = nauvisKnownFailures,
-        )
-
-    @Test
-    fun vulcanusBlueprintFailures() =
-        assertKnownFailures(
-            spaceAge = true,
-            surface = Surface.VULCANUS,
-            knownFailures = vulcanusKnownFailures,
-        )
-
-    @Test
-    fun glebaBlueprintFailures() =
-        assertKnownFailures(
-            spaceAge = true,
-            surface = Surface.GLEBA,
-            knownFailures = glebaKnownFailures,
         )
 
     @Test
@@ -149,22 +111,6 @@ class BlueprintBenchmarkTest {
             spaceAge = true,
             surface = Surface.FULGORA,
             knownFailures = fulgoraKnownFailures,
-        )
-
-    @Test
-    fun aquiloBlueprintFailures() =
-        assertKnownFailures(
-            spaceAge = true,
-            surface = Surface.AQUILO,
-            knownFailures = aquiloKnownFailures,
-        )
-
-    @Test
-    fun spaceBlueprintFailures() =
-        assertKnownFailures(
-            spaceAge = true,
-            surface = Surface.SPACE,
-            knownFailures = spaceKnownFailures,
         )
 }
 
@@ -439,63 +385,23 @@ private val spaceMaterials =
         )
 
 // A listed case that stops building is a regression, not a skip, so the blacklist only holds
-// combinations that fail today; delete an entry once it passes.
-private val baseGameKnownFailures =
-    listOf(
-            failures("requester-chest", 0.5),
-            failures("rocket-silo"),
-        )
-        .flatten()
-        .toSet()
-
-private val nauvisKnownFailures = listOf(failures("assembling-machine-3")).flatten().toSet()
-
-private val vulcanusKnownFailures =
-    listOf(
-            failures("speed-module-3"),
-            failures("substation", 0.5),
-        )
-        .flatten()
-        .toSet()
-
-private val glebaKnownFailures =
-    listOf(
-            failures("assembling-machine-3", 0.5),
-        )
-        .flatten()
-        .toSet()
-
+// combinations that fail today; delete an entry once it passes. Fulgora's chains run through the
+// recycler, which the planner does not build, so these targets plan a single row.
 private val fulgoraKnownFailures =
     listOf(
             failures("advanced-circuit"),
-            failures("battery"),
-            failures("concrete"),
-            failures("low-density-structure"),
-            failures("processing-unit"),
-            failures("stone"),
             failures("assembling-machine-1"),
             failures("automation-science-pack"),
+            failures("battery"),
             failures("beacon"),
+            failures("concrete"),
             failures("electric-furnace"),
             failures("electronic-circuit"),
             failures("heat-pipe"),
+            failures("low-density-structure"),
+            failures("processing-unit"),
             failures("roboport"),
-        )
-        .flatten()
-        .toSet()
-
-private val aquiloKnownFailures =
-    listOf(
-            failures("assembling-machine-3"),
-            failures("bulk-inserter", 0.5),
-        )
-        .flatten()
-        .toSet()
-
-private val spaceKnownFailures =
-    listOf(
-            failures("assembling-machine-3", 0.5),
-            failures("utility-science-pack", 0.5),
+            failures("stone"),
         )
         .flatten()
         .toSet()
@@ -510,7 +416,7 @@ private fun assertSweep(
     spaceAge: Boolean,
     surface: Surface,
     materials: List<String>,
-    knownFailures: Set<SweepCase>,
+    knownFailures: Set<SweepCase> = emptySet(),
 ) {
     val cases = materials.flatMap { material ->
         normalizeTargets.map { SweepCase(material, it) }

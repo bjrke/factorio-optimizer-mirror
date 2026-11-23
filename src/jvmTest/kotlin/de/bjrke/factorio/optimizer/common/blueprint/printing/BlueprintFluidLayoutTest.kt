@@ -74,7 +74,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(fluidPlan)
@@ -110,7 +110,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
         // the pipe-to-ground carries no input/output type, so its direction is the side the
@@ -152,9 +152,9 @@ class BlueprintFluidLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(electronicCircuit, 1.0, fluid = false),
-                        PlannedSource(advancedCircuit, 1.0, fluid = false),
-                        PlannedSource(sulfuricAcid, 1.0, fluid = true),
+                        PlannedSource(electronicCircuit, fluid = false),
+                        PlannedSource(advancedCircuit, fluid = false),
+                        PlannedSource(sulfuricAcid, fluid = true),
                     ),
                 label = "processing-unit",
             )
@@ -190,8 +190,8 @@ class BlueprintFluidLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(coal, 1.0, fluid = false),
-                        PlannedSource(petroleum, 1.0, fluid = true),
+                        PlannedSource(coal, fluid = false),
+                        PlannedSource(petroleum, fluid = true),
                     ),
                 label = "plastic-bar",
             )
@@ -237,7 +237,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
         val cheatLogistics =
@@ -290,7 +290,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
 
@@ -314,7 +314,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(steam, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(steam, fluid = true)),
                 label = "steam-condensation",
             )
 
@@ -340,7 +340,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(steam, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(steam, fluid = true)),
                 label = "steam-condensation",
             )
         val fluids = LogisticsCalculator(testLogistics.copy(fluids = setOf(steam, water)))
@@ -370,9 +370,9 @@ class BlueprintFluidLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(sulfur, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
-                        PlannedSource(water, 1.0, fluid = true),
+                        PlannedSource(sulfur, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
+                        PlannedSource(water, fluid = true),
                     ),
                 label = "sulfuric-acid",
             )
@@ -404,8 +404,8 @@ class BlueprintFluidLayoutTest {
                 rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(petroleum, 1.0, fluid = true),
+                        PlannedSource(water, fluid = true),
+                        PlannedSource(petroleum, fluid = true),
                     ),
                 label = "sulfur",
             )
@@ -438,8 +438,8 @@ class BlueprintFluidLayoutTest {
                 rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(petroleum, 1.0, fluid = true),
+                        PlannedSource(water, fluid = true),
+                        PlannedSource(petroleum, fluid = true),
                     ),
                 label = "sulfur",
             )
@@ -494,7 +494,7 @@ class BlueprintFluidLayoutTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(fluidPlan)
@@ -528,8 +528,8 @@ class BlueprintFluidLayoutTest {
                 rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(petroleum, 1.0, fluid = true),
+                        PlannedSource(water, fluid = true),
+                        PlannedSource(petroleum, fluid = true),
                     ),
                 label = "sulfur",
             )
@@ -560,8 +560,8 @@ class BlueprintFluidLayoutTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(water, 1.0, fluid = true),
-                        PlannedSource(petroleum, 1.0, fluid = true),
+                        PlannedSource(water, fluid = true),
+                        PlannedSource(petroleum, fluid = true),
                     ),
                 label = "sulfur",
             )

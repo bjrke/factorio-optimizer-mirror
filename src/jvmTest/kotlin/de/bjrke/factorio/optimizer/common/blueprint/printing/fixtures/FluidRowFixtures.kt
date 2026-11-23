@@ -22,7 +22,7 @@ fun fluidRowPlan(
     return BlueprintPlan(
         target = product,
         rows = listOf(PlannedRow(List(machines.toInt().coerceAtLeast(1)) { planned })),
-        sources = recipe.ingredients.keys.map { PlannedSource(it, 1.0, fluid = true) },
+        sources = recipe.ingredients.keys.map { PlannedSource(it, fluid = true) },
         label = recipe.name,
     )
 }

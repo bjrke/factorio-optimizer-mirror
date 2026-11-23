@@ -22,7 +22,10 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.adjacent
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 
-/** How many split points are routed before the cheapest one is chosen. */
+/**
+ * How many of the nearest split points are routed before the cheapest one is chosen. The belt is
+ * usually split near the sink, so this bounds the routing cost of the common case.
+ */
 private const val SPLIT_CANDIDATES = 12
 
 /** Extra cost of an underground run when comparing two split points, so surface wins when close. */
@@ -51,9 +54,35 @@ internal class SplitDeliveryRouter(
 
     fun deliver(material: Material, sink: Sink): Boolean {
         val candidates = splitCandidates(material).sortedBy { it.exit.manhattanDist(sink.feed) }
+        // The belt is split near the sink when that works. The nearest points can all be walled off
+        // by the rows between them and the sink while a farther one still reaches it, so a failed
+        // first batch searches the rest instead of reporting the feed lost.
+        val (candidate, segment) =
+            bestSplit(candidates.take(SPLIT_CANDIDATES), material, sink)
+                ?: bestSplit(candidates.drop(SPLIT_CANDIDATES), material, sink)
+                ?: run {
+                    failures += sink.feed.issue("${material.name} to ${sink.feed} (no split)")
+                    return false
+                }
+
+        split(candidate, material)
+        val nodes = listOf(candidate.exit) + segment
+        placePath(board, material, nodes, sink.heading)
+        networks.record(material, nodes, sink)
+        return true
+    }
+
+    /**
+     * The cheapest routable split of [candidates], or null when none of them reaches the [sink].
+     */
+    private fun bestSplit(
+        candidates: List<SplitCandidate>,
+        material: Material,
+        sink: Sink,
+    ): Pair<SplitCandidate, List<Coordinate>>? {
         var best: Pair<SplitCandidate, List<Coordinate>>? = null
         var bestScore = Int.MAX_VALUE
-        for (candidate in candidates.take(SPLIT_CANDIDATES)) {
+        for (candidate in candidates) {
             val splitterTiles = setOf(candidate.belt, candidate.side)
             // the branch starts on the splitter's exit, which the search itself never judges; a
             // foreign belt pouring into it would side-load the branch
@@ -75,18 +104,7 @@ internal class SplitDeliveryRouter(
                 best = candidate to segment
             }
         }
-        val (candidate, segment) =
-            best
-                ?: run {
-                    failures += sink.feed.issue("${material.name} to ${sink.feed} (no split)")
-                    return false
-                }
-
-        split(candidate, material)
-        val nodes = listOf(candidate.exit) + segment
-        placePath(board, material, nodes, sink.heading)
-        networks.record(material, nodes, sink)
-        return true
+        return best
     }
 
     /**

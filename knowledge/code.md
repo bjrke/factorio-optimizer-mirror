@@ -86,7 +86,8 @@ CLI (JVM) from one shared core.
       checks (`LayoutValidation*.kt`). This tree must never mention the
       optimizer.
     - `blueprint/planning` — planning the blueprint. It holds the plan reduction
-      (`blueprintPlan`, `plannedSources`, `BlueprintSelection`) at the stage root
+      (`blueprintPlan`, `plannedSources`, `BlueprintSelection`, `BandFitValidation`)
+      at the stage root
       and clusters the planner by
       concern: `plan` — the shared vocabulary (`BlueprintPlan` and its result,
       the `Planned*` types, the machine footprint and fluid ports, the budget
@@ -96,7 +97,8 @@ CLI (JVM) from one shared core.
       planner (`RowPlanner`, `RowTopology`, `RowPlacer`, `RowBeltPlacement`, `Row`
       and the inserter/interface placers) with the shared `LayoutStage`; `band` — the
       direct-feed band (`DirectFeed`, `DirectFeedModel`, `BandSearch`,
-      `FeedCandidates`, `FeedLink`, `RecipeFilter`). `RecipeFilter` plans smelting;
+      `FeedCandidates`, `FeedLink`, `RecipeFilter`) and its capacity shrink
+      (`OverCapacityOutputs`). `RecipeFilter` plans smelting;
       the optimizer's intermediate limit decides which smelting products are built.
     - `blueprint/placing` — placing the entities and their connections:`route`
       (the weighted A* shared by belts and pipes — `LayoutRouter`,
@@ -169,10 +171,10 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | blueprint.layout | 10 |
 | blueprint.layout.entity | 5 |
 | blueprint.layout.validation | 5 |
-| blueprint.planning | 2 |
+| blueprint.planning | 3 |
 | blueprint.planning.plan | 6 |
 | blueprint.planning.row | 11 |
-| blueprint.planning.band | 6 |
+| blueprint.planning.band | 7 |
 | blueprint.placing.route | 3 |
 | blueprint.placing.routing | 8 |
 | blueprint.placing.plumbing | 2 |
@@ -233,7 +235,7 @@ other.
 | `blueprint.layout` | `blueprint.layout.entity`, `core.model`, `game.prototype` | `optimize`, `blueprint`, the stages above |
 | `blueprint.layout.entity` | `core.model`, `game.prototype` | everything else |
 | `blueprint.layout.validation` | `blueprint.layout`, `blueprint.layout.entity`, `core.model` | `blueprint` and above |
-| `blueprint.planning` | `blueprint.planning.{band,plan}`, `core.model`, `game.production`, `game.prototype`, `model`, `util` | `layout` (it builds a plan, not a grid), the placing/printing stages |
+| `blueprint.planning` | `blueprint.planning.{band,plan,row}`, `core.model`, `game.production`, `game.prototype`, `model`, `util` | `layout` (it builds a plan, not a grid), the placing/printing stages |
 | `blueprint.planning.plan` | `core.model`, `game.prototype`, `model` | `layout`, `blueprint` |
 | `blueprint.planning.row` | `blueprint.layout`, `blueprint.layout.entity`, `blueprint.placing.route`, `blueprint.planning`, `blueprint.planning.plan`, `core.model`, `game.prototype`, `model`, `util` | `routing`, `blueprint` |
 | `blueprint.planning.band` | `blueprint.planning.plan`, `core.model`, `game.prototype`, `model`, `util` | the layout |

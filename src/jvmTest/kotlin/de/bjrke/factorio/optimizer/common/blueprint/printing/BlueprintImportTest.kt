@@ -211,8 +211,8 @@ class BlueprintImportTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(sulfur, 1.0, fluid = false),
-                        PlannedSource(coal, 1.0, fluid = false),
+                        PlannedSource(sulfur, fluid = false),
+                        PlannedSource(coal, fluid = false),
                     ),
                 label = "explosives",
             )
@@ -269,9 +269,9 @@ class BlueprintImportTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(copperCable, 1.0, fluid = false),
-                        PlannedSource(electronicCircuit, 1.0, fluid = false),
-                        PlannedSource(plasticBar, 1.0, fluid = false),
+                        PlannedSource(copperCable, fluid = false),
+                        PlannedSource(electronicCircuit, fluid = false),
+                        PlannedSource(plasticBar, fluid = false),
                     ),
                 label = "advanced-circuit",
             )
@@ -322,8 +322,8 @@ class BlueprintImportTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(copperPlate, 1.0, fluid = false),
-                        PlannedSource(ironPlate, 1.0, fluid = false),
+                        PlannedSource(copperPlate, fluid = false),
+                        PlannedSource(ironPlate, fluid = false),
                     ),
                 label = "electronic-circuit",
             )

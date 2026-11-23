@@ -1,21 +1,21 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
+import de.bjrke.factorio.optimizer.common.blueprint.planning.band.BandPolicy
 import de.bjrke.factorio.optimizer.common.blueprint.planning.band.DirectFeed
 import de.bjrke.factorio.optimizer.common.blueprint.planning.band.directFeed
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.planLabel
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.util.EPSILON
-import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 /** Slack for a delivered rate that should fit one lane but carries floating-point noise. */
-private const val CAPACITY_EPSILON = EPSILON
+internal const val CAPACITY_EPSILON = EPSILON
 
 /**
  * How often the planner may replan while it fits the product belts and the direct-feed bands. Each
@@ -60,116 +60,95 @@ fun blueprintPlan(
     result: OptimizationResult,
     logistics: LogisticsCalculator,
     scale: Double = 1.0,
-): BlueprintPlanResult {
-    if (result.target.name == ALL_SCIENCE_PACKS) {
-        return BlueprintPlanResult.Unavailable(
-            "all-science-packs needs every science pack and is too large for one blueprint; " +
-                "choose a specific material",
-        )
-    }
-    if (Category.IMPORT in result.recipe.categories) {
-        return BlueprintPlanResult.Unavailable(
-            "no recipe produces ${result.target.name} on this surface; choose a material a " +
-                "recipe makes there",
-        )
-    }
-
-    val targetFactory =
-        result.factories[result.recipe]
-            ?: return BlueprintPlanResult.Unavailable(
-                "no buildable factory for ${result.target.name}",
+) =
+    when (val targetName = result.target.name) {
+        ALL_SCIENCE_PACKS ->
+            BlueprintPlanResult.Unavailable(
+                "all-science-packs needs every science pack and is too large for one " +
+                    "blueprint; choose a specific material",
             )
+        else if Category.IMPORT in result.recipe.categories ->
+            BlueprintPlanResult.Unavailable(
+                "no recipe produces $targetName on this surface; choose a material a recipe makes there",
+            )
+        else if result.factories[result.recipe] == null ->
+            BlueprintPlanResult.Unavailable("no buildable factory for $targetName")
+        else -> plannedPlan(result, logistics, scale)
+    }
 
+/**
+ * Splits, packs and shrinks the plan until it fits its product belts and every band fits its four
+ * solid belt rows, then reports the settled plan. A band that the finished feed sides cannot pack
+ * is rebuilt as its own rows.
+ */
+private fun plannedPlan(
+    result: OptimizationResult,
+    logistics: LogisticsCalculator,
+    scale: Double,
+): BlueprintPlanResult.Planned {
     var effective = scale
     var forced = emptySet<Material>()
+    val rejected = mutableSetOf<Set<Recipe>>()
+    val targetProduction = result.factories.getValue(result.recipe)
 
-    // split the recipes into rows and direct-feed bands: a recipe feeding another one in a small
-    // whole-machine cycle is built interleaved with it, one production per consumer machine
-    var feed = directFeed(targetFactory, result.factories, logistics, effective, forced)
-
-    fun planned() =
-        BlueprintPlanResult.Planned(
-            BlueprintPlan(
-                target = result.target,
-                rows = feed.rows,
-                sources = plannedSources(feed.rows, logistics),
-                scale = effective,
-                label = planLabel(result.target, (effective / scale).coerceAtMost(1.0)),
-            ),
+    fun directFeed() =
+        directFeed(
+            targetProduction,
+            result.factories,
+            logistics,
+            effective,
+            BandPolicy(forced, rejected),
         )
 
-    repeat(MAX_CAPACITY_STEPS) {
+    var feed = directFeed()
+    var steps = 0
+    while (steps++ < MAX_CAPACITY_STEPS) {
+        // Settles the band search for one fixed [effective] scale and [forced] set. A band whose
+        // finished inputs land on opposite feed sides is rejected here and built as its own rows
+        // instead, because the search only knows lane counts.
+        //
+        // Each pass adds at least one recipe set to the rejected groups, and only recipe sets the
+        // search can produce are ever added, so the loop is bounded even though it is not capped
+        // like the caller.
+        while (true) {
+            if (!rejected.addAll(failingBandGroups(feed.rows, result.target, effective, logistics)))
+                break
+            feed = directFeed()
+        }
         // A forced band that is too long for the machine budget must shrink first: its material
         // would otherwise fall back onto a belt, and that belt's lane rate would shrink the plan
         // from a different baseline than the same plan's direct-fed neighbor.
-        if (feed.bandOverflow.isNotEmpty()) {
-            effective = shrinkTo(effective, feed.bandOverflow)
-            feed = directFeed(targetFactory, result.factories, logistics, effective, forced)
-            return@repeat
-        }
-        val over = feed.overCapacityOutputs(logistics)
-        if (over.isEmpty()) return planned()
-
-        // direct feed first, but only a material with one consumer: a shared product cannot be
-        // internalized without stranding its other consumers, so it has to shrink instead
-        val newForced =
-            over.keys.filterTo(mutableSetOf()) { material ->
-                material !in forced && feed.consumers(material) == 1
+        when {
+            feed.bandOverflow.isNotEmpty() -> {
+                effective = shrinkTo(effective, feed.bandOverflow)
+                feed = directFeed()
             }
-        if (newForced.isNotEmpty()) {
-            forced = forced + newForced
-        } else {
-            effective = shrinkTo(effective, over)
-        }
-        feed = directFeed(targetFactory, result.factories, logistics, effective, forced)
-    }
-    return planned()
-}
-
-/**
- * The solid outputs whose delivered rate exceeds their producer's one-lane capacity at the drawn
- * scale, mapped to the share of a lane they need. A direct-output machine stacks its own product,
- * so its lane capacity follows the requested belt stack even when the selected inserter cannot
- * stack; any other product is stacked only by a stacking inserter.
- */
-private fun DirectFeed.overCapacityOutputs(logistics: LogisticsCalculator) = buildMap {
-    val onBelt = rows.flatMapTo(mutableSetOf()) { row -> row.beltMaterials }
-    for ((material, demand) in beltRates) {
-        if (material !in onBelt) continue
-        val capacity = laneCapacity(material, logistics)
-        if (
-            demand > capacity + CAPACITY_EPSILON &&
-                builtRate(material) > capacity + CAPACITY_EPSILON
-        ) {
-            put(material, demand / capacity)
+            feed.overCapacityOutputs.isNotEmpty() -> {
+                // direct feed first, but only a material with one consumer: a shared product cannot
+                // be internalized without stranding its other consumers, so it has to shrink
+                // instead
+                val newForced = feed.newForcedMaterials(feed.overCapacityOutputs, forced)
+                if (newForced.isNotEmpty()) forced = forced + newForced
+                else effective = shrinkTo(effective, feed.overCapacityOutputs)
+                feed = directFeed()
+            }
+            else -> break
         }
     }
+    return BlueprintPlanResult.Planned(
+        BlueprintPlan(
+            target = result.target,
+            rows = feed.rows,
+            sources = plannedSources(feed.rows, logistics),
+            scale = effective,
+            label = planLabel(result.target, (effective / scale).coerceAtMost(1.0)),
+        ),
+    )
 }
 
-/** The one-lane rate of [material]'s product belt, following its producer's stacking. */
-private fun DirectFeed.laneCapacity(
-    material: Material,
-    logistics: LogisticsCalculator,
-): Double {
-    val producer = rows.firstNotNullOfOrNull { row -> row.producerOf(material) }
-    val stacks =
-        if (producer != null && producer.factory.outputsDirectly) {
-            producer.factory.stacksOnBelt
-        } else {
-            logistics.rates.stacksOnBelt
-        }
-    return logistics.beltThroughput(logistics.beltStackFor(stacks)) / logistics.lanes
-}
-
-/**
- * The rate the built machines can put on a belt for [material] before the belt throttles them. A
- * row that cannot even make the demanded rate is underbuilt, not over capacity, so it does not
- * shrink the plan; once it can make the demand, the demand decides.
- */
-private fun DirectFeed.builtRate(material: Material): Double = rows.sumOf { row ->
-    val production = row.producerOf(material) ?: return@sumOf 0.0
-    row.machines.count { it == production } * production.outputPerMachine(material)
-}
+/** The not-yet-forced over-capacity materials that only one consumer takes. */
+private fun DirectFeed.newForcedMaterials(over: Map<Material, Double>, forced: Set<Material>) =
+    over.keys.filterTo(mutableSetOf()) { it !in forced && consumers(it) == 1 }
 
 /** How many distinct productions consume [material] in the plan. */
 private fun DirectFeed.consumers(material: Material) =
@@ -191,15 +170,3 @@ private fun shrinkTo(
     val limit = scale / over.values.max()
     return if (limit < scale) limit else scale * (1.0 - CAPACITY_EPSILON)
 }
-
-/**
- * The blueprint label: the target plus, when the plan had to shrink to fit its product belts, how
- * much of the requested rate it covers and how many copies reach the full rate.
- */
-internal fun planLabel(target: Material, share: Double): String =
-    if (share >= 1.0) target.name
-    else {
-        val percent = (share * 100).roundToInt()
-        val copies = ceil(1.0 / share).toInt()
-        "${target.name} ($percent%, place ${copies}x for full rate)"
-    }

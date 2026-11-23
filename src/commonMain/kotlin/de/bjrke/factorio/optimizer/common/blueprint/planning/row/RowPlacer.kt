@@ -8,16 +8,13 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeBelt
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltGroup
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BeltPackRequest
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.RowBeltRates
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineDirection
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.fits
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.packRowBelts
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowBeltPacking
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Dimension
@@ -117,27 +114,14 @@ internal class RowPlacer(
         machines: List<PlacedMachine>,
     ): RowLanes {
         val plannedRow = unit.row
-        val linked = plannedRow.links.mapTo(mutableSetOf()) { it.material }
-        val outputs = rowOutputs(machines.map { it.production }, logistics).minus(linked)
-        // A link only internalizes the consumers it actually reaches. A material another machine
-        // of the same row still takes from a belt keeps its input lane.
-        val inputs =
-            rowInputs(machines.map { it.production }, logistics)
-                .minus(plannedRow.fullyInternalInputs)
-        val directions =
-            (inputs.keys - outputs.keys).associateWith { planner.feedDirection(it) ?: EAST }
-        val imports = inputs.keys - plan.beltMaterials
-        val laneCapacity = logistics.oneLaneCapacity()
-        val packing =
-            packRowBelts(
-                BeltPackRequest(
-                    rates = RowBeltRates(inputs, outputs, laneCapacity),
-                    directions = directions,
-                    imports = imports,
-                    allowOverCapacityPairs = plannedRow.productions.size == 1,
-                ),
+        val (inputs, outputs, groups) =
+            rowBeltPacking(
+                plannedRow,
+                plan.beltMaterials,
+                logistics,
+                plan::machineRate,
+                planner::feedDirection,
             )
-        val groups = packing.groups
 
         val rates = RowRates(inputs, outputs, logistics.oneLaneCapacity())
         val placements = assignRowBelts(planner, unit, groups, rates)
@@ -148,7 +132,7 @@ internal class RowPlacer(
         val rowRight =
             machines.lastOrNull()?.left?.plus(size.width - 1) ?: (FIRST_MACHINE_X + size.width - 1)
 
-        if (!packing.fits) {
+        if (!groups.fits()) {
             // the box covers the machines and the belt rows above them, which is where the row
             // runs out of room
             val area =

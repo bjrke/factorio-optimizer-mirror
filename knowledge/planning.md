@@ -19,8 +19,9 @@ take its product, so a production may have several consumers. `FeedLink` is the 
 consumer, material); `FeedNode.traverse()` walks the ingredients once with a visited set, so a
 shared production is not expanded twice. `DirectFeedContext` owns the target, the included
 productions, the scale, the logistics, the per-material producer index (with `stone` always
-excluded), the lazy `nodeOf` lookup and the `consumerScope` (the main plan's productions, so the
-belted pass sees a shared product's consumers). `FeedLink.kt` holds the edge, its `candidateScore`
+excluded), the lazy `nodeOf` lookup, the `consumerScope` (the main plan's productions, so the
+belted pass sees a shared product's consumers) and the `BandPolicy` (the forced materials and the
+rejected group sets). `FeedLink.kt` holds the edge, its `candidateScore`
 and the two orders: `linkComparator` ranks links for the seed/growth walk, while the canonical
 `linkNameComparator` / `linkKey` is the order the arrangement cache keys a link set by.
 `FeedCandidates.kt` grows each group maximally from the best remaining seed, retries links after
@@ -250,6 +251,18 @@ nutrients per second at its dump energy usage.
   that producer's lane the requested stack. Do not apply the raw `beltStack` to a belt an inserter
   loads, or the plan and the listing disagree (`bothSidesOnlyStackWithAStackingInserter`,
   `aNonStackingInserterCannotUseTheBeltStackForItsProductLane`).
+- **A row's belts carry the plan's share of each production, not every copy's full rate.**
+  A band repeats a production to balance its links, and the plan may be shrunk below the
+  requested rate. `BlueprintPlan.machineRate` spreads `amount * scale` over every placed copy;
+  `rowInputs`/`rowOutputs` multiply each rate by it. Sizing for each copy at full rate made the
+  Nauvis `assembling-machine-3` band need five solid belt rows and drop its product, although
+  the plan's speed and steel rates are far below a lane. The scaled rates feed the final band
+  check; `failingBandGroups` re-packs the finished rows with their real feed directions and a
+  rejected band is rebuilt as its own rows. Do not scale `RowTopology`'s rates: that reorders
+  rows and can separate the pole networks (see `layout.md`). Evidence:
+  `theReportedAssemblingMachine3BandMergesSpeedAndSteel`,
+  `aRepeatedBandMachineRunsAtThePlanShareOfItsRate`,
+  `aBandWithOppositeProducedFeedsIsRejected`.
 - **A product belt carries one lane, and its capacity is judged by demand.** A row's
   `productLoad` fills only the lane away from its inserters, so the product belt can
   deliver one lane's capacity (the selected inserter's `oneLaneCapacity()`, or the

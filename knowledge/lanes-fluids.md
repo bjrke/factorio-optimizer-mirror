@@ -190,12 +190,15 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   `aRunLeavesAHalfBeltLane`.
 - **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed,
   prefers the ones whose rate fits a lane, and never pairs a fluid or an output; `bandBeltFits(plan)`
-  must read the arranged machine rates, not `bandBeltMaterials(...).size`. A row that still needs
+  must read the arranged machine rates, not a raw material count. A row that still needs
   more disjoint pairs than its inputs can form reports a failure; silently dropping a belt leaves a
-  machine unfed. Evidence: `aSixInputRowMixesThreeInputPairs`,
-  `producedInputsPairOnBothFeedSides`, `anOverCapacityInputPairsBeforeTheRowLosesABelt`,
-  `aRowThatCannotFitReportsTheMissingMaterials`, `wideLayoutIsStable`. See
-  `packRowBelts` (`BeltRows.kt`).
+  machine unfed. The band search only counts lanes, so `failingBandGroups` re-packs the finished
+  rows with `rowBeltPacking` and rejects a band whose produced feeds land on opposite sides; that
+  band becomes its own rows. Evidence:
+  `aSixInputRowMixesThreeInputPairs`, `producedInputsPairOnBothFeedSides`,
+  `anOverCapacityInputPairsBeforeTheRowLosesABelt`, `aBandWithOppositeProducedFeedsIsRejected`,
+  `aRowThatCannotFitReportsTheMissingMaterials`, `wideLayoutIsStable`. See `packRowBelts`
+  (`BeltRows.kt`) and `failingBandGroups` (`BandFitValidation.kt`).
 - **A machine's port table is written in the placed orientation, in recipe-assignment order.**
   The sanitized dump has no `pipe_connections`/`fluid_boxes`; `prototypeFluidPorts` is curated
   from the Wube prototypes and already lists the tiles after `blueprintMachineDirection`'s turn,

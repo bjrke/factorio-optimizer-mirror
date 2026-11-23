@@ -116,8 +116,7 @@ the recipe rather than from the machine.
 **Guardrail.** Never derive the imports from `DirectFeedContext.included`: it keeps productions the
 planner drops, so the reported imports would disagree with the layout. Keep one definition —
 `plannedSources` for the plan, `sourceMaterials` for `DeliveryPreparation`. Each row holds one entry
-per whole machine, so the source rate is already at the drawn scale and must not be multiplied by
-`BlueprintPlan.scale` again.
+per whole machine; the import rate is not reported because the laid-out row belts already carry it.
 
 **See.** `blueprint/planning/{BlueprintSelection,plan/BlueprintPlan}.kt`,
 `blueprint/placing/routing/DeliveryPreparation.kt`.

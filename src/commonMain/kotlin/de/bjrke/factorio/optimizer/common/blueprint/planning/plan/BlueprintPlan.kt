@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.plan
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /** Upper bound on the machines of one recipe row, so a huge rate cannot explode the blueprint. */
 internal const val MAX_COPIES = 9
@@ -36,6 +37,26 @@ internal fun plannedMachines(production: FactoryProduction, scale: Double = 1.0)
     ceil(production.amount * scale - MACHINE_COUNT_EPSILON).toInt().coerceIn(1, MAX_COPIES)
 
 /**
+ * The share of [production]'s full per-machine rate that [copies] placed machines run at when the
+ * plan is drawn at [scale]. Clamped to one: a plan that rounded its machine count up cannot run a
+ * machine above its full rate.
+ */
+internal fun machineRate(production: FactoryProduction, copies: Int, scale: Double): Double =
+    (production.amount * scale / copies).coerceIn(0.0, 1.0)
+
+/**
+ * The blueprint label: the target plus, when the plan had to shrink to fit its product belts, how
+ * much of the requested rate it covers and how many copies reach the full rate.
+ */
+internal fun planLabel(target: Material, share: Double): String =
+    if (share >= 1.0) target.name
+    else {
+        val percent = (share * 100).roundToInt()
+        val copies = ceil(1.0 / share).toInt()
+        "${target.name} ($percent%, place ${copies}x for full rate)"
+    }
+
+/**
  * The reduced production plan a blueprint is laid out from: the [rows] to build, the external
  * [sources] they draw from, and the [scale] the whole plan is drawn at. A [scale] the planner had
  * to reduce to fit the product belts is reported by [label] as the covered share and the copies
@@ -62,6 +83,21 @@ data class BlueprintPlan(
      */
     val sourceMaterials: Set<Material>
         get() = sources.map { it.material }.toSet()
+
+    private val placedMachines by lazy {
+        rows.flatMap { it.machines }.groupingBy { it }.eachCount()
+    }
+
+    /**
+     * The share of [production]'s full per-machine rate its placed copies run at. The plan's
+     * [scale] spreads the optimizer's machine need over every copy the rows place, so a band that
+     * repeats a production does not size its belts for each copy at full rate. Clamped to one: a
+     * plan that rounded its machine count up cannot run a machine above its full rate.
+     */
+    fun machineRate(production: FactoryProduction): Double {
+        val copies = placedMachines[production] ?: return 1.0
+        return machineRate(production, copies, scale)
+    }
 
     /**
      * The first row that puts [material] on a belt, or null when the plan imports it or consumes it
@@ -172,4 +208,4 @@ data class PlannedLink(
 )
 
 /** An external input: one belt/pipe lane of [material] the plan consumes but does not produce. */
-data class PlannedSource(val material: Material, val rate: Double, val fluid: Boolean)
+data class PlannedSource(val material: Material, val fluid: Boolean)

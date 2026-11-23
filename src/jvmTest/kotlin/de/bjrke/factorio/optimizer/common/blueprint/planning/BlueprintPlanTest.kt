@@ -34,8 +34,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.rocketSiloRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
-import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
@@ -86,7 +84,6 @@ class BlueprintPlanTest {
                 amount = 2.0,
             )
         val planned = plan(gear, ironGearWheelRecipe, listOf(gearProduction))
-        val plate = planned.sources.single { it.material == ironPlate }
 
         assertAll(
             {
@@ -99,13 +96,7 @@ class BlueprintPlanTest {
                         },
                 )
             },
-            {
-                assertEquals(
-                    2.0 * gearProduction.inputPerMachine(ironPlate),
-                    plate.rate,
-                    TOLERANCE,
-                )
-            },
+            { assertContains(planned.sources.map { it.material }, ironPlate) },
         )
     }
 
@@ -272,34 +263,6 @@ class BlueprintPlanTest {
     }
 
     @Test
-    fun aMaterialMadeAndTakenByOneRecipeIsDirectInserted() {
-        val belt = transportBeltRecipe
-        val craft = ironGearWheelRecipe
-
-        val planned =
-            plan(
-                transportBelt,
-                belt,
-                listOf(
-                    production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 1),
-                    production(belt, transportBelt, Factory.ASSEMBLING_MACHINE_3, level = 2),
-                ),
-            )
-
-        val band = planned.rows.single { it.links.isNotEmpty() }
-        assertAll(
-            {
-                assertEquals(
-                    setOf(belt, craft),
-                    band.machines.mapTo(mutableSetOf()) { it.recipe },
-                )
-            },
-            { assertEquals(setOf(gear), band.links.mapTo(mutableSetOf()) { it.material }) },
-            { assertEquals(setOf(transportBelt), planned.beltMaterials) },
-        )
-    }
-
-    @Test
     fun aMaterialOnlyLinkedInsideABandIsASourceForAnotherRow() {
         val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3)
         val circuit =
@@ -342,12 +305,11 @@ class BlueprintPlanTest {
             )
 
         // the cable link reaches only the circuit machine, so the advanced machine still needs an
-        // import at its own rate; the linked circuit machine's cable must not be added
+        // import of its own; the linked circuit machine's cable must not be added
         val sources = plannedSources(listOf(band), logistics)
-        val cableSource = sources.single { it.material == copperCable }
 
         assertAll(
-            { assertEquals(advanced.inputPerMachine(copperCable), cableSource.rate, TOLERANCE) },
+            { assertContains(sources.map { it.material }, copperCable) },
             { assertContainsNot(sources.map { it.material }, electronicCircuit) },
         )
     }
@@ -403,14 +365,7 @@ class BlueprintPlanTest {
             { assertEquals(15.0, planned.scale, TOLERANCE) },
             { assertEquals(3, planned.rows.single().machines.size) },
             { assertEquals("copper-cable (75%, place 2x for full rate)", planned.label) },
-            {
-                // the sources follow the drawn three machines, not a second multiplication by 15
-                assertEquals(
-                    3 * cable.inputPerMachine(copperPlate),
-                    planned.sources.single { it.material == copperPlate }.rate,
-                    TOLERANCE,
-                )
-            },
+            { assertContains(planned.sources.map { it.material }, copperPlate) },
         )
     }
 

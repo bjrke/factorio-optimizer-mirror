@@ -52,9 +52,9 @@ class BeltRowsTest {
         val packing = packing(rates)
 
         assertAll(
-            { assertTrue(packing.fits) },
-            { assertEquals(3, packing.groups.size) },
-            { assertEquals(2, packing.groups.count { it.materials.size == 2 }) },
+            { assertTrue(packing.fits()) },
+            { assertEquals(3, packing.size) },
+            { assertEquals(2, packing.count { it.materials.size == 2 }) },
         )
     }
 
@@ -72,8 +72,8 @@ class BeltRowsTest {
             )
 
         assertAll(
-            { assertEquals(1, safe.groups.count { it.materials.size == 2 }) },
-            { assertEquals(0, tooFast.groups.count { it.materials.size == 2 }) },
+            { assertEquals(1, safe.count { it.materials.size == 2 }) },
+            { assertEquals(0, tooFast.count { it.materials.size == 2 }) },
         )
     }
 
@@ -89,7 +89,7 @@ class BeltRowsTest {
                 directions = directions,
                 imports = setOf(coal),
             )
-        val mixed = packing.groups.single { it.materials.size == 2 }
+        val mixed = packing.single { it.materials.size == 2 }
 
         assertAll(
             { assertEquals(EAST, mixed.direction) },
@@ -108,7 +108,7 @@ class BeltRowsTest {
                 directions = mapOf(east to EAST, west to WEST),
             )
 
-        assertEquals(0, packing.groups.count { it.materials.size == 2 })
+        assertEquals(0, packing.count { it.materials.size == 2 })
     }
 
     /**
@@ -171,10 +171,10 @@ class BeltRowsTest {
         val packing = packing(rates, pairCapacity = 10.0, allowOverCapacityPairs = true)
 
         assertAll(
-            { assertTrue(packing.fits) },
-            { assertEquals(4, packing.groups.size) },
-            { assertEquals(1, packing.groups.count { it.materials.toSet() == safe.toSet() }) },
-            { assertEquals(0, packing.groups.count { it.materials.toSet() == fast.toSet() }) },
+            { assertTrue(packing.fits()) },
+            { assertEquals(4, packing.size) },
+            { assertEquals(1, packing.count { it.materials.toSet() == safe.toSet() }) },
+            { assertEquals(0, packing.count { it.materials.toSet() == fast.toSet() }) },
         )
     }
 
@@ -188,13 +188,13 @@ class BeltRowsTest {
         val packing = packing(rates, pairCapacity = 10.0, allowOverCapacityPairs = true)
 
         assertAll(
-            { assertTrue(packing.fits) },
-            { assertEquals(4, packing.groups.size) },
-            { assertEquals(1, packing.groups.count { it.materials.toSet() == safe.toSet() }) },
+            { assertTrue(packing.fits()) },
+            { assertEquals(4, packing.size) },
+            { assertEquals(1, packing.count { it.materials.toSet() == safe.toSet() }) },
             {
                 assertEquals(
                     2,
-                    packing.groups.count { group ->
+                    packing.count { group ->
                         group.materials.size == 2 && group.materials.all { it in fast }
                     },
                 )
@@ -210,9 +210,9 @@ class BeltRowsTest {
         val singleRecipe = packing(rates, pairCapacity = 10.0, allowOverCapacityPairs = true)
 
         assertAll(
-            { assertFalse(band.fits) },
-            { assertTrue(singleRecipe.fits) },
-            { assertEquals(4, singleRecipe.groups.size) },
+            { assertFalse(band.fits()) },
+            { assertTrue(singleRecipe.fits()) },
+            { assertEquals(4, singleRecipe.size) },
         )
     }
 

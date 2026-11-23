@@ -336,6 +336,15 @@ baselines, so every finding fails.
   `validateLayout` reported `copper-plate runs into electronic-circuit` and compaction stayed off.
   A candidate now rejects any foreign belt pouring into either splitter tile. Evidence:
   `theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters`, `realBlueprintsAreValid`.
+- **The nearest split points can all be walled off, so the split must be searched further.** `deliver`
+  routes only the `SPLIT_CANDIDATES` (12) nearest candidates, because a belt is normally split beside
+  its sink. A row that takes a produced material from the *other* side of the trunk puts its lane
+  between the trunk and the sink: the Vulcanus rocket-silo's rate-scaled lanes pair its inputs into
+  mixed belts, the rows between the pipe trunk and the silo walled off every one of the nearest
+  twelve split points, and the feed was reported `pipe to … (no split)`. The failed layout then
+  skipped compaction and drew 275 rows instead of 128. `deliver` retries with the remaining
+  candidates when the first batch cannot route any split. Evidence:
+  `theVulcanusRocketSiloSplitsThePipeFurtherDownItsBelt`. See `SplitDeliveryRouter`.
 - **A seam must not run along an underground run's span.** `SeamSearch` prices only the one tile
   the seam passes through per column, not the `width` tiles the corridor removes, so a winding
   seam that dips past a tunnel output can look cheaper than the straight one. The reported
@@ -419,3 +428,10 @@ baselines, so every finding fails.
   area or delete the tile it names. Evidence:
   `aRowThatCannotFitReportsTheMissingMaterials` checks that the row issue still contains its
   machine and that the import markers are still at the untrimmed column.
+- **Scaled belt rates drive the strips, not the row topology.** `RowPlacer`/`rowBeltPacking`
+  size a row with `BlueprintPlan.machineRate`, but `RowTopology` must keep the whole-machine
+  `rowInputs`/`rowOutputs`: scaling them changed the producer order and side, moved the
+  logistic-science transport-belt row between branches and left an 11-tile gap that split the
+  poles into two networks. Use the scaled rates for capacity and mixing, and the unscaled ones
+  for ranking producers. Evidence: `realBlueprintsPowerEveryMachine`
+  (`logistic-science-pack`).

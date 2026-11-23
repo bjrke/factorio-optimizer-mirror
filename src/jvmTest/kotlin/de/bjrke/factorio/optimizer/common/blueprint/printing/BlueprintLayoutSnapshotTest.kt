@@ -62,7 +62,7 @@ class BlueprintLayoutSnapshotTest {
                             1,
                         ),
                     ),
-                sources = listOf(PlannedSource(petroleum, 1.0, fluid = true)),
+                sources = listOf(PlannedSource(petroleum, fluid = true)),
                 label = "solid-fuel-from-petroleum-gas",
             )
         val layout = Layout(plan)
@@ -98,7 +98,7 @@ class BlueprintLayoutSnapshotTest {
                                 ),
                         ),
                     ),
-                sources = listOf(PlannedSource(ironOre, 1.0, fluid = false)),
+                sources = listOf(PlannedSource(ironOre, fluid = false)),
                 label = "iron-gear-wheel",
             )
         val layout = Layout(plan)
@@ -147,7 +147,7 @@ private fun sixInputPlan(): BlueprintPlan {
     return BlueprintPlan(
         target = output,
         rows = listOf(PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), 1)),
-        sources = inputs.map { PlannedSource(it, 1.0, fluid = false) },
+        sources = inputs.map { PlannedSource(it, fluid = false) },
         label = "six-inputs",
     )
 }

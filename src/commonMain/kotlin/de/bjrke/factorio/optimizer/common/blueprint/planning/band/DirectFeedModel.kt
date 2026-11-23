@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_MATERIALS_PER_BELT
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.MAX_ROW_BELTS
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltRowBudget
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.machineRate
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacity
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.pairsNeeded
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
@@ -81,12 +82,6 @@ internal class FeedGroup(
     val needs: Map<FactoryProduction, Double>,
 )
 
-/** The solid materials a band row belts and does not insert machine to machine. */
-internal fun DirectFeedContext.bandBeltMaterials(links: List<FeedLink>): Set<Material> {
-    val materials = bandBeltInputs(links) + bandBeltOutputs(links)
-    return materials
-}
-
 /** The solid inputs a band draws from outside its links. */
 internal fun DirectFeedContext.bandBeltInputs(links: List<FeedLink>): Set<Material> {
     val internal = links.mapTo(mutableSetOf()) { it.material }
@@ -135,8 +130,15 @@ internal fun DirectFeedContext.bandBeltMayFit(links: List<FeedLink>) =
  */
 internal fun DirectFeedContext.bandBeltFits(plan: BandPlan): Boolean {
     val internal = plan.feeds.mapTo(mutableSetOf()) { it.link.material }
-    val inputs = rowInputs(plan.machines, logistics).minus(internal)
-    val outputs = rowOutputs(plan.machines, logistics).minus(internal)
+    // A band repeats a production to balance its links. Spread the plan's machine need over those
+    // copies, exactly as the finished plan's `machineRate` does, so the band is not sized for every
+    // copy at full rate. Other rows may add copies later, which only lowers the final rate.
+    val copies = plan.machines.groupingBy { it }.eachCount()
+    val bandRate = { production: FactoryProduction ->
+        machineRate(production, copies[production] ?: 1, scale)
+    }
+    val inputs = rowInputs(plan.machines, logistics, bandRate) - internal
+    val outputs = rowOutputs(plan.machines, logistics, bandRate) - internal
     val singleRecipe = plan.machines.map { it.recipe }.distinct().size == 1
     return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity(), singleRecipe).fits
 }
@@ -238,6 +240,8 @@ internal data class DirectFeedContext(
      * context's own [included] set.
      */
     val consumerScope: Set<FactoryProduction>? = null,
+    /** The band search policy the finished plan applies on top of the arrangement. */
+    val policy: BandPolicy = BandPolicy(),
 ) {
     private val nodeCache = mutableMapOf<FactoryProduction, FeedNode>()
 

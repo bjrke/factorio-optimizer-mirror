@@ -47,9 +47,9 @@ class BlueprintFluidLaneLinkTest {
                     ),
                 sources =
                     listOf(
-                        PlannedSource(coal, 1.0, fluid = false),
-                        PlannedSource(heavyOil, 1.0, fluid = true),
-                        PlannedSource(steam, 1.0, fluid = true),
+                        PlannedSource(coal, fluid = false),
+                        PlannedSource(heavyOil, fluid = true),
+                        PlannedSource(steam, fluid = true),
                     ),
                 label = "coal-liquefaction",
             )
