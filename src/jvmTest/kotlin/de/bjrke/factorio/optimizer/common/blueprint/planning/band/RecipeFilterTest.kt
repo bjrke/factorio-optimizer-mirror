@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.moltenIronFromLavaRecipe
@@ -30,13 +31,13 @@ class RecipeFilterTest : BaseGameCtxTest() {
         assertAll(
             {
                 assertTrue(
-                    buildable(logistics, nuclearFuelRecipe),
+                    buildable(logistics, nuclearFuelRecipe.indexedForTest()),
                     "centrifuging is planned",
                 )
             },
             {
                 assertTrue(
-                    buildable(logistics, plasticBarRecipe),
+                    buildable(logistics, plasticBarRecipe.indexedForTest()),
                     "simple chemistry is planned",
                 )
             },
@@ -45,14 +46,14 @@ class RecipeFilterTest : BaseGameCtxTest() {
     @Test
     fun aFluidByproductDoesNotNeedASecondOutputBelt() =
         assertTrue(
-            buildable(logistics, moltenIronFromLavaRecipe),
+            buildable(logistics, moltenIronFromLavaRecipe.indexedForTest()),
             "fluid results leave through their own lanes",
         )
 
     @Test
     fun twoSolidResultsStillNeedAMixedOutputBelt() =
         assertFalse(
-            buildable(logistics, uraniumProcessingRecipe),
+            buildable(logistics, uraniumProcessingRecipe.indexedForTest()),
             "a second solid would need a second output belt",
         )
 
@@ -61,13 +62,13 @@ class RecipeFilterTest : BaseGameCtxTest() {
         assertAll(
             {
                 assertFalse(
-                    buildable(logistics, importPseudoRecipe()),
+                    buildable(logistics, importPseudoRecipe().indexedForTest()),
                     "imports enter the blueprint from outside",
                 )
             },
             {
                 assertFalse(
-                    buildable(logistics, ironOreMiningRecipe),
+                    buildable(logistics, ironOreMiningRecipe.indexedForTest()),
                     "extraction recipes are imported too",
                 )
             },

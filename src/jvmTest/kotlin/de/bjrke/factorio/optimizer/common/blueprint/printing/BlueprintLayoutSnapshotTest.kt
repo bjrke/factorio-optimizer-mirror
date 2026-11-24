@@ -7,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
@@ -17,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
@@ -58,7 +58,7 @@ class BlueprintLayoutSnapshotTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -83,8 +83,8 @@ class BlueprintLayoutSnapshotTest : BaseGameCtxTest() {
 
     @Test
     fun bandLayoutIsStable() {
-        val gearRow = planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3)
+        val gearRow = production(ironGearWheelRecipe)
+        val plateRow = production(ironPlateRecipe)
         val plan =
             BlueprintPlan(
                 target = gear,
@@ -145,7 +145,7 @@ class BlueprintLayoutSnapshotTest : BaseGameCtxTest() {
             )
         return BlueprintPlan(
             target = output,
-            rows = listOf(PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), 1)),
+            rows = listOf(PlannedRow.copies(production(recipe), 1)),
             sources = inputs.map { PlannedSource(it, fluid = false) },
             label = "six-inputs",
         )

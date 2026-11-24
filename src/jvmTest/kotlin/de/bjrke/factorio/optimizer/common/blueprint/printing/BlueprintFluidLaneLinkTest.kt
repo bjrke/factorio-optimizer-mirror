@@ -14,7 +14,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.NORTH_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
@@ -22,6 +21,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.coalLiquefactionRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.steam
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -41,7 +41,7 @@ class BlueprintFluidLaneLinkTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(coalLiquefactionRecipe, heavyOil, Factory.OIL_REFINERY),
+                            production(coalLiquefactionRecipe, Factory.OIL_REFINERY, heavyOil),
                             1,
                         ),
                     ),

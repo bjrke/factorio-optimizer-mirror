@@ -14,6 +14,21 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-24 — A recipe gets a result-local index after the optimizer
+
+**Decision.** `RecipeIndexer` mints one dense `RecipeIndex` per recipe of an
+`OptimizationResult`; `IndexedRecipe` mirrors `Recipe` and equals/hashes only by that
+index, so every post-optimizer recipe map/set hashes one int. `FactoryProduction`
+keeps structural equality, so its recipe hash is the index and a belted copy with a
+different amount remains a distinct production.
+
+**Guardrail.** A recipe index is result-local: never compare or mix recipes from two
+optimizer results, and mint slots only through `RecipeIndexer`. `IndexedRecipe` must
+mirror every `Recipe` field; the index is identity, not a new recipe dimension.
+
+**See.** `model/IndexedRecipe.kt`, `model/OptimizationResult.kt`,
+`optimize/Optimizer.kt`, `blueprint/planning/band/DirectFeed.kt`.
+
 ## 2026-11-23 — A material belongs to one registry
 
 **Decision.** `Material` is interned per `MaterialRegistry`; its `index` is the registry slot and
@@ -158,13 +173,16 @@ the table assigns is never taken by the routed fallback, and a port never costs 
 **Decision.** A plan occurrence is a plain-data `PlannedRow`: `machines` left to right plus the
 band `links`. Band membership and order are the `rows`/`machines` lists themselves, each machine a
 bare `FactoryProduction`, and `BlueprintPlan` keeps no derived recipe list. Producer lookup scans
-`plan.rows` and compares by value.
+`plan.rows` and compares by value. A recipe's post-optimizer identity is its result-local
+`RecipeIndex`; a production's identity stays its full value, so two belted occurrences of one recipe
+with different amounts remain distinct.
 
-**Guardrail.** Never key a `Map` or `Set` by a production or a row, and never add an allocation
-index: structurally identical rows are separate occurrences, must compare equal and stay
-interchangeable, or two copies of one recipe collapse into one.
+**Guardrail.** Never add a row allocation index: structurally identical rows are separate
+occurrences, must compare equal and stay interchangeable. The recipe index is not a row index; do
+not use it to collapse two `PlannedRow`s into one.
 
-**See.** `blueprint/planning/plan/BlueprintPlan.kt`, `blueprint/planning/row/{Row,RowTopology}.kt`.
+**See.** `blueprint/planning/plan/BlueprintPlan.kt`, `blueprint/planning/row/{Row,RowTopology}.kt`,
+`model/IndexedRecipe.kt`.
 
 ## 2026-10-18 — Belt-fed productions are sized by plan demand, one belt source per material
 

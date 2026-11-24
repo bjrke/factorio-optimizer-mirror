@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -13,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
@@ -31,7 +31,7 @@ class RowFluidLaneTest : BaseGameCtxTest() {
      */
     @Test
     fun aMixedBeltTurnRowKeepsTheLaneHeadClear() {
-        val production = planned(batteryRecipe, Factory.CHEMICAL_PLANT)
+        val production = production(batteryRecipe, Factory.CHEMICAL_PLANT)
         val merge =
             BeltMerge(
                 column = FIRST_MACHINE_X - EAST_MERGE_OFFSET,

@@ -37,10 +37,10 @@ import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.ComponentTest
 import de.bjrke.test.RenderResult
 import de.bjrke.test.assertAll
@@ -67,20 +67,7 @@ class BlueprintExportTest : ComponentTest(), GameCtxTestMixin by BaseGameCtxTest
     private val plan =
         BlueprintPlan(
             target = gear,
-            rows =
-                listOf(
-                    PlannedRow(
-                        listOf(
-                            FactoryProduction(
-                                gear,
-                                ironGearWheelRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                                1.0,
-                                0,
-                            ),
-                        ),
-                    ),
-                ),
+            rows = listOf(PlannedRow(listOf(production(ironGearWheelRecipe)))),
             sources = listOf(PlannedSource(ironPlate, fluid = false)),
             label = "iron-gear-wheel",
         )
@@ -526,23 +513,7 @@ class BlueprintExportTest : ComponentTest(), GameCtxTestMixin by BaseGameCtxTest
 
     @Test
     fun thePreviewIsBuiltFromThePlan() {
-        val result =
-            OptimizationResult(
-                target = gear,
-                recipe = ironGearWheelRecipe,
-                factories =
-                    mapOf(
-                        ironGearWheelRecipe to
-                            FactoryProduction(
-                                gear,
-                                ironGearWheelRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                                1.0,
-                                0,
-                            ),
-                    ),
-            )
-
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
         val preview = blueprintPreview(result, logistics, 1.0, BeltEnd.CONSTANT_COMBINATOR)
         val blueprint = assertNotNull(preview.blueprint)
         val planned = assertNotNull(preview.outcome as? BlueprintPlanResult.Planned)

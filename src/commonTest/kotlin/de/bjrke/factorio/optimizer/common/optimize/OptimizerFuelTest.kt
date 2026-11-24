@@ -13,8 +13,8 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.MachineStats
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -45,7 +45,7 @@ class OptimizerFuelTest : BaseGameCtxTest() {
         factories: Set<Factory> = setOf(Factory.STONE_FURNACE, Factory.NO_FACTORY),
         machineStats: Map<String, MachineStats> = emptyMap(),
         fuelValues: Map<Material, Double> = fuels,
-    ): Recipe =
+    ): IndexedRecipe =
         Optimizer(
                 ParsedRecipe(
                     materials = listOf(ironPlate),

@@ -1,40 +1,16 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
-import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.fixtures.factories
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.test.TOLERANCE
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-
-private fun production(
-    recipe: Recipe,
-    material: Material,
-    amount: Double = 1.0,
-) =
-    FactoryProduction(
-        material,
-        recipe,
-        Factory.ASSEMBLING_MACHINE_3,
-        amount,
-        0,
-        1.0,
-        0.0,
-    )
-
-private fun factories(vararg productions: FactoryProduction) = productions.associateBy {
-    it.recipe
-}
 
 /** The arrangement search's pruning and its cached ratio penalty. */
 class BandSearchTest : BaseGameCtxTest() {
@@ -43,8 +19,8 @@ class BandSearchTest : BaseGameCtxTest() {
 
     @Test
     fun anArrangedPlanCarriesItsRatioPenalty() {
-        val circuit = production(electronicCircuitRecipe, electronicCircuit, amount = 4.0)
-        val cable = production(copperCableRecipe, copperCable, amount = 6.0)
+        val circuit = production(electronicCircuitRecipe, amount = 4.0)
+        val cable = production(copperCableRecipe, amount = 6.0)
         val context = DirectFeedContext(circuit, factories(circuit, cable), logistics)
         val plan = assertNotNull(context.arrange(context.candidateLinks()))
 
@@ -54,8 +30,8 @@ class BandSearchTest : BaseGameCtxTest() {
 
     @Test
     fun arrangePicksTheShortestWindow() {
-        val circuit = production(electronicCircuitRecipe, electronicCircuit, amount = 4.0)
-        val cable = production(copperCableRecipe, copperCable, amount = 6.0)
+        val circuit = production(electronicCircuitRecipe, amount = 4.0)
+        val cable = production(copperCableRecipe, amount = 6.0)
         val context = DirectFeedContext(circuit, factories(circuit, cable), logistics)
         val plan = assertNotNull(context.arrange(context.candidateLinks()))
 
@@ -67,9 +43,9 @@ class BandSearchTest : BaseGameCtxTest() {
     fun arrangeRealizesEveryLinkAroundTheCycle() {
         // three recipes in a triangle: one link is only adjacent across the cycle's wrap boundary,
         // so the search must close the cycle before it accepts the arrangement
-        val advanced = production(advancedCircuitRecipe, advancedCircuit)
-        val circuit = production(electronicCircuitRecipe, electronicCircuit, amount = 4.0)
-        val cable = production(copperCableRecipe, copperCable, amount = 6.0)
+        val advanced = production(advancedCircuitRecipe)
+        val circuit = production(electronicCircuitRecipe, amount = 4.0)
+        val cable = production(copperCableRecipe, amount = 6.0)
         val context = DirectFeedContext(advanced, factories(advanced, circuit, cable), logistics)
         val links = context.candidateLinks()
         val plan = assertNotNull(context.arrange(links))

@@ -2,10 +2,10 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.entry
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,26 +35,15 @@ class BeltRowLimitTest : BaseGameCtxTest() {
                 time = 1.0,
                 categories = setOf(Category.CRAFTING),
             )
-        val gadgetProduction =
-            FactoryProduction(
-                gadget,
-                gadgetRecipe,
-                Factory.ASSEMBLING_MACHINE_3,
-                1.0,
-                0,
-            )
-        val widgetProduction =
-            FactoryProduction(
-                widget,
-                widgetRecipe,
-                Factory.ASSEMBLING_MACHINE_3,
-                1.0,
-                0,
-            )
+        val gadgetProduction = production(gadgetRecipe)
+        val widgetProduction = production(widgetRecipe)
         val feed =
             directFeed(
                 gadgetProduction,
-                mapOf(gadgetRecipe to gadgetProduction, widgetRecipe to widgetProduction),
+                mapOf(
+                    gadgetProduction.entry(),
+                    widgetProduction.entry(),
+                ),
                 calculator(),
             )
 
@@ -65,7 +54,7 @@ class BeltRowLimitTest : BaseGameCtxTest() {
             {
                 assertEquals(
                     setOf(gadgetRecipe, widgetRecipe),
-                    feed.rows.flatMap { it.productions }.map { it.recipe }.toSet(),
+                    feed.rows.flatMap { it.productions }.map { it.recipe.recipe }.toSet(),
                 )
             },
         )

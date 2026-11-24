@@ -5,7 +5,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
@@ -18,11 +17,11 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.splitter
 import de.bjrke.factorio.optimizer.common.fixtures.splitterRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -50,8 +49,7 @@ private fun testRecipe(
         categories = setOf(Category.CRAFTING),
     )
 
-private fun testRow(recipe: Recipe, material: Material) =
-    PlannedRow.copies(planned(recipe, material, Factory.ASSEMBLING_MACHINE_3), 1)
+private fun testRow(recipe: Recipe) = PlannedRow.copies(production(recipe), 1)
 
 class RowPlannerTest : BaseGameCtxTest() {
 
@@ -92,13 +90,11 @@ class RowPlannerTest : BaseGameCtxTest() {
 
     @Test
     fun aTargetSitsBetweenItsProducerBranches() {
-        val circuit =
-            PlannedRow.copies(planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val cable = PlannedRow.copies(planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val target = PlannedRow.copies(planned(splitterRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val belt = PlannedRow.copies(planned(transportBeltRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val gearRow =
-            PlannedRow.copies(planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val circuit = PlannedRow.copies(production(electronicCircuitRecipe), 1)
+        val cable = PlannedRow.copies(production(copperCableRecipe), 1)
+        val target = PlannedRow.copies(production(splitterRecipe), 1)
+        val belt = PlannedRow.copies(production(transportBeltRecipe), 1)
+        val gearRow = PlannedRow.copies(production(ironGearWheelRecipe), 1)
         val plan =
             BlueprintPlan(
                 target = splitter,
@@ -150,13 +146,12 @@ class RowPlannerTest : BaseGameCtxTest() {
             )
         val target =
             PlannedRow.copies(
-                planned(targetRecipe, advancedCircuit, Factory.ASSEMBLING_MACHINE_3),
+                production(targetRecipe),
                 1,
             )
-        val circuit =
-            PlannedRow.copies(planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val cable = PlannedRow.copies(planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val plastic = PlannedRow.copies(planned(plasticBarRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val circuit = PlannedRow.copies(production(electronicCircuitRecipe), 1)
+        val cable = PlannedRow.copies(production(copperCableRecipe), 1)
+        val plastic = PlannedRow.copies(production(plasticBarRecipe), 1)
         val plan =
             BlueprintPlan(
                 target = advancedCircuit,
@@ -200,15 +195,13 @@ class RowPlannerTest : BaseGameCtxTest() {
                     mapOf(input1 to 1.0, input2 to 1.0, input3 to 1.0),
                     targetMaterial,
                 ),
-                targetMaterial,
             )
-        val producer1 =
-            testRow(testRecipe("producer-1", mapOf(sub1 to 1.0, sub2 to 1.0), input1), input1)
-        val producer2 = testRow(testRecipe("producer-2", mapOf(sub3 to 1.0), input2), input2)
-        val producer3 = testRow(testRecipe("producer-3", emptyMap(), input3), input3)
-        val sub1Row = testRow(testRecipe("sub-1", emptyMap(), sub1), sub1)
-        val sub2Row = testRow(testRecipe("sub-2", emptyMap(), sub2), sub2)
-        val sub3Row = testRow(testRecipe("sub-3", emptyMap(), sub3), sub3)
+        val producer1 = testRow(testRecipe("producer-1", mapOf(sub1 to 1.0, sub2 to 1.0), input1))
+        val producer2 = testRow(testRecipe("producer-2", mapOf(sub3 to 1.0), input2))
+        val producer3 = testRow(testRecipe("producer-3", emptyMap(), input3))
+        val sub1Row = testRow(testRecipe("sub-1", emptyMap(), sub1))
+        val sub2Row = testRow(testRecipe("sub-2", emptyMap(), sub2))
+        val sub3Row = testRow(testRecipe("sub-3", emptyMap(), sub3))
         val plan =
             BlueprintPlan(
                 target = targetMaterial,
@@ -247,9 +240,8 @@ class RowPlannerTest : BaseGameCtxTest() {
 
     @Test
     fun structurallyEqualRowsStayDistinctOccurrences() {
-        val duplicate =
-            PlannedRow.copies(planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val target = PlannedRow.copies(planned(splitterRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val duplicate = PlannedRow.copies(production(ironGearWheelRecipe), 1)
+        val target = PlannedRow.copies(production(splitterRecipe), 1)
         val plan =
             BlueprintPlan(
                 target = splitter,

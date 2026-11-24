@@ -10,7 +10,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -29,6 +28,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.fixtures.pipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.sulfur
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
@@ -59,8 +59,8 @@ class BlueprintBandFluidTest : BaseGameCtxTest() {
         // also takes lubricant; the fluid lane has to reach the consumer's own top port
         val machines =
             listOf(
-                planned(engineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                planned(electricEngineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
+                production(engineUnitRecipe),
+                production(electricEngineUnitRecipe),
             )
         val links = listOf(PlannedLink(0, engineUnit, 0.1, producerIsLeft = true))
         val sources =
@@ -86,9 +86,9 @@ class BlueprintBandFluidTest : BaseGameCtxTest() {
         // port still has to reach the lane
         val machines =
             listOf(
-                planned(flyingRobotFrameRecipe, Factory.ASSEMBLING_MACHINE_3),
-                planned(electricEngineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                planned(flyingRobotFrameRecipe, Factory.ASSEMBLING_MACHINE_3),
+                production(flyingRobotFrameRecipe),
+                production(electricEngineUnitRecipe),
+                production(flyingRobotFrameRecipe),
             )
         val links =
             listOf(
@@ -120,8 +120,8 @@ class BlueprintBandFluidTest : BaseGameCtxTest() {
         // a fluid that leaves through the pipe network instead of a belt
         val machines =
             listOf(
-                planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3),
-                planned(sulfuricAcidRecipe, Factory.CHEMICAL_PLANT),
+                production(ironPlateRecipe),
+                production(sulfuricAcidRecipe, Factory.CHEMICAL_PLANT),
             )
         val links = listOf(PlannedLink(0, ironPlate, 1.0, producerIsLeft = true))
         val sources =

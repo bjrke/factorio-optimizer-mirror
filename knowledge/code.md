@@ -73,9 +73,14 @@ CLI (JVM) from one shared core.
     plan neither calculates nor lays out its production. The target is never
     excluded.
   - `model` — the shared result models: `OptimizationResult`, `FactoryProduction`
-    (per-machine production) and `factoryProductionComparator`. They sit above
-    the rulebook (`game/prototype`) and are consumed by both the optimizer and
-    the blueprint planner, so `optimize` and the `planning` packages need not
+    (per-machine production), `IndexedRecipe`/`RecipeIndex` (the post-optimizer
+    recipe identity), the `RecipeIndexer` that mints its dense slots, and
+    `factoryProductionComparator`. `IndexedRecipe` mirrors a `Recipe`'s fields and
+    equals/hashes only by its result-local index, so the planning code's recipe
+    maps and sets hash one int. `FactoryProduction` keeps structural equality, so
+    a belted copy with a different amount stays a distinct production. They sit
+    above the rulebook (`game/prototype`) and are consumed by both the optimizer
+    and the blueprint planner, so `optimize` and the `planning` packages need not
     couple to each other — both reach the *models* instead. A leaf of its own:
     it imports only `core/model` and `game/prototype`.
   - `blueprint` — everything that picks, places and prints a blueprint, split
@@ -173,7 +178,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | game.prototype | 8 |
 | game.production | 10 |
 | game.selection | 4 |
-| model | 1 |
+| model | 2 |
 | optimize | 3 |
 | blueprint | 1 |
 | blueprint.layout | 10 |

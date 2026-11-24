@@ -15,7 +15,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.BlueprintWire
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -26,6 +25,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -207,7 +207,7 @@ class BlueprintBeltEndTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),

@@ -14,12 +14,11 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -72,7 +71,7 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
                 time = 10.0,
                 categories = setOf(Category.CRAFTING),
             )
-        val production = planned(recipe, Factory.ASSEMBLING_MACHINE_3)
+        val production = production(recipe)
         val plan =
             BlueprintPlan(
                 target = output,
@@ -123,7 +122,7 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
                     time = 10.0,
                     categories = setOf(Category.CRAFTING),
                 )
-            PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), index + 1)
+            PlannedRow.copies(production(recipe), index + 1)
         }
         val consumerRecipe =
             Recipe(
@@ -136,12 +135,7 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = product,
-                rows =
-                    producerRows +
-                        PlannedRow.copies(
-                            planned(consumerRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
+                rows = producerRows + PlannedRow.copies(production(consumerRecipe), 1),
                 sources = listOf(PlannedSource(ore, fluid = false)),
                 label = "consumer",
             )
@@ -170,7 +164,7 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
                 time = 10.0,
                 categories = setOf(Category.CRAFTING),
             )
-        val production = planned(recipe, Factory.ASSEMBLING_MACHINE_3)
+        val production = production(recipe)
         val layout =
             Layout(
                 BlueprintPlan(

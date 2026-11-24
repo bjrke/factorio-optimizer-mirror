@@ -7,6 +7,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.castingSteelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.factoryOf
+import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.iceMeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -34,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class OptimizerTest : BaseGameCtxTest() {
 
@@ -534,6 +536,45 @@ class OptimizerTest : BaseGameCtxTest() {
             // the cycle member may be imported, but the target itself must be produced
             { assertEquals("back", result.recipe.name) },
             { assertContains(result.factories.values.map { it.recipe.name }, "back") },
+        )
+    }
+
+    @Test
+    fun factoriesCarryOneDenseIndexPerRecipe() {
+        val result =
+            Optimizer(
+                ParsedRecipe(
+                    emptyList(),
+                    listOf(ironPlateSmeltingRecipe, ironGearWheelRecipe),
+                    gameCtx = gameCtx,
+                ),
+                setOf(
+                    Factory.STONE_FURNACE,
+                    Factory.ASSEMBLING_MACHINE_1,
+                    Factory.NO_FACTORY,
+                ),
+            )[gear]
+
+        assertAll(
+            { assertTrue(result.factories.isNotEmpty()) },
+            {
+                assertTrue(
+                    result.factories.all { (recipe, production) -> production.recipe === recipe },
+                )
+            },
+            {
+                assertEquals(
+                    result.factories.size,
+                    result.factories.values.map { it.recipe.index }.distinct().size,
+                )
+            },
+            {
+                assertEquals(
+                    (0 until result.factories.size).toSet(),
+                    result.factories.values.map { it.recipe.index.value }.toSet(),
+                )
+            },
+            { assertNotNull(result.factories[result.recipe]) },
         )
     }
 }

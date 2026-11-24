@@ -13,15 +13,16 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -29,29 +30,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-private fun production(
-    recipe: Recipe,
-    material: Material,
-    factory: Factory,
-    amount: Double = 1.0,
-    level: Int = 0,
-) = FactoryProduction(material, recipe, factory, amount, level)
-
-private fun result(target: Material, targetRecipe: Recipe, productions: List<FactoryProduction>) =
-    OptimizationResult(
-        target = target,
-        recipe = targetRecipe,
-        factories = productions.associateBy { it.recipe },
-        logistics = testLogistics,
-    )
-
 /** The band plans: the per-copy machine rate and the finished-row belt check. */
 class BandPlanTest : BaseGameCtxTest() {
 
     private val logistics = calculator()
-
-    private fun plan(target: Material, targetRecipe: Recipe, productions: List<FactoryProduction>) =
-        testBlueprintPlan(result(target, targetRecipe, productions), logistics)
 
     /**
      * A band repeats a production to balance its links. Its belts must carry the plan's share of
@@ -60,8 +42,7 @@ class BandPlanTest : BaseGameCtxTest() {
      */
     @Test
     fun aRepeatedBandMachineRunsAtThePlanShareOfItsRate() {
-        val gearProduction =
-            production(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3, amount = 0.4)
+        val gearProduction = production(ironGearWheelRecipe, amount = 0.4)
         val repeated =
             BlueprintPlan(
                 target = gear,
@@ -87,25 +68,17 @@ class BandPlanTest : BaseGameCtxTest() {
 
     @Test
     fun aMaterialMadeAndTakenByOneRecipeIsDirectInserted() {
-        val belt = transportBeltRecipe
-        val craft = ironGearWheelRecipe
-
-        val planned =
-            plan(
-                transportBelt,
-                belt,
-                listOf(
-                    production(craft, gear, Factory.ASSEMBLING_MACHINE_3, level = 1),
-                    production(belt, transportBelt, Factory.ASSEMBLING_MACHINE_3, level = 2),
-                ),
-            )
+        val belts = production(transportBeltRecipe, level = 2)
+        val gears = production(ironGearWheelRecipe, level = 1)
+        val result = optimizationResult(belts, gears, logistics = testLogistics)
+        val planned = testBlueprintPlan(result, logistics)
 
         val band = planned.rows.single { it.links.isNotEmpty() }
         assertAll(
             {
                 assertEquals(
-                    setOf(belt, craft),
-                    band.machines.mapTo(mutableSetOf()) { it.recipe },
+                    setOf(transportBeltRecipe, ironGearWheelRecipe),
+                    band.machines.mapTo(mutableSetOf()) { it.recipe.recipe },
                 )
             },
             { assertEquals(setOf(gear), band.links.mapTo(mutableSetOf()) { it.material }) },
@@ -145,7 +118,12 @@ class BandPlanTest : BaseGameCtxTest() {
             { assertTrue(budget.fits, "the direction-blind budget accepts $inputs + $outputs") },
             {
                 assertEquals(
-                    setOf(setOf(band.linkProducer.recipe, band.consumerRecipe)),
+                    setOf(
+                        setOf(
+                            band.linkProducer.recipe,
+                            band.consumerRecipe.indexedForTest(),
+                        ),
+                    ),
                     failingBandGroups(band.rows, band.target, 1.0, logistics),
                 )
             },
@@ -186,8 +164,6 @@ private fun BandPlanTest.oppositeFeedBand(): OppositeFeedBand {
                 time = 1.0,
                 categories = setOf(Category.CRAFTING),
             ),
-            material,
-            Factory.ASSEMBLING_MACHINE_3,
         )
 
     val linkProducer = producer(linked)
@@ -200,13 +176,10 @@ private fun BandPlanTest.oppositeFeedBand(): OppositeFeedBand {
             time = 1.0,
             categories = setOf(Category.CRAFTING),
         )
+
     val row =
         PlannedRow(
-            machines =
-                listOf(
-                    linkProducer,
-                    production(consumerRecipe, target, Factory.ASSEMBLING_MACHINE_3),
-                ),
+            machines = listOf(linkProducer, production(consumerRecipe)),
             links = listOf(PlannedLink(0, linked, 1.0, producerIsLeft = true)),
         )
     val rows =

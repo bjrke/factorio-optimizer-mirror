@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.carbon
 import de.bjrke.factorio.optimizer.common.fixtures.coal
+import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.test.assertAll
@@ -124,7 +125,7 @@ class RecipePolicyTest : BaseGameCtxTest() {
             val banned = unplannedRecipes(surface)
             parsed.recipes
                 .filter { recipe -> recipe.result.keys.any { it in recipe.ingredients } }
-                .filter { recipe -> buildable(logistics, recipe) }
+                .filter { recipe -> buildable(logistics, recipe.indexedForTest()) }
                 .map { it.name }
                 .filter { it !in banned }
                 .forEach { add(it) }

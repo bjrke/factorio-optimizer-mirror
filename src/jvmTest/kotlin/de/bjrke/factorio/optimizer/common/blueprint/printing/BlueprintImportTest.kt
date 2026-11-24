@@ -16,7 +16,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.east
@@ -36,8 +35,8 @@ import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.sulfur
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -203,13 +202,7 @@ class BlueprintImportTest : BaseGameCtxTest() {
         val mixedPlan =
             BlueprintPlan(
                 target = explosives,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(explosivesRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(explosivesRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(sulfur, fluid = false),
@@ -258,13 +251,7 @@ class BlueprintImportTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = advancedCircuit,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(advancedCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(advancedCircuitRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(copperCable, fluid = false),
@@ -309,14 +296,8 @@ class BlueprintImportTest : BaseGameCtxTest() {
                 target = electronicCircuit,
                 rows =
                     listOf(
-                        PlannedRow.copies(
-                            planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                        PlannedRow.copies(
-                            planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
+                        PlannedRow.copies(production(electronicCircuitRecipe), 1),
+                        PlannedRow.copies(production(copperCableRecipe), 1),
                     ),
                 sources =
                     listOf(

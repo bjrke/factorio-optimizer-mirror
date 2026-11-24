@@ -11,7 +11,8 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
@@ -19,9 +20,6 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
-import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
-import de.bjrke.factorio.optimizer.js.component.fixtures.production
-import de.bjrke.factorio.optimizer.js.component.fixtures.twoProductions
 import de.bjrke.test.assertAll
 import de.bjrke.test.screen
 import kotlin.test.Test
@@ -37,7 +35,7 @@ class OptimizationResultPresenterTest :
 
     @Test
     fun recipeWithoutIngredientsRendersTheFactoryOutputAndLogisticsInputs() {
-        val result = optimizationResult(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(ironOreMiningRecipe, Factory.ELECTRIC_MINING_DRILL)
 
         val rendered = renderResult(result)
 
@@ -47,7 +45,7 @@ class OptimizationResultPresenterTest :
 
     @Test
     fun recipeWithIngredientsRendersIngredientAndOutputInputs() {
-        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
 
         val rendered = renderResult(result)
 
@@ -57,7 +55,7 @@ class OptimizationResultPresenterTest :
 
     @Test
     fun solidIngredientAndOutputShowBeltAndInserterCounts() {
-        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
 
         renderResult(result)
 
@@ -70,7 +68,7 @@ class OptimizationResultPresenterTest :
     fun eachMaterialIsGroupedInABorderedBox() {
         val rendered =
             renderResult(
-                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
             )
 
         val groups = materialGroups(rendered.container)
@@ -89,7 +87,7 @@ class OptimizationResultPresenterTest :
     fun themedFactoryBlocksAndGroupBoxesKeepTheirBackgroundAndBorder() {
         val rendered =
             renderResult(
-                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
             )
 
         val block = rendered.container.querySelector(":scope > div")!!
@@ -105,7 +103,7 @@ class OptimizationResultPresenterTest :
 
     @Test
     fun theFactoryAndRecipeAreBoxedTogetherInTheRow() {
-        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1))
 
         // the factory icon hangs in an <a> inside the factory group box
         val box =
@@ -124,7 +122,7 @@ class OptimizationResultPresenterTest :
     fun ingredientsComeBeforeTheFactoryAndOutputsAfterIt() {
         val rendered =
             renderResult(
-                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
             )
 
         val titles = imageTitles(rendered.container)
@@ -150,7 +148,7 @@ class OptimizationResultPresenterTest :
     fun theMaterialPickerIsReplacedByMiddleClicks() {
         val rendered =
             renderResult(
-                optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+                optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
             )
 
         assertEquals(0, rendered.container.querySelectorAll("button").length)
@@ -161,7 +159,7 @@ class OptimizationResultPresenterTest :
         val calculator = LogisticsCalculator(testLogistics)
 
         renderResult(
-            optimizationResult(solidFuelFromLightOilRecipe, solidFuel, Factory.CHEMICAL_PLANT),
+            optimizationResult(solidFuelFromLightOilRecipe, Factory.CHEMICAL_PLANT),
             calculator,
         )
 
@@ -182,25 +180,16 @@ class OptimizationResultPresenterTest :
         )
 
     private fun resultWithImport() =
-        OptimizationResult(
-            target = gear,
-            recipe = ironGearWheelRecipe,
-            factories =
-                mapOf(
-                    ironGearWheelRecipe to
-                        production(Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)),
-                    importRecipe to production(Triple(importRecipe, ironPlate, Factory.NO_FACTORY)),
-                ),
+        optimizationResult(
+            production(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
+            production(importRecipe, Factory.NO_FACTORY),
         )
 
     @Test
     fun everyBuiltRowOffersAnExclusionCheckbox() {
-        renderResult(
-            twoProductions(
-                Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
-                Triple(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
-            ),
-        )
+        val gears = production(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
+        val ore = production(ironOreMiningRecipe, Factory.ELECTRIC_MINING_DRILL)
+        renderResult(optimizationResult(gears, ore))
 
         val checkbox = exclusionCheckbox("Exclude ${ironOre.name} from the blueprint")
 
@@ -213,7 +202,7 @@ class OptimizationResultPresenterTest :
 
     @Test
     fun theTargetRowKeepsAHiddenExclusionCheckbox() {
-        renderResult(optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1))
+        renderResult(optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1))
 
         val checkbox = exclusionCheckbox("The target cannot be excluded from the blueprint")
 
@@ -252,7 +241,7 @@ class OptimizationResultPresenterTest :
     @Test
     fun anExcludedMaterialWithoutARowKeepsACheckedCheckbox() {
         renderResult(
-            optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
+            optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
             excludedMaterials = setOf(ironPlate),
         )
 
@@ -289,20 +278,10 @@ class OptimizationResultPresenterTest :
     private fun rowOrderResult(circuitImport: Boolean): OptimizationResult {
         val circuitRecipe = if (circuitImport) circuitImportRecipe else electronicCircuitRecipe
         val circuitFactory = if (circuitImport) Factory.NO_FACTORY else Factory.ASSEMBLING_MACHINE_2
-        return OptimizationResult(
-            target = gear,
-            recipe = ironGearWheelRecipe,
-            factories =
-                mapOf(
-                    ironGearWheelRecipe to
-                        production(Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)),
-                    ironPlateSmeltingRecipe to
-                        production(
-                            Triple(ironPlateSmeltingRecipe, ironPlate, Factory.ELECTRIC_FURNACE),
-                        ),
-                    circuitRecipe to
-                        production(Triple(circuitRecipe, electronicCircuit, circuitFactory)),
-                ),
+        return optimizationResult(
+            production(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1),
+            production(ironPlateSmeltingRecipe, Factory.ELECTRIC_FURNACE),
+            production(circuitRecipe, circuitFactory),
         )
     }
 

@@ -14,11 +14,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.LayoutStage
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlacer
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlanner
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
-import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
@@ -26,12 +24,12 @@ import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.uranium235
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCell
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumFuelCellRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumRoundsMagazineRecipe
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -77,17 +75,9 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
             PlannedRow(
                 machines =
                     listOf(
-                        planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3),
-                        planned(
-                            electronicCircuitRecipe,
-                            electronicCircuit,
-                            Factory.ASSEMBLING_MACHINE_3,
-                        ),
-                        planned(
-                            advancedCircuitRecipe,
-                            advancedCircuit,
-                            Factory.ASSEMBLING_MACHINE_3,
-                        ),
+                        production(copperCableRecipe),
+                        production(electronicCircuitRecipe),
+                        production(advancedCircuitRecipe),
                     ),
                 links =
                     listOf(
@@ -98,18 +88,7 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = processingUnit,
-                rows =
-                    listOf(
-                        band,
-                        PlannedRow.copies(
-                            planned(
-                                processingUnitRecipe,
-                                processingUnit,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
-                            1,
-                        ),
-                    ),
+                rows = listOf(band, PlannedRow.copies(production(processingUnitRecipe), 1)),
                 sources = emptyList(),
                 label = "missing circuit source",
             )
@@ -177,21 +156,11 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
             rows =
                 listOf(
                     PlannedRow.copies(
-                        planned(
-                            uraniumProcessingRecipe,
-                            uranium235,
-                            Factory.ASSEMBLING_MACHINE_3,
-                        ),
+                        production(uraniumProcessingRecipe, material = uranium235),
                         1,
                     ),
-                    PlannedRow.copies(
-                        planned(uraniumFuelCellRecipe, Factory.ASSEMBLING_MACHINE_3),
-                        1,
-                    ),
-                    PlannedRow.copies(
-                        planned(uraniumRoundsMagazineRecipe, Factory.ASSEMBLING_MACHINE_3),
-                        1,
-                    ),
+                    PlannedRow.copies(production(uraniumFuelCellRecipe), 1),
+                    PlannedRow.copies(production(uraniumRoundsMagazineRecipe), 1),
                 ),
             sources = emptyList(),
             label = "two products",

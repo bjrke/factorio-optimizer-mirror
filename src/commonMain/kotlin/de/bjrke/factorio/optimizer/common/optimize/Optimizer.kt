@@ -12,7 +12,9 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
 import de.bjrke.factorio.optimizer.common.game.prototype.unplannedRecipes
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.RecipeIndexer
 
 private const val EPSILON = 1e-7
 private const val SLACK = 1e-6
@@ -199,14 +201,23 @@ class Optimizer(
             solve(target, materials, finalRecipes, importMaterials)
                 ?: error("no feasible production plan for ${target.name}")
 
+        val targetRecipe =
+            finalRecipes
+                .filter { target in it.result.keys }
+                .maxByOrNull { solution[finalRecipes.indexOf(it)] } ?: freeSource(target)
+        val indexer = RecipeIndexer()
+        val consumption = consumptionOf(finalRecipes, solution)
         return OptimizationResult(
             target = target,
-            recipe =
-                finalRecipes
-                    .filter { target in it.result.keys }
-                    .maxByOrNull { solution[finalRecipes.indexOf(it)] } ?: freeSource(target),
+            recipe = indexer.index(targetRecipe),
             factories =
-                factoryProductions(target, materials, finalRecipes, importMaterials, solution),
+                factoryProductions(
+                    finalRecipes,
+                    importMaterials,
+                    solution,
+                    { recipe -> representativeOf(recipe, materials, target, consumption) },
+                    indexer,
+                ),
             logistics = parsedRecipe.logistics,
         )
     }
@@ -292,29 +303,31 @@ class Optimizer(
 
     /** Builds the per-recipe machine counts from the LP solution, one entry per running recipe. */
     private fun factoryProductions(
-        target: Material,
-        materials: List<Material>,
         recipes: List<Recipe>,
         importMaterials: List<Material>,
         solution: DoubleArray,
-    ): Map<Recipe, FactoryProduction> {
+        representative: (Recipe) -> Material,
+        indexer: RecipeIndexer,
+    ): Map<IndexedRecipe, FactoryProduction> {
         val recipeVariables = recipes.size
-        val consumption = consumptionOf(recipes, solution)
         val effectiveProducer = effectiveProducersOf(recipes, solution)
         val depth = DepthIndex(effectiveProducer)
-        val productions = mutableMapOf<Recipe, FactoryProduction>()
+        val productions = mutableMapOf<IndexedRecipe, FactoryProduction>()
 
         recipes.forEachIndexed { index, recipe ->
             val amount = solution[index]
             if (amount <= EPSILON) return@forEachIndexed
-            val material = representativeOf(recipe, materials, target, consumption)
-            productions[recipe] =
-                productionOf(
-                    material,
-                    recipe,
-                    machine.findFactory(recipe) ?: Factory.NO_FACTORY,
-                    amount,
-                    depth,
+            val material = representative(recipe)
+            val indexedRecipe = indexer.index(recipe)
+            productions[indexedRecipe] =
+                FactoryProduction(
+                    material = material,
+                    recipe = indexedRecipe,
+                    factory = machine.findFactory(recipe) ?: Factory.NO_FACTORY,
+                    amount = amount,
+                    level = depth.of(material),
+                    speed = machine.speedOf(recipe),
+                    productivity = machine.productivityOf(recipe),
                 )
         }
         importMaterials.forEachIndexed { index, material ->
@@ -322,8 +335,17 @@ class Optimizer(
             // the import optimization allows a small slack; only show a meaningful import
             if (imported <= IMPORT_DISPLAY_EPSILON) return@forEachIndexed
             val recipe = freeSource(material)
-            productions[recipe] =
-                productionOf(material, recipe, Factory.NO_FACTORY, imported, depth)
+            val indexedRecipe = indexer.index(recipe)
+            productions[indexedRecipe] =
+                FactoryProduction(
+                    material = material,
+                    recipe = indexedRecipe,
+                    factory = Factory.NO_FACTORY,
+                    amount = imported,
+                    level = depth.of(material),
+                    speed = machine.speedOf(recipe),
+                    productivity = machine.productivityOf(recipe),
+                )
         }
         return productions
     }
@@ -369,23 +391,6 @@ class Optimizer(
                     outputs.maxWithOrNull(compareBy({ consumption[it] ?: 0.0 }, { it.name }))
                         ?: recipe.result.keys.first()
             }
-
-    private fun productionOf(
-        material: Material,
-        recipe: Recipe,
-        factory: Factory,
-        amount: Double,
-        depth: DepthIndex,
-    ) =
-        FactoryProduction(
-            material = material,
-            recipe = recipe,
-            factory = factory,
-            amount = amount,
-            level = depth.of(material),
-            speed = machine.speedOf(recipe),
-            productivity = machine.productivityOf(recipe),
-        )
 
     operator fun get(target: Material) = cache.getOrPut(target) { compute(target) }
 }

@@ -7,7 +7,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.fits
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowBeltPacking
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlanner
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 
 /**
  * The recipe sets of the finished [rows] whose solid belts do not pack. `bandBeltFits` can only
@@ -20,7 +20,7 @@ internal fun failingBandGroups(
     target: Material,
     scale: Double,
     logistics: LogisticsCalculator,
-): Set<Set<Recipe>> {
+): Set<Set<IndexedRecipe>> {
     if (rows.none { it.links.isNotEmpty() }) return emptySet()
     // `RowTopology`/`FeedSides` read only the rows and the target, so this plan's feed directions
     // match the real plan even though its external sources are not computed yet.

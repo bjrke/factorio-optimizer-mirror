@@ -2,8 +2,8 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.extractionCategories
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 
 /**
  * Whether a recipe can stand in the blueprint on its own: place-dependent recipes
@@ -14,7 +14,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.extractionCategories
  * second solid would need a second output belt. The target is not exempt here;
  * `DirectFeedContext.included` seeds whatever production the optimizer chose.
  */
-internal fun buildable(logistics: LogisticsCalculator, recipe: Recipe) =
+internal fun buildable(logistics: LogisticsCalculator, recipe: IndexedRecipe) =
     recipe.categories.none { it in externallyProcessedCategories } &&
         recipe.result.keys.count { !logistics.isFluid(it) } <= 1
 

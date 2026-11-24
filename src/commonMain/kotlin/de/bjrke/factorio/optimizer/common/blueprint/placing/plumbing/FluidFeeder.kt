@@ -153,7 +153,7 @@ internal class FluidFeeder(
         val row = rowPlacer.producerRow(plan.target) ?: return
         val producer = row.plannedRow.producerOf(plan.target) ?: return
         for (machine in row.machines) {
-            if (machine.production.recipe === producer.recipe) {
+            if (machine.production.recipe == producer.recipe) {
                 connectTargetOutput(row, machine)
             }
         }

@@ -14,7 +14,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.NORTH_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.layoutAscii
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -28,6 +27,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -53,7 +53,10 @@ class BlueprintFluidCharacterizationTest : BaseGameCtxTest() {
             target = solidFuel,
             rows =
                 listOf(
-                    PlannedRow.copies(planned(solidFuelFromPetroleumGasRecipe, CHEMICAL_PLANT), 3),
+                    PlannedRow.copies(
+                        production(solidFuelFromPetroleumGasRecipe, CHEMICAL_PLANT),
+                        3,
+                    ),
                 ),
             sources = listOf(PlannedSource(petroleum, fluid = true)),
             label = "solid-fuel-from-petroleum-gas",

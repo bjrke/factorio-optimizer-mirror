@@ -7,8 +7,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.plannedMachines
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -18,7 +18,7 @@ import kotlin.math.max
  */
 internal data class BandPolicy(
     val forcedMaterials: Set<Material> = emptySet(),
-    val rejectedGroups: Set<Set<Recipe>> = emptySet(),
+    val rejectedGroups: Set<Set<IndexedRecipe>> = emptySet(),
 )
 
 /**
@@ -92,8 +92,9 @@ private fun DirectFeedContext.bandOverflow(
 /**
  * Runs the same band search over the belted rows. A recipe that still has belt consumers can be
  * direct-fed from its producer even when the main band already inserts it: the belted rows are
- * copied with their whole-machine amount and planned at scale 1, so the copies are distinct from
- * the main band's productions and can sit in a row of their own.
+ * copied with their whole-machine amount and planned at scale 1. The copy shares the recipe
+ * identity but differs in its amount, so it stays a distinct production value and can sit in a row
+ * of its own.
  */
 private fun DirectFeedContext.beltedBands(rows: List<PlannedRow>): List<PlannedRow> {
     if (rows.size < 2) return rows
@@ -182,7 +183,7 @@ private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): BeltDemand {
                 Triple(it.material, it.producer.production.recipe, it.consumer.production.recipe)
             }
             .toSet()
-    val perRecipe = mutableMapOf<Recipe, Double>()
+    val perRecipe = mutableMapOf<IndexedRecipe, Double>()
     val perMaterial = mutableMapOf<Material, Double>()
     for (consumer in included.values) {
         for (material in consumer.recipe.ingredients.keys) {
@@ -203,7 +204,7 @@ private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): BeltDemand {
 
 /** The belted production rates by recipe and the delivered rates by material. */
 private data class BeltDemand(
-    val perRecipe: Map<Recipe, Double>,
+    val perRecipe: Map<IndexedRecipe, Double>,
     val perMaterial: Map<Material, Double>,
 )
 
@@ -215,7 +216,7 @@ private data class BeltDemand(
  */
 private fun DirectFeedContext.belted(
     production: FactoryProduction,
-    demand: Map<Recipe, Double>,
+    demand: Map<IndexedRecipe, Double>,
     onBelt: Map<FactoryProduction, Int>,
     built: Map<FactoryProduction, Int>,
 ): PlannedRow? {
@@ -259,7 +260,7 @@ private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>): Lis
  */
 internal fun directFeed(
     targetProduction: FactoryProduction,
-    factories: Map<Recipe, FactoryProduction>,
+    factories: Map<IndexedRecipe, FactoryProduction>,
     logistics: LogisticsCalculator,
     scale: Double = 1.0,
     policy: BandPolicy = BandPolicy(),

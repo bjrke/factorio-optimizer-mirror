@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
@@ -14,6 +13,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.test.assertAll
@@ -25,8 +25,8 @@ class BlueprintBandTest : BaseGameCtxTest() {
 
     @Test
     fun aBandFeedsItsConsumerMachineToMachine() {
-        val gearRow = planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
-        val plateRow = planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3)
+        val gearRow = production(ironGearWheelRecipe)
+        val plateRow = production(ironPlateRecipe)
         val bandPlan =
             BlueprintPlan(
                 target = gear,

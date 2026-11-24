@@ -10,8 +10,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.pairsNeeded
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.core.model.Material
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.math.max
 
@@ -231,7 +231,7 @@ internal class FeedNode(
  */
 internal data class DirectFeedContext(
     val targetProduction: FactoryProduction,
-    val factories: Map<Recipe, FactoryProduction>,
+    val factories: Map<IndexedRecipe, FactoryProduction>,
     val logistics: LogisticsCalculator,
     val scale: Double = 1.0,
     /**

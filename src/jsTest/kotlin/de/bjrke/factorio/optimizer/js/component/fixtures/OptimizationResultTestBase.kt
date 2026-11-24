@@ -3,9 +3,6 @@ package de.bjrke.factorio.optimizer.js.component.fixtures
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.js.component.optimizationResult
 import de.bjrke.test.ComponentTest
@@ -14,43 +11,6 @@ import de.bjrke.test.screen
 import react.create
 import web.dom.Element
 import web.html.HTMLInputElement
-
-internal fun optimizationResult(recipe: Recipe, target: Material, factory: Factory) =
-    OptimizationResult(
-        target = target,
-        recipe = recipe,
-        factories =
-            mapOf(
-                recipe to
-                    FactoryProduction(
-                        material = target,
-                        recipe = recipe,
-                        factory = factory,
-                        amount = 1.0,
-                        level = 0,
-                    ),
-            ),
-    )
-
-internal fun production(entry: Triple<Recipe, Material, Factory>) =
-    FactoryProduction(
-        material = entry.second,
-        recipe = entry.first,
-        factory = entry.third,
-        amount = 1.0,
-        level = 0,
-    )
-
-/** Two recipe blocks so their widths and stacking can be compared. */
-internal fun twoProductions(
-    first: Triple<Recipe, Material, Factory>,
-    second: Triple<Recipe, Material, Factory>,
-) =
-    OptimizationResult(
-        target = first.second,
-        recipe = first.first,
-        factories = mapOf(first.first to production(first), second.first to production(second)),
-    )
 
 abstract class OptimizationResultTestBase : ComponentTest() {
     protected val normalizedTo = mutableListOf<Double>()

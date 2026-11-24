@@ -4,14 +4,12 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.js.component.fixtures.OptimizationResultTestBase
-import de.bjrke.factorio.optimizer.js.component.fixtures.optimizationResult
 import de.bjrke.test.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,7 +23,7 @@ class OptimizationResultLogisticsTest :
 
     @Test
     fun aStackInserterNeedsFewerOutputInsertersThanABulkInserter() {
-        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
         val rendered =
             renderResult(
                 result,
@@ -61,7 +59,7 @@ class OptimizationResultLogisticsTest :
     @Test
     fun miningOutputNeedsNoInserter() {
         renderResult(
-            optimizationResult(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL),
+            optimizationResult(ironOreMiningRecipe, Factory.ELECTRIC_MINING_DRILL),
         )
 
         assertNotNull(screen.queryByTitle("belts"))
@@ -70,7 +68,7 @@ class OptimizationResultLogisticsTest :
 
     @Test
     fun theBigMiningDrillHonorsTheBeltStackWithoutAnInserter() {
-        val result = optimizationResult(ironOreMiningRecipe, ironOre, Factory.BIG_MINING_DRILL)
+        val result = optimizationResult(ironOreMiningRecipe, Factory.BIG_MINING_DRILL)
         val rendered = renderResult(result, calculator())
         val atSingle = beltInput(0)
 
@@ -85,7 +83,7 @@ class OptimizationResultLogisticsTest :
 
     @Test
     fun theOtherMiningDrillsIgnoreTheBeltStack() {
-        val result = optimizationResult(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
+        val result = optimizationResult(ironOreMiningRecipe, Factory.ELECTRIC_MINING_DRILL)
         val rendered = renderResult(result, calculator())
         val atSingle = beltInput(0)
 
@@ -99,7 +97,7 @@ class OptimizationResultLogisticsTest :
 
     @Test
     fun bothSidesOnlyStackWithAStackingInserter() {
-        val result = optimizationResult(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
         val rendered =
             renderResult(
                 result,

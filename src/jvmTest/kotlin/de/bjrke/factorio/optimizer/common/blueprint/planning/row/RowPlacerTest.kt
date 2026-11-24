@@ -7,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedLink
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
@@ -29,13 +28,13 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.pipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.splitter
 import de.bjrke.factorio.optimizer.common.fixtures.splitterRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.assertAll
@@ -53,13 +52,7 @@ class RowPlacerTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = gear,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            3,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(ironGearWheelRecipe), 3)),
                 sources = listOf(PlannedSource(ironPlate, fluid = false)),
                 label = "iron-gear-wheel",
             )
@@ -80,8 +73,8 @@ class RowPlacerTest : BaseGameCtxTest() {
 
     @Test
     fun onlyALinkedGapGetsASeparatingColumn() {
-        val gearMachine = planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)
-        val plateMachine = planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_3)
+        val gearMachine = production(ironGearWheelRecipe)
+        val plateMachine = production(ironPlateRecipe)
         val plan =
             BlueprintPlan(
                 target = gear,
@@ -113,10 +106,9 @@ class RowPlacerTest : BaseGameCtxTest() {
 
     @Test
     fun aLinkOnlyRemovesTheInputsItActuallyReaches() {
-        val advanced = planned(advancedCircuitRecipe, advancedCircuit, Factory.ASSEMBLING_MACHINE_3)
-        val circuit =
-            planned(electronicCircuitRecipe, electronicCircuit, Factory.ASSEMBLING_MACHINE_3)
-        val cable = planned(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3)
+        val advanced = production(advancedCircuitRecipe)
+        val circuit = production(electronicCircuitRecipe)
+        val cable = production(copperCableRecipe)
         val plan =
             BlueprintPlan(
                 target = advancedCircuit,
@@ -156,16 +148,7 @@ class RowPlacerTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = electronicCircuit,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(
-                                electronicCircuitRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(electronicCircuitRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(copperCable, fluid = false),
@@ -190,16 +173,7 @@ class RowPlacerTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = electronicCircuit,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(
-                                electronicCircuitRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(electronicCircuitRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(copperCable, fluid = false),
@@ -231,9 +205,8 @@ class RowPlacerTest : BaseGameCtxTest() {
                         PlannedRow(
                             machines =
                                 listOf(
-                                    planned(transportBeltRecipe, Factory.ASSEMBLING_MACHINE_3)
-                                        .copy(productivity = 1.0),
-                                    planned(splitterRecipe, Factory.ASSEMBLING_MACHINE_3),
+                                    production(transportBeltRecipe, productivity = 1.0),
+                                    production(splitterRecipe),
                                 ),
                             links =
                                 listOf(
@@ -283,8 +256,8 @@ class RowPlacerTest : BaseGameCtxTest() {
                         PlannedRow(
                             machines =
                                 listOf(
-                                    planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3),
-                                    planned(engineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
+                                    production(ironGearWheelRecipe),
+                                    production(engineUnitRecipe),
                                 ),
                             links =
                                 listOf(
@@ -330,14 +303,11 @@ class RowPlacerTest : BaseGameCtxTest() {
                 time = 1.0,
                 categories = setOf(Category.CRAFTING),
             )
-        val target =
-            PlannedRow.copies(planned(flyingRobotFrameRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val circuit =
-            PlannedRow.copies(planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val battery = PlannedRow.copies(planned(batteryRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val electricEngine =
-            PlannedRow.copies(planned(electricEngineUnitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val steel = PlannedRow.copies(planned(steelPlateRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val target = PlannedRow.copies(production(flyingRobotFrameRecipe), 1)
+        val circuit = PlannedRow.copies(production(electronicCircuitRecipe), 1)
+        val battery = PlannedRow.copies(production(batteryRecipe), 1)
+        val electricEngine = PlannedRow.copies(production(electricEngineUnitRecipe), 1)
+        val steel = PlannedRow.copies(production(steelPlateRecipe), 1)
         val plan =
             BlueprintPlan(
                 target = flyingRobotFrame,

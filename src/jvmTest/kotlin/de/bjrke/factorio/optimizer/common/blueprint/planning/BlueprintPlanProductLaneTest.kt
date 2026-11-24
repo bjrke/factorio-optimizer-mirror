@@ -2,46 +2,27 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.testBlueprintPlan
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
-import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
-import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-
-private fun production(
-    recipe: Recipe,
-    material: Material,
-    factory: Factory,
-    amount: Double = 1.0,
-    level: Int = 0,
-) = FactoryProduction(material, recipe, factory, amount, level)
-
-private fun result(target: Material, targetRecipe: Recipe, productions: List<FactoryProduction>) =
-    OptimizationResult(
-        target = target,
-        recipe = targetRecipe,
-        factories = productions.associateBy { it.recipe },
-        logistics = testLogistics,
-    )
 
 class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
 
@@ -50,14 +31,9 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
     @Test
     fun aSolidTargetShrinksToTheProductLane() {
         // copper cable: 2 per 0.5 s at assembling machine 3's 1.25 speed, so 0.2 machines per 1/s
-        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 0.2)
+        val cable = production(copperCableRecipe, amount = 0.2)
 
-        val planned =
-            testBlueprintPlan(
-                result(copperCable, copperCableRecipe, listOf(cable)),
-                logistics,
-                20.0,
-            )
+        val planned = testBlueprintPlan(optimizationResult(cable), logistics, 20.0)
 
         assertAll(
             // one product lane carries 15/s, so the requested 20/s is drawn at 15/s
@@ -70,8 +46,8 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
 
     @Test
     fun aNonStackingInserterCannotUseTheBeltStackForItsProductLane() {
-        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 0.2)
-        val result = result(copperCable, copperCableRecipe, listOf(cable))
+        val cable = production(copperCableRecipe, amount = 0.2)
+        val result = optimizationResult(cable)
 
         // a stack inserter fills the lane with four items per slot, so 20/s fits
         val stackInserter =
@@ -98,9 +74,9 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
                 categories = setOf(Category.MINING_BASIC_SOLID),
             )
         // 5/s per electric mining drill, so 0.2 machines per 1/s
-        val electric = production(highOutputMining, ironOre, Factory.ELECTRIC_MINING_DRILL, 0.2)
+        val electric = production(highOutputMining, Factory.ELECTRIC_MINING_DRILL, amount = 0.2)
         // 25/s per big mining drill, so 0.04 machines per 1/s
-        val big = production(highOutputMining, ironOre, Factory.BIG_MINING_DRILL, 0.04)
+        val big = production(highOutputMining, Factory.BIG_MINING_DRILL, amount = 0.04)
         val stackInserter =
             calculator(
                 LogisticsCalculatorSelection(inserter = InserterTier.STACK_INSERTER, beltStack = 4),
@@ -112,12 +88,7 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
             {
                 assertEquals(
                     15.0,
-                    testBlueprintPlan(
-                            result(ironOre, highOutputMining, listOf(electric)),
-                            stackInserter,
-                            20.0,
-                        )
-                        .scale,
+                    testBlueprintPlan(optimizationResult(electric), stackInserter, 20.0).scale,
                     TOLERANCE,
                 )
             },
@@ -125,12 +96,7 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
             {
                 assertEquals(
                     20.0,
-                    testBlueprintPlan(
-                            result(ironOre, highOutputMining, listOf(big)),
-                            stackInserter,
-                            20.0,
-                        )
-                        .scale,
+                    testBlueprintPlan(optimizationResult(big), stackInserter, 20.0).scale,
                     TOLERANCE,
                 )
             },
@@ -139,11 +105,11 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
 
     @Test
     fun aTargetBelowTheProductLaneKeepsTheRequestedScale() {
-        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 0.2)
+        val cable = production(copperCableRecipe, amount = 0.2)
 
         val planned =
             testBlueprintPlan(
-                result(copperCable, copperCableRecipe, listOf(cable)),
+                optimizationResult(cable),
                 logistics,
                 7.5,
             )
@@ -171,10 +137,10 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
                 categories = setOf(Category.CRAFTING),
             )
         // 12.5/s per machine, so 0.08 machines per 1/s
-        val craft = production(highOutput, gear, Factory.ASSEMBLING_MACHINE_3, 0.08)
+        val craft = production(highOutput, amount = 0.08)
         val slowBelt = calculator(LogisticsCalculatorSelection(belt = BeltTier.TRANSPORT_BELT))
 
-        val planned = testBlueprintPlan(result(gear, highOutput, listOf(craft)), slowBelt, 5.0)
+        val planned = testBlueprintPlan(optimizationResult(craft), slowBelt, 5.0)
 
         assertAll(
             // 5/s fits the 7.5/s yellow lane even though the one machine could make 12.5/s
@@ -187,18 +153,12 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
     @Test
     fun anOverCapacityIntermediateIsDirectFedInsteadOfShrinking() {
         // at 6/s the circuit row needs 18/s of cable, over one 15/s lane, but a band can insert it
-        val circuit =
-            production(
-                electronicCircuitRecipe,
-                electronicCircuit,
-                Factory.ASSEMBLING_MACHINE_3,
-                0.4,
-            )
-        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 1.5)
+        val circuit = production(electronicCircuitRecipe, amount = 0.4)
+        val cable = production(copperCableRecipe, amount = 1.5)
 
         val planned =
             testBlueprintPlan(
-                result(electronicCircuit, electronicCircuitRecipe, listOf(cable, circuit)),
+                optimizationResult(circuit, cable),
                 logistics,
                 6.0,
             )
@@ -217,21 +177,10 @@ class BlueprintPlanProductLaneTest : BaseGameCtxTest() {
      */
     @Test
     fun aBandOverTheMachineBudgetShrinksInsteadOfBeltingItsInput() {
-        val circuit =
-            production(
-                electronicCircuitRecipe,
-                electronicCircuit,
-                Factory.ASSEMBLING_MACHINE_3,
-                0.4,
-            )
-        val cable = production(copperCableRecipe, copperCable, Factory.ASSEMBLING_MACHINE_3, 1.5)
+        val circuit = production(electronicCircuitRecipe, amount = 0.4)
+        val cable = production(copperCableRecipe, amount = 1.5)
 
-        val planned =
-            testBlueprintPlan(
-                result(electronicCircuit, electronicCircuitRecipe, listOf(cable, circuit)),
-                logistics,
-                12.0,
-            )
+        val planned = testBlueprintPlan(optimizationResult(circuit, cable), logistics, 12.0)
 
         assertAll(
             // the propagated need is 5 circuit + 8 cable machines, over the 10-machine budget, so

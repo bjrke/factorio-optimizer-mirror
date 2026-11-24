@@ -11,7 +11,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
@@ -33,6 +32,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.pipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.smallElectricPoleRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.factorio.optimizer.common.fixtures.stoneBrick
@@ -42,7 +42,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.wood
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -110,7 +109,7 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
                 target = water,
                 rows =
                     listOf(
-                        PlannedRow.copies(planned(waterPumpingRecipe, Factory.OFFSHORE_PUMP), 1),
+                        PlannedRow.copies(production(waterPumpingRecipe, Factory.OFFSHORE_PUMP), 1),
                     ),
                 sources = emptyList(),
                 label = "water",
@@ -174,19 +173,7 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
         val scaled =
             BlueprintPlan(
                 target = gear,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            FactoryProduction(
-                                gear,
-                                ironGearWheelRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                                1.0,
-                                0,
-                            ),
-                            3,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(ironGearWheelRecipe), 3)),
                 sources = listOf(PlannedSource(ironPlate, fluid = false)),
                 label = "iron-gear-wheel",
             )
@@ -205,19 +192,7 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
         val row =
             BlueprintPlan(
                 target = gear,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            FactoryProduction(
-                                gear,
-                                ironGearWheelRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                                1.0,
-                                0,
-                            ),
-                            3,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(ironGearWheelRecipe), 3)),
                 sources = listOf(PlannedSource(ironPlate, fluid = false)),
                 label = "iron-gear-wheel",
             )
@@ -248,13 +223,7 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
         val twoPlan =
             BlueprintPlan(
                 target = electronicCircuit,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(electronicCircuitRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(ironPlate, fluid = false),
@@ -284,10 +253,7 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
         val twoPlan =
             BlueprintPlan(
                 target = concrete,
-                rows =
-                    listOf(
-                        PlannedRow.copies(planned(concreteRecipe, Factory.ASSEMBLING_MACHINE_3), 1),
-                    ),
+                rows = listOf(PlannedRow.copies(production(concreteRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(stoneBrick, fluid = false),
@@ -324,18 +290,9 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
                 target = electronicCircuit,
                 rows =
                     listOf(
-                        PlannedRow.copies(
-                            planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                        PlannedRow.copies(
-                            planned(smallElectricPoleRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                        PlannedRow.copies(
-                            planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
+                        PlannedRow.copies(production(electronicCircuitRecipe), 1),
+                        PlannedRow.copies(production(smallElectricPoleRecipe), 1),
+                        PlannedRow.copies(production(copperCableRecipe), 1),
                     ),
                 sources =
                     listOf(
@@ -357,11 +314,9 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
 
     @Test
     fun aSharedInputSplitsOnItsBeltNotAtTheProducer() {
-        val row1 =
-            PlannedRow.copies(planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val row2 =
-            PlannedRow.copies(planned(smallElectricPoleRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
-        val row3 = PlannedRow.copies(planned(copperCableRecipe, Factory.ASSEMBLING_MACHINE_3), 1)
+        val row1 = PlannedRow.copies(production(electronicCircuitRecipe), 1)
+        val row2 = PlannedRow.copies(production(smallElectricPoleRecipe), 1)
+        val row3 = PlannedRow.copies(production(copperCableRecipe), 1)
         val shared =
             BlueprintPlan(
                 target = electronicCircuit,
@@ -486,13 +441,7 @@ class BlueprintLayoutTest : BaseGameCtxTest() {
         val threePlan =
             BlueprintPlan(
                 target = engineUnit,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(engineUnitRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(engineUnitRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(steelPlate, fluid = false),

@@ -10,7 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.planLabel
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.util.EPSILON
 
@@ -88,7 +88,7 @@ private fun plannedPlan(
 ): BlueprintPlanResult.Planned {
     var effective = scale
     var forced = emptySet<Material>()
-    val rejected = mutableSetOf<Set<Recipe>>()
+    val rejected = mutableSetOf<Set<IndexedRecipe>>()
     val targetProduction = result.factories.getValue(result.recipe)
 
     fun directFeed() =

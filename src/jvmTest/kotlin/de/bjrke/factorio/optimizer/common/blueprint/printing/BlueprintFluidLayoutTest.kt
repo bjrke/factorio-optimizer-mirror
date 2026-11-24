@@ -16,7 +16,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.plumbingComponents
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
@@ -36,6 +35,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.steam
@@ -68,7 +68,7 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -104,7 +104,7 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -144,7 +144,7 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(processingUnitRecipe, Factory.ELECTROMAGNETIC_PLANT),
+                            production(processingUnitRecipe, Factory.ELECTROMAGNETIC_PLANT),
                             1,
                         ),
                     ),
@@ -179,13 +179,7 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
         val plan =
             BlueprintPlan(
                 target = plasticBar,
-                rows =
-                    listOf(
-                        PlannedRow.copies(
-                            planned(plasticBarRecipe, Factory.ASSEMBLING_MACHINE_3),
-                            1,
-                        ),
-                    ),
+                rows = listOf(PlannedRow.copies(production(plasticBarRecipe), 1)),
                 sources =
                     listOf(
                         PlannedSource(coal, fluid = false),
@@ -228,7 +222,7 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -274,7 +268,8 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
+                rows =
+                    listOf(PlannedRow.copies(production(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, fluid = true),
@@ -308,7 +303,8 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
+                rows =
+                    listOf(PlannedRow.copies(production(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, fluid = true),
@@ -363,7 +359,7 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -398,7 +394,8 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
+                rows =
+                    listOf(PlannedRow.copies(production(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, fluid = true),
@@ -424,7 +421,8 @@ class BlueprintFluidLayoutTest : BaseGameCtxTest() {
         val fluidPlan =
             BlueprintPlan(
                 target = sulfur,
-                rows = listOf(PlannedRow.copies(planned(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
+                rows =
+                    listOf(PlannedRow.copies(production(sulfurRecipe, Factory.CHEMICAL_PLANT), 1)),
                 sources =
                     listOf(
                         PlannedSource(water, fluid = true),
@@ -455,7 +453,7 @@ class BlueprintFluidSourceTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
+                            production(solidFuelFromPetroleumGasRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -479,7 +477,7 @@ class BlueprintFluidSourceTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(steamCondensationRecipe, Factory.CHEMICAL_PLANT),
+                            production(steamCondensationRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -505,7 +503,7 @@ class BlueprintFluidSourceTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(steamCondensationRecipe, Factory.CHEMICAL_PLANT),
+                            production(steamCondensationRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
@@ -533,7 +531,7 @@ class BlueprintFluidSourceTest : BaseGameCtxTest() {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(sulfuricAcidRecipe, Factory.CHEMICAL_PLANT),
+                            production(sulfuricAcidRecipe, Factory.CHEMICAL_PLANT),
                             1,
                         ),
                     ),
