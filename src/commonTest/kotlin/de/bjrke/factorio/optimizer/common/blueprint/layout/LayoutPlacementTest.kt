@@ -35,21 +35,6 @@ class LayoutPlacementTest : BaseGameCtxTest() {
                     longInserter = "long-handed-inserter",
                 ),
             undergroundRange = 4,
-            fluidPredicate = { true },
-            temperatureOf = { 0 },
-        )
-
-    /** A board whose materials are solids, so a link rides on belts with the tier's reach. */
-    private fun solidBoard() =
-        LayoutBoard(
-            names =
-                LayoutNames(
-                    belt = "transport-belt",
-                    inserter = "inserter",
-                    longInserter = "long-handed-inserter",
-                ),
-            undergroundRange = 4,
-            fluidPredicate = { false },
             temperatureOf = { 0 },
         )
 
@@ -225,7 +210,7 @@ class LayoutPlacementTest : BaseGameCtxTest() {
 
     @Test
     fun aLinkLongerThanTheBeltReachSplitsIntoRunsOfThatTier() {
-        val board = solidBoard()
+        val board = newBoard()
 
         val plan = board.tunnelPlan(gear, Coordinate(0, 0), Coordinate(6, 0))
 
@@ -246,7 +231,7 @@ class LayoutPlacementTest : BaseGameCtxTest() {
 
     @Test
     fun aSolidLinkIsLaidAsBeltsAndUndergroundBelts() {
-        val board = solidBoard()
+        val board = newBoard()
 
         board.placeTunnels(gear, Coordinate(0, 0), Coordinate(6, 0))
 
@@ -276,7 +261,7 @@ class LayoutPlacementTest : BaseGameCtxTest() {
 
     @Test
     fun anUndergroundOutputFeedsTheNextRunDirectly() {
-        val board = solidBoard()
+        val board = newBoard()
         // the first and last run still need a surface belt to feed and to empty onto
         board.placeBelt(Coordinate(-1, 0), gear, Direction.EAST)
         board.placeTunnels(gear, Coordinate(0, 0), Coordinate(6, 0))

@@ -29,6 +29,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
+import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsFromUrl
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
@@ -54,12 +55,11 @@ val chestMarkers =
  * The layout suites pin geometry, not the intermediate limit, so they plan the full production
  * graph. The limit's effect on the optimizer is covered by the optimizer suites and the URL tests.
  */
-fun GameCtxTestMixin.optimize(
+private fun GameCtxTestMixin.optimize(
+    parsedRecipes: ParsedRecipe,
+    factories: Set<Factory>,
     target: String,
-    surface: Surface = Surface.NAUVIS,
-    factories: Set<Factory> = FactoryConfig().defaults,
 ): OptimizationResult {
-    val parsedRecipes = forSurface(surface)
     return Optimizer(parsedRecipes, factories, MAX_INTERMEDIATE_LIMIT)[Material(target)]
 }
 
@@ -141,11 +141,16 @@ data class Layout(
 
     constructor(
         result: OptimizationResult,
-        logistics: LogisticsCalculator = LogisticsCalculator(result.logistics),
+        logistics: LogisticsCalculator,
         scale: Double,
         beltEnd: BeltEnd,
         powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
-    ) : this(testBlueprintPlan(result, logistics, scale), logistics, beltEnd, powerPole)
+    ) : this(
+        testBlueprintPlan(result, logistics, scale),
+        logistics,
+        beltEnd,
+        powerPole,
+    )
 
     private val rowLayout by lazy { RowLayout(plan, logistics, beltEnd, powerPole) }
 
@@ -270,13 +275,16 @@ fun GameCtxTestMixin.Layout(
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
     surface: Surface = Surface.NAUVIS,
     factories: Set<Factory> = FactoryConfig().defaults,
-) =
-    Layout(
-        result = optimize(target, surface, factories),
+): Layout {
+    val parsedRecipes = forSurface(surface)
+    return Layout(
+        optimize(parsedRecipes, factories, target),
+        LogisticsCalculator(parsedRecipes.logistics),
         scale = scale,
         beltEnd = beltEnd,
         powerPole = PowerPole.forSelection(surface, factories),
     )
+}
 
 /** A loader is two tiles long, so neither tile may sit above a tunnel span. */
 internal fun assertNoLoaderOverTunnel(layout: Layout) {

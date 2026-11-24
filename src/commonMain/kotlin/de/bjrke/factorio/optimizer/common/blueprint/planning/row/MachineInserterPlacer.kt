@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeInserter
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PortFlow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluidPorts
@@ -24,7 +23,6 @@ import kotlin.math.abs
  */
 internal class MachineInserterPlacer(
     private val board: LayoutBoard,
-    private val logistics: LogisticsCalculator,
     private val planner: RowPlanner,
 ) {
 
@@ -50,8 +48,8 @@ internal class MachineInserterPlacer(
         val recipe = production.recipe
         return inserterPortColumns(
             production.factory,
-            recipe.ingredients.keys.count { logistics.isFluid(it) },
-            recipe.result.keys.count { logistics.isFluid(it) },
+            recipe.ingredients.keys.count { it.isFluid },
+            recipe.result.keys.count { it.isFluid },
         )
     }
 
@@ -124,8 +122,8 @@ internal class MachineInserterPlacer(
     }
 
     private fun usesFluid(production: FactoryProduction) =
-        production.recipe.ingredients.keys.any { logistics.isFluid(it) } ||
-            production.recipe.result.keys.any { logistics.isFluid(it) }
+        production.recipe.ingredients.keys.any { it.isFluid } ||
+            production.recipe.result.keys.any { it.isFluid }
 }
 
 /**

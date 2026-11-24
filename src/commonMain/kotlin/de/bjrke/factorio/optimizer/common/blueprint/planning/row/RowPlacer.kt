@@ -83,7 +83,7 @@ internal class RowPlacer(
     /** Every row once, in placement order; a band row serves all of its productions. */
     val placedRows = mutableListOf<Row>()
 
-    private val machineInserters = MachineInserterPlacer(board, logistics, planner)
+    private val machineInserters = MachineInserterPlacer(board, planner)
     private val bandInterfaces = BandInterfacePlacer(board, logistics)
 
     fun placeAll() {

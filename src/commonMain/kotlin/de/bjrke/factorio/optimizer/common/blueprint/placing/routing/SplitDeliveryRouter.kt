@@ -97,7 +97,7 @@ internal class SplitDeliveryRouter(
                 ) ?: continue
             // a branch that reuses one of its own belt tiles would lose the belt it already placed
             val nodes = listOf(candidate.exit) + segment
-            if (pathConflicts(board, material, nodes).isNotEmpty()) continue
+            if (pathConflicts(material, nodes).isNotEmpty()) continue
             val score = routeScore(nodes)
             if (score < bestScore) {
                 bestScore = score

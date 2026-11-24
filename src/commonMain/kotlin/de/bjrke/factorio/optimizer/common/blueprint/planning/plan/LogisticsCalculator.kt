@@ -78,8 +78,8 @@ class LogisticsCalculator(
         get() = inserterStats.stackSize(inserterStack)
 
     /**
-     * The selected inserter's rates at this hand size and belt stacking. Lazy so a calculator can
-     * still be built for a partial prototype dump when only its material predicates are queried.
+     * The selected inserter's rates at this hand size and belt stacking. Built on first use, so a
+     * calculator over a partial prototype dump stays usable as long as it never needs these rates.
      */
     val rates by lazy {
         InserterRate(
@@ -101,9 +101,6 @@ class LogisticsCalculator(
     /** The supply area and wire reach of every electric pole prototype, keyed by its name. */
     val poles
         get() = logistics.poles
-
-    /** Fluids move through pipes and pumps, not on belts. */
-    fun isFluid(material: Material) = material.isFluid
 
     /** The default temperature of a fluid, for an infinity pipe source; 0 when unknown. */
     fun fluidTemperature(material: Material) = logistics.fluidTemperatures[material] ?: 0

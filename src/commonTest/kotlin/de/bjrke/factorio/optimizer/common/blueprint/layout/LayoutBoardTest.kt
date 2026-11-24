@@ -20,7 +20,6 @@ class LayoutBoardTest : BaseGameCtxTest() {
                     longInserter = "long-handed-inserter",
                 ),
             undergroundRange = 4,
-            fluidPredicate = { false },
             temperatureOf = { 0 },
         )
 

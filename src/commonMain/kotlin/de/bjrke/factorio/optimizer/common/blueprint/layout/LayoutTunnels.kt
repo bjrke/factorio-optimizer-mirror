@@ -22,7 +22,7 @@ internal fun LayoutBoard.placeSurface(
     coordinate: Coordinate,
     direction: Direction,
 ) {
-    if (isFluid(material)) placePipe(coordinate, material)
+    if (material.isFluid) placePipe(coordinate, material)
     else placeBelt(coordinate, material, direction)
 }
 
@@ -34,7 +34,7 @@ internal fun LayoutBoard.placeEnd(
     io: Io,
 ) {
     place(
-        if (isFluid(material))
+        if (material.isFluid)
             PipeToGroundEntity(coordinate.area(), names.pipeToGround, material, direction, io)
         else
             UndergroundBeltEntity(

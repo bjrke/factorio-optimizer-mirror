@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.band.buildable
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.carbon
 import de.bjrke.factorio.optimizer.common.fixtures.coal
@@ -121,11 +120,10 @@ class RecipePolicyTest : BaseGameCtxTest() {
     private fun selfConsumingRecipesThePolicyAllows() = buildSet {
         for (surface in Surface.entries) {
             val parsed = forSurface(surface)
-            val logistics = LogisticsCalculator(parsed.logistics)
             val banned = unplannedRecipes(surface)
             parsed.recipes
                 .filter { recipe -> recipe.result.keys.any { it in recipe.ingredients } }
-                .filter { recipe -> buildable(logistics, recipe.indexedForTest()) }
+                .filter { recipe -> buildable(recipe.indexedForTest()) }
                 .map { it.name }
                 .filter { it !in banned }
                 .forEach { add(it) }

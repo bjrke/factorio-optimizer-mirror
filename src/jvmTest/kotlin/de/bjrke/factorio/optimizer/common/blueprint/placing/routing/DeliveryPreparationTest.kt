@@ -46,7 +46,7 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
         val board = board()
         val planner = RowPlanner(plan, logistics)
         val rowPlacer = RowPlacer(board, plan, logistics, planner)
-        val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, LayoutRouter(board))
+        val stage = LayoutStage(board, plan, planner, rowPlacer, LayoutRouter(board))
         rowPlacer.placeAll()
         val producer = rowPlacer.placedRows.first()
         val expected =
@@ -107,7 +107,7 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
         val board = board()
         val planner = RowPlanner(plan, logistics)
         val rowPlacer = RowPlacer(board, plan, logistics, planner)
-        val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, LayoutRouter(board))
+        val stage = LayoutStage(board, plan, planner, rowPlacer, LayoutRouter(board))
         rowPlacer.placeAll()
         val failures = mutableListOf<LayoutIssue>()
         DeliveryPreparation(
@@ -127,7 +127,7 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
         val board = board()
         val planner = RowPlanner(plan, logistics)
         val rowPlacer = RowPlacer(board, plan, logistics, planner)
-        val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, LayoutRouter(board))
+        val stage = LayoutStage(board, plan, planner, rowPlacer, LayoutRouter(board))
         rowPlacer.placeAll()
         val delivery =
             DeliveryPreparation(
@@ -175,7 +175,6 @@ class DeliveryPreparationTest : BaseGameCtxTest() {
                 InserterTier.LONG_HANDED_INSERTER.identifier,
             ),
             undergroundRange = 9,
-            logistics::isFluid,
             logistics::fluidTemperature,
         )
 }

@@ -29,7 +29,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
 import de.bjrke.factorio.optimizer.common.fixtures.rocketSiloRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -49,7 +48,7 @@ class BlueprintPlanTest : BaseGameCtxTest() {
     private val logistics = calculator()
 
     private fun plan(vararg productions: FactoryProduction) =
-        testBlueprintPlan(optimizationResult(*productions, logistics = testLogistics), logistics)
+        testBlueprintPlan(optimizationResult(*productions), logistics)
 
     @Test
     fun thePlanUsesTheAmountForMachinesAndSources() {
@@ -77,7 +76,6 @@ class BlueprintPlanTest : BaseGameCtxTest() {
             blueprintPlan(
                 optimizationResult(
                     production(smelt, Factory.ELECTRIC_FURNACE, allSciencePacks),
-                    logistics = testLogistics,
                 ),
                 logistics,
             )
@@ -104,7 +102,6 @@ class BlueprintPlanTest : BaseGameCtxTest() {
             blueprintPlan(
                 optimizationResult(
                     production(imported, Factory.NO_FACTORY),
-                    logistics = testLogistics,
                 ),
                 logistics,
             )
@@ -159,7 +156,6 @@ class BlueprintPlanTest : BaseGameCtxTest() {
                 optimizationResult(
                     production(ironGearWheelRecipe, level = 3),
                     production(castingIronRecipe, Factory.FOUNDRY, level = 2),
-                    logistics = testLogistics,
                 ),
                 logistics,
             )
@@ -187,7 +183,7 @@ class BlueprintPlanTest : BaseGameCtxTest() {
             )
         val targetPlan =
             testBlueprintPlan(
-                optimizationResult(advOilProcessing, logistics = testLogistics),
+                optimizationResult(advOilProcessing),
                 logistics,
             )
 
@@ -214,7 +210,7 @@ class BlueprintPlanTest : BaseGameCtxTest() {
             )
 
         // the band inserts circuit internally; the processing row still needs a belt source
-        val sources = plannedSources(listOf(band, PlannedRow.copies(processing, 1)), logistics)
+        val sources = plannedSources(listOf(band, PlannedRow.copies(processing, 1)))
 
         assertContains(sources.map { it.material }, electronicCircuit)
     }
@@ -236,7 +232,7 @@ class BlueprintPlanTest : BaseGameCtxTest() {
 
         // the cable link reaches only the circuit machine, so the advanced machine still needs an
         // import of its own; the linked circuit machine's cable must not be added
-        val sources = plannedSources(listOf(band), logistics)
+        val sources = plannedSources(listOf(band))
 
         assertAll(
             { assertContains(sources.map { it.material }, copperCable) },

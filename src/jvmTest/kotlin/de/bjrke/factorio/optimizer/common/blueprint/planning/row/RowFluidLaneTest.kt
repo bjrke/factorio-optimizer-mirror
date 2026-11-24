@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
-import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -61,7 +60,7 @@ class RowFluidLaneTest : BaseGameCtxTest() {
                             ),
                     ),
             )
-        val lane = RowFluidLane(logistics)
+        val lane = RowFluidLane()
         val laneRow = lane.laneRow(row, NORTH)
         val acid = lane.fluids(row, NORTH).single { it.material == sulfuricAcid }
         val head = FluidLane.of(laneRow, acid.ports, NORTH).head

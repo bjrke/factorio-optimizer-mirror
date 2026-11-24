@@ -109,7 +109,7 @@ private class RunGrowth(
     private val step = direction.step
     private val backward = step * -1
     private val budget = board.range(material) - inputTile.manhattanDist(outputTile)
-    private val fluid = board.isFluid(material)
+    private val fluid = material.isFluid
     private val type = board.endName(material)
 
     fun stretch() {

@@ -2,7 +2,6 @@ package de.bjrke.factorio.optimizer.common.model
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
 
 data class FactoryProduction(
     // the demanded material this recipe entry is labeled with; a recipe producing several needed
@@ -55,8 +54,6 @@ data class OptimizationResult(
     // keyed by recipe: several recipes can produce the same material and run in parallel. An
     // IndexedRecipe hashes its index, so the map stays cheap even though the recipe carries maps.
     val factories: Map<IndexedRecipe, FactoryProduction>,
-    // the logistics prototypes the calculator uses to turn rates into belts/inserters/pumps
-    val logistics: Logistics = Logistics(),
 )
 
 /**

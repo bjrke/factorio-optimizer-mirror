@@ -13,28 +13,25 @@ import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 internal fun solidRates(
     machines: List<FactoryProduction>,
     rates: (FactoryProduction) -> List<Pair<Material, Double>>,
-    logistics: LogisticsCalculator,
     machineRate: (FactoryProduction) -> Double = { 1.0 },
 ): Map<Material, Double> =
     machines
         .flatMap { production ->
             rates(production).map { (material, rate) -> material to rate * machineRate(production) }
         }
-        .filterNot { (material, _) -> logistics.isFluid(material) }
+        .filterNot { (material, _) -> material.isFluid }
         .groupingBy { (material, _) -> material }
         .fold(0.0) { acc, (_, rate) -> acc + rate }
 
 internal fun rowInputs(
     machines: List<FactoryProduction>,
-    logistics: LogisticsCalculator,
     machineRate: (FactoryProduction) -> Double = { 1.0 },
-) = solidRates(machines, ::inputRates, logistics, machineRate)
+) = solidRates(machines, ::inputRates, machineRate)
 
 internal fun rowOutputs(
     machines: List<FactoryProduction>,
-    logistics: LogisticsCalculator,
     machineRate: (FactoryProduction) -> Double = { 1.0 },
-) = solidRates(machines, ::outputRates, logistics, machineRate)
+) = solidRates(machines, ::outputRates, machineRate)
 
 /** The solid input/output rates of one row and the belt rows they pack into. */
 internal data class RowBeltPacking(
@@ -56,8 +53,8 @@ internal fun rowBeltPacking(
     feedDirection: (Material) -> Direction? = { null },
 ): RowBeltPacking {
     val linked = row.links.mapTo(mutableSetOf()) { it.material }
-    val inputs = rowInputs(row.machines, logistics, machineRate) - row.fullyInternalInputs
-    val outputs = rowOutputs(row.machines, logistics, machineRate) - linked
+    val inputs = rowInputs(row.machines, machineRate) - row.fullyInternalInputs
+    val outputs = rowOutputs(row.machines, machineRate) - linked
     val directions =
         (inputs.keys - outputs.keys).associateWith { feedDirection(it) ?: Direction.EAST }
     val groups =

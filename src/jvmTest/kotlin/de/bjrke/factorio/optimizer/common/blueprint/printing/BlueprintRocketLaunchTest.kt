@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
+import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.lowDensityStructure
@@ -33,14 +34,21 @@ class BlueprintRocketLaunchTest : BaseGameCtxTest() {
     @Test
     fun theRocketSiloFeedsItsThreeIngredientsAndExportsTheParts() {
         val ingredients = setOf(processingUnit, lowDensityStructure, rocketFuel)
+        val parsedRecipe = forSurface(Surface.NAUVIS)
         val result =
             Optimizer(
-                forSurface(Surface.NAUVIS),
+                parsedRecipe,
                 FactoryConfig(spaceAge = true).defaults,
                 MAX_INTERMEDIATE_LIMIT,
                 ingredients,
             )[rocketPart]
-        val layout = Layout(result = result, scale = 0.2, beltEnd = BeltEnd.CONSTANT_COMBINATOR)
+        val layout =
+            Layout(
+                result,
+                LogisticsCalculator(parsedRecipe.logistics),
+                scale = 0.2,
+                beltEnd = BeltEnd.CONSTANT_COMBINATOR,
+            )
         val silo = layout.machine("rocket-silo")
         val targetRow = layout.plan.rows.single { rocketPart in it.beltMaterials }
 
@@ -72,14 +80,21 @@ class BlueprintRocketLaunchTest : BaseGameCtxTest() {
     fun theBaseGameSiloTakesThePartIngredientsAndTheSatellite() {
         val ingredients = setOf(processingUnit, lowDensityStructure, rocketFuel)
         val imports = ingredients + satellite
+        val parsedRecipe = forSurface(Surface.NAUVIS, spaceAge = false)
         val result =
             Optimizer(
-                forSurface(Surface.NAUVIS, spaceAge = false),
+                parsedRecipe,
                 FactoryConfig(spaceAge = false).defaults,
                 MAX_INTERMEDIATE_LIMIT,
                 imports,
             )[spaceScience]
-        val layout = Layout(result = result, scale = 0.2, beltEnd = BeltEnd.CONSTANT_COMBINATOR)
+        val layout =
+            Layout(
+                result,
+                LogisticsCalculator(parsedRecipe.logistics),
+                scale = 0.2,
+                beltEnd = BeltEnd.CONSTANT_COMBINATOR,
+            )
         val silo = layout.machine("rocket-silo")
         val targetRow = layout.plan.rows.single { spaceScience in it.beltMaterials }
 
@@ -98,14 +113,21 @@ class BlueprintRocketLaunchTest : BaseGameCtxTest() {
     /** The base game keeps the dumped one-part recipe, so its silo layout is unchanged. */
     @Test
     fun theBaseGameSiloKeepsTheDumpedPartRecipe() {
+        val parsedRecipe = forSurface(Surface.NAUVIS, spaceAge = false)
         val result =
             Optimizer(
-                forSurface(Surface.NAUVIS, spaceAge = false),
+                parsedRecipe,
                 FactoryConfig(spaceAge = false).defaults,
                 MAX_INTERMEDIATE_LIMIT,
                 setOf(processingUnit, lowDensityStructure, rocketFuel),
             )[rocketPart]
-        val layout = Layout(result = result, scale = 0.2, beltEnd = BeltEnd.CONSTANT_COMBINATOR)
+        val layout =
+            Layout(
+                result,
+                LogisticsCalculator(parsedRecipe.logistics),
+                scale = 0.2,
+                beltEnd = BeltEnd.CONSTANT_COMBINATOR,
+            )
 
         assertAll(
             { assertEquals(1.0, result.production(rocketPart).recipe.result.getValue(rocketPart)) },

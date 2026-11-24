@@ -41,8 +41,8 @@ on it through the `Layout` fixture in
 is `internal` and keeps its accessors private.
 
 The layout is split into a small mutable kernel plus stages, and every stage takes
-one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `logistics`,
-`planner`, `rowPlacer`, `router`) instead of repeating those collaborators. The
+one `blueprint/planning/row/LayoutStage.kt` context (`board`, `plan`, `planner`,
+`rowPlacer`, `router`) instead of repeating those collaborators. The
 belt-row and fluid-lane stages are in `lanes-fluids.md`.
 
 - `blueprint/layout/LayoutBoard.kt` — the tile grid (a `Coordinate`-keyed cell map), the placed

@@ -348,7 +348,6 @@ class RowPlacerTest : BaseGameCtxTest() {
                     InserterTier.LONG_HANDED_INSERTER.identifier,
                 ),
                 undergroundRange = 9,
-                logistics::isFluid,
                 logistics::fluidTemperature,
             )
         val planner = RowPlanner(plan, logistics)

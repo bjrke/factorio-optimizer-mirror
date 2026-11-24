@@ -274,7 +274,7 @@ private fun printListing(
         rate: Double,
         isOutput: Boolean,
     ): String {
-        if (logistics.isFluid(material)) {
+        if (material.isFluid) {
             return "${superRound(logistics.pumpCount(rate))} pumps + pipe"
         }
         // the big mining drill and the recycler drop their product straight onto the belt

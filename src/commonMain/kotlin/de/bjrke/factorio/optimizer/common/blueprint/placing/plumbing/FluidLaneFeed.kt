@@ -6,7 +6,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FIRST_MACHINE_X
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FluidLane
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.FluidLanePlacer
@@ -58,11 +57,10 @@ internal class FluidLaneFeed(
     board: LayoutBoard,
     private val imports: ImportExtension,
     beltEnd: BeltEnd,
-    private val logistics: LogisticsCalculator,
     private val failures: MutableList<LayoutIssue>,
 ) {
     private val placer = FluidLanePlacer(board, imports, beltEnd)
-    private val model = RowFluidLane(logistics)
+    private val model = RowFluidLane()
 
     /** The port tiles the lanes carry a fluid to, and the fluid each of them carries. */
     private val laneFeeds = mutableMapOf<Coordinate, Material>()
@@ -185,5 +183,5 @@ internal class FluidLaneFeed(
 
     /** The fluids [machine] takes, in recipe order: the order the lane hands its ports out in. */
     fun liquidsOf(machine: PlacedMachine): List<Material> =
-        machine.production.recipe.ingredients.keys.filter { logistics.isFluid(it) }
+        machine.production.recipe.ingredients.keys.filter { it.isFluid }
 }

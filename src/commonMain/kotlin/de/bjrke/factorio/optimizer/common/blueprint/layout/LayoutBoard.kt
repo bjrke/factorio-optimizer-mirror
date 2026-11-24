@@ -54,12 +54,8 @@ internal class LayoutBoard(
     val names: LayoutNames,
     /** Maximum length of the selected belt tier's underground run. */
     val undergroundRange: Int,
-    private val fluidPredicate: (Material) -> Boolean,
     internal val temperatureOf: (Material) -> Int,
 ) {
-
-    /** Whether [material] is a fluid, and therefore rides in pipes instead of on belts. */
-    fun isFluid(material: Material) = fluidPredicate(material)
 
     /** One tile: the entity that covers it and the planner's flags for the tile. */
     private class Cell {

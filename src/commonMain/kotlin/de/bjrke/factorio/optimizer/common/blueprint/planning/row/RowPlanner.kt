@@ -22,7 +22,7 @@ internal class RowPlanner(
     private val logistics: LogisticsCalculator,
 ) {
 
-    private val topology = RowTopology(plan, logistics)
+    private val topology = RowTopology(plan)
 
     /** The rows to place, north to south, in the target-centred topology order. */
     val units: List<RowUnit> = topology.units

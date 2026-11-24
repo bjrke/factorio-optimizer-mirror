@@ -1,7 +1,5 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
@@ -9,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.moltenIronFromLavaRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.nuclearFuelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.uraniumProcessingRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
@@ -20,24 +17,18 @@ import kotlin.test.assertTrue
 
 class RecipeFilterTest : BaseGameCtxTest() {
 
-    private val logistics =
-        LogisticsCalculator(
-            testLogistics,
-            LogisticsCalculatorSelection(),
-        )
-
     @Test
     fun centrifugingAndSimpleChemistryAreBuildable() =
         assertAll(
             {
                 assertTrue(
-                    buildable(logistics, nuclearFuelRecipe.indexedForTest()),
+                    buildable(nuclearFuelRecipe.indexedForTest()),
                     "centrifuging is planned",
                 )
             },
             {
                 assertTrue(
-                    buildable(logistics, plasticBarRecipe.indexedForTest()),
+                    buildable(plasticBarRecipe.indexedForTest()),
                     "simple chemistry is planned",
                 )
             },
@@ -46,14 +37,14 @@ class RecipeFilterTest : BaseGameCtxTest() {
     @Test
     fun aFluidByproductDoesNotNeedASecondOutputBelt() =
         assertTrue(
-            buildable(logistics, moltenIronFromLavaRecipe.indexedForTest()),
+            buildable(moltenIronFromLavaRecipe.indexedForTest()),
             "fluid results leave through their own lanes",
         )
 
     @Test
     fun twoSolidResultsStillNeedAMixedOutputBelt() =
         assertFalse(
-            buildable(logistics, uraniumProcessingRecipe.indexedForTest()),
+            buildable(uraniumProcessingRecipe.indexedForTest()),
             "a second solid would need a second output belt",
         )
 
@@ -62,13 +53,13 @@ class RecipeFilterTest : BaseGameCtxTest() {
         assertAll(
             {
                 assertFalse(
-                    buildable(logistics, importPseudoRecipe().indexedForTest()),
+                    buildable(importPseudoRecipe().indexedForTest()),
                     "imports enter the blueprint from outside",
                 )
             },
             {
                 assertFalse(
-                    buildable(logistics, ironOreMiningRecipe.indexedForTest()),
+                    buildable(ironOreMiningRecipe.indexedForTest()),
                     "extraction recipes are imported too",
                 )
             },

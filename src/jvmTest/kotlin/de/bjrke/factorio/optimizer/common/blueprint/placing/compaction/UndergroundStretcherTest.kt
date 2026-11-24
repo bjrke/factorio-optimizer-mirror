@@ -36,15 +36,6 @@ class UndergroundStretcherTest : BaseGameCtxTest() {
         LayoutBoard(
             names = LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
             undergroundRange = 6,
-            fluidPredicate = { false },
-            temperatureOf = { 0 },
-        )
-
-    private fun fluidBoard() =
-        LayoutBoard(
-            names = LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
-            undergroundRange = 6,
-            fluidPredicate = { it == water },
             temperatureOf = { 0 },
         )
 
@@ -107,7 +98,7 @@ class UndergroundStretcherTest : BaseGameCtxTest() {
      */
     @Test
     fun aRunLeavesTheMachinePortPastItsOutput() {
-        val board = fluidBoard()
+        val board = board()
         board.place(
             MachineEntity(
                 Factory.ASSEMBLING_MACHINE_3,

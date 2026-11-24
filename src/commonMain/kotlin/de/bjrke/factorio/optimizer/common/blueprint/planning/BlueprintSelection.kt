@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning
 
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 
@@ -15,10 +14,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
  * not external. A fluid produced by another row is still imported, because rows never pipe fluids
  * to each other.
  */
-internal fun plannedSources(
-    rows: List<PlannedRow>,
-    logistics: LogisticsCalculator,
-) = buildSet {
+internal fun plannedSources(rows: List<PlannedRow>) = buildSet {
     // A solid only leaves a row through its belt materials; a material that is merely a recipe
     // result but is inserted internally is not a source for another row. A link covers only the
     // machine it reaches, so the other machines of a partially linked row still import it.
@@ -29,7 +25,7 @@ internal fun plannedSources(
         for ((index, machine) in row.machines.withIndex()) {
             for (material in machine.recipe.ingredients.keys) {
                 val covered =
-                    if (logistics.isFluid(material)) material in rowProducts
+                    if (material.isFluid) material in rowProducts
                     else material in produced || (index to material) in internal
                 if (!covered) add(material)
             }
@@ -37,4 +33,4 @@ internal fun plannedSources(
     }
 }
     .sortedBy { it.name }
-    .map { PlannedSource(it, logistics.isFluid(it)) }
+    .map { PlannedSource(it, it.isFluid) }

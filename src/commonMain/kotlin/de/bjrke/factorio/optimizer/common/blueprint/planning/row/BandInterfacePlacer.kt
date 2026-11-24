@@ -46,8 +46,7 @@ internal class BandInterfacePlacer(
         val production = machine.production
         val recipe = production.recipe
         val usesFluid =
-            recipe.ingredients.keys.any { logistics.isFluid(it) } ||
-                recipe.result.keys.any { logistics.isFluid(it) }
+            recipe.ingredients.keys.any { it.isFluid } || recipe.result.keys.any { it.isFluid }
         if (!usesFluid) return emptySet()
         val edge = if (east) row.width else -1
         return prototypeFluidPorts(production.factory)

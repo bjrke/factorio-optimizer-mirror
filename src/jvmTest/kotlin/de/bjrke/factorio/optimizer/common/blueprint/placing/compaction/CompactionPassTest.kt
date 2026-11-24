@@ -25,7 +25,6 @@ class CompactionPassTest : BaseGameCtxTest() {
         LayoutBoard(
             names = LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
             undergroundRange = 6,
-            fluidPredicate = { false },
             temperatureOf = { 0 },
         )
 

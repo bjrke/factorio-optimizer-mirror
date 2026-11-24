@@ -53,10 +53,9 @@ internal class FluidFeeder(
 ) {
     private val board = stage.board
     private val plan = stage.plan
-    private val logistics = stage.logistics
     private val rowPlacer = stage.rowPlacer
     private val router = stage.router
-    private val lanes = FluidLaneFeed(board, imports, beltEnd, logistics, failures)
+    private val lanes = FluidLaneFeed(board, imports, beltEnd, failures)
 
     /** The routed fallback prepared by [placeImports], routed by [routeFluids]. */
     private var groups: List<PipeGroup> = emptyList()
@@ -149,7 +148,7 @@ internal class FluidFeeder(
 
     /** Connects a fluid output pipe to each target machine, so its product has somewhere to go. */
     fun placeTargetOutput() {
-        if (!logistics.isFluid(plan.target)) return
+        if (!plan.target.isFluid) return
         val row = rowPlacer.producerRow(plan.target) ?: return
         val producer = row.plannedRow.producerOf(plan.target) ?: return
         for (machine in row.machines) {

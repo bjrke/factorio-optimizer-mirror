@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.fixtures
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -44,13 +43,9 @@ fun factories(vararg productions: FactoryProduction) = productions.associateBy {
 internal fun optimizationResult(recipe: Recipe, factory: Factory) =
     optimizationResult(production(recipe, factory))
 
-internal fun optimizationResult(
-    vararg productions: FactoryProduction,
-    logistics: Logistics = Logistics(),
-) =
+internal fun optimizationResult(vararg productions: FactoryProduction) =
     OptimizationResult(
         target = productions.first().material,
         recipe = productions.first().recipe,
         factories = productions.associateBy { it.recipe },
-        logistics = logistics,
     )

@@ -142,7 +142,7 @@ every surface, one solid-fuel recipe per surface — never by picking one of its
 
 ## 2026-11-06 — Sources follow the placed rows
 
-**Decision.** `BlueprintPlan.sources` comes from `plannedSources(rows, logistics)` — the rows
+**Decision.** `BlueprintPlan.sources` comes from `plannedSources(rows)` — the rows
 actually placed — and a synthetic import is a `Category.IMPORT` recipe, so `buildable` decides from
 the recipe rather than from the machine.
 

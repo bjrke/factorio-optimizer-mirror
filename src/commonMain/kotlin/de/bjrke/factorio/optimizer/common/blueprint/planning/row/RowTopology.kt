@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
@@ -33,10 +32,7 @@ private const val MAX_DISTRIBUTED_BRANCH_ROWS = 4
  * Nodes are the row **positions** in `BlueprintPlan.rows`, never row values: two structurally equal
  * rows are two occurrences and must not collapse into one graph node.
  */
-internal class RowTopology(
-    plan: BlueprintPlan,
-    logistics: LogisticsCalculator,
-) {
+internal class RowTopology(plan: BlueprintPlan) {
 
     /** One plan row and the belt facts the graph needs, indexed by its plan position. */
     private class RowInfo(
@@ -56,8 +52,8 @@ internal class RowTopology(
                 // The topology keeps the whole-machine rates: they only rank producers and pick a
                 // side, and scaling them changes the row order enough to separate power networks.
                 // The scaled rates drive the belts, not the graph (`BlueprintPlan.machineRate`).
-                inputs = rowInputs(row.machines, logistics).minus(row.fullyInternalInputs),
-                outputs = rowOutputs(row.machines, logistics).minus(linked),
+                inputs = rowInputs(row.machines).minus(row.fullyInternalInputs),
+                outputs = rowOutputs(row.machines).minus(linked),
                 beltMaterials = row.beltMaterials,
                 right =
                     FIRST_MACHINE_X +

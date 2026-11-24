@@ -17,7 +17,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
-import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
@@ -70,7 +69,7 @@ class BandPlanTest : BaseGameCtxTest() {
     fun aMaterialMadeAndTakenByOneRecipeIsDirectInserted() {
         val belts = production(transportBeltRecipe, level = 2)
         val gears = production(ironGearWheelRecipe, level = 1)
-        val result = optimizationResult(belts, gears, logistics = testLogistics)
+        val result = optimizationResult(belts, gears)
         val planned = testBlueprintPlan(result, logistics)
 
         val band = planned.rows.single { it.links.isNotEmpty() }
@@ -102,8 +101,8 @@ class BandPlanTest : BaseGameCtxTest() {
                 label = "",
             )
         val links = band.row.links.mapTo(mutableSetOf()) { it.material }
-        val inputs = rowInputs(band.row.machines, logistics) - band.row.fullyInternalInputs
-        val outputs = rowOutputs(band.row.machines, logistics) - links
+        val inputs = rowInputs(band.row.machines) - band.row.fullyInternalInputs
+        val outputs = rowOutputs(band.row.machines) - links
         val budget =
             beltRowBudget(
                 inputs,

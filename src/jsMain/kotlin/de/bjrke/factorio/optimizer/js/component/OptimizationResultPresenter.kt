@@ -278,7 +278,7 @@ private fun ChildrenBuilder.materialLogistics(
     isOutput: Boolean,
 ) {
     val calculator = props.logistics
-    if (calculator.isFluid(material)) {
+    if (material.isFluid) {
         logisticsInputIcon(props, "pump", "pumps", calculator.pumpCount(rate))
         pipeMarker()
         return

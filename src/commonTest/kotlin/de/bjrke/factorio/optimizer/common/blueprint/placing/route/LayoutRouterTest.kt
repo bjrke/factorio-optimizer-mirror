@@ -38,7 +38,6 @@ class LayoutRouterTest : BaseGameCtxTest() {
         LayoutBoard(
             LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
             undergroundRange = 4,
-            fluidPredicate = { false },
             temperatureOf = { 0 },
         )
 
@@ -199,7 +198,6 @@ class LayoutRouterTest : BaseGameCtxTest() {
             LayoutBoard(
                 LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
                 undergroundRange = 4,
-                fluidPredicate = { true },
                 temperatureOf = { 0 },
             )
         val router = LayoutRouter(board)

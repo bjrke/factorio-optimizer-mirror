@@ -21,11 +21,11 @@ private fun UndergroundEntity.isOutputOf(input: UndergroundEntity) =
 
 /** How far [material] may travel underground: a pipe's own reach or the belt tier's. */
 internal fun LayoutBoard.range(material: Material) =
-    if (isFluid(material)) PIPE_UNDERGROUND_RANGE else undergroundRange
+    if (material.isFluid) PIPE_UNDERGROUND_RANGE else undergroundRange
 
 /** The name of an underground end of [material]: a pipe-to-ground or the belt tier's. */
 internal fun LayoutBoard.endName(material: Material) =
-    if (isFluid(material)) names.pipeToGround else names.undergroundBelt
+    if (material.isFluid) names.pipeToGround else names.undergroundBelt
 
 /** Whether a run of [type] along [step] already passes under [coordinate]. */
 internal fun LayoutBoard.hasTunnel(coordinate: Coordinate, step: Coordinate, type: String) =

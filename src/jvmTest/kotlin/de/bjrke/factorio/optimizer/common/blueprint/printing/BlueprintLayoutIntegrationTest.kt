@@ -288,8 +288,7 @@ class BlueprintLayoutIntegrationTest : BaseGameCtxTest() {
             val missing =
                 entities.filterIsInstance<MachineEntity>().mapNotNull { machine ->
                     val recipe = recipes[machine.recipe] ?: return@mapNotNull null
-                    val solids =
-                        recipe.ingredients.keys.filterNot(layout.logistics::isFluid).toSet()
+                    val solids = recipe.ingredients.keys.filterNot { it.isFluid }.toSet()
                     if (solids.isEmpty()) return@mapNotNull null
                     val area = machine.area
                     val laneRows = setOf(area.y - 2, area.y - 3, area.endY + 1, area.endY + 2)
@@ -417,8 +416,8 @@ class BlueprintLayoutIntegrationTest : BaseGameCtxTest() {
             {
                 bands.forEach { band ->
                     val internal = band.links.map { it.material }.toSet()
-                    val inputs = rowInputs(band.machines, layout.logistics).minus(internal)
-                    val outputs = rowOutputs(band.machines, layout.logistics).minus(internal)
+                    val inputs = rowInputs(band.machines).minus(internal)
+                    val outputs = rowOutputs(band.machines).minus(internal)
                     val singleRecipe = band.machines.map { it.recipe }.distinct().size == 1
                     val budget =
                         beltRowBudget(

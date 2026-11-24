@@ -83,33 +83,33 @@ internal class FeedGroup(
 )
 
 /** The solid inputs a band draws from outside its links. */
-internal fun DirectFeedContext.bandBeltInputs(links: List<FeedLink>): Set<Material> {
+internal fun bandBeltInputs(links: List<FeedLink>): Set<Material> {
     val internal = links.mapTo(mutableSetOf()) { it.material }
     return links
         .asSequence()
         .flatMap { listOf(it.producer.production, it.consumer.production) }
         .distinct()
         .flatMap { production -> production.recipe.ingredients.keys }
-        .filterNot { logistics.isFluid(it) }
+        .filterNot { it.isFluid }
         .filterNot { it in internal }
         .toSet()
 }
 
 /** The solid results a band puts on a belt rather than inserting them. */
-internal fun DirectFeedContext.bandBeltOutputs(links: List<FeedLink>): Set<Material> {
+internal fun bandBeltOutputs(links: List<FeedLink>): Set<Material> {
     val internal = links.mapTo(mutableSetOf()) { it.material }
     return links
         .asSequence()
         .flatMap { listOf(it.producer.production, it.consumer.production) }
         .distinct()
         .flatMap { production -> production.recipe.result.keys }
-        .filterNot { logistics.isFluid(it) }
+        .filterNot { it.isFluid }
         .filterNot { it in internal }
         .toSet()
 }
 
 /** The belt rows [links] need, ignoring lane capacity: the quick pre-filter for growth. */
-internal fun DirectFeedContext.bandBeltRows(links: List<FeedLink>): Int {
+internal fun bandBeltRows(links: List<FeedLink>): Int {
     val inputs = bandBeltInputs(links)
     val outputs = bandBeltOutputs(links)
     val materials = (inputs + outputs).size
@@ -118,8 +118,7 @@ internal fun DirectFeedContext.bandBeltRows(links: List<FeedLink>): Int {
 }
 
 /** Whether [links] can still fit the row's belt budget before the expensive arrangement. */
-internal fun DirectFeedContext.bandBeltMayFit(links: List<FeedLink>) =
-    bandBeltRows(links) <= MAX_ROW_BELTS
+internal fun bandBeltMayFit(links: List<FeedLink>) = bandBeltRows(links) <= MAX_ROW_BELTS
 
 /**
  * Whether the arranged [plan] fits the row's four belt rows. This is the precise check: every
@@ -137,8 +136,8 @@ internal fun DirectFeedContext.bandBeltFits(plan: BandPlan): Boolean {
     val bandRate = { production: FactoryProduction ->
         machineRate(production, copies[production] ?: 1, scale)
     }
-    val inputs = rowInputs(plan.machines, logistics, bandRate) - internal
-    val outputs = rowOutputs(plan.machines, logistics, bandRate) - internal
+    val inputs = rowInputs(plan.machines, bandRate) - internal
+    val outputs = rowOutputs(plan.machines, bandRate) - internal
     val singleRecipe = plan.machines.map { it.recipe }.distinct().size == 1
     return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity(), singleRecipe).fits
 }
@@ -182,7 +181,7 @@ internal class FeedNode(
      */
     val ingredients by lazy {
         recipe.ingredients.keys
-            .filterNot { ctx.logistics.isFluid(it) }
+            .filterNot { it.isFluid }
             .flatMap { ctx.producers[it].orEmpty() }
             .map { ctx.feedLink(it, production) }
     }
@@ -190,7 +189,7 @@ internal class FeedNode(
     /** Every plan consumer that takes this production's material. */
     val consumers: List<FeedLink> by lazy {
         recipe.result.keys
-            .filterNot { ctx.logistics.isFluid(it) }
+            .filterNot { it.isFluid }
             .flatMap { ctx.consumers[it].orEmpty() }
             .map { ctx.feedLink(production, it) }
     }
@@ -252,16 +251,16 @@ internal data class DirectFeedContext(
             .flatMap { (recipe, factory) -> recipe.result.keys.map { it to factory } }
             // stone is a byproduct of Vulcanus' lava recipes, so it is always imported instead of
             // being fed from one of several producers.
-            .filter { (m, p) -> m.name != "stone" && buildable(logistics, p.recipe) }
+            .filter { (m, p) -> m.name != "stone" && buildable(p.recipe) }
             .groupBy({ (m, _) -> m }, { (_, p) -> p })
-            .filterKeys { !logistics.isFluid(it) }
+            .filterKeys { !it.isFluid }
 
     val consumers =
         factories
             .flatMap { (recipe, factory) -> recipe.ingredients.keys.map { it to factory } }
-            .filter { (_, p) -> buildable(logistics, p.recipe) }
+            .filter { (_, p) -> buildable(p.recipe) }
             .groupBy({ (m, _) -> m }, { (_, p) -> p })
-            .filterKeys { !logistics.isFluid(it) }
+            .filterKeys { !it.isFluid }
 
     /**
      * The target plus every production that alone supplies a material. The target is seeded even

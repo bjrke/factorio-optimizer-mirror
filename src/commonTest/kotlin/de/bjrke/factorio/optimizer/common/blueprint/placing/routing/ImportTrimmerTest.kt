@@ -103,7 +103,6 @@ class ImportTrimmerTest : BaseGameCtxTest() {
                         longInserter = "long-handed-inserter",
                     ),
                 undergroundRange = 5,
-                fluidPredicate = { false },
                 temperatureOf = { 0 },
             )
         val imports = ImportExtension()

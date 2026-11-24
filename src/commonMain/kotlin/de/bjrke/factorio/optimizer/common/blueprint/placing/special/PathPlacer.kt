@@ -43,13 +43,13 @@ internal fun placePath(
     finalHeading: Direction? = null,
     load: LaneLoad? = null,
 ): Set<Coordinate> {
-    val revisited = pathConflicts(board, material, nodes)
+    val revisited = pathConflicts(material, nodes)
     if (revisited.isNotEmpty()) return revisited
     for ((tile, role) in roles(nodes, finalHeading)) {
         if (!board.isFree(tile)) continue
         when (role) {
             is SurfaceRole ->
-                if (load != null && !board.isFluid(material)) {
+                if (load != null && !material.isFluid) {
                     board.placeBelt(tile, load, role.direction)
                 } else {
                     board.placeSurface(material, tile, role.direction)
@@ -66,12 +66,8 @@ internal fun placePath(
  * The tiles a belt route in [nodes] uses twice, so the caller can rule them out and search again. A
  * pipe route may reuse a tile: a pipe tile is a junction.
  */
-internal fun pathConflicts(
-    board: LayoutBoard,
-    material: Material,
-    nodes: List<Coordinate>,
-): Set<Coordinate> =
-    if (board.isFluid(material)) emptySet()
+internal fun pathConflicts(material: Material, nodes: List<Coordinate>) =
+    if (material.isFluid) emptySet()
     else nodes.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
 
 /**

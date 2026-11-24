@@ -21,7 +21,7 @@ class PathPlacerTest : BaseGameCtxTest() {
      */
     @Test
     fun aBeltPathThatRevisitsATileIsRejected() {
-        val board = board(fluid = false)
+        val board = board()
         val nodes =
             listOf(
                 Coordinate(0, 0),
@@ -42,7 +42,7 @@ class PathPlacerTest : BaseGameCtxTest() {
     /** A pipe tile is a junction, so a pipe route may revisit a tile and still be placed. */
     @Test
     fun aPipePathMayRevisitATile() {
-        val board = board(fluid = true)
+        val board = board()
         val nodes =
             listOf(
                 Coordinate(0, 0),
@@ -60,11 +60,10 @@ class PathPlacerTest : BaseGameCtxTest() {
         )
     }
 
-    private fun board(fluid: Boolean) =
+    private fun board() =
         LayoutBoard(
             LayoutNames("transport-belt", "inserter", "long-handed-inserter"),
             undergroundRange = 4,
-            fluidPredicate = { fluid },
             temperatureOf = { 0 },
         )
 }

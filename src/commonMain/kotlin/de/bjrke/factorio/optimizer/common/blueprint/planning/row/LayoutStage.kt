@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 
 /**
  * The board and plan-level services every layout stage reads. A stage owns its own state and takes
@@ -13,7 +12,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalcu
 internal class LayoutStage(
     val board: LayoutBoard,
     val plan: BlueprintPlan,
-    val logistics: LogisticsCalculator,
     val planner: RowPlanner,
     val rowPlacer: RowPlacer,
     val router: LayoutRouter,

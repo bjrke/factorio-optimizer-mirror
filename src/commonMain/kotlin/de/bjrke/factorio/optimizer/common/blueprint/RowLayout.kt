@@ -35,8 +35,6 @@ internal class RowLayout(
     beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
     private val powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
 ) {
-    /** A fluid target needs an explicit signal type; the other icons are item signals. */
-    private val targetIsFluid = logistics.isFluid(plan.target)
 
     private val board =
         LayoutBoard(
@@ -47,7 +45,6 @@ internal class RowLayout(
                 pole = powerPole.identifier,
             ),
             undergroundRange = logistics.undergroundRange,
-            logistics::isFluid,
             logistics::fluidTemperature,
         )
 
@@ -73,7 +70,7 @@ internal class RowLayout(
 
     private val rowPlacer = RowPlacer(board, plan, logistics, planner, failures)
 
-    private val stage = LayoutStage(board, plan, logistics, planner, rowPlacer, router)
+    private val stage = LayoutStage(board, plan, planner, rowPlacer, router)
 
     private val fluidFeeder = FluidFeeder(stage, beltEnd, imports, failures)
 
@@ -180,7 +177,7 @@ internal class RowLayout(
                 else -> null
             }
         return buildList {
-            add(BlueprintIcon(plan.target.name, fluid = targetIsFluid))
+            add(BlueprintIcon(plan.target.name, fluid = plan.target.isFluid))
             targetFactory()?.let { add(BlueprintIcon(it.identifier)) }
             if (beltNames.any { it in placedNames }) add(BlueprintIcon(board.names.belt))
             usedInserter?.let { add(BlueprintIcon(it)) }

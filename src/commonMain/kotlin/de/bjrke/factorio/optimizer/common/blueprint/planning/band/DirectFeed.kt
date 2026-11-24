@@ -126,7 +126,7 @@ private fun DirectFeedContext.linksBetween(productions: Collection<FactoryProduc
     productions
         .flatMap { consumer ->
             consumer.recipe.ingredients.keys
-                .filterNot { logistics.isFluid(it) }
+                .filterNot { it.isFluid }
                 .flatMap { material -> producers[material].orEmpty() }
                 .filter { it != consumer }
                 .map { feedLink(it, consumer) }
@@ -164,8 +164,8 @@ private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
  * that result even when the plan labelled the production with one of its fluids, because a fluid
  * never rides a belt row. Multi-solid recipes keep the label's rate.
  */
-private fun DirectFeedContext.beltOutputPerMachine(production: FactoryProduction): Double {
-    val solid = production.recipe.result.keys.singleOrNull { !logistics.isFluid(it) }
+private fun beltOutputPerMachine(production: FactoryProduction): Double {
+    val solid = production.recipe.result.keys.singleOrNull { !it.isFluid }
     return production.outputPerMachine(solid ?: production.material)
 }
 
@@ -187,7 +187,7 @@ private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): BeltDemand {
     val perMaterial = mutableMapOf<Material, Double>()
     for (consumer in included.values) {
         for (material in consumer.recipe.ingredients.keys) {
-            if (logistics.isFluid(material)) continue
+            if (material.isFluid) continue
             val producer = producers[material]?.singleOrNull() ?: continue
             if (Triple(material, producer.recipe, consumer.recipe) in groupedTriples) continue
             val rate = consumer.consumption(material) * scale
@@ -196,7 +196,7 @@ private fun DirectFeedContext.beltDemand(grouped: Set<FeedLink>): BeltDemand {
         }
     }
     val targetMaterial = target.production.material
-    if (!logistics.isFluid(targetMaterial)) {
+    if (!targetMaterial.isFluid) {
         perMaterial[targetMaterial] = (perMaterial[targetMaterial] ?: 0.0) + scale
     }
     return BeltDemand(perRecipe, perMaterial)

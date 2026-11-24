@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineEdge
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -35,7 +34,7 @@ internal class RowFluid(
  * for that material on the side. A machine that takes several fluids on the same edge gets one lane
  * per fluid, stacked outward so every lane can dive to its own port.
  */
-internal class RowFluidLane(private val logistics: LogisticsCalculator) {
+internal class RowFluidLane {
 
     /**
      * The fluid lanes [row] needs on [side], the leftmost port first. One lane per fluid and flow:
@@ -129,11 +128,11 @@ internal class RowFluidLane(private val logistics: LogisticsCalculator) {
 
     /** The fluid inputs of [machine]'s recipe, in recipe order. */
     private fun inputMaterials(machine: PlacedMachine): List<Material> =
-        machine.production.recipe.ingredients.keys.filter { logistics.isFluid(it) }
+        machine.production.recipe.ingredients.keys.filter { it.isFluid }
 
     /** The fluid outputs of [machine]'s recipe, in recipe order. */
     private fun outputMaterials(machine: PlacedMachine): List<Material> =
-        machine.production.recipe.result.keys.filter { logistics.isFluid(it) }
+        machine.production.recipe.result.keys.filter { it.isFluid }
 
     /** The horizontal edge [tile] sits on for [machine], or null when it is a side edge. */
     private fun sideOf(row: Row, machine: PlacedMachine, tile: Coordinate): LineSide? {

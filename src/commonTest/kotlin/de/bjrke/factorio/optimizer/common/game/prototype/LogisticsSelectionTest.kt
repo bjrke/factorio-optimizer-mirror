@@ -1,17 +1,14 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
-import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
-import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** What the dump and the selection string make available: tiers, lanes, stacking and fluids. */
+/** What the dump and the selection string make available: tiers, lanes and stacking. */
 class LogisticsSelectionTest : BaseGameCtxTest() {
 
     @Test
@@ -107,14 +104,5 @@ class LogisticsSelectionTest : BaseGameCtxTest() {
                 )
             },
         )
-    }
-
-    @Test
-    fun fluidsAreDetectedFromTheDump() {
-        val calculator = LogisticsCalculator(logistics = Logistics())
-
-        assertTableOf(water to true, ironPlate to false) { (material, expected) ->
-            assertEquals(expected, calculator.isFluid(material))
-        }
     }
 }

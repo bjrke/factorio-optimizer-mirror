@@ -33,7 +33,7 @@ internal fun DirectFeedContext.arrange(
  * The best arrangement of [recipes], pruning every window longer than the best plan found so far.
  * Machine count is the comparator's primary key, so a longer window can never win.
  */
-private fun DirectFeedContext.arrangeBest(
+private fun arrangeBest(
     recipes: List<FactoryProduction>,
     group: FeedGroup,
     requireComplete: Boolean,
@@ -44,7 +44,7 @@ private fun DirectFeedContext.arrangeBest(
             group,
             recipes,
             bandPlanComparator(),
-            logistics::isFluid,
+            { it.isFluid },
             requireComplete,
         )
     var best: BandPlan? = null

@@ -104,7 +104,7 @@ internal class DeliveryRouter(
         }
         if (start == sink.feed) {
             val heading = sink.heading ?: direction
-            if (load != null && !board.isFluid(material)) {
+            if (load != null && !material.isFluid) {
                 board.placeBelt(sink.feed, load, heading)
             } else {
                 board.placeSurface(material, sink.feed, heading)
@@ -145,7 +145,7 @@ internal class DeliveryRouter(
     /** Reserves the product row east of its placed belt, before any route runs. */
     fun reserveTargetOutput() {
         val targetMaterial = plan.target
-        if (board.isFluid(targetMaterial)) return
+        if (targetMaterial.isFluid) return
         val row = rowPlacer.producerRow(targetMaterial)
         val outputBelt =
             row?.belts?.firstOrNull { it.io == Io.OUTPUT && it.material == targetMaterial }
@@ -161,7 +161,7 @@ internal class DeliveryRouter(
     fun placeTargetOutput() {
         val targetMaterial = plan.target
         // a fluid target leaves through the pipe output FluidFeeder places
-        if (board.isFluid(targetMaterial)) return
+        if (targetMaterial.isFluid) return
         val row = rowPlacer.producerRow(targetMaterial)
         val endBelt =
             board.placed

@@ -139,7 +139,7 @@ private fun plannedPlan(
         BlueprintPlan(
             target = result.target,
             rows = feed.rows,
-            sources = plannedSources(feed.rows, logistics),
+            sources = plannedSources(feed.rows),
             scale = effective,
             label = planLabel(result.target, (effective / scale).coerceAtMost(1.0)),
         ),

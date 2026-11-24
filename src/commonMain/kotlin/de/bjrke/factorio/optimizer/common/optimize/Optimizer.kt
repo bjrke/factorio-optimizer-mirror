@@ -218,7 +218,6 @@ class Optimizer(
                     { recipe -> representativeOf(recipe, materials, target, consumption) },
                     indexer,
                 ),
-            logistics = parsedRecipe.logistics,
         )
     }
 

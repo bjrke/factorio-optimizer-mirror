@@ -1,6 +1,10 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.TEST_FLUID_NAMES
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.water
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -14,7 +18,7 @@ import kotlin.test.assertEquals
  * including the light component suites that need no prototype data. This test is what keeps the
  * curated set in step with the dump.
  */
-class TestFluidNamesTest {
+class TestFluidNamesTest : BaseGameCtxTest() {
 
     @Test
     fun theFixtureFluidNamesAreTheDumpsRealFluids() {
@@ -24,6 +28,15 @@ class TestFluidNamesTest {
 
         assertEquals(realFluids, TEST_FLUID_NAMES)
     }
+
+    /**
+     * The fixture universe applies that split, so a synthetic recipe sees the dump's fluid-ness.
+     */
+    @Test
+    fun theFixtureUniverseMarksTheDumpsFluidsAsFluid() =
+        assertTableOf(water to true, ironPlate to false) { (material, expected) ->
+            assertEquals(expected, material.isFluid)
+        }
 }
 
 /**

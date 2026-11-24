@@ -89,8 +89,8 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
         val carried = belts.flatMap { it.materials }.toSet()
         val budget =
             beltRowBudget(
-                rowInputs(listOf(production), layout.logistics),
-                rowOutputs(listOf(production), layout.logistics),
+                rowInputs(listOf(production)),
+                rowOutputs(listOf(production)),
                 layout.logistics.oneLaneCapacity(),
                 allowOverCapacityPairs = true,
             )
