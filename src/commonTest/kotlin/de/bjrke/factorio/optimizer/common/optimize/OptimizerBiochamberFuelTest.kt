@@ -3,16 +3,15 @@ package de.bjrke.factorio.optimizer.common.optimize
 import de.bjrke.factorio.optimizer.common.core.model.IconLayer
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.iconLayers
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.bioflux
 import de.bjrke.factorio.optimizer.common.fixtures.nutrients
 import de.bjrke.factorio.optimizer.common.fixtures.producers
 import de.bjrke.factorio.optimizer.common.fixtures.production
-import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.game.prototype.biochamberFuel
-import de.bjrke.factorio.optimizer.common.game.prototype.forSurface
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
@@ -22,11 +21,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** The biochamber's fuel: nutrients, booked as an imported pseudo material to break the cycle. */
-class OptimizerBiochamberFuelTest {
+class OptimizerBiochamberFuelTest : BaseGameCtxTest() {
 
     private val gleba by lazy {
-        Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.GLEBA))
+        Optimizer(forSurface(Surface.GLEBA))
     }
+
+    private val biochamberFuel by lazy { materialRegistry.biochamberFuel() }
 
     @Test
     fun aBiochamberConsumesQuarterNutrientsPerSecond() {

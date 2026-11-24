@@ -17,6 +17,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.test.assertTable
@@ -40,83 +41,87 @@ private val MARKER_DESIGNS =
         BeltEnd.STEEL_CHEST,
     )
 
-private class ImportFixture(
-    val beltEnd: BeltEnd,
-    val board: LayoutBoard,
-    val imports: ImportExtension,
-    val connector: BeltEndConnector,
-) {
-    fun trim() = ImportTrimmer(board, connector, beltEnd, imports).trim()
+class ImportTrimmerTest : BaseGameCtxTest() {
 
-    /**
-     * The feed tile east of the marker strip, i.e. the column the trimmer aligns every marker on:
-     * the chest designs sit three tiles west of it, the label two (see
-     * `BeltEndConnector.placeSolidConnector`).
-     */
-    fun column(): Int =
-        when (beltEnd) {
-            BeltEnd.CONSTANT_COMBINATOR ->
-                board.placed
-                    .filterIsInstance<MarkerEntity>()
-                    .single { it.signal.material == ironPlate }
-                    .area
-                    .topLeft
-                    .x + 2
-            BeltEnd.INFINITY_CHEST ->
-                board.placed
-                    .filterIsInstance<InfinityChestEntity>()
-                    .single { it.settings.item == ironPlate }
-                    .area
-                    .topLeft
-                    .x + 3
-            else ->
-                board.placed
-                    .filterIsInstance<ChestEntity>()
-                    .single { it.area.y == ROW }
-                    .area
-                    .topLeft
-                    .x + 3
-        }
-}
+    private inner class ImportFixture(
+        val beltEnd: BeltEnd,
+        val board: LayoutBoard,
+        val imports: ImportExtension,
+        val connector: BeltEndConnector,
+    ) {
+        fun trim() = ImportTrimmer(board, connector, beltEnd, imports).trim()
 
-/** Registers an import on [row] without placing its belt, so a test can shape that row. */
-private fun ImportFixture.claimImportRow(row: Int, material: Material = ironPlate) {
-    imports.importFeeds +=
-        ImportFeed(
-            material,
-            Coordinate(IMPORT_FEED, row),
-            Coordinate(FEED_COLUMN, row),
-        )
-}
-
-/** A straight imported belt with its inline marker, ready for the trimmer. */
-private fun importFixture(beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR): ImportFixture {
-    val board =
-        LayoutBoard(
-            names =
-                LayoutNames(
-                    belt = "transport-belt",
-                    inserter = "inserter",
-                    longInserter = "long-handed-inserter",
-                ),
-            undergroundRange = 5,
-            fluidPredicate = { false },
-            temperatureOf = { 0 },
-        )
-    val imports = ImportExtension()
-    val connector = BeltEndConnector(board, beltEnd)
-    connector.placeSolidConnector(ironPlate, IMPORT_FEED, ROW, input = true)
-    for (x in IMPORT_FEED..FEED_COLUMN) {
-        board.placeBelt(Coordinate(x, ROW), ironPlate, EAST)
+        /**
+         * The feed tile east of the marker strip, i.e. the column the trimmer aligns every marker
+         * on: the chest designs sit three tiles west of it, the label two (see
+         * `BeltEndConnector.placeSolidConnector`).
+         */
+        fun column(): Int =
+            when (beltEnd) {
+                BeltEnd.CONSTANT_COMBINATOR ->
+                    board.placed
+                        .filterIsInstance<MarkerEntity>()
+                        .single { it.signal.material == ironPlate }
+                        .area
+                        .topLeft
+                        .x + 2
+                BeltEnd.INFINITY_CHEST ->
+                    board.placed
+                        .filterIsInstance<InfinityChestEntity>()
+                        .single { it.settings.item == ironPlate }
+                        .area
+                        .topLeft
+                        .x + 3
+                else ->
+                    board.placed
+                        .filterIsInstance<ChestEntity>()
+                        .single { it.area.y == ROW }
+                        .area
+                        .topLeft
+                        .x + 3
+            }
     }
-    board.reserve(Coordinate(IMPORT_FEED, ROW), ironPlate)
-    imports.markerRows += ROW
-    imports.importFeeds +=
-        ImportFeed(ironPlate, Coordinate(IMPORT_FEED, ROW), Coordinate(FEED_COLUMN, ROW))
-    return ImportFixture(beltEnd, board, imports, connector)
-}
 
-class ImportTrimmerTest {
+    /** Registers an import on [row] without placing its belt, so a test can shape that row. */
+    private fun ImportFixture.claimImportRow(row: Int, material: Material = ironPlate) {
+        imports.importFeeds +=
+            ImportFeed(
+                material,
+                Coordinate(IMPORT_FEED, row),
+                Coordinate(FEED_COLUMN, row),
+            )
+    }
+
+    /** A straight imported belt with its inline marker, ready for the trimmer. */
+    private fun importFixture(beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR): ImportFixture {
+        val board =
+            LayoutBoard(
+                names =
+                    LayoutNames(
+                        belt = "transport-belt",
+                        inserter = "inserter",
+                        longInserter = "long-handed-inserter",
+                    ),
+                undergroundRange = 5,
+                fluidPredicate = { false },
+                temperatureOf = { 0 },
+            )
+        val imports = ImportExtension()
+        val connector = BeltEndConnector(board, beltEnd)
+        connector.placeSolidConnector(ironPlate, IMPORT_FEED, ROW, input = true)
+        for (x in IMPORT_FEED..FEED_COLUMN) {
+            board.placeBelt(Coordinate(x, ROW), ironPlate, EAST)
+        }
+        board.reserve(Coordinate(IMPORT_FEED, ROW), ironPlate)
+        imports.markerRows += ROW
+        imports.importFeeds +=
+            ImportFeed(
+                ironPlate,
+                Coordinate(IMPORT_FEED, ROW),
+                Coordinate(FEED_COLUMN, ROW),
+            )
+        return ImportFixture(beltEnd, board, imports, connector)
+    }
 
     @Test
     fun everyMarkerDesignTrimsToTheStraightEnd() {

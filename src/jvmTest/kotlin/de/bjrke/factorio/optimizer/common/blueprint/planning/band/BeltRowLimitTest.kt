@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** A band still cannot exceed the four belt rows even when its inputs share a lane. */
-class BeltRowLimitTest {
+class BeltRowLimitTest : BaseGameCtxTest() {
 
     @Test
     fun aBandThatNeedsTooManyBeltRowsIsRejected() {

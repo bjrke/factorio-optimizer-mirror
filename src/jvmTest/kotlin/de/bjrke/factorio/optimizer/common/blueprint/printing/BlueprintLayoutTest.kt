@@ -18,6 +18,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.north
 import de.bjrke.factorio.optimizer.common.core.model.south
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.concrete
 import de.bjrke.factorio.optimizer.common.fixtures.concreteRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
@@ -51,7 +52,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Row geometry, belt feeding and compaction of a solid plan. */
-class BlueprintLayoutTest {
+class BlueprintLayoutTest : BaseGameCtxTest() {
 
     @Test
     fun noTwoEntitiesOverlap() {
@@ -109,10 +110,7 @@ class BlueprintLayoutTest {
                 target = water,
                 rows =
                     listOf(
-                        PlannedRow.copies(
-                            planned(waterPumpingRecipe, Factory.OFFSHORE_PUMP),
-                            1,
-                        ),
+                        PlannedRow.copies(planned(waterPumpingRecipe, Factory.OFFSHORE_PUMP), 1),
                     ),
                 sources = emptyList(),
                 label = "water",
@@ -195,9 +193,7 @@ class BlueprintLayoutTest {
 
         val layout = Layout(scaled)
         val built =
-            layout.blueprint.entities.count {
-                it.name == Factory.ASSEMBLING_MACHINE_3.identifier
-            }
+            layout.blueprint.entities.count { it.name == Factory.ASSEMBLING_MACHINE_3.identifier }
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(3, built) },
@@ -255,10 +251,7 @@ class BlueprintLayoutTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                electronicCircuitRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
+                            planned(electronicCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),

@@ -97,6 +97,9 @@ area-specific facts are in the other knowledge files.
   the JSON field. British spellings in untouched code (`labelled` in
   `Optimizer`/`Surface`) are not churned just to conform; new identifiers and new
   prose are American (user instruction, 2026-10-24).
+- A `GameContext` parameter is always named `gameCtx`, never `context`; the type
+  still reads `GameContext`. That keeps the parser, loader and test fixtures
+  signatures consistent (user instruction, 2026-11-24).
 
 ## Reporting an issue
 

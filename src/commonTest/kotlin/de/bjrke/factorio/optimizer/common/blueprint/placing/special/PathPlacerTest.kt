@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.test.assertAll
@@ -11,7 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class PathPlacerTest {
+class PathPlacerTest : BaseGameCtxTest() {
 
     /**
      * A belt tile carries one entity, so a route that comes back onto a tile it already used would

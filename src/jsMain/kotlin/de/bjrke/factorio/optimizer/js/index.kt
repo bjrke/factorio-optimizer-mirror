@@ -7,7 +7,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.PowerPole
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.production.normalizeTargetFromUrl
@@ -67,7 +66,6 @@ class FactorioOptimizerProps {
     private val navigate = useNavigate()
 
     var normalizeTarget = normalizeTargetFromUrl(params[ParamName("normalizeTarget")])
-    var target = Material(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
     private val selection = params[ParamName("selection")]
     var spaceAgeEnabled = spaceAgeIn(selection)
     val factoryConfig = FactoryConfig(spaceAgeEnabled)
@@ -75,9 +73,11 @@ class FactorioOptimizerProps {
     var surface =
         if (spaceAgeEnabled) surfaceFromUrl(selection) ?: Surface.NAUVIS else Surface.NAUVIS
     var intermediateLimit = validIntermediateLimit(params[ParamName("intermediates")])
-    var excludedMaterials = excludedMaterialsFromUrl(params[ParamName("excluded")])
 
     val parsedRecipes = RecipeLoader.forSurface(spaceAgeEnabled, surface)
+    val materialRegistry = parsedRecipes.gameCtx.materialRegistry
+    var target = materialRegistry.Material(params[ParamName("target")] ?: ALL_SCIENCE_PACKS)
+    var excludedMaterials = materialRegistry.excludedMaterialsFromUrl(params[ParamName("excluded")])
 
     // the limit and the exclusions are part of the optimizer's configuration, so changing either
     // drops its result cache; a target change reuses it

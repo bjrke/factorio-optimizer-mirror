@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
@@ -36,7 +37,7 @@ private fun factories(vararg productions: FactoryProduction) = productions.assoc
 }
 
 /** The arrangement search's pruning and its cached ratio penalty. */
-class BandSearchTest {
+class BandSearchTest : BaseGameCtxTest() {
 
     private val logistics = calculator()
 

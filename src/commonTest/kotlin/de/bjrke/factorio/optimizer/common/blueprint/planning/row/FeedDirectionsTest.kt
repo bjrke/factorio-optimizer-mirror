@@ -1,13 +1,13 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.core.model.Direction
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** The network-weighted east/west split that decides which end a row's belts are fed from. */
-class FeedDirectionsTest {
+class FeedDirectionsTest : BaseGameCtxTest() {
 
     private fun network(
         name: String,

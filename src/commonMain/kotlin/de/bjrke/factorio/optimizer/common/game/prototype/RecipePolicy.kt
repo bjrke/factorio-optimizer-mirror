@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 
 private val exclusions =
     setOf(
@@ -50,7 +51,7 @@ internal fun unplannedRecipes(surface: Surface) = buildSet {
 }
 
 /** The real nutrient item the biochamber consumes. */
-internal val nutrients = Material("nutrients")
+internal fun MaterialRegistry.nutrients() = Material("nutrients")
 
 /**
  * The pseudo material a biochamber's nutrient demand is booked as. It is a distinct key from
@@ -59,7 +60,8 @@ internal val nutrients = Material("nutrients")
  * show that import, while [Material.prototypeName] makes display and blueprint output name the real
  * nutrient item. The pseudo material renders with the nutrients icon.
  */
-internal val biochamberFuel = Material("nutrients-fuel", prototypeName = "nutrients")
+internal fun MaterialRegistry.biochamberFuel() =
+    Material("nutrients-fuel", prototypeName = "nutrients")
 
 /**
  * The one fuel the furnaces burn on [surface]. Coal is the mined fuel where the surface has a coal
@@ -68,7 +70,7 @@ internal val biochamberFuel = Material("nutrients-fuel", prototypeName = "nutrie
  * of carbonic asteroids. One fuel per surface also keeps the plan from splitting its demand across
  * several producers.
  */
-internal fun burnerFuel(surface: Surface): Material =
+internal fun MaterialRegistry.burnerFuel(surface: Surface): Material =
     when (surface) {
         Surface.NAUVIS,
         Surface.VULCANUS -> Material("coal")

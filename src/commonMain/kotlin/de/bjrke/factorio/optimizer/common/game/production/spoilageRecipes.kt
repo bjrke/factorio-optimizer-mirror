@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import kotlinx.serialization.json.JsonObject
@@ -14,7 +14,7 @@ import kotlinx.serialization.json.JsonObject
  * Recipes are named `<source>-spoiling` so they don't collide with the recipe that produces the
  * source item; the icon component maps that suffix back to the source icon.
  */
-fun spoilageRecipes(root: JsonObject): List<Recipe> =
+fun MaterialRegistry.spoilageRecipes(root: JsonObject): List<Recipe> =
     listOf("item", "capsule").flatMap { kind ->
         root.table(kind).filterValueIsInstance<JsonObject>().mapNotNull { (name, element) ->
             val ticks = element.number("spoil_ticks") ?: return@mapNotNull null

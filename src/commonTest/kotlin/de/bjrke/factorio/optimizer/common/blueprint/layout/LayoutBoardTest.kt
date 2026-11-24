@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout
 
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -8,7 +9,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class LayoutBoardTest {
+class LayoutBoardTest : BaseGameCtxTest() {
 
     private fun newBoard() =
         LayoutBoard(

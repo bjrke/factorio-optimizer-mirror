@@ -25,6 +25,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.water
@@ -51,7 +52,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-class BlueprintJsonTest {
+class BlueprintJsonTest : BaseGameCtxTest() {
 
     /** The `blueprint` object a [blueprint] serializes to. */
     private fun blueprintJson(blueprint: Blueprint): JsonObject =

@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.row.NORTH_MARGIN
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.electrolyte
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
 import de.bjrke.factorio.optimizer.common.fixtures.holmiumSolution
@@ -33,7 +34,7 @@ import kotlin.test.assertTrue
  * rotation and the fluid at the machine's real pipe connections, so a port-table or lane change
  * cannot silently move a fluid to another port.
  */
-class BlueprintFluidPortLayoutTest {
+class BlueprintFluidPortLayoutTest : BaseGameCtxTest() {
 
     @Test
     fun theReportedLayoutsKeepEveryFluidRouted() =

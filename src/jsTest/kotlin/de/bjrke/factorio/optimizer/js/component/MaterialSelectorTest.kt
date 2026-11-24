@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.test.ComponentTest
@@ -18,10 +20,10 @@ import kotlin.test.assertNull
 import react.create
 import web.html.HTMLInputElement
 
-private val materials = listOf(ironOre, copperOre)
+class MaterialSelectorTest : ComponentTest(), GameCtxTestMixin by BaseGameCtxTest() {
 
-class MaterialSelectorTest : ComponentTest() {
     private val selections = mutableListOf<Material>()
+    private val materials = listOf(ironOre, copperOre)
 
     private fun renderSelector() =
         render(

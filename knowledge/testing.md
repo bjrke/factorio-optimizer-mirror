@@ -27,6 +27,22 @@ whenever they apply.
   name as another suite's `private` top-level value is a Kotlin `REDECLARATION`, and
   Kotlin does not allow star-importing an `object`. Import each fixture by name; the
   project's packages no longer use wildcards.
+- **Fixtures are context-parameterized.** `GameCtxTestMixin` declares `gameCtx: GameContext`;
+  `BaseGameCtxTest` implements it with one `GameContext(MaterialRegistry(TEST_FLUID_NAMES))`.
+  Suites extend `BaseGameCtxTest`, or — when they already extend another base such as
+  `ComponentTest` or `OptimizationResultTestBase` — delegate the interface with
+  `GameCtxTestMixin by BaseGameCtxTest()`. `MaterialFixtures.kt` and `RecipeFixtures.kt` build
+  every material and recipe in that registry as `GameCtxTestMixin` extension properties. Each
+  suite instance's inherited `gameCtx` is its own universe (its `TEST_FLUID_NAMES` are the real
+  fluids, and `TestFluidNamesTest` keeps that set equal to the dumps' real fluids); a suite that
+  needs a different fluid set builds its own `GameContext(MaterialRegistry(setOf(...)))` for that
+  scenario (`RecipeParserIsFluidTest.gameContext`) and uses that context's materials and recipes,
+  and a suite that genuinely needs every material solid passes `emptySet()` explicitly — there is
+  no implicit solids-only default. Never mix materials from two contexts: equality is reference
+  equality, so equal names from different registries are unequal. `forActiveMods`/`forSurface` on
+  the mixin build a dump-backed `ParsedRecipe` in the suite's registry; the result is not cached,
+  only the immutable `PrototypeDump` is shared. The context must already know every fluid a kept
+  recipe uses — the parse throws on a disagreement instead of routing a fluid as a solid.
 - Prefer data that can be tested alone: `LayoutCompaction` already takes a
   `List<LayoutEntity>` and `LayoutRouter` only reads the board, so neither needs a
   full `BlueprintPlan` to test.

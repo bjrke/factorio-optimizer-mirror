@@ -21,6 +21,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.west
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
@@ -45,7 +46,7 @@ import kotlin.test.assertTrue
 /**
  * Import markers, their trimmed belt prefixes and the pins they leave for the rest of the layout.
  */
-class BlueprintImportTest {
+class BlueprintImportTest : BaseGameCtxTest() {
 
     @Test
     fun solidImportMarkersHideTheirBeltUnderTheLabel() {
@@ -260,10 +261,7 @@ class BlueprintImportTest {
                 rows =
                     listOf(
                         PlannedRow.copies(
-                            planned(
-                                advancedCircuitRecipe,
-                                Factory.ASSEMBLING_MACHINE_3,
-                            ),
+                            planned(advancedCircuitRecipe, Factory.ASSEMBLING_MACHINE_3),
                             1,
                         ),
                     ),

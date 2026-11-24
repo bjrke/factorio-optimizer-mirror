@@ -2,12 +2,12 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.row
 
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class BeltMergeTest {
+class BeltMergeTest : BaseGameCtxTest() {
 
     private data class Case(
         val above: Boolean,

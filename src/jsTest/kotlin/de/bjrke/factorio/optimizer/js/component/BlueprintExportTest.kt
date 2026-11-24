@@ -30,6 +30,8 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.core.model.Io.OUTPUT
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.gear
@@ -55,33 +57,33 @@ import react.create
 import web.dom.Element
 import web.html.HTMLButtonElement
 
-private val plan =
-    BlueprintPlan(
-        target = gear,
-        rows =
-            listOf(
-                PlannedRow(
-                    listOf(
-                        FactoryProduction(
-                            gear,
-                            ironGearWheelRecipe,
-                            Factory.ASSEMBLING_MACHINE_3,
-                            1.0,
-                            0,
-                        ),
-                    ),
-                ),
-            ),
-        sources = listOf(PlannedSource(ironPlate, fluid = false)),
-        label = "iron-gear-wheel",
-    )
-
 /** One tooltip expectation: the entity and the lines its hover text carries. */
 private data class TitleCase(val entity: LayoutEntity, val expected: List<String>)
 
-class BlueprintExportTest : ComponentTest() {
+class BlueprintExportTest : ComponentTest(), GameCtxTestMixin by BaseGameCtxTest() {
 
     private val logistics = calculator()
+
+    private val plan =
+        BlueprintPlan(
+            target = gear,
+            rows =
+                listOf(
+                    PlannedRow(
+                        listOf(
+                            FactoryProduction(
+                                gear,
+                                ironGearWheelRecipe,
+                                Factory.ASSEMBLING_MACHINE_3,
+                                1.0,
+                                0,
+                            ),
+                        ),
+                    ),
+                ),
+            sources = listOf(PlannedSource(ironPlate, fluid = false)),
+            label = "iron-gear-wheel",
+        )
 
     private fun blueprintOf(outcome: BlueprintPlanResult) =
         (outcome as? BlueprintPlanResult.Planned)?.let {
@@ -198,9 +200,7 @@ class BlueprintExportTest : ComponentTest() {
     @Test
     fun aLoaderIsRotatedClockwiseAndStretchedToItsFootprint() {
         val result =
-            renderView(
-                LoaderEntity(Area(0, 0, 2, 1), "fast-loader", ironPlate, OUTPUT, EAST),
-            )
+            renderView(LoaderEntity(Area(0, 0, 2, 1), "fast-loader", ironPlate, OUTPUT, EAST))
 
         val loader = assertNotNull(result.image("fast-loader"))
         assertAll(

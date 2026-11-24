@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedSource
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -20,7 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** Direct-feed bands, where a producer inserts straight into its consumer. */
-class BlueprintBandTest {
+class BlueprintBandTest : BaseGameCtxTest() {
 
     @Test
     fun aBandFeedsItsConsumerMachineToMachine() {

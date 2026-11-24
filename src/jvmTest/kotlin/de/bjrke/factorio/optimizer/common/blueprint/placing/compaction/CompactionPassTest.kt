@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
@@ -18,7 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
-class CompactionPassTest {
+class CompactionPassTest : BaseGameCtxTest() {
 
     private fun board() =
         LayoutBoard(

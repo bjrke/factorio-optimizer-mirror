@@ -25,6 +25,9 @@ data class LaneLoad(val left: Material?, val right: Material?) {
     val materials: Set<Material>
         get() = setOfNotNull(left, right)
 
+    /** Whether [material] is on either lane, without allocating the [materials] set. */
+    fun has(material: Material) = left == material || right == material
+
     /** The material the belt is labelled with; a half belt uses its one filled lane. */
     val material: Material
         get() = left ?: requireNotNull(right) { "a belt needs at least one lane material" }

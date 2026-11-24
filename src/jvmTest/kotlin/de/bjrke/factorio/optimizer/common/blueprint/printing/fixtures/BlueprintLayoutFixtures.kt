@@ -12,15 +12,12 @@ import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.lubricant
-import de.bjrke.factorio.optimizer.common.fixtures.petroleum
-import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
-import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
@@ -40,22 +37,27 @@ fun planned(
 
 val logistics =
     LogisticsCalculator(
-        testLogistics.copy(fluids = setOf(water, lubricant, petroleum, sulfuricAcid)),
+        testLogistics,
         LogisticsCalculatorSelection(belt = BeltTier.EXPRESS_TRANSPORT_BELT),
     )
 
 /** A gear machine fed by a plate machine, with iron ore imported from a belt. */
-val basePlan =
-    BlueprintPlan(
-        target = gear,
-        rows =
-            listOf(
-                PlannedRow(listOf(planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3))),
-                PlannedRow(listOf(planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_1))),
-            ),
-        sources = listOf(PlannedSource(ironOre, fluid = false)),
-        label = "iron-gear-wheel",
-    )
+val GameCtxTestMixin.basePlan
+    get() =
+        BlueprintPlan(
+            target = gear,
+            rows =
+                listOf(
+                    PlannedRow(
+                        listOf(planned(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_3)),
+                    ),
+                    PlannedRow(
+                        listOf(planned(ironPlateRecipe, Factory.ASSEMBLING_MACHINE_1)),
+                    ),
+                ),
+            sources = listOf(PlannedSource(ironOre, fluid = false)),
+            label = "iron-gear-wheel",
+        )
 
 /**
  * The connected pipe networks of [entities]. Pipes connect by touching. A pipe-to-ground carries

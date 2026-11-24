@@ -10,7 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.model.Blueprint
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -30,7 +30,7 @@ import kotlin.test.assertEquals
  * Characterization tests for the layout pipeline: they pin the exact entity order and every entity
  * field, so a refactor that changes geometry, wiring or placement order fails loudly.
  */
-class BlueprintLayoutSnapshotTest {
+class BlueprintLayoutSnapshotTest : BaseGameCtxTest() {
 
     @Test
     fun baseLayoutIsStable() {
@@ -130,24 +130,24 @@ class BlueprintLayoutSnapshotTest {
      * what a blueprint string carries, independent of how the entities are modeled.
      */
     private fun canonical(blueprint: Blueprint) = blueprint.toJson()
-}
 
-/** A six-input row: three mixed belts plus the product. */
-private fun sixInputPlan(): BlueprintPlan {
-    val inputs = (1..6).map { Material("input-$it") }
-    val output = Material("output")
-    val recipe =
-        Recipe(
-            name = "six-inputs",
-            ingredients = inputs.associateWith { 1.0 },
-            result = mapOf(output to 1.0),
-            time = 10.0,
-            categories = setOf(Category.CRAFTING),
+    /** A six-input row: three mixed belts plus the product. */
+    private fun sixInputPlan(): BlueprintPlan {
+        val inputs = (1..6).map { Material("input-$it") }
+        val output = Material("output")
+        val recipe =
+            Recipe(
+                name = "six-inputs",
+                ingredients = inputs.associateWith { 1.0 },
+                result = mapOf(output to 1.0),
+                time = 10.0,
+                categories = setOf(Category.CRAFTING),
+            )
+        return BlueprintPlan(
+            target = output,
+            rows = listOf(PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), 1)),
+            sources = inputs.map { PlannedSource(it, fluid = false) },
+            label = "six-inputs",
         )
-    return BlueprintPlan(
-        target = output,
-        rows = listOf(PlannedRow.copies(planned(recipe, Factory.ASSEMBLING_MACHINE_3), 1)),
-        sources = inputs.map { PlannedSource(it, fluid = false) },
-        label = "six-inputs",
-    )
+    }
 }

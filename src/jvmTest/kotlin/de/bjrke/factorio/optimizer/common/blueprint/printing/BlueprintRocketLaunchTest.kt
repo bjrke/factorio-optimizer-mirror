@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InfinityChestEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.lowDensityStructure
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
 import de.bjrke.factorio.optimizer.common.fixtures.production
@@ -11,7 +12,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
 import de.bjrke.factorio.optimizer.common.fixtures.rocketPart
 import de.bjrke.factorio.optimizer.common.fixtures.satellite
 import de.bjrke.factorio.optimizer.common.fixtures.spaceScience
-import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
@@ -23,7 +23,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 /** The 9x9 rocket silo in both games: its ingredients in, its product out. */
-class BlueprintRocketLaunchTest {
+class BlueprintRocketLaunchTest : BaseGameCtxTest() {
 
     /**
      * The 9x9 silo imports the three ingredients and puts the rocket parts on its product belt. The
@@ -35,17 +35,12 @@ class BlueprintRocketLaunchTest {
         val ingredients = setOf(processingUnit, lowDensityStructure, rocketFuel)
         val result =
             Optimizer(
-                RecipeLoader.forSurface(spaceAge = true, Surface.NAUVIS),
+                forSurface(Surface.NAUVIS),
                 FactoryConfig(spaceAge = true).defaults,
                 MAX_INTERMEDIATE_LIMIT,
                 ingredients,
             )[rocketPart]
-        val layout =
-            Layout(
-                result = result,
-                scale = 0.2,
-                beltEnd = BeltEnd.CONSTANT_COMBINATOR,
-            )
+        val layout = Layout(result = result, scale = 0.2, beltEnd = BeltEnd.CONSTANT_COMBINATOR)
         val silo = layout.machine("rocket-silo")
         val targetRow = layout.plan.rows.single { rocketPart in it.beltMaterials }
 
@@ -79,17 +74,12 @@ class BlueprintRocketLaunchTest {
         val imports = ingredients + satellite
         val result =
             Optimizer(
-                RecipeLoader.forSurface(spaceAge = false, Surface.NAUVIS),
+                forSurface(Surface.NAUVIS, spaceAge = false),
                 FactoryConfig(spaceAge = false).defaults,
                 MAX_INTERMEDIATE_LIMIT,
                 imports,
             )[spaceScience]
-        val layout =
-            Layout(
-                result = result,
-                scale = 0.2,
-                beltEnd = BeltEnd.CONSTANT_COMBINATOR,
-            )
+        val layout = Layout(result = result, scale = 0.2, beltEnd = BeltEnd.CONSTANT_COMBINATOR)
         val silo = layout.machine("rocket-silo")
         val targetRow = layout.plan.rows.single { spaceScience in it.beltMaterials }
 
@@ -110,17 +100,12 @@ class BlueprintRocketLaunchTest {
     fun theBaseGameSiloKeepsTheDumpedPartRecipe() {
         val result =
             Optimizer(
-                RecipeLoader.forSurface(spaceAge = false, Surface.NAUVIS),
+                forSurface(Surface.NAUVIS, spaceAge = false),
                 FactoryConfig(spaceAge = false).defaults,
                 MAX_INTERMEDIATE_LIMIT,
                 setOf(processingUnit, lowDensityStructure, rocketFuel),
             )[rocketPart]
-        val layout =
-            Layout(
-                result = result,
-                scale = 0.2,
-                beltEnd = BeltEnd.CONSTANT_COMBINATOR,
-            )
+        val layout = Layout(result = result, scale = 0.2, beltEnd = BeltEnd.CONSTANT_COMBINATOR)
 
         assertAll(
             { assertEquals(1.0, result.production(rocketPart).recipe.result.getValue(rocketPart)) },

@@ -1,15 +1,13 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.uranium235
-import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
-import de.bjrke.factorio.optimizer.common.game.prototype.forSurface
 import de.bjrke.test.assertAll
-import de.bjrke.test.assertTable
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -20,13 +18,13 @@ import kotlin.test.assertNotEquals
  * the solver normalized its rows, every target that needs uranium-235 made it report "no feasible
  * production plan" once the intermediate limit let the whole chain in.
  */
-class OptimizerUraniumTest {
+class OptimizerUraniumTest : BaseGameCtxTest() {
 
-    private val nauvis by lazy { RecipeLoader.forActiveMods().forSurface(Surface.NAUVIS) }
+    private val nauvis by lazy { forSurface(Surface.NAUVIS) }
 
     @Test
     fun uraniumTargetsBuildTheChainInsteadOfFailing() =
-        assertTable(listOf("atomic-bomb", "nuclear-fuel")) { name ->
+        assertTableOf("atomic-bomb", "nuclear-fuel") { name ->
             val target = Material(name)
             val result = Optimizer(nauvis, maxIntermediates = MAX_INTERMEDIATE_LIMIT)[target]
             val uranium = result.production(uranium235)

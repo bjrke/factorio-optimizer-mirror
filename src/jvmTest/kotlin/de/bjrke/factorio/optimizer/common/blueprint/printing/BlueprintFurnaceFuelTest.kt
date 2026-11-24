@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
 import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
@@ -21,7 +22,7 @@ import kotlin.test.assertTrue
  * material the layout feeds, whether the surface imports it (coal on Nauvis) or builds it (solid
  * fuel from ammonia on Aquilo, rocket fuel from jelly on Gleba).
  */
-class BlueprintFurnaceFuelTest {
+class BlueprintFurnaceFuelTest : BaseGameCtxTest() {
 
     private val stoneFurnace: Set<Factory> =
         FactoryConfig().let { config -> config.add(config.defaults, Factory.STONE_FURNACE) }

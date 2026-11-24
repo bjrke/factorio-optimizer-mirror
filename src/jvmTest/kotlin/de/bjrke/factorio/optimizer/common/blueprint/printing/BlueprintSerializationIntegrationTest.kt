@@ -4,13 +4,14 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.decode
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 /** End-to-end check that a real plan becomes a string the game can read back. */
-class BlueprintSerializationIntegrationTest {
+class BlueprintSerializationIntegrationTest : BaseGameCtxTest() {
 
     @Test
     fun aRealTargetProducesADecodableBlueprint() {

@@ -13,6 +13,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.water
@@ -22,7 +23,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
-class LayoutAsciiTest {
+class LayoutAsciiTest : BaseGameCtxTest() {
 
     private val layout =
         LayoutDump(

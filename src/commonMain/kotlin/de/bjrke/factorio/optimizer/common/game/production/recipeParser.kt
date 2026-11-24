@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.GameContext
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
@@ -8,19 +10,81 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.game.prototype.SurfaceProperty
 import de.bjrke.factorio.optimizer.common.game.prototype.surfaceProperty
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
 /**
  * Parses the `data.raw` JSON dumped by `factorio --dump-data` (see the `dumpPrototypes` gradle
  * task) into the optimizer's model. Only the prototype types the optimizer needs are read;
  * everything else in the dump is ignored.
+ *
+ * The dump's `fluid` keys configure the registry before any material is created, so
+ * [Material.isFluid] is fixed for the universe. Pass [gameCtx] to parse into an existing universe;
+ * the default builds a fresh one from the dump. A supplied context must already agree with the dump
+ * about which materials are fluids: [PrototypeDump.parse] rejects a mismatch. The shipped dumps go
+ * through [PrototypeDump.load], which decodes them once; a root that is not a JSON object is not a
+ * dump and fails.
  */
-fun parsePrototypes(json: String): ParsedRecipe {
-    val root =
-        Json.parseToJsonElement(json) as? JsonObject
-            ?: return ParsedRecipe(emptyList(), emptyList())
+fun parsePrototypes(json: String, gameCtx: GameContext? = null): ParsedRecipe =
+    PrototypeDump.of(json).parse(gameCtx)
 
+/**
+ * Builds a fresh [ParsedRecipe] in [gameCtx]'s registry. Nothing is cached: a parsed recipe holds
+ * [Material]s from exactly one registry, so it cannot be shared between universes. Without a
+ * [gameCtx] the dump creates a registry from its [PrototypeDump.fluidNames].
+ *
+ * A supplied [gameCtx] fixed every [Material.isFluid] before the dump was read, so it must already
+ * agree with the dump's fluid classification; [requireFluidClassification] rejects a mismatch
+ * instead of letting a fluid ride on belts or a solid through pipes.
+ */
+internal fun PrototypeDump.parse(gameCtx: GameContext?): ParsedRecipe {
+    val newGameCtx = gameCtx ?: GameContext(MaterialRegistry(fluidNames))
+    val materials = newGameCtx.materialRegistry
+
+    val recipes = materials.recipes(root)
+    if (gameCtx != null) requireFluidClassification(recipes)
+
+    return ParsedRecipe(
+        // Only materials a kept recipe produces: a hidden recipe's items (loaders, cheat entities,
+        // ...) are dropped above but would otherwise leak in, and a material that merely appears as
+        // an ingredient (with no recipe yielding it) has no surface or factory to be produced on.
+        materials =
+            recipes
+                .flatMapTo(mutableSetOf()) {
+                    it.result.keys
+                }
+                .sortedBy(Material::name),
+        recipes = recipes,
+        machineStats = machineStats(root),
+        logistics = materials.logisticsStats(root),
+        fuelValues = materials.fuelValues(root),
+        surfaceProperties = surfaceProperties(root),
+        gameCtx = newGameCtx,
+    )
+}
+
+/**
+ * The kept recipes' materials whose [Material.isFluid] disagrees with the dump's fluid table. Both
+ * directions are checked: a dump fluid the registry calls solid, and a name the registry calls
+ * fluid that the dump has as an item. Only recipe materials are checked: `data.raw.fluid` also
+ * lists `fluid-unknown` and the `parameter-*` placeholders, which no kept recipe references and
+ * which a test registry need not seed.
+ */
+private fun PrototypeDump.requireFluidClassification(recipes: List<Recipe>) {
+    val mismatched = buildSet {
+        for (recipe in recipes) {
+            for (material in recipe.ingredients.keys + recipe.result.keys) {
+                if ((material.name in fluidNames) != material.isFluid) add(material.name)
+            }
+        }
+    }
+    require(mismatched.isEmpty()) {
+        "the GameContext registry disagrees with the dump about whether these are fluids: " +
+            mismatched.sorted().joinToString(", ") +
+            "; build the MaterialRegistry from the dump's data.raw.fluid keys"
+    }
+}
+
+private fun MaterialRegistry.recipes(root: JsonObject): List<Recipe> {
     val subgroups = mutableMapOf<String, Subgroup>()
     val noSubGroup = Subgroup()
     fun subGroup(name: String?) =
@@ -43,31 +107,13 @@ fun parsePrototypes(json: String): ParsedRecipe {
     // Only scrap and what scrap-recycling yields may enter the recycler. Keeping recycling recipes
     // one step past scrap avoids reverse chains (e.g. an accumulator recycling back into the
     // circuits that used to make it) that would otherwise beat the forward recipes.
-    val scrapReach = parsedRecipes.scrapReach()
-    val recipes =
-        parsedRecipes.values
-            .filter { recipe ->
-                Category.RECYCLING !in recipe.categories ||
-                    scrapReach.containsAll(recipe.ingredients.keys)
-            }
-            .sortedBy(Recipe::name)
-
-    return ParsedRecipe(
-        // Only materials a kept recipe produces: a hidden recipe's items (loaders, cheat entities,
-        // ...) are dropped above but would otherwise leak in, and a material that merely appears as
-        // an ingredient (with no recipe yielding it) has no surface or factory to be produced on.
-        materials =
-            recipes
-                .flatMapTo(mutableSetOf()) {
-                    it.result.keys
-                }
-                .sortedBy(Material::name),
-        recipes = recipes,
-        machineStats = machineStats(root),
-        logistics = logisticsStats(root),
-        fuelValues = fuelValues(root),
-        surfaceProperties = surfaceProperties(root),
-    )
+    val scrapReach = scrapReach(parsedRecipes)
+    return parsedRecipes.values
+        .filter { recipe ->
+            Category.RECYCLING !in recipe.categories ||
+                scrapReach.containsAll(recipe.ingredients.keys)
+        }
+        .sortedBy(Recipe::name)
 }
 
 /**
@@ -99,7 +145,7 @@ private fun surfaceProperties(root: JsonObject): Map<Surface, Map<SurfacePropert
 }
 
 /** The energy every burnable item releases, from `data.raw.item.fuel_value`. */
-private fun fuelValues(root: JsonObject) =
+private fun MaterialRegistry.fuelValues(root: JsonObject) =
     root
         .table("item")
         .filterValueIsInstance<JsonObject>()
@@ -109,9 +155,7 @@ private fun fuelValues(root: JsonObject) =
         .toMap()
 
 /** `scrap` and everything the scrap-recycling recipe yields. */
-private fun Map<String, Recipe>.scrapReach() = buildSet {
+private fun MaterialRegistry.scrapReach(parsedRecipes: Map<String, Recipe>) = buildSet {
     add(Material("scrap"))
-    this@scrapReach["scrap-recycling"]?.run {
-        addAll(result.keys)
-    }
+    parsedRecipes["scrap-recycling"]?.let { addAll(it.result.keys) }
 }

@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
@@ -18,7 +20,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** The belt and inserter counts the block shows, and how stacking changes them. */
-class OptimizationResultLogisticsTest : OptimizationResultTestBase() {
+class OptimizationResultLogisticsTest :
+    OptimizationResultTestBase(), GameCtxTestMixin by BaseGameCtxTest() {
 
     @Test
     fun aStackInserterNeedsFewerOutputInsertersThanABulkInserter() {

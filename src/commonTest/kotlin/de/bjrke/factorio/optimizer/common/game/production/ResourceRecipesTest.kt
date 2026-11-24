@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.carbonicAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
 import de.bjrke.factorio.optimizer.common.fixtures.flourine
@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
-class ResourceRecipesTest {
+class ResourceRecipesTest : BaseGameCtxTest() {
 
     private val dump =
         Json.parseToJsonElement(
@@ -49,7 +49,7 @@ class ResourceRecipesTest {
             )
             .let { it as JsonObject }
 
-    private val recipes = resourceRecipes(dump).associateBy(Recipe::name)
+    private val recipes = materialRegistry.resourceRecipes(dump).associateBy(Recipe::name)
 
     private val harvestedFruits = listOf("yumako", "jellynut")
 
@@ -129,7 +129,11 @@ class ResourceRecipesTest {
     @Test
     fun harvestedFruitYieldsFifty() =
         assertTable(harvestedFruits) { fruit ->
-            assertEquals(mapOf(Material(fruit) to 50.0), recipes.getValue(fruit).result, fruit)
+            assertEquals(
+                mapOf(Material(fruit) to 50.0),
+                recipes.getValue(fruit).result,
+                fruit,
+            )
         }
 
     @Test
@@ -156,7 +160,7 @@ class ResourceRecipesTest {
     @Test
     fun spaceAgeExtractionRecipesAreGatedOnTheDump() {
         val baseDump = Json.parseToJsonElement("{}") as JsonObject
-        val baseNames = resourceRecipes(baseDump).map(Recipe::name)
+        val baseNames = materialRegistry.resourceRecipes(baseDump).map(Recipe::name)
         val spaceAgeOnly = harvestedFruits + listOf("wood", "asteroid-collection")
         assertAll(
             {

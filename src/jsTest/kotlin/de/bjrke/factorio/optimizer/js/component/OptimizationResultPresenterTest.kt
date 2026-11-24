@@ -1,6 +1,8 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
@@ -9,7 +11,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
@@ -31,7 +32,8 @@ import kotlin.test.assertTrue
 import web.dom.Element
 
 /** What the result block renders: the boxes, the material rows, the order and the icons. */
-class OptimizationResultPresenterTest : OptimizationResultTestBase() {
+class OptimizationResultPresenterTest :
+    OptimizationResultTestBase(), GameCtxTestMixin by BaseGameCtxTest() {
 
     @Test
     fun recipeWithoutIngredientsRendersTheFactoryOutputAndLogisticsInputs() {
@@ -156,7 +158,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
 
     @Test
     fun fluidIngredientsShowAPumpAndAPipeMarker() {
-        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(lightOil)))
+        val calculator = LogisticsCalculator(testLogistics)
 
         renderResult(
             optimizationResult(solidFuelFromLightOilRecipe, solidFuel, Factory.CHEMICAL_PLANT),
@@ -186,9 +188,7 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
             factories =
                 mapOf(
                     ironGearWheelRecipe to
-                        production(
-                            Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
-                        ),
+                        production(Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)),
                     importRecipe to production(Triple(importRecipe, ironPlate, Factory.NO_FACTORY)),
                 ),
         )
@@ -295,21 +295,13 @@ class OptimizationResultPresenterTest : OptimizationResultTestBase() {
             factories =
                 mapOf(
                     ironGearWheelRecipe to
-                        production(
-                            Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
-                        ),
+                        production(Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)),
                     ironPlateSmeltingRecipe to
                         production(
-                            Triple(
-                                ironPlateSmeltingRecipe,
-                                ironPlate,
-                                Factory.ELECTRIC_FURNACE,
-                            ),
+                            Triple(ironPlateSmeltingRecipe, ironPlate, Factory.ELECTRIC_FURNACE),
                         ),
                     circuitRecipe to
-                        production(
-                            Triple(circuitRecipe, electronicCircuit, circuitFactory),
-                        ),
+                        production(Triple(circuitRecipe, electronicCircuit, circuitFactory)),
                 ),
         )
     }

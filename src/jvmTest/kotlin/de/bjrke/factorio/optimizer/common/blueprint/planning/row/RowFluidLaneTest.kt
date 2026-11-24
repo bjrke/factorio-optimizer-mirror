@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.LineSide.NORTH
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -19,7 +20,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class RowFluidLaneTest {
+class RowFluidLaneTest : BaseGameCtxTest() {
 
     /**
      * The lane row is read from the belts alone, so it may sit on a mixed belt's turn row. The

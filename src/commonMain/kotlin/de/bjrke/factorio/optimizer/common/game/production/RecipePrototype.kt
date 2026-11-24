@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
@@ -17,7 +17,7 @@ private const val DEFAULT_CATEGORY = "crafting"
  * One entry of `data.raw.recipe`, or `null` when it is not a recipe the optimizer can model. The
  * caller owns the dump-level filtering (scrap reach); this function owns the recipe's own fields.
  */
-internal fun recipePrototype(
+internal fun MaterialRegistry.recipePrototype(
     name: String,
     element: JsonObject,
     subgroup: (String?) -> Subgroup,
@@ -55,7 +55,7 @@ internal fun recipePrototype(
     )
 }
 
-private fun recipeResults(element: JsonObject) = buildMap {
+private fun MaterialRegistry.recipeResults(element: JsonObject) = buildMap {
     element.string("result")?.also {
         put(Material(it), element.number("result_count") ?: DEFAULT_AMOUNT)
     }
@@ -84,7 +84,7 @@ private fun resultProbability(result: JsonObject): Double =
         ?: result.number("independent_probability")
         ?: DEFAULT_PROBABILITY
 
-private fun recipeIngredients(element: JsonObject) = buildMap {
+private fun MaterialRegistry.recipeIngredients(element: JsonObject) = buildMap {
     for (entry in element.objects("ingredients")) {
         entry.string("name")?.also {
             put(Material(it), entry.number("amount") ?: DEFAULT_AMOUNT)

@@ -17,10 +17,10 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFrom
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.coalLiquefactionRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
-import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.steam
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
@@ -30,7 +30,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** A fluid that is both an input and an output needs a feed lane and a drain lane, joined. */
-class BlueprintFluidLaneLinkTest {
+class BlueprintFluidLaneLinkTest : BaseGameCtxTest() {
 
     @Test
     fun aFluidThatIsBothInputAndOutputJoinsItsTwoLanes() {
@@ -55,7 +55,7 @@ class BlueprintFluidLaneLinkTest {
             )
         val fluids =
             LogisticsCalculator(
-                testLogistics.copy(fluids = setOf(heavyOil, lightOil, petroleum, steam)),
+                testLogistics,
             )
         val layout = Layout(plan, fluids)
 

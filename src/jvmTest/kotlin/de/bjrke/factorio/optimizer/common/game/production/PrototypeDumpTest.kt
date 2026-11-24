@@ -1,6 +1,10 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
+import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
+import de.bjrke.factorio.optimizer.common.fixtures.rocketPart
+import de.bjrke.factorio.optimizer.common.fixtures.satellite
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltStats
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
@@ -13,18 +17,37 @@ import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
  * The values the shipped dump must supply. They pin the sanitizer: dropping one of the categories
  * the parser reads would turn these into missing-entry failures instead of a silently worse plan.
  */
-class PrototypeDumpTest {
+class PrototypeDumpTest : BaseGameCtxTest() {
+
+    /**
+     * The facade decodes each shipped dump once and shares it; only parsed results are per game.
+     */
+    @Test
+    fun theShippedDumpsAreDecodedOnce() {
+        val base = PrototypeDump.load(spaceAge = false)
+        val spaceAge = PrototypeDump.load(spaceAge = true)
+
+        assertAll(
+            { assertSame(base, PrototypeDump.load(spaceAge = false)) },
+            { assertSame(spaceAge, PrototypeDump.load(spaceAge = true)) },
+            { assertNotSame(base, spaceAge) },
+            { assertTrue("water" in spaceAge.fluidNames) },
+            { assertFalse("iron-plate" in spaceAge.fluidNames) },
+        )
+    }
 
     @Test
     fun beltStatsComeFromTheDump() {
-        val base = RecipeLoader.forActiveMods(spaceAge = false).logistics.belts
-        val spaceAge = RecipeLoader.forActiveMods(spaceAge = true).logistics.belts
+        val base = forActiveMods(spaceAge = false).logistics.belts
+        val spaceAge = forActiveMods(spaceAge = true).logistics.belts
 
         assertAll(
             { assertEquals(BeltStats(0.03125, 5), base.getValue("transport-belt")) },
@@ -37,7 +60,7 @@ class PrototypeDumpTest {
 
     @Test
     fun poleStatsComeFromTheDump() {
-        val poles = RecipeLoader.forActiveMods(spaceAge = false).logistics.poles
+        val poles = forActiveMods(spaceAge = false).logistics.poles
 
         assertAll(
             {
@@ -50,7 +73,7 @@ class PrototypeDumpTest {
 
     @Test
     fun surfacePropertiesComeFromTheDump() {
-        val properties = RecipeLoader.forActiveMods(spaceAge = true).surfaceProperties
+        val properties = forActiveMods(spaceAge = true).surfaceProperties
 
         assertAll(
             {
@@ -83,11 +106,7 @@ class PrototypeDumpTest {
     /** Fulgora's pressure is 800, so a `pressure 1000..1000` recipe cannot run there. */
     @Test
     fun nauvisPressureRecipesAreNotOfferedOnFulgora() {
-        val names =
-            RecipeLoader.forSurface(spaceAge = true, Surface.FULGORA)
-                .recipes
-                .map { it.name }
-                .toSet()
+        val names = forSurface(Surface.FULGORA).recipes.map { it.name }.toSet()
 
         assertAll(
             { assertFalse("tree-seed" in names, "tree-seed needs pressure 1000") },
@@ -102,14 +121,15 @@ class PrototypeDumpTest {
      */
     @Test
     fun theBaseLaunchIsOneSiloCycle() {
-        val base = RecipeLoader.forActiveMods(spaceAge = false).recipes.associateBy { it.name }
+        val base = forActiveMods(spaceAge = false).recipes.associateBy { it.name }
         val launch = base.getValue("space-science-pack")
 
+        val ingredients = launch.ingredients
         assertAll(
-            { assertEquals(1000.0, launch.ingredients.getValue(Material("processing-unit"))) },
-            { assertEquals(1000.0, launch.ingredients.getValue(Material("rocket-fuel"))) },
-            { assertEquals(1.0, launch.ingredients.getValue(Material("satellite"))) },
-            { assertContainsNot(launch.ingredients.keys, Material("rocket-part")) },
+            { assertEquals(1000.0, ingredients.getValue(processingUnit)) },
+            { assertEquals(1000.0, ingredients.getValue(rocketFuel)) },
+            { assertEquals(1.0, ingredients.getValue(satellite)) },
+            { assertContainsNot(ingredients.keys, rocketPart) },
             { assertEquals(300.0, launch.time, TOLERANCE) },
         )
     }
@@ -121,12 +141,11 @@ class PrototypeDumpTest {
      */
     @Test
     fun theSpaceAgePartRecipeIsOneLaunchOfParts() {
-        val parts =
-            RecipeLoader.forActiveMods(spaceAge = true).recipes.single { it.name == "rocket-part" }
+        val parts = forActiveMods(spaceAge = true).recipes.single { it.name == "rocket-part" }
 
         assertAll(
-            { assertEquals(50.0, parts.result.getValue(Material("rocket-part"))) },
-            { assertEquals(50.0, parts.ingredients.getValue(Material("processing-unit"))) },
+            { assertEquals(50.0, parts.result.getValue(rocketPart)) },
+            { assertEquals(50.0, parts.ingredients.getValue(processingUnit)) },
             { assertEquals(150.0, parts.time, TOLERANCE) },
             {
                 assertEquals(
@@ -139,8 +158,8 @@ class PrototypeDumpTest {
 
     @Test
     fun sciencePacksComeFromTheLab() {
-        val base = RecipeLoader.forActiveMods(spaceAge = false).recipes.associateBy { it.name }
-        val spaceAge = RecipeLoader.forActiveMods(spaceAge = true).recipes.associateBy { it.name }
+        val base = forActiveMods(spaceAge = false).recipes.associateBy { it.name }
+        val spaceAge = forActiveMods(spaceAge = true).recipes.associateBy { it.name }
 
         assertAll(
             { assertEquals(7, base.getValue(ALL_SCIENCE_PACKS).ingredients.size) },

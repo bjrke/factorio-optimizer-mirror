@@ -9,8 +9,15 @@ import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
 
 /** The factory the optimizer picks for [target] from [recipes], restricted to [factories]. */
-internal fun factoryOf(target: Material, recipes: List<Recipe>, factories: Set<Factory>) =
-    Optimizer(ParsedRecipe(emptyList(), recipes), factories)[target].production(target).factory
+internal fun GameCtxTestMixin.factoryOf(
+    target: Material,
+    recipes: List<Recipe>,
+    factories: Set<Factory>,
+) =
+    Optimizer(ParsedRecipe(emptyList(), recipes, gameCtx = gameCtx), factories)[target].production(
+            target,
+        )
+        .factory
 
 // The OptimizationResult read-back the optimizer suites assert on. Production only ever reads a
 // single FactoryProduction (FactoryProduction.production), so these live in the test source set.

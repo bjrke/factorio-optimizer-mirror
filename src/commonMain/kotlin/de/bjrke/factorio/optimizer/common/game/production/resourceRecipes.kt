@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import kotlinx.serialization.json.JsonObject
@@ -13,13 +13,13 @@ import kotlinx.serialization.json.JsonObject
  * Space Age and are gated on [isSpaceAgeDump] so the base game does not offer materials it cannot
  * produce.
  */
-fun resourceRecipes(root: JsonObject) = buildList {
-    minedResourceRecipes(root)
-    offshorePumpFluids(root)
+fun MaterialRegistry.resourceRecipes(root: JsonObject) = buildList {
+    addAll(minedResourceRecipes(root))
+    addAll(offshorePumpFluids(root))
     if (root.isSpaceAgeDump()) {
-        harvestedFruit()
-        harvestedWood()
-        asteroidCollectionRecipes()
+        addAll(harvestedFruit())
+        addAll(harvestedWood())
+        addAll(asteroidCollectionRecipes())
     }
 }
 
@@ -31,16 +31,16 @@ fun resourceRecipes(root: JsonObject) = buildList {
 internal fun JsonObject.isSpaceAgeDump() = table("recipe").containsKey("tree-seed")
 
 /** `data.raw.resource`: the resource the drill/pumpjack extracts and how long a unit takes. */
-private fun MutableList<Recipe>.minedResourceRecipes(root: JsonObject) {
+private fun MaterialRegistry.minedResourceRecipes(root: JsonObject) = buildList {
     for ((name, element) in root.table("resource").filterValueIsInstance<JsonObject>()) {
         add(minedResourceRecipe(name, element) ?: continue)
     }
 }
 
-private fun minedResourceRecipe(name: String, element: JsonObject): Recipe? {
+private fun MaterialRegistry.minedResourceRecipe(name: String, element: JsonObject): Recipe? {
     val category = resourceCategory(element.string("category")) ?: return null
     val minable = element.table("minable")
-    val result = minableResults(minable)
+    val result = minableResults(minable, this)
     if (result.isEmpty()) return null
 
     val ingredients =
@@ -64,13 +64,13 @@ private fun resourceCategory(identifier: String?) =
         else -> miningCategory(identifier)
     }
 
-private fun minableResults(minable: JsonObject) = buildMap {
+private fun minableResults(minable: JsonObject, materials: MaterialRegistry) = buildMap {
     minable.string("result")?.also {
-        put(Material(it), minable.number("count") ?: 1.0)
+        put(materials.Material(it), minable.number("count") ?: 1.0)
     }
     for (entry in minable.objects("results")) {
         val resultName = entry.string("name") ?: continue
-        put(Material(resultName), entry.number("amount") ?: 1.0)
+        put(materials.Material(resultName), entry.number("amount") ?: 1.0)
     }
 }
 
@@ -78,7 +78,7 @@ private fun minableResults(minable: JsonObject) = buildMap {
  * The offshore pump extracts whatever fluid the tile it is placed on carries. The dump's tiles
  * reference water, heavy oil, lava and ammoniacal solution.
  */
-private fun MutableList<Recipe>.offshorePumpFluids(root: JsonObject) {
+private fun MaterialRegistry.offshorePumpFluids(root: JsonObject) = buildList {
     val fluids =
         root.table("tile").values.mapNotNull { (it as? JsonObject)?.string("fluid") }.distinct()
     for (fluid in fluids) {
@@ -95,7 +95,7 @@ private fun MutableList<Recipe>.offshorePumpFluids(root: JsonObject) {
 }
 
 /** Trees tend to a fruit every 5 minutes; the agricultural tower harvests 50 fruit per tree. */
-private fun MutableList<Recipe>.harvestedFruit() {
+private fun MaterialRegistry.harvestedFruit() = buildList {
     for (fruit in listOf("yumako", "jellynut")) {
         add(
             Recipe(
@@ -113,7 +113,7 @@ private fun MutableList<Recipe>.harvestedFruit() {
  * On Nauvis the agricultural tower plants tree seeds and harvests the grown trees for wood. A tree
  * takes 10 minutes to reach full maturity and yields the 4 wood a hand-mined tree gives.
  */
-private fun MutableList<Recipe>.harvestedWood() {
+private fun MaterialRegistry.harvestedWood() = buildList {
     add(
         Recipe(
             name = "wood",
@@ -131,7 +131,7 @@ private fun MutableList<Recipe>.harvestedWood() {
  * assumed to drop at the same rate. Modelled as one recipe so a single collector serves every
  * chunk.
  */
-private fun MutableList<Recipe>.asteroidCollectionRecipes() {
+private fun MaterialRegistry.asteroidCollectionRecipes() = buildList {
     add(
         Recipe(
             name = "asteroid-collection",

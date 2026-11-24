@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNonNegativeOrigin
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
@@ -15,7 +16,7 @@ import kotlin.test.assertEquals
  * row, so the blueprint never carries a negative coordinate. The real plans and every chest marker
  * design are covered by the integration tables, which build them once for all their invariants.
  */
-class LayoutOriginTest {
+class LayoutOriginTest : BaseGameCtxTest() {
 
     @Test
     fun theFixtureLayoutsKeepEveryTileNonNegative() =

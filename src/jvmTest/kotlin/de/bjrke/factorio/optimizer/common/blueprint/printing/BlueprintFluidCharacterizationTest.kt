@@ -26,6 +26,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Io.INPUT
 import de.bjrke.factorio.optimizer.common.core.model.Io.OUTPUT
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
@@ -45,17 +46,14 @@ import kotlin.test.assertEquals
  * across each two-tile gap, which the player can walk across. Every port is reached by a vertical
  * shaft whose top end stands one row inside the lane and whose bottom end sits on the port tile.
  */
-class BlueprintFluidCharacterizationTest {
+class BlueprintFluidCharacterizationTest : BaseGameCtxTest() {
 
     private val fluidPlan =
         BlueprintPlan(
             target = solidFuel,
             rows =
                 listOf(
-                    PlannedRow.copies(
-                        planned(solidFuelFromPetroleumGasRecipe, CHEMICAL_PLANT),
-                        3,
-                    ),
+                    PlannedRow.copies(planned(solidFuelFromPetroleumGasRecipe, CHEMICAL_PLANT), 3),
                 ),
             sources = listOf(PlannedSource(petroleum, fluid = true)),
             label = "solid-fuel-from-petroleum-gas",

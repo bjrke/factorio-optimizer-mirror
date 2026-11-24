@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltStats
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
@@ -10,16 +10,13 @@ import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
 import de.bjrke.factorio.optimizer.common.game.prototype.category
 import kotlinx.serialization.json.JsonObject
 
-/**
- * Belt, inserter, pole and pump stats plus the set of fluid materials, all derived from the dump.
- */
-internal fun logisticsStats(root: JsonObject) =
+/** Belt, inserter, pole and pump stats plus each fluid's default temperature, from the dump. */
+internal fun MaterialRegistry.logisticsStats(root: JsonObject) =
     Logistics(
         belts = beltStats(root),
         inserters = inserterStats(root),
         poles = poleStats(root),
         pumpRate = pumpRate(root),
-        fluids = root.table("fluid").keys.mapTo(mutableSetOf()) { Material(it) },
         fluidTemperatures =
             root
                 .table("fluid")

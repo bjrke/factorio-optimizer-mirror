@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
@@ -19,7 +20,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** The guard that keeps a band from internalizing a product another plan row still needs. */
-class FeedCandidatesTest {
+class FeedCandidatesTest : BaseGameCtxTest() {
 
     private val logistics = calculator()
 

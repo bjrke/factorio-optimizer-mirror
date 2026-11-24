@@ -16,6 +16,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.test.assertTableOf
@@ -25,7 +26,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class LayoutRouterTest {
+class LayoutRouterTest : BaseGameCtxTest() {
 
     /**
      * A tile east of the router's west bound: it never steps west of [IMPORT_FEED], so the generic

@@ -1,6 +1,13 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.lowDensityStructure
+import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
+import de.bjrke.factorio.optimizer.common.fixtures.rocketFuel
+import de.bjrke.factorio.optimizer.common.fixtures.rocketPart
+import de.bjrke.factorio.optimizer.common.fixtures.satellite
+import de.bjrke.factorio.optimizer.common.fixtures.spaceScience
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.SurfaceCondition
@@ -18,10 +25,12 @@ import kotlinx.serialization.json.JsonObject
  * The recipes the parser synthesises on top of the dump: the lab's inputs plus the silo's launch
  * cycle, which is one launch's worth of rocket parts.
  */
-class DefaultRecipesTest {
+class DefaultRecipesTest : BaseGameCtxTest() {
 
     private fun recipes(json: String) =
-        customRecipes(Json.parseToJsonElement(json) as JsonObject).associateBy(Recipe::name)
+        materialRegistry
+            .customRecipes(Json.parseToJsonElement(json) as JsonObject)
+            .associateBy(Recipe::name)
 
     /** A dump with the lab's [inputs], the [recipePrototypes] and optionally a [silo] prototype. */
     private fun dump(
@@ -140,18 +149,14 @@ class DefaultRecipesTest {
                 )
                 .getValue("space-science-pack")
 
+        val ingredients = space.ingredients
         assertAll(
             { assertEquals(setOf(Category.ROCKET_BUILDING), space.categories) },
-            { assertEquals(1.0, space.ingredients.getValue(Material("satellite"))) },
-            { assertEquals(1000.0, space.ingredients.getValue(Material("processing-unit"))) },
-            {
-                assertEquals(
-                    1000.0,
-                    space.ingredients.getValue(Material("low-density-structure")),
-                )
-            },
-            { assertEquals(1000.0, space.ingredients.getValue(Material("rocket-fuel"))) },
-            { assertEquals(1000.0, space.result.getValue(Material("space-science-pack"))) },
+            { assertEquals(1.0, ingredients.getValue(satellite)) },
+            { assertEquals(1000.0, ingredients.getValue(processingUnit)) },
+            { assertEquals(1000.0, ingredients.getValue(lowDensityStructure)) },
+            { assertEquals(1000.0, ingredients.getValue(rocketFuel)) },
+            { assertEquals(1000.0, space.result.getValue(spaceScience)) },
             { assertEquals(300.0, space.time, TOLERANCE) },
         )
     }
@@ -167,7 +172,7 @@ class DefaultRecipesTest {
                 .getValue("space-science-pack")
 
         assertAll(
-            { assertEquals(500.0, space.ingredients.getValue(Material("processing-unit"))) },
+            { assertEquals(500.0, space.ingredients.getValue(processingUnit)) },
             { assertEquals(150.0, space.time, TOLERANCE) },
         )
     }
@@ -181,11 +186,12 @@ class DefaultRecipesTest {
         val parts =
             recipes(dump(spaceAgeSciencePacks, spaceAgeRecipes, silo(50))).getValue("rocket-part")
 
+        val ingredients = parts.ingredients
         assertAll(
-            { assertEquals(50.0, parts.result.getValue(Material("rocket-part"))) },
-            { assertEquals(50.0, parts.ingredients.getValue(Material("processing-unit"))) },
-            { assertEquals(50.0, parts.ingredients.getValue(Material("low-density-structure"))) },
-            { assertEquals(50.0, parts.ingredients.getValue(Material("rocket-fuel"))) },
+            { assertEquals(50.0, parts.result.getValue(rocketPart)) },
+            { assertEquals(50.0, ingredients.getValue(processingUnit)) },
+            { assertEquals(50.0, ingredients.getValue(lowDensityStructure)) },
+            { assertEquals(50.0, ingredients.getValue(rocketFuel)) },
             { assertEquals(150.0, parts.time, TOLERANCE) },
         )
     }

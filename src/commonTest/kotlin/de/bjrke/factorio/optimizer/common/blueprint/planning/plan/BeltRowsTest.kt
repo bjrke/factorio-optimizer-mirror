@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import kotlin.test.Test
@@ -11,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class BeltRowsTest {
+class BeltRowsTest : BaseGameCtxTest() {
 
     private val inputs = (1..6).map { Material("input-$it") }
     private val output = Material("output")

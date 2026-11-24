@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
@@ -24,7 +24,7 @@ private fun labInputs(root: JsonObject) =
         .flatMap { (_, element) -> element.strings("inputs") }
         .distinct()
 
-private fun allSciencePacks(sciencePacks: List<String>) =
+private fun MaterialRegistry.allSciencePacks(sciencePacks: List<String>) =
     Recipe(
         name = ALL_SCIENCE_PACKS,
         ingredients = sciencePacks.associate { Material(it) to 1.0 },
@@ -43,11 +43,10 @@ private fun allSciencePacks(sciencePacks: List<String>) =
  * shrinks the launch rate, which is not worth a second hand-maintained constant. The silo's
  * `surface_conditions` gate the cycle, so a surface the silo cannot be built on gets no launch.
  */
-private fun launchRecipe(root: JsonObject): Recipe? {
+private fun MaterialRegistry.launchRecipe(root: JsonObject): Recipe? {
     val part =
-        recipePrototype(ROCKET_PART, root.table("recipe").table(ROCKET_PART)) {
-            Subgroup()
-        } ?: return null
+        recipePrototype(ROCKET_PART, root.table("recipe").table(ROCKET_PART)) { Subgroup() }
+            ?: return null
     val siloJson = root.table(ROCKET_SILO).table(ROCKET_SILO)
     val parts =
         siloJson.number("rocket_parts_required")?.takeIf { it > 0.0 }
@@ -69,9 +68,9 @@ private fun launchRecipe(root: JsonObject): Recipe? {
  * and takes the satellite payload, and the launch yields 1000 packs, a fixed engine reward rather
  * than a prototype field.
  */
-private fun spaceSciencePackForBaseMod(root: JsonObject): Recipe? {
+private fun MaterialRegistry.spaceSciencePackForBaseMod(root: JsonObject): Recipe? {
     if (root.table("recipe").containsKey(SPACE_SCIENCE_PACK)) return null
-    return launchRecipe(root)?.let {
+    return this.launchRecipe(root)?.let {
         it.copy(
             name = SPACE_SCIENCE_PACK,
             ingredients = it.ingredients + (Material(SATELLITE) to 1.0),
@@ -88,8 +87,8 @@ private fun spaceSciencePackForBaseMod(root: JsonObject): Recipe? {
  * parts on its product belt, which in game merely removes the silo's cargo, so a player who wants
  * them for launches can delete that belt.
  */
-private fun rocketPartLaunchForSpaceAge(root: JsonObject) =
-    if (!root.isSpaceAgeDump()) null else launchRecipe(root)
+private fun MaterialRegistry.rocketPartLaunchForSpaceAge(root: JsonObject) =
+    if (!root.isSpaceAgeDump()) null else this.launchRecipe(root)
 
 /**
  * Recipes the optimizer synthesises on top of the game's prototypes: the dummy recipe that consumes
@@ -98,7 +97,7 @@ private fun rocketPartLaunchForSpaceAge(root: JsonObject) =
  * cycle for a rocket-part target. A dump with no lab adds nothing, so a synthetic test dump is not
  * given recipes it never declared.
  */
-internal fun customRecipes(root: JsonObject) = buildList {
+internal fun MaterialRegistry.customRecipes(root: JsonObject) = buildList {
     val packs = labInputs(root)
     if (packs.isEmpty()) return@buildList
     add(allSciencePacks(packs))

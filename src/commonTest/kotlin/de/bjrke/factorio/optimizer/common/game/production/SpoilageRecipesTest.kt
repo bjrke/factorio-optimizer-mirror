@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperBacteriaSpoilingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironBacteriaSpoilingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.spoilage
@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
-class SpoilageRecipesTest {
+class SpoilageRecipesTest : BaseGameCtxTest() {
 
     private val dump =
         Json.parseToJsonElement(
@@ -40,7 +40,7 @@ class SpoilageRecipesTest {
             )
             .let { it as JsonObject }
 
-    private val recipes = spoilageRecipes(dump).associateBy(Recipe::name)
+    private val recipes = materialRegistry.spoilageRecipes(dump).associateBy(Recipe::name)
 
     private val spoilTimes =
         mapOf(

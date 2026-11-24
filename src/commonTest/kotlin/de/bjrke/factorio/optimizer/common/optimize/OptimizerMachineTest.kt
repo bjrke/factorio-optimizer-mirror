@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.concrete
 import de.bjrke.factorio.optimizer.common.fixtures.concreteRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
@@ -25,7 +26,7 @@ import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class OptimizerMachineTest {
+class OptimizerMachineTest : BaseGameCtxTest() {
 
     @Test
     fun biochamberIsPreferredOverAssembler() {
@@ -107,7 +108,11 @@ class OptimizerMachineTest {
 
         val result =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(concreteRecipe, pumpWater)),
+                ParsedRecipe(
+                    emptyList(),
+                    listOf(concreteRecipe, pumpWater),
+                    gameCtx = gameCtx,
+                ),
                 setOf(
                     Factory.ASSEMBLING_MACHINE_1,
                     Factory.OFFSHORE_PUMP,
@@ -146,7 +151,7 @@ class OptimizerMachineTest {
     fun builtInProductivityBoostsOutputWithoutExtraInput() {
         val optimizer =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(copperCableRecipe)),
+                ParsedRecipe(emptyList(), listOf(copperCableRecipe), gameCtx = gameCtx),
                 setOf(
                     Factory.ELECTROMAGNETIC_PLANT,
                     Factory.NO_FACTORY,

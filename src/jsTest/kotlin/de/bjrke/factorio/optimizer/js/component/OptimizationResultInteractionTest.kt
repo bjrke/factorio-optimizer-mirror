@@ -1,5 +1,7 @@
 package de.bjrke.factorio.optimizer.js.component
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -22,7 +24,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** What a click does: normalize an amount, select a material, or pin a count. */
-class OptimizationResultInteractionTest : OptimizationResultTestBase() {
+class OptimizationResultInteractionTest :
+    OptimizationResultTestBase(), GameCtxTestMixin by BaseGameCtxTest() {
+
     @Test
     fun clickingTheFactoryIconNormalizesToTheFactoryAmount() {
         val result = optimizationResult(ironOreMiningRecipe, ironOre, Factory.ELECTRIC_MINING_DRILL)
@@ -128,9 +132,7 @@ class OptimizationResultInteractionTest : OptimizationResultTestBase() {
             factories =
                 mapOf(
                     ironGearWheelRecipe to
-                        production(
-                            Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1),
-                        ),
+                        production(Triple(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_1)),
                     importRecipe to production(Triple(importRecipe, ironPlate, Factory.NO_FACTORY)),
                 ),
         )

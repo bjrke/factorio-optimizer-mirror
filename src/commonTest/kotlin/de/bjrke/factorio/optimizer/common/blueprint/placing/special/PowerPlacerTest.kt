@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.area
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.PoleStats
@@ -23,7 +24,7 @@ import kotlin.test.assertTrue
  * A burner machine (furnace, biochamber, captive biter spawner) runs on fuel instead of the
  * electric grid, so its body needs no pole; the inserters around it still do.
  */
-class PowerPlacerTest {
+class PowerPlacerTest : BaseGameCtxTest() {
 
     private val smallPole = PoleStats(supplyRadius = 2, wireReach = 7.5)
 

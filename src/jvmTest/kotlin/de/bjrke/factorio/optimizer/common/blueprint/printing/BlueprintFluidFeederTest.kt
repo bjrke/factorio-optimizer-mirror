@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPl
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.west
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
 import de.bjrke.factorio.optimizer.common.fixtures.sulfurRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.water
@@ -21,7 +22,7 @@ import kotlin.test.assertEquals
  * port the row can reach — the input edge facing the lanes above — and leaves the other corner
  * alone, so no inserter has to make room for a pipe that would feed nothing new.
  */
-class BlueprintFluidFeederTest {
+class BlueprintFluidFeederTest : BaseGameCtxTest() {
 
     private val boilPlan = fluidRowPlan(Factory.CHEMICAL_PLANT)
 

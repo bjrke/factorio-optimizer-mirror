@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.biterEgg
 import de.bjrke.factorio.optimizer.common.fixtures.carbonicAsteroidChunk
 import de.bjrke.factorio.optimizer.common.fixtures.metallicAsteroidChunk
@@ -10,16 +11,14 @@ import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessor
 import de.bjrke.factorio.optimizer.common.fixtures.rocketPart
 import de.bjrke.factorio.optimizer.common.fixtures.solarPanel
 import de.bjrke.factorio.optimizer.common.fixtures.spaceScience
-import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
-import de.bjrke.factorio.optimizer.common.game.prototype.forSurface
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class OptimizerSpaceTest {
+class OptimizerSpaceTest : BaseGameCtxTest() {
 
     private val asteroidChunks =
         listOf(
@@ -33,7 +32,7 @@ class OptimizerSpaceTest {
     fun spaceAgeSpaceScienceIsAssembledInSpace() {
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -49,7 +48,7 @@ class OptimizerSpaceTest {
         // the silo needs pressure, so a platform cannot run the launch cycle it would host
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -62,7 +61,7 @@ class OptimizerSpaceTest {
         // on space platforms; the fluoroketone it needs is imported (barrels) there
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -76,7 +75,7 @@ class OptimizerSpaceTest {
     fun biterEggsAreImportedInSpace() {
         // the captive biter spawner can only be built on Nauvis, so the biter eggs needed for
         // promethium science must be imported on space platforms
-        val optimizer = Optimizer(RecipeLoader.forActiveMods().forSurface(Surface.SPACE))
+        val optimizer = Optimizer(forSurface(Surface.SPACE))
 
         assertEquals(Factory.NO_FACTORY, optimizer[biterEgg].production(biterEgg).factory)
     }
@@ -85,7 +84,7 @@ class OptimizerSpaceTest {
     fun spaceAsteroidChunksComeFromCollectors() {
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -101,7 +100,7 @@ class OptimizerSpaceTest {
     fun spaceAsteroidChunksUseCollectionRecipe() {
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -119,7 +118,7 @@ class OptimizerSpaceTest {
         // collector must appear once instead of once per chunk
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 
@@ -134,7 +133,7 @@ class OptimizerSpaceTest {
         // whichever output is needed most, not once per ore
         val optimizer =
             Optimizer(
-                RecipeLoader.forActiveMods().forSurface(Surface.SPACE),
+                forSurface(Surface.SPACE),
                 FactoryConfig(spaceAge = true).defaults,
             )
 

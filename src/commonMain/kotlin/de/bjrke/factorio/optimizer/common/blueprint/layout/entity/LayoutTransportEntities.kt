@@ -31,6 +31,23 @@ data class BeltEntity(
     override fun withArea(area: Area) = copy(area = area)
 }
 
+/**
+ * Whether [material] is on this conveyor, without building the [TransportEntity.materials] set a
+ * mixed belt would allocate.
+ */
+fun ConveyorEntity.hasMaterial(material: Material): Boolean =
+    when (this) {
+        is BeltEntity -> load.has(material)
+        else -> this.material == material
+    }
+
+/** Whether this conveyor carries only [material]; a mixed belt carries two materials. */
+fun ConveyorEntity.isSingleMaterial(material: Material): Boolean =
+    when (this) {
+        is BeltEntity -> !load.isMixed && load.has(material)
+        else -> this.material == material
+    }
+
 data class UndergroundBeltEntity(
     override val area: Area,
     override val name: String,

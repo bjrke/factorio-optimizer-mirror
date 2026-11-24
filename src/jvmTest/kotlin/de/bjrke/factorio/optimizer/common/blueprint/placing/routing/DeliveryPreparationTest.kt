@@ -17,7 +17,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
@@ -40,7 +40,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class DeliveryPreparationTest {
+class DeliveryPreparationTest : BaseGameCtxTest() {
 
     @Test
     fun everyProductStartsOnItsOwnOutputBelt() {
@@ -167,11 +167,7 @@ class DeliveryPreparationTest {
         assertAll(
             { assertEquals(delivery.material, board.reservedMaterialAt(approach)) },
             { assertTrue(rules.allowed(delivery.material, delivery.sink)(approach, heading)) },
-            {
-                assertFalse(
-                    rules.allowed(Material("foreign"), delivery.sink)(approach, heading),
-                )
-            },
+            { assertFalse(rules.allowed(Material("foreign"), delivery.sink)(approach, heading)) },
         )
     }
 

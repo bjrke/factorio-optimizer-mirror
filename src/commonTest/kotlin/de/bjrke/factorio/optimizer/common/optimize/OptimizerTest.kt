@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calciteMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.castingSteelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnit
@@ -34,7 +35,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class OptimizerTest {
+class OptimizerTest : BaseGameCtxTest() {
 
     private val miningIron = ironOreMiningRecipe
     private val pumpWater = waterPumpingRecipe
@@ -120,6 +121,7 @@ class OptimizerTest {
                         pumpLava,
                         mineCalcite,
                     ),
+                    gameCtx = gameCtx,
                 ),
                 vulcanusFactories,
             )[moltenIron]
@@ -140,6 +142,7 @@ class OptimizerTest {
                         pumpLava,
                         mineCalcite,
                     ),
+                    gameCtx = gameCtx,
                 ),
                 vulcanusFactories,
             )[steelPlate]
@@ -170,6 +173,7 @@ class OptimizerTest {
                 ParsedRecipe(
                     emptyList(),
                     listOf(ironOreMeltingRecipe, moltenIronFromLavaRecipe, mineCalcite, miningIron),
+                    gameCtx = gameCtx,
                 ),
                 vulcanusFactories,
             )[moltenIron]
@@ -181,7 +185,11 @@ class OptimizerTest {
     fun byproductRecipeRunsOnceForAllItsOutputs() {
         val optimizer =
             Optimizer(
-                ParsedRecipe(emptyList(), listOf(uraniumProcessingRecipe, uraniumFuelCellRecipe)),
+                ParsedRecipe(
+                    emptyList(),
+                    listOf(uraniumProcessingRecipe, uraniumFuelCellRecipe),
+                    gameCtx = gameCtx,
+                ),
                 setOf(
                     Factory.CENTRIFUGE,
                     Factory.ASSEMBLING_MACHINE_3,
@@ -215,6 +223,7 @@ class OptimizerTest {
                         pipeRecipe,
                         engineUnitRecipe,
                     ),
+                    gameCtx = gameCtx,
                 ),
                 setOf(
                     Factory.ASSEMBLING_MACHINE_3,
@@ -254,6 +263,7 @@ class OptimizerTest {
                     recipe("pipe", mapOf(plate to 1.0), mapOf(pipe to 1.0)),
                     recipe("target", mapOf(gear to 1.0, pipe to 1.0), mapOf(target to 1.0)),
                 ),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -299,6 +309,7 @@ class OptimizerTest {
                     recipe("gear", mapOf(plate to 1.0), mapOf(gear to 1.0)),
                     recipe("target", mapOf(gear to 1.0), mapOf(target to 1.0)),
                 ),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -343,6 +354,7 @@ class OptimizerTest {
                     recipe("smelt-b", mapOf(ore to 2.0), mapOf(plate to 1.0)),
                     recipe("target", mapOf(plate to 1.0), mapOf(target to 1.0)),
                 ),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -378,6 +390,7 @@ class OptimizerTest {
                     recipe("combo", mapOf(ore to 1.0), mapOf(plate to 1.0, gear to 1.0)),
                     recipe("target", mapOf(gear to 1.0), mapOf(target to 1.0)),
                 ),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -413,6 +426,7 @@ class OptimizerTest {
             ParsedRecipe(
                 emptyList(),
                 listOf(recipe("target", mapOf(ore to 1.0), mapOf(target to 1.0, plate to 1.0))),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -439,6 +453,7 @@ class OptimizerTest {
             ParsedRecipe(
                 emptyList(),
                 listOf(recipe("target", mapOf(ore to 1.0), mapOf(target to 1.0))),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -471,6 +486,7 @@ class OptimizerTest {
                     recipe("gear", mapOf(plate to 1.0), mapOf(gear to 1.0)),
                     recipe("target", mapOf(gear to 1.0, plate to 1.0), mapOf(target to 1.0)),
                 ),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(
@@ -509,6 +525,7 @@ class OptimizerTest {
                     recipe("forward", mapOf(target to 1.0), mapOf(byproduct to 1.0)),
                     recipe("back", mapOf(byproduct to 1.0), mapOf(target to 1.0)),
                 ),
+                gameCtx = gameCtx,
             )
         val result =
             Optimizer(parsed, setOf(Factory.ASSEMBLING_MACHINE_3, Factory.NO_FACTORY))[target]

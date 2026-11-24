@@ -14,6 +14,24 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-23 — A material belongs to one registry
+
+**Decision.** `Material` is interned per `MaterialRegistry`; its `index` is the registry slot and
+its identity, `equals` is reference equality and `hashCode` is the index. `isFluid` is fixed at
+creation from the registry's fluid names, and `ParsedRecipe.gameCtx` carries the universe the
+recipes and policy materials share.
+
+**Guardrail.** Never create a material outside its run's registry: two registries make equal names
+unequal, and an index is only meaningful in its own universe. The constructor and `copy()` are
+private and the factory needs the `MaterialCreation` opt-in, so a construction outside
+`MaterialRegistry` is a compile error. Production parses the dump into a registry built from
+`data.raw.fluid`; each test suite builds a `GameContext` per scenario. A registry handed to the
+parser must already agree with the dump about which materials are fluids: the parse rejects a
+disagreement instead of reclassifying one.
+
+**See.** `core/model/Material.kt`, `game/context/{MaterialRegistry,GameContext}.kt`,
+`game/prototype/Recipe.kt`.
+
 ## 2026-11-13 — An unproducible target is refused, not hidden from the picker
 
 **Decision.** `ParsedRecipe.forSurface` keeps the dump-wide `materials` list, so the picker and a

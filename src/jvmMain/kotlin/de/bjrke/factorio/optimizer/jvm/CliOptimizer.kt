@@ -25,6 +25,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.ParsedRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsFromUrl
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -73,8 +74,10 @@ data class CliArgs(
     val inserterStack: String? = null,
     /** How many produced materials besides the target the plan may build. */
     val intermediates: Int = DEFAULT_INTERMEDIATE_LIMIT,
-    /** Materials imported instead of built; `--exclude` or the URL's excluded segment. */
-    val excludedMaterials: Set<Material> = emptySet(),
+    /** The URL's `excluded` segment, resolved against the parsed material registry. */
+    val excludedSegment: String? = null,
+    /** Explicit `--exclude` names; they replace the URL's list. */
+    val excludedNames: List<String> = emptyList(),
     /** The requested [Output]s; empty means the default listing. */
     val outputs: Set<Output> = emptySet(),
 )
@@ -100,13 +103,18 @@ internal fun runCli(
             return 1
         }
     val parsedRecipes = RecipeLoader.forSurface(cli.spaceAge, cli.surface)
-    val target = Material(cli.material)
+    val materialRegistry = parsedRecipes.gameCtx.materialRegistry
+    val target = materialRegistry.Material(cli.material)
     if (target !in parsedRecipes.materials) {
         err("Unknown material '${cli.material}'")
         return 1
     }
+    val excluded =
+        if (cli.excludedNames.isEmpty())
+            materialRegistry.excludedMaterialsFromUrl(cli.excludedSegment)
+        else cli.excludedNames.mapTo(mutableSetOf()) { materialRegistry.Material(it) }
 
-    val run = resolve(cli, parsedRecipes, target)
+    val run = resolve(cli, parsedRecipes, target, excluded)
     val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
     val blueprintOutputs = Output.order.filter { it.blueprint && it in outputs }
     val outcome =
@@ -115,7 +123,7 @@ internal fun runCli(
 
     val sections = mutableListOf<() -> Unit>()
     if (Output.SETTINGS in outputs) {
-        sections += { out(settingsText(cli, run.factories, run.logistics)) }
+        sections += { out(settingsText(cli, run.factories, run.logistics, excluded)) }
     }
     if (Output.LISTING in outputs) sections += { printListing(run.result, run.logistics, out) }
     val blueprintContext =
@@ -146,7 +154,12 @@ private data class Run(
 )
 
 /** Resolves the selection and logistics, then optimizes [target] with them. */
-private fun resolve(cli: CliArgs, parsedRecipes: ParsedRecipe, target: Material): Run {
+private fun resolve(
+    cli: CliArgs,
+    parsedRecipes: ParsedRecipe,
+    target: Material,
+    excluded: Set<Material>,
+): Run {
     val factoryConfig = FactoryConfig(cli.spaceAge)
     val factories =
         cli.factories
@@ -179,8 +192,7 @@ private fun resolve(cli: CliArgs, parsedRecipes: ParsedRecipe, target: Material)
             ),
         )
 
-    val result =
-        Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[target]
+    val result = Optimizer(parsedRecipes, factories, cli.intermediates, excluded)[target]
     return Run(factories, logistics, result)
 }
 
@@ -208,6 +220,7 @@ internal fun settingsText(
     cli: CliArgs,
     factories: Set<Factory>,
     logistics: LogisticsCalculator,
+    excluded: Set<Material>,
 ) =
     """
     settings
@@ -222,7 +235,7 @@ internal fun settingsText(
       beltStack: ${logistics.beltStack}
       inserterStack: ${logistics.inserterStack}
       intermediates: ${cli.intermediates}
-      excluded: ${cli.excludedMaterials.map { it.name }.sorted().joinToString(", ")}
+      excluded: ${excluded.map { it.name }.sorted().joinToString(", ")}
       factories: ${factories.map { it.identifier }.sorted().joinToString(", ")}
     """
         .trimIndent()

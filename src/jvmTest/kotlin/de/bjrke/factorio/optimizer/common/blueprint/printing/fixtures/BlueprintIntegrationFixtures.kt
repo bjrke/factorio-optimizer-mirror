@@ -21,16 +21,16 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.isOutputPort
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.prototypeFluidPorts
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.boundingBox
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
-import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.LogisticsConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
+import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsFromUrl
 import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
@@ -54,21 +54,19 @@ val chestMarkers =
  * The layout suites pin geometry, not the intermediate limit, so they plan the full production
  * graph. The limit's effect on the optimizer is covered by the optimizer suites and the URL tests.
  */
-fun optimize(
+fun GameCtxTestMixin.optimize(
     target: String,
     surface: Surface = Surface.NAUVIS,
     factories: Set<Factory> = FactoryConfig().defaults,
-) =
-    Optimizer(
-        RecipeLoader.forSurface(true, surface),
-        factories,
-        MAX_INTERMEDIATE_LIMIT,
-    )[Material(target)]
+): OptimizationResult {
+    val parsedRecipes = forSurface(surface)
+    return Optimizer(parsedRecipes, factories, MAX_INTERMEDIATE_LIMIT)[Material(target)]
+}
 
 /** Resolves a pasted web-UI URL exactly like the CLI, so a reported layout can be replayed. */
-internal fun layoutFromUrl(url: String): Layout {
+internal fun GameCtxTestMixin.layoutFromUrl(url: String): Layout {
     val cli = parseArgs(arrayOf(url))
-    val parsedRecipes = RecipeLoader.forSurface(cli.spaceAge, cli.surface)
+    val parsedRecipes = forSurface(cli.surface, cli.spaceAge)
     val factoryConfig = FactoryConfig(cli.spaceAge)
     val factories =
         cli.factories
@@ -100,9 +98,14 @@ internal fun layoutFromUrl(url: String): Layout {
             ),
         )
 
+    val excluded =
+        if (cli.excludedNames.isEmpty()) {
+            materialRegistry.excludedMaterialsFromUrl(cli.excludedSegment)
+        } else {
+            cli.excludedNames.mapTo(mutableSetOf()) { Material(it) }
+        }
     val result =
-        Optimizer(parsedRecipes, factories, cli.intermediates, cli.excludedMaterials)[
-            Material(cli.material)]
+        Optimizer(parsedRecipes, factories, cli.intermediates, excluded)[Material(cli.material)]
     return Layout(
         result,
         logistics,
@@ -143,19 +146,6 @@ data class Layout(
         beltEnd: BeltEnd,
         powerPole: PowerPole = PowerPole.MEDIUM_ELECTRIC_POLE,
     ) : this(testBlueprintPlan(result, logistics, scale), logistics, beltEnd, powerPole)
-
-    constructor(
-        target: String,
-        scale: Double = 1.0,
-        beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
-        surface: Surface = Surface.NAUVIS,
-        factories: Set<Factory> = FactoryConfig().defaults,
-    ) : this(
-        result = optimize(target, surface, factories),
-        scale = scale,
-        beltEnd = beltEnd,
-        powerPole = PowerPole.forSelection(surface, factories),
-    )
 
     private val rowLayout by lazy { RowLayout(plan, logistics, beltEnd, powerPole) }
 
@@ -273,6 +263,20 @@ data class Layout(
     val dimension
         get() = assertNotNull(entities.map { it.area }.boundingBox()).dimension
 }
+
+fun GameCtxTestMixin.Layout(
+    target: String,
+    scale: Double = 1.0,
+    beltEnd: BeltEnd = BeltEnd.CONSTANT_COMBINATOR,
+    surface: Surface = Surface.NAUVIS,
+    factories: Set<Factory> = FactoryConfig().defaults,
+) =
+    Layout(
+        result = optimize(target, surface, factories),
+        scale = scale,
+        beltEnd = beltEnd,
+        powerPole = PowerPole.forSelection(surface, factories),
+    )
 
 /** A loader is two tiles long, so neither tile may sit above a tunnel span. */
 internal fun assertNoLoaderOverTunnel(layout: Layout) {

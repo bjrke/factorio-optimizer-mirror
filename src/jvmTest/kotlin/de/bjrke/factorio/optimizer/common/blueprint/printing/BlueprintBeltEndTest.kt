@@ -22,6 +22,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.east
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.petroleum
@@ -37,7 +38,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /** The belt-end markers: labels, infinity chests and chests the inserters feed. */
-class BlueprintBeltEndTest {
+class BlueprintBeltEndTest : BaseGameCtxTest() {
 
     @Test
     fun infinityChestsAreOptIn() {

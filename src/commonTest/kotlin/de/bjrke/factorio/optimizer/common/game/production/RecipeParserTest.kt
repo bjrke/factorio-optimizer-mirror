@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.production
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperBacteria
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlateSmeltingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
@@ -17,11 +18,12 @@ import de.bjrke.test.assertContainsNot
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
-class RecipeParserTest {
+class RecipeParserTest : BaseGameCtxTest() {
 
     private fun parse(s: String) =
-        parsePrototypes(s)
+        parsePrototypes(s, gameCtx)
             .recipes
             // resource, harvesting, asteroid and spoilage recipes are derived separately
             .filter {
@@ -30,6 +32,10 @@ class RecipeParserTest {
             }
 
     @Test fun emptyDumpShouldReturnEmptyRecipeList() = assertEquals(emptyList(), parse("{}"))
+
+    @Test
+    fun aNonObjectDumpIsRejected() =
+        assertFailsWith<IllegalStateException> { parsePrototypes("[]") }
 
     @Test
     fun parseDumpRecipes() =

@@ -8,16 +8,15 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
  * usable.
  *
  * [belts] maps a belt prototype name to its stats, [inserters] maps an inserter name to its stats,
- * [poles] maps an electric pole name to its area and reach, [pumpRate] is the fastest pump's
- * throughput in fluid per second and [fluids] holds the materials that are fluids (which move in
- * pipes, not on belts).
+ * [poles] maps an electric pole name to its area and reach and [pumpRate] is the fastest pump's
+ * throughput in fluid per second. Whether a material is a fluid is a property of the material
+ * itself ([Material.isFluid]), not of the logistics config.
  */
 data class Logistics(
     val belts: Map<String, BeltStats> = emptyMap(),
     val inserters: Map<String, InserterStats> = emptyMap(),
     val poles: Map<String, PoleStats> = emptyMap(),
     val pumpRate: Double = 1200.0,
-    val fluids: Set<Material> = emptySet(),
     /** The default temperature of each fluid, used to configure an infinity pipe source. */
     val fluidTemperatures: Map<Material, Int> = emptyMap(),
 )

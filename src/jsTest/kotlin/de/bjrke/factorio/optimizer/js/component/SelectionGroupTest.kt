@@ -2,6 +2,8 @@ package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
@@ -19,7 +21,8 @@ import web.dom.Element
  * The selection controls are grouped into rows. A line may break between groups, never inside one,
  * so every group is a `nowrap` flex row and neighboring groups are separate siblings.
  */
-class SelectionGroupTest : ComponentTest() {
+class SelectionGroupTest : ComponentTest(), GameCtxTestMixin by BaseGameCtxTest() {
+
     private val factoryConfig = FactoryConfig(spaceAge = true)
 
     private fun renderFactorySelector() =

@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.battery
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnitRecipe
@@ -43,7 +44,7 @@ import kotlin.test.assertEquals
 /**
  * Fluid ports on a direct-feed band: a producer's ingredient, a consumer's ingredient, the target.
  */
-class BlueprintBandFluidTest {
+class BlueprintBandFluidTest : BaseGameCtxTest() {
 
     private val engineSources =
         listOf(

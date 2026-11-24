@@ -28,13 +28,16 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertSpli
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertTunnelEndsAreFed
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertUndergroundRunsAreStretched
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
+import de.bjrke.factorio.optimizer.common.fixtures.rocketSilo
 import de.bjrke.factorio.optimizer.common.fixtures.sulfuricAcid
+import de.bjrke.factorio.optimizer.common.fixtures.utilitySciencePack
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -46,7 +49,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Layout invariants on the real prototype dump: overlap, belts, tunnels and compaction. */
-class BlueprintLayoutIntegrationTest {
+class BlueprintLayoutIntegrationTest : BaseGameCtxTest() {
 
     /**
      * Every real plan's layout once, against every geometry and feed invariant: overlap, dangling
@@ -146,13 +149,14 @@ class BlueprintLayoutIntegrationTest {
         val five = layout("30")
         val six = layout("36")
 
+        val copperCable = copperCable
         assertAll(
             { assertEquals(emptyList(), five.failures) },
             { assertEquals(emptyList(), six.failures) },
             { assertEquals(five.plan.scale, six.plan.scale, TOLERANCE) },
             { assertEquals(five.plan.rows, six.plan.rows) },
-            { assertContainsNot(five.plan.beltMaterials, Material("copper-cable")) },
-            { assertContainsNot(six.plan.beltMaterials, Material("copper-cable")) },
+            { assertContainsNot(five.plan.beltMaterials, copperCable) },
+            { assertContainsNot(six.plan.beltMaterials, copperCable) },
             { assertEquals("electronic-circuit (25%, place 4x for full rate)", five.plan.label) },
             { assertEquals("electronic-circuit (21%, place 5x for full rate)", six.plan.label) },
         )
@@ -210,158 +214,6 @@ class BlueprintLayoutIntegrationTest {
      * plan kept its uncompacted 78x184 shape.
      */
     @Test
-    fun theReportedFusionReactorUrlCompacts() {
-        val layout =
-            layoutFromUrl(
-                "http://localhost:8080/#/0.041666666667/fusion-reactor-equipment/CFSXbmr/1/1",
-            )
-
-        val (width, height) = layout.dimension
-
-        assertAll(
-            { assertTrue(width <= 52, "layout is still $width tiles wide") },
-            { assertTrue(height <= 95, "layout is still $height rows tall") },
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertNoPlannedMaterialIsImported(layout.plan) },
-        )
-    }
-
-    /**
-     * The reported utility-science layout used to import battery, electric-engine-unit, LDS and
-     * processing-unit while building them: the band search had put the same production into two
-     * rows, so one row internalized the material and the other imported it. Its acid lane also
-     * collided with the gear belt's mixed merge and was dropped, leaving the batteries dry.
-     */
-    @Test
-    fun theReportedUtilityScienceUrlCompacts() {
-        val layout =
-            layoutFromUrl(
-                "http://localhost:8080/#/0.178571428571/utility-science-pack/FSbr/1/1",
-            )
-        val (width, height) = layout.dimension
-
-        assertAll(
-            { assertTrue(width <= 45, "layout is still $width tiles wide") },
-            { assertTrue(height <= 75, "layout is still $height rows tall") },
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertNoPlannedMaterialIsImported(layout.plan) },
-        )
-    }
-
-    /**
-     * The rocket-silo row has five solid inputs plus its product, more belt rows than a row can
-     * hold at one lane each. The row pairs two over-capacity inputs instead of dropping the product
-     * belt (which used to leave the target without any output connector), and every belt route
-     * keeps its own tiles, so the layout compacts.
-     */
-    @Test
-    fun theReportedRocketSiloUrlCompacts() {
-        val layout = layoutFromUrl("http://localhost:8080/#/0.041666666667/rocket-silo/CFSXbmr/1/1")
-        val entities = layout.entities
-        val (width, height) = layout.dimension
-
-        assertAll(
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(width <= 52, "layout is still $width tiles wide") },
-            { assertTrue(height <= 125, "layout is still $height rows tall") },
-            { assertNoPlannedMaterialIsImported(layout.plan) },
-            { assertContains(layout.plan.beltMaterials, Material("rocket-silo")) },
-        )
-    }
-
-    /**
-     * The reported express-splitter layout put a splitter on the electronic-circuit trunk whose
-     * other input tile was fed by the copper-plate belt, so the splitter merged the plate into the
-     * circuit branch: `validateLayout` reported both a run-into and a foreign side-load, and the
-     * broken layout never compacted.
-     */
-    @Test
-    fun theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters() {
-        val layout = layoutFromUrl("http://localhost:8080/#/1.0/express-splitter/CFLSXbmr/1/1/50")
-        val conveyors = layout.entities.filterIsInstance<ConveyorEntity>()
-        val copperIntoCircuit =
-            layout.entities
-                .filterIsInstance<BeltEntity>()
-                .filter { copperPlate in it.load.materials }
-                .filter { belt ->
-                    val ahead = belt.area.topLeft + belt.direction.step
-                    conveyors.any {
-                        it.area.topLeft == ahead && electronicCircuit in it.materials
-                    }
-                }
-
-        assertAll(
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertEquals(emptyList(), copperIntoCircuit) },
-        )
-    }
-
-    /**
-     * The reported express-splitter layout left its empty band at rows 63-68 in place: the
-     * horizontal seam slipped under the plastic-bar tunnel output to save one belt tile, cut
-     * through the tunnel's span, and moved the entrance but not the exit, so every candidate was
-     * rejected as an unpaired underground. A seam may no longer run along a span, so the band goes
-     * in one six-row corridor.
-     */
-    @Test
-    fun theReportedExpressSplitterUrlCompactsItsEmptyBand() {
-        val layout = layoutFromUrl("http://localhost:8080/#/1.0/express-splitter/CFLSXbmr/1/1/50")
-        val (_, height) = layout.dimension
-
-        assertAll(
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertTrue(height <= 91, "layout is still $height rows tall") },
-        )
-    }
-
-    /**
-     * The reported logistic-science layout still compacts to a bounded size. Its mix merge sits
-     * east of the row, so it is wider than the old west-merge layout.
-     */
-    @Test
-    fun theReportedLogisticScienceUrlCompacts() {
-        val layout = layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSXbmr/1/1")
-        val entities = layout.entities
-        val (width, height) = layout.dimension
-
-        assertAll(
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(entities)) },
-            // smelting is planned now, so the plate rows make the layout taller than before
-            { assertTrue(width <= 48, "layout is still $width tiles wide") },
-            { assertTrue(height <= 68, "layout is still $height rows tall") },
-        )
-    }
-
-    /**
-     * The reported stacked logistic-science layout compacted rows around its iron-plate tunnel
-     * exit: the exit feeds a splitter directly, so the belt in front of it is spliceable. It was 64
-     * rows tall while the seam and the tunnel stretch left that lone belt in place.
-     */
-    @Test
-    fun theReportedStackedLogisticScienceUrlCompactsItsTunnelExitRow() {
-        val layout =
-            layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSbmr/1/1/10/-")
-        val entities = layout.entities
-        val (_, height) = layout.dimension
-
-        assertAll(
-            { assertEquals(emptyList(), layout.failures) },
-            { assertEquals(emptyList(), validateLayout(entities)) },
-            { assertTrue(height <= 62, "layout is still $height rows tall") },
-        )
-    }
-
-    /**
-     * The reported production-science layout distributes the target's three producer branches
-     * across both sides of the target instead of stacking them on one side.
-     */
-    @Test
     fun theReportedProductionScienceUrlDistributesItsBranches() {
         val layout =
             layoutFromUrl(
@@ -402,7 +254,7 @@ class BlueprintLayoutIntegrationTest {
         val productRow =
             entities
                 .filterIsInstance<BeltEntity>()
-                .filter { it.material == Material("utility-science-pack") }
+                .filter { it.material == utilitySciencePack }
                 .minOf { it.area.y }
 
         assertAll(
@@ -500,7 +352,9 @@ class BlueprintLayoutIntegrationTest {
         val layout =
             layoutFromUrl("http://localhost:8080/#/0.3/uranium-rounds-magazine/CFSXbmr/1/1")
         val belts =
-            layout.entities.filterIsInstance<BeltEntity>().filter { it.material == copperPlate }
+            layout.entities.filterIsInstance<BeltEntity>().filter {
+                it.material == copperPlate
+            }
         val tunnels =
             layout.entities.filterIsInstance<UndergroundBeltEntity>().filter {
                 it.material == copperPlate
@@ -630,22 +484,6 @@ class BlueprintLayoutIntegrationTest {
         )
     }
 
-    /** A plan must never import a material one of its own rows builds. */
-    private fun assertNoPlannedMaterialIsImported(plan: BlueprintPlan) {
-        val built =
-            plan.rows
-                .flatMap { row ->
-                    row.machines.flatMap { it.recipe.result.keys }
-                }
-                .toSet()
-
-        assertEquals(
-            emptyList(),
-            plan.sources.map { it.material }.filter { it in built },
-            "the plan imports a material it builds",
-        )
-    }
-
     /**
      * The belt tiles of [material] that a belt of another direction pours into: the side-loads that
      * make a route turn. A corner faces the tile it turns into, so its feeder lies on another axis.
@@ -657,4 +495,176 @@ class BlueprintLayoutIntegrationTest {
                 it is MarkerEntity && it.area.topLeft.manhattanDist(tunnel.area.topLeft) == 1
             }
         }
+}
+
+class BlueprintLayoutUrlCompactionTest : BaseGameCtxTest() {
+
+    @Test
+    fun theReportedFusionReactorUrlCompacts() {
+        val layout =
+            layoutFromUrl(
+                "http://localhost:8080/#/0.041666666667/fusion-reactor-equipment/CFSXbmr/1/1",
+            )
+
+        val (width, height) = layout.dimension
+
+        assertAll(
+            { assertTrue(width <= 52, "layout is still $width tiles wide") },
+            { assertTrue(height <= 95, "layout is still $height rows tall") },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertNoPlannedMaterialIsImported(layout.plan) },
+        )
+    }
+
+    /**
+     * The reported utility-science layout used to import battery, electric-engine-unit, LDS and
+     * processing-unit while building them: the band search had put the same production into two
+     * rows, so one row internalized the material and the other imported it. Its acid lane also
+     * collided with the gear belt's mixed merge and was dropped, leaving the batteries dry.
+     */
+    @Test
+    fun theReportedUtilityScienceUrlCompacts() {
+        val layout =
+            layoutFromUrl(
+                "http://localhost:8080/#/0.178571428571/utility-science-pack/FSbr/1/1",
+            )
+        val (width, height) = layout.dimension
+
+        assertAll(
+            { assertTrue(width <= 45, "layout is still $width tiles wide") },
+            { assertTrue(height <= 75, "layout is still $height rows tall") },
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertNoPlannedMaterialIsImported(layout.plan) },
+        )
+    }
+
+    /**
+     * The rocket-silo row has five solid inputs plus its product, more belt rows than a row can
+     * hold at one lane each. The row pairs two over-capacity inputs instead of dropping the product
+     * belt (which used to leave the target without any output connector), and every belt route
+     * keeps its own tiles, so the layout compacts.
+     */
+    @Test
+    fun theReportedRocketSiloUrlCompacts() {
+        val layout = layoutFromUrl("http://localhost:8080/#/0.041666666667/rocket-silo/CFSXbmr/1/1")
+        val entities = layout.entities
+        val (width, height) = layout.dimension
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(entities)) },
+            { assertTrue(width <= 52, "layout is still $width tiles wide") },
+            { assertTrue(height <= 125, "layout is still $height rows tall") },
+            { assertNoPlannedMaterialIsImported(layout.plan) },
+            { assertContains(layout.plan.beltMaterials, rocketSilo) },
+        )
+    }
+
+    /**
+     * The reported express-splitter layout put a splitter on the electronic-circuit trunk whose
+     * other input tile was fed by the copper-plate belt, so the splitter merged the plate into the
+     * circuit branch: `validateLayout` reported both a run-into and a foreign side-load, and the
+     * broken layout never compacted.
+     */
+    @Test
+    fun theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1.0/express-splitter/CFLSXbmr/1/1/50")
+        val conveyors = layout.entities.filterIsInstance<ConveyorEntity>()
+        val copperIntoCircuit =
+            layout.entities
+                .filterIsInstance<BeltEntity>()
+                .filter { copperPlate in it.load.materials }
+                .filter { belt ->
+                    val ahead = belt.area.topLeft + belt.direction.step
+                    conveyors.any {
+                        it.area.topLeft == ahead && electronicCircuit in it.materials
+                    }
+                }
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertEquals(emptyList(), copperIntoCircuit) },
+        )
+    }
+
+    /**
+     * The reported express-splitter layout left its empty band at rows 63-68 in place: the
+     * horizontal seam slipped under the plastic-bar tunnel output to save one belt tile, cut
+     * through the tunnel's span, and moved the entrance but not the exit, so every candidate was
+     * rejected as an unpaired underground. A seam may no longer run along a span, so the band goes
+     * in one six-row corridor.
+     */
+    @Test
+    fun theReportedExpressSplitterUrlCompactsItsEmptyBand() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1.0/express-splitter/CFLSXbmr/1/1/50")
+        val (_, height) = layout.dimension
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(layout.entities)) },
+            { assertTrue(height <= 91, "layout is still $height rows tall") },
+        )
+    }
+
+    /**
+     * The reported logistic-science layout still compacts to a bounded size. Its mix merge sits
+     * east of the row, so it is wider than the old west-merge layout.
+     */
+    @Test
+    fun theReportedLogisticScienceUrlCompacts() {
+        val layout = layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSXbmr/1/1")
+        val entities = layout.entities
+        val (width, height) = layout.dimension
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(entities)) },
+            // smelting is planned now, so the plate rows make the layout taller than before
+            { assertTrue(width <= 48, "layout is still $width tiles wide") },
+            { assertTrue(height <= 68, "layout is still $height rows tall") },
+        )
+    }
+
+    /**
+     * The reported stacked logistic-science layout compacted rows around its iron-plate tunnel
+     * exit: the exit feeds a splitter directly, so the belt in front of it is spliceable. It was 64
+     * rows tall while the seam and the tunnel stretch left that lone belt in place.
+     */
+    @Test
+    fun theReportedStackedLogisticScienceUrlCompactsItsTunnelExitRow() {
+        val layout =
+            layoutFromUrl("http://localhost:8080/#/1/logistic-science-pack/CFSbmr/1/1/10/-")
+        val entities = layout.entities
+        val (_, height) = layout.dimension
+
+        assertAll(
+            { assertEquals(emptyList(), layout.failures) },
+            { assertEquals(emptyList(), validateLayout(entities)) },
+            { assertTrue(height <= 62, "layout is still $height rows tall") },
+        )
+    }
+
+    /**
+     * The reported production-science layout distributes the target's three producer branches
+     * across both sides of the target instead of stacking them on one side.
+     */
+}
+
+/** A plan must never import a material one of its own rows builds. */
+private fun assertNoPlannedMaterialIsImported(plan: BlueprintPlan) {
+    val built =
+        plan.rows
+            .flatMap { row ->
+                row.machines.flatMap { it.recipe.result.keys }
+            }
+            .toSet()
+
+    assertEquals(
+        emptyList(),
+        plan.sources.map { it.material }.filter { it in built },
+        "the plan imports a material it builds",
+    )
 }

@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.GameContext
 
 /** The parsed prototype data: every known material and recipe plus the machine and belt stats. */
 data class ParsedRecipe(
@@ -12,7 +13,7 @@ data class ParsedRecipe(
      * for synthetic tests that build a [ParsedRecipe] without a dump.
      */
     val machineStats: Map<String, MachineStats> = emptyMap(),
-    /** Belt/inserter/pump throughput and the set of fluid materials, derived from the dump. */
+    /** Belt/inserter/pole/pump throughput and the fluid temperatures, derived from the dump. */
     val logistics: Logistics = Logistics(),
     /** The energy a burnable item releases, keyed by its material, derived from the dump. */
     val fuelValues: Map<Material, Double> = emptyMap(),
@@ -24,6 +25,8 @@ data class ParsedRecipe(
     val surfaceProperties: Map<Surface, Map<SurfaceProperty, Int>> = emptyMap(),
     /** The surface these recipes were filtered for; selects surface-specific recipes. */
     val surface: Surface = Surface.NAUVIS,
+    /** The run's registries; [GameContext.materialRegistry] owns every [Material] in [recipes]. */
+    val gameCtx: GameContext,
 ) {
 
     /** The cached transitive usage counts and ordering of [recipes]. */

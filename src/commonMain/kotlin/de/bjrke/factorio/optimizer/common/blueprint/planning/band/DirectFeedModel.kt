@@ -214,7 +214,7 @@ internal class FeedNode(
             }
         }
 
-        this@FeedNode.walk()
+        walk()
     }
 
     override fun toString() = material.name

@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.game.selection
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.game.context.MaterialRegistry
 
 /**
  * Placeholder for the `excluded` URL segment when no material is excluded. It is not a material
@@ -13,7 +14,7 @@ const val NO_EXCLUSIONS = "-"
  * is imported instead of built: the optimizer drops every recipe that produces it, so the plan
  * neither calculates nor lays out its production. The target is never excluded.
  */
-fun excludedMaterialsFromUrl(segment: String?): Set<Material> =
+fun MaterialRegistry.excludedMaterialsFromUrl(segment: String?): Set<Material> =
     segment
         ?.split(',')
         ?.filter { it.isNotEmpty() && it != NO_EXCLUSIONS }

@@ -17,7 +17,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.basePlan
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
@@ -29,7 +29,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Compaction bounds and the capacity limits of wide rows. */
-class BlueprintLayoutCompactionTest {
+class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
 
     @Test
     fun feedRoutesStayEastOfTheWestBound() {

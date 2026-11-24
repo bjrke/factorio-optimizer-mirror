@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.row.RowPlanner
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.testBlueprintPlan
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
@@ -45,7 +46,7 @@ private fun result(target: Material, targetRecipe: Recipe, productions: List<Fac
     )
 
 /** The band plans: the per-copy machine rate and the finished-row belt check. */
-class BandPlanTest {
+class BandPlanTest : BaseGameCtxTest() {
 
     private val logistics = calculator()
 
@@ -60,12 +61,7 @@ class BandPlanTest {
     @Test
     fun aRepeatedBandMachineRunsAtThePlanShareOfItsRate() {
         val gearProduction =
-            production(
-                ironGearWheelRecipe,
-                gear,
-                Factory.ASSEMBLING_MACHINE_3,
-                amount = 0.4,
-            )
+            production(ironGearWheelRecipe, gear, Factory.ASSEMBLING_MACHINE_3, amount = 0.4)
         val repeated =
             BlueprintPlan(
                 target = gear,
@@ -173,7 +169,7 @@ private data class OppositeFeedBand(
  * [OppositeFeedBand.west] west. `x2`/`x3` are above one lane, so they cannot bridge the two, and a
  * multi-recipe band may not use the over-capacity rescue.
  */
-private fun oppositeFeedBand(): OppositeFeedBand {
+private fun BandPlanTest.oppositeFeedBand(): OppositeFeedBand {
     val east = Material("a")
     val west = Material("b")
     val linked = Material("x1")

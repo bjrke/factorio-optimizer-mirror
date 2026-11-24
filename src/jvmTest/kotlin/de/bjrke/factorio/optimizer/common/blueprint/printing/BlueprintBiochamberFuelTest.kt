@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.decode
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.bioflux
 import de.bjrke.factorio.optimizer.common.fixtures.nutrients
 import de.bjrke.factorio.optimizer.common.fixtures.recipes
@@ -21,10 +22,11 @@ import kotlin.test.assertEquals
  * The biochamber's nutrient fuel is a pseudo plan material. It must stay visible in the plan but
  * never become an item name in the blueprint the game reads.
  */
-class BlueprintBiochamberFuelTest {
+class BlueprintBiochamberFuelTest : BaseGameCtxTest() {
 
     @Test
-    fun glebaNutrientPlansNameTheRealItemInTheBlueprint() =
+    fun glebaNutrientPlansNameTheRealItemInTheBlueprint() {
+        val biochamberFuel = materialRegistry.biochamberFuel()
         assertTableOf(nutrients, bioflux) { target ->
             val layout = Layout(target.name, surface = Surface.GLEBA)
             val json = decode(blueprintString(layout.blueprint.toJson()))
@@ -43,4 +45,5 @@ class BlueprintBiochamberFuelTest {
                 { assertContains(json, "\"name\":\"nutrients\"") },
             )
         }
+    }
 }

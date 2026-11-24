@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.carbon
 import de.bjrke.factorio.optimizer.common.fixtures.coal
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
@@ -27,7 +28,7 @@ import kotlin.test.assertNull
  * craft, divided by the fuel's energy. The fixtures carry no machine stats, so the curated
  * fallbacks (90 kW for both furnaces) size the cases that do not set one.
  */
-class OptimizerFuelTest {
+class OptimizerFuelTest : BaseGameCtxTest() {
 
     /** Every fuel the surface table can pick, at the game's own values. */
     private val fuels =
@@ -52,6 +53,7 @@ class OptimizerFuelTest {
                     machineStats = machineStats,
                     fuelValues = fuelValues,
                     surface = surface,
+                    gameCtx = gameCtx,
                 ),
                 factories,
             )[ironPlate]
@@ -125,6 +127,7 @@ class OptimizerFuelTest {
                     materials = listOf(ironPlate),
                     recipes = listOf(ironPlateSmeltingRecipe),
                     fuelValues = fuels,
+                    gameCtx = gameCtx,
                 ),
                 setOf(Factory.STONE_FURNACE, Factory.NO_FACTORY),
             )[ironPlate]

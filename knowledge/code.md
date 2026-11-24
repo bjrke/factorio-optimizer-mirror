@@ -16,11 +16,16 @@ CLI (JVM) from one shared core.
   may use are listed under "Package dependencies":
   - `core/model` — the grid vocabulary and nothing else: `Tile.kt` (`Coordinate`,
     `Area`, `Dimension`, `Direction`, `Io`), `TileGeometry.kt` (distance and
-    compass helpers), `Material.kt`, `IconLayer.kt`. A leaf: it imports no other
-    project package.
+    compass helpers), `Material.kt` (the interned material with its registry slot
+    and fluid flag), `IconLayer.kt`. A leaf: it imports no other project package.
   - `util` — dependency-free helpers: `MinHeap`, `connectedComponents`,
     `ArrayDeque.drain`, and `MathUtils` (`countVectors`, `greatestCommonDivisor`,
     `EPSILON`, `snapToWhole`, `epsilonCeil`, `superRound`).
+  - `game/context` — the registries one run shares: `MaterialRegistry.kt` (the
+    per-universe interning and dense index) and `GameContext.kt` (the composition
+    root holding it, plus the subgroup registry later). It sits above
+    `core.model` and below the rulebook: `game.prototype` reads the registry
+    through `ParsedRecipe.gameCtx`, so it depends on this package.
   - `game/prototype` — the Factorio rulebook: `Recipe.kt` (`ParsedRecipe`,
     `MachineStats`, `Recipe`, `Subgroup`), `Factory.kt`, `Category.kt`,
     `Logistics.kt` (`BeltStats`/`InserterStats`/`PoleStats`, `Logistics` and
@@ -40,9 +45,11 @@ CLI (JVM) from one shared core.
     (`excludedMaterialsFromUrl/-ToUrl`, the material exclusions). Only the entry
     points (UI, CLI) and the tests use it; the layout never sees a URL.
   - `game/production` — reads the prototype dump: `recipeParser.kt` orchestrates
-    it, `RecipeLoader` (the cached per-mods parse and the cached
-    `forSurface(spaceAge, surface)` view), `prototypeDump.kt` (the
-    `loadPrototypeDump` `expect` declaration), `RecipePrototype.kt`,
+    it, `RecipeLoader` (the production cache: the per-mods parse and the
+    `forSurface(spaceAge, surface)` view, plus an uncached `parse` into a
+    caller-owned universe), `prototypeDump.kt` (the `loadPrototypeDump` `expect`
+    declaration and the immutable `PrototypeDump` facade decoded once per
+    process), `RecipePrototype.kt`,
     `JsonFields.kt`, `resourceRecipes.kt`, `customRecipes.kt`
     (`ALL_SCIENCE_PACKS` from `lab.inputs`, plus the silo's launch cycle in
     either game), `spoilageRecipes.kt`, `utils.kt` (normalization) and
@@ -152,7 +159,7 @@ target-specific `loadRecipe.kt`/`index.kt` files (the `loadRecipe.kt` ones are
 `expect`/`actual` pairs with the common declaration, both in
 `common.production`).
 
-Package sizes (files, verified 2026-11-17). **Files** are the budget: past 10 is a
+Package sizes (files, verified 2026-11-24). **Files** are the budget: past 10 is a
 signal to split, 15 the ceiling. Nothing automates it — the file-count test was
 removed, so review keeps it. There is no line
 budget; `LargeClass` caps a class at 500 lines. Recheck a count with
@@ -162,6 +169,7 @@ budget; `LargeClass` caps a class at 500 lines. Recheck a count with
 | --- | --- |
 | core.model | 4 |
 | util | 4 |
+| game.context | 2 |
 | game.prototype | 8 |
 | game.production | 10 |
 | game.selection | 4 |
@@ -203,7 +211,7 @@ The arrows point one way from the vocabulary up to the artifact (leaf
 dependencies at the bottom, the assembly root at the top):
 
 ```
-core.model < game.prototype < game.production
+core.model < game.context < game.prototype < game.production
 core.model, util, game.prototype < model < optimize < blueprint
 blueprint.layout < blueprint.placing.route, blueprint.planning.plan
 blueprint.layout, blueprint.planning.plan < blueprint.planning.row,
@@ -226,9 +234,10 @@ other.
 | --- | --- | --- |
 | `core.model` | nothing | every project package |
 | `util` | nothing | every project package |
-| `game.prototype` | `core.model` | `game.production`, `model`, `optimize`, `blueprint` |
-| `game.production` | `core.model`, `game.prototype`, `util` | `model`, `optimize`, `blueprint` |
-| `game.selection` | `blueprint.layout`, `core.model`, `game.prototype` | `optimize`, `model`, the dump loader |
+| `game.context` | `core.model` | `game.prototype`, `game.production`, `model`, `optimize`, `blueprint` |
+| `game.prototype` | `core.model`, `game.context` | `game.production`, `model`, `optimize`, `blueprint` |
+| `game.production` | `core.model`, `game.context`, `game.prototype`, `util` | `model`, `optimize`, `blueprint` |
+| `game.selection` | `blueprint.layout`, `core.model`, `game.context`, `game.prototype` | `optimize`, `model`, the dump loader |
 | `model` | `core.model`, `game.prototype` | everything above (the shared result models) |
 | `optimize` | `core.model`, `game.prototype`, `model`, `util` | `game.production` (the dump loader), `game.selection`, `blueprint` |
 | `blueprint` | `blueprint.layout(+entity,validation)`, the placing stages, `blueprint.planning.{plan,row}`, `blueprint.printing.{model,output,inspection}`, `core.model`, `game.prototype` | `blueprint.json`, `optimize` (the optimizer stays out) |

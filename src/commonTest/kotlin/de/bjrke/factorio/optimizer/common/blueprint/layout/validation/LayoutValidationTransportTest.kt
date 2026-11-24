@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import kotlin.test.Test
@@ -17,18 +18,22 @@ import kotlin.test.assertEquals
 private const val BELT = "express-transport-belt"
 private const val UNDERGROUND_BELT = "express-underground-belt"
 
-private fun belt(x: Int, y: Int, material: Material = ironOre, direction: Direction = EAST) =
-    BeltEntity(areaTile(x, y), BELT, material, direction)
+class LayoutValidationTransportTest : BaseGameCtxTest() {
 
-private fun underground(
-    x: Int,
-    y: Int,
-    direction: Direction,
-    io: Io,
-    material: Material = ironOre,
-) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, material, direction, io)
+    private fun belt(
+        x: Int,
+        y: Int,
+        material: Material = ironOre,
+        direction: Direction = EAST,
+    ) = BeltEntity(areaTile(x, y), BELT, material, direction)
 
-class LayoutValidationTransportTest {
+    private fun underground(
+        x: Int,
+        y: Int,
+        direction: Direction,
+        io: Io,
+        material: Material = ironOre,
+    ) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, material, direction, io)
 
     /**
      * An underground entrance dives into its run; the belt above the tunnel span is independent of

@@ -103,7 +103,7 @@ class LogisticsCalculator(
         get() = logistics.poles
 
     /** Fluids move through pipes and pumps, not on belts. */
-    fun isFluid(material: Material) = material in logistics.fluids
+    fun isFluid(material: Material) = material.isFluid
 
     /** The default temperature of a fluid, for an infinity pipe source; 0 when unknown. */
     fun fluidTemperature(material: Material) = logistics.fluidTemperatures[material] ?: 0

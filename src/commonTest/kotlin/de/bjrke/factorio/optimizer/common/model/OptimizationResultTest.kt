@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.model
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
@@ -10,7 +11,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class OptimizationResultTest {
+class OptimizationResultTest : BaseGameCtxTest() {
 
     // the recipes differ in shape and level, which must not influence the display order
     private val rows =

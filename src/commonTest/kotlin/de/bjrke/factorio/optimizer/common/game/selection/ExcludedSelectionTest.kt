@@ -1,30 +1,44 @@
 package de.bjrke.factorio.optimizer.common.game.selection
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.copperCable
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ExcludedSelectionTest {
+class ExcludedSelectionTest : BaseGameCtxTest() {
 
     @Test
-    fun theEmptyPlaceholderDecodesToNoExclusions() =
+    fun theEmptyPlaceholderDecodesToNoExclusions() {
         assertAll(
-            { assertEquals(emptySet(), excludedMaterialsFromUrl(null)) },
-            { assertEquals(emptySet(), excludedMaterialsFromUrl("")) },
-            { assertEquals(emptySet(), excludedMaterialsFromUrl(NO_EXCLUSIONS)) },
+            { assertEquals(emptySet(), materialRegistry.excludedMaterialsFromUrl(null)) },
+            { assertEquals(emptySet(), materialRegistry.excludedMaterialsFromUrl("")) },
+            {
+                assertEquals(
+                    emptySet(),
+                    materialRegistry.excludedMaterialsFromUrl(NO_EXCLUSIONS),
+                )
+            },
         )
+    }
 
     @Test
     fun materialsRoundTripInSortedOrder() {
-        val materials = setOf(Material("iron-plate"), Material("copper-cable"), Material("gear"))
+        val materials = setOf(ironPlate, copperCable, gear)
 
         val segment = excludedMaterialsToUrl(materials)
 
         assertAll(
-            { assertEquals("copper-cable,gear,iron-plate", segment) },
-            { assertEquals(materials, excludedMaterialsFromUrl(segment)) },
+            { assertEquals("copper-cable,iron-gear-wheel,iron-plate", segment) },
+            {
+                assertEquals(
+                    materials,
+                    materialRegistry.excludedMaterialsFromUrl(segment),
+                )
+            },
         )
     }
 
@@ -33,12 +47,15 @@ class ExcludedSelectionTest {
         assertEquals(NO_EXCLUSIONS, excludedMaterialsToUrl(emptySet()))
 
     @Test
-    fun blankEntriesAreIgnored() =
+    fun blankEntriesAreIgnored() {
+        val gear = Material("gear")
+        val pipe = Material("pipe")
         assertTableOf(
-            "gear" to setOf(Material("gear")),
-            "gear,,pipe" to setOf(Material("gear"), Material("pipe")),
-            "gear,-,pipe" to setOf(Material("gear"), Material("pipe")),
+            "gear" to setOf(gear),
+            "gear,,pipe" to setOf(gear, pipe),
+            "gear,-,pipe" to setOf(gear, pipe),
         ) { (segment, expected) ->
-            assertEquals(expected, excludedMaterialsFromUrl(segment))
+            assertEquals(expected, materialRegistry.excludedMaterialsFromUrl(segment))
         }
+    }
 }

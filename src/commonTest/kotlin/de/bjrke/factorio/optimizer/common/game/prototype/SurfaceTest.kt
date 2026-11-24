@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ammoniacalSolutionPumpingRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.coalMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlateSmeltingRecipe
@@ -31,7 +32,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class SurfaceTest {
+class SurfaceTest : BaseGameCtxTest() {
 
     private fun pressure(min: Int, max: Int) = SurfaceCondition(SurfaceProperty.PRESSURE, min..max)
 
@@ -111,13 +112,14 @@ class SurfaceTest {
                 recipes = listOf(nauvisOnly),
                 surfaceProperties =
                     mapOf(Surface.FULGORA to mapOf(SurfaceProperty.PRESSURE to 800)),
+                gameCtx = gameCtx,
             )
 
         assertAll(
             {
                 assertEquals(
                     listOf("nauvis-only"),
-                    parsed.forSurface(Surface.NAUVIS).recipes.map { it.name },
+                    parsed.forSurface(Surface.NAUVIS).recipes.map(Recipe::name),
                 )
             },
             { assertEquals(emptyList(), parsed.forSurface(Surface.FULGORA).recipes) },
@@ -172,6 +174,7 @@ class SurfaceTest {
                         foundryRecipe,
                         moltenIronFromLavaRecipe,
                     ),
+                gameCtx = gameCtx,
             )
 
         assertTableOf(
@@ -185,7 +188,12 @@ class SurfaceTest {
     @Test
     fun explicitConditionsOverridePlanetSubgroup() {
         // quantum-processor is in the Aquilo subgroup but its pressure condition also allows space
-        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(quantumProcessorRecipe))
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes = listOf(quantumProcessorRecipe),
+                gameCtx = gameCtx,
+            )
 
         assertTableOf(
             Surface.AQUILO to listOf("quantum-processor"),
@@ -209,6 +217,7 @@ class SurfaceTest {
                         coalMiningRecipe,
                         stoneMiningRecipe,
                     ),
+                gameCtx = gameCtx,
             )
 
         assertTableOf(
@@ -233,6 +242,7 @@ class SurfaceTest {
                         lavaPumpingRecipe,
                         ammoniacalSolutionPumpingRecipe,
                     ),
+                gameCtx = gameCtx,
             )
 
         assertTableOf(
@@ -252,6 +262,7 @@ class SurfaceTest {
             ParsedRecipe(
                 materials = emptyList(),
                 recipes = listOf(yumakoHarvestingRecipe, jellynutHarvestingRecipe),
+                gameCtx = gameCtx,
             )
 
         assertTableOf(
@@ -264,7 +275,12 @@ class SurfaceTest {
 
     @Test
     fun harvestedWoodIsGatedToNauvis() {
-        val parsed = ParsedRecipe(materials = emptyList(), recipes = listOf(woodHarvestingRecipe))
+        val parsed =
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes = listOf(woodHarvestingRecipe),
+                gameCtx = gameCtx,
+            )
 
         assertTableOf(
             Surface.NAUVIS to setOf("wood"),
@@ -277,7 +293,11 @@ class SurfaceTest {
     @Test
     fun recyclingRecipesOnlySurviveOnFulgora() {
         val parsed =
-            ParsedRecipe(materials = emptyList(), recipes = listOf(ironGearWheelRecyclingRecipe))
+            ParsedRecipe(
+                materials = emptyList(),
+                recipes = listOf(ironGearWheelRecyclingRecipe),
+                gameCtx = gameCtx,
+            )
 
         assertContains(
             parsed.forSurface(Surface.FULGORA).recipes.map(Recipe::name),
@@ -295,6 +315,7 @@ class SurfaceTest {
             ParsedRecipe(
                 materials = emptyList(),
                 recipes = listOf(ironBacteriaRecipe, ironBacteriaSpoilingRecipe),
+                gameCtx = gameCtx,
             )
 
         assertTableOf(

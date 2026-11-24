@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertOneBeltSourcePerMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -26,7 +27,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Which recipes a real optimization result reduces to, and which materials it imports. */
-class BlueprintPlanIntegrationTest {
+class BlueprintPlanIntegrationTest : BaseGameCtxTest() {
 
     @Test
     fun advancedCircuitsBuildTheirPlasticAndCopperCable() {
@@ -194,7 +195,9 @@ class BlueprintPlanIntegrationTest {
                 // still has light oil as its single source
                 assertEquals(
                     listOf(lightOil),
-                    planned.sources.map { it.material }.filter { it != biochamberFuel },
+                    planned.sources
+                        .map { it.material }
+                        .filter { it != materialRegistry.biochamberFuel() },
                 )
             },
         )

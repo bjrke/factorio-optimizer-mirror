@@ -9,7 +9,10 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFrom
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.pipe
+import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.test.assertAll
 import kotlin.test.Test
@@ -24,7 +27,7 @@ import kotlin.test.assertTrue
  * reversed to reach the merge at `(7,20)`. The network split puts both in the east-fed half, and
  * each producer exits east to meet it.
  */
-class BlueprintLayoutFeedSideTest {
+class BlueprintLayoutFeedSideTest : BaseGameCtxTest() {
 
     @Test
     fun theReportedLogisticScienceOutputsFollowTheirFeedSide() {
@@ -41,8 +44,8 @@ class BlueprintLayoutFeedSideTest {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(entities)) },
             { assertMixedLane(belts, scienceTop - 2, Direction.WEST) },
-            { assertProductRow(belts, "transport-belt", foundry.area.y - 2, EAST) },
-            { assertProductRow(belts, "electronic-circuit", circuit.area.endY + 1, EAST) },
+            { assertProductRow(belts, transportBelt, foundry.area.y - 2, EAST) },
+            { assertProductRow(belts, electronicCircuit, circuit.area.endY + 1, EAST) },
         )
     }
 
@@ -86,13 +89,11 @@ class BlueprintLayoutFeedSideTest {
     /** The one-lane product belt of [material] on row [y]: present, and exiting [direction]. */
     private fun assertProductRow(
         belts: List<BeltEntity>,
-        material: String,
+        material: Material,
         y: Int,
         direction: Direction,
     ) {
-        val product = belts.filter {
-            it.material == Material(material) && !it.load.isFull && it.area.y == y
-        }
+        val product = belts.filter { it.material == material && !it.load.isFull && it.area.y == y }
         assertAll(
             { assertTrue(product.isNotEmpty(), "no $material product belt on row $y") },
             {

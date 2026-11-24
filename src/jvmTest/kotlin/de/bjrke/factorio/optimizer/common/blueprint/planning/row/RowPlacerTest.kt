@@ -10,9 +10,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.battery
 import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
@@ -46,7 +46,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class RowPlacerTest {
+class RowPlacerTest : BaseGameCtxTest() {
 
     @Test
     fun aPlainRowKeepsItsMachinesTouching() {
@@ -98,9 +98,7 @@ class RowPlacerTest {
                 sources = listOf(PlannedSource(ironOre, fluid = false)),
                 label = "iron-gear-wheel",
             )
-
         val row = place(plan).single()
-
         assertAll(
             { assertEquals(FIRST_MACHINE_X, row.left) },
             { assertEquals(3, row.width) },
@@ -134,12 +132,7 @@ class RowPlacerTest {
                                         flow = 0.1,
                                         producerIsLeft = false,
                                     ),
-                                    PlannedLink(
-                                        1,
-                                        copperCable,
-                                        flow = 0.1,
-                                        producerIsLeft = false,
-                                    ),
+                                    PlannedLink(1, copperCable, flow = 0.1, producerIsLeft = false),
                                 ),
                         ),
                     ),
@@ -238,10 +231,7 @@ class RowPlacerTest {
                         PlannedRow(
                             machines =
                                 listOf(
-                                    planned(
-                                            transportBeltRecipe,
-                                            Factory.ASSEMBLING_MACHINE_3,
-                                        )
+                                    planned(transportBeltRecipe, Factory.ASSEMBLING_MACHINE_3)
                                         .copy(productivity = 1.0),
                                     planned(splitterRecipe, Factory.ASSEMBLING_MACHINE_3),
                                 ),

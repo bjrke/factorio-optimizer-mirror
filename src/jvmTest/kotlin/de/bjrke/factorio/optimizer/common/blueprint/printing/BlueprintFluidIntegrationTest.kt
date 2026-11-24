@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidNetworkProblems
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.lubricant
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
@@ -11,7 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** Plumbing validity and fluid network connectivity on the real prototype dump. */
-class BlueprintFluidIntegrationTest {
+class BlueprintFluidIntegrationTest : BaseGameCtxTest() {
 
     /**
      * One layout per target feeds both fluid checks: plumbing validity and network connectivity.

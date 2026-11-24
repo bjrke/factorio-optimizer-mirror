@@ -7,7 +7,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFrom
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
+import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,11 +22,11 @@ import kotlin.test.assertTrue
  * necessary corner into the lane. A produced turn feeder on an outer belt row now feeds the merge
  * from its open side instead, so the merge is still the straight belt fed from both sides.
  */
-class BlueprintLayoutMergeTest {
+class BlueprintLayoutMergeTest : BaseGameCtxTest() {
 
     @Test
     fun theReportedChemicalScienceUrlSideLoadsItsProducedTurnFeed() {
-        val layout = layoutFromUrl(REPORTED_URL)
+        val layout = layoutFromUrl("http://localhost:8080/#/1/chemical-science-pack/CFSbmr/1/1/10/")
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val machines = layout.entities.filterIsInstance<MachineEntity>()
         val circuitTop = machines.filter { it.recipe == "advanced-circuit" }.minOf { it.area.y }
@@ -49,7 +51,7 @@ class BlueprintLayoutMergeTest {
                     it.area.topLeft == Coordinate(feedX, merge.area.y) &&
                         it.load.isFull &&
                         !it.load.isMixed &&
-                        it.material == plastic
+                        it.material == plasticBar
                 },
                 "the plastic trunk must feed the merge from the side, not the lane directly",
             )
@@ -57,10 +59,10 @@ class BlueprintLayoutMergeTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertEquals(setOf(ironPlate, plastic), lane.load.materials) },
+            { assertEquals(setOf(ironPlate, plasticBar), lane.load.materials) },
             { assertEquals(feedDirection, feed.direction) },
             { assertTrue(feed.area.x < machineLeft, "the feed joins downstream") },
-            { assertEquals(setOf(ironPlate, plastic), merge.load.materials) },
+            { assertEquals(setOf(ironPlate, plasticBar), merge.load.materials) },
         )
     }
 
@@ -71,7 +73,7 @@ class BlueprintLayoutMergeTest {
      */
     @Test
     fun theReportedChemicalScienceUrlFeedsItsLowerMergeFromBothSides() {
-        val layout = layoutFromUrl(REPORTED_URL)
+        val layout = layoutFromUrl("http://localhost:8080/#/1/chemical-science-pack/CFSbmr/1/1/10/")
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val machines = layout.entities.filterIsInstance<MachineEntity>()
         val chemBottom =
@@ -114,11 +116,5 @@ class BlueprintLayoutMergeTest {
             { assertEquals(EAST, straight.direction) },
             { assertEquals(lane.load.materials, merge.load.materials) },
         )
-    }
-
-    private companion object {
-        val ironPlate = Material("iron-plate")
-        val plastic = Material("plastic-bar")
-        const val REPORTED_URL = "http://localhost:8080/#/1/chemical-science-pack/CFSbmr/1/1/10/"
     }
 }

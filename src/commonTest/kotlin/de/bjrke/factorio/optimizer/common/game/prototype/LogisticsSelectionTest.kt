@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.testLogisticsConfig
 import de.bjrke.factorio.optimizer.common.fixtures.water
@@ -11,7 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** What the dump and the selection string make available: tiers, lanes, stacking and fluids. */
-class LogisticsSelectionTest {
+class LogisticsSelectionTest : BaseGameCtxTest() {
 
     @Test
     fun prototypesMissingFromTheDumpAreNotUsable() {
@@ -110,7 +111,7 @@ class LogisticsSelectionTest {
 
     @Test
     fun fluidsAreDetectedFromTheDump() {
-        val calculator = LogisticsCalculator(logistics = Logistics(fluids = setOf(water)))
+        val calculator = LogisticsCalculator(logistics = Logistics())
 
         assertTableOf(water to true, ironPlate to false) { (material, expected) ->
             assertEquals(expected, calculator.isFluid(material))

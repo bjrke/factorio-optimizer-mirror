@@ -1,95 +1,216 @@
 package de.bjrke.factorio.optimizer.common.fixtures
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+/**
+ * The real fluids the fixture recipes use. `BaseGameCtxTest` marks them in its registry, so a
+ * synthetic recipe sees the same fluid/solid split the dump gives the real prototypes.
+ */
+internal val TEST_FLUID_NAMES =
+    setOf(
+        "water",
+        "steam",
+        "sulfuric-acid",
+        "crude-oil",
+        "heavy-oil",
+        "light-oil",
+        "petroleum-gas",
+        "lubricant",
+        "ammoniacal-solution",
+        "ammonia",
+        "fluorine",
+        "fluoroketone-cold",
+        "fluoroketone-hot",
+        "holmium-solution",
+        "electrolyte",
+        "lithium-brine",
+        "lava",
+        "molten-iron",
+        "molten-copper",
+        "thruster-fuel",
+        "thruster-oxidizer",
+        "fusion-plasma",
+    )
 
-val ironOre = Material("iron-ore")
-val copperOre = Material("copper-ore")
-val tungstenOre = Material("tungsten-ore")
-val copperCable = Material("copper-cable")
-val copperPlate = Material("copper-plate")
-val electronicCircuit = Material("electronic-circuit")
-val advancedCircuit = Material("advanced-circuit")
-val processingUnit = Material("processing-unit")
-val coal = Material("coal")
-val ironPlate = Material("iron-plate")
-val gear = Material("iron-gear-wheel")
-val pipe = Material("pipe")
-val steelPlate = Material("steel-plate")
-val engineUnit = Material("engine-unit")
-val electricEngineUnit = Material("electric-engine-unit")
-val flyingRobotFrame = Material("flying-robot-frame")
-val battery = Material("battery")
-val smallElectricPole = Material("small-electric-pole")
-val wood = Material("wood")
-val water = Material("water")
-val lubricant = Material("lubricant")
-val sulfuricAcid = Material("sulfuric-acid")
-val sulfur = Material("sulfur")
-val plasticBar = Material("plastic-bar")
-val crudeOil = Material("crude-oil")
-val transportBelt = Material("transport-belt")
-val splitter = Material("splitter")
-val petroleum = Material("petroleum-gas")
-val utilitySciencePack = Material("utility-science-pack")
-val ice = Material("ice")
-val efficiencyModule2 = Material("efficiency-module-2")
-val efficiencyModule = Material("efficiency-module")
-val ironBacteria = Material("iron-bacteria")
-val copperBacteria = Material("copper-bacteria")
-val yumako = Material("yumako")
-val jellynut = Material("jellynut")
-val moltenIron = Material("molten-iron")
-val heavyOil = Material("heavy-oil")
-val ammoniacalSolution = Material("ammoniacal-solution")
-val holmiumSolution = Material("holmium-solution")
-val electrolyte = Material("electrolyte")
-val spaceScience = Material("space-science-pack")
-val satellite = Material("satellite")
-val quantumProcessor = Material("quantum-processor")
-val tungstenPlate = Material("tungsten-plate")
-val railgun = Material("railgun")
-val lava = Material("lava")
-val calcite = Material("calcite")
-val assemblingMachine1 = Material("assembling-machine-1")
-val carbon = Material("carbon")
-val rawFish = Material("raw-fish")
-val nutrients = Material("nutrients")
-val bioflux = Material("bioflux")
-val uranium235 = Material("uranium-235")
-val piercingRoundsMagazine = Material("piercing-rounds-magazine")
-val uraniumRoundsMagazine = Material("uranium-rounds-magazine")
-val metallicAsteroidChunk = Material("metallic-asteroid-chunk")
-val carbonicAsteroidChunk = Material("carbonic-asteroid-chunk")
-val oxideAsteroidChunk = Material("oxide-asteroid-chunk")
-val promethiumAsteroidChunk = Material("promethium-asteroid-chunk")
-val scrap = Material("scrap")
-val yumakoMash = Material("yumako-mash")
-val spoilage = Material("spoilage")
-val stone = Material("stone")
-val stoneBrick = Material("stone-brick")
-val concrete = Material("concrete")
-val refinedConcrete = Material("refined-concrete")
-val oilRefinery = Material("oil-refinery")
-val rocketSilo = Material("rocket-silo")
-val rocketPart = Material("rocket-part")
-val lowDensityStructure = Material("low-density-structure")
-val tungstenCarbide = Material("tungsten-carbide")
-val superconductor = Material("superconductor")
-val carbonFiber = Material("carbon-fiber")
-val lithiumPlate = Material("lithium-plate")
-val fluoroketoneCold = Material("fluoroketone-cold")
-val fluoroketoneHot = Material("fluoroketone-hot")
-val explosives = Material("explosives")
-val jelly = Material("jelly")
-val solarPanel = Material("solar-panel")
-val solidFuel = Material("solid-fuel")
-val rocketFuel = Material("rocket-fuel")
-val nuclearFuel = Material("nuclear-fuel")
-val biterEgg = Material("biter-egg")
-val lightOil = Material("light-oil")
-val steam = Material("steam")
-val foundry = Material("foundry")
-val flourine = Material("fluorine")
-val uranium238 = Material("uranium-238")
-val uraniumFuelCell = Material("uranium-fuel-cell")
-val uraniumOre = Material("uranium-ore")
+val GameCtxTestMixin.speedModule
+    get() = Material("speed-module")
+val GameCtxTestMixin.ironOre
+    get() = Material("iron-ore")
+val GameCtxTestMixin.copperOre
+    get() = Material("copper-ore")
+val GameCtxTestMixin.tungstenOre
+    get() = Material("tungsten-ore")
+val GameCtxTestMixin.copperCable
+    get() = Material("copper-cable")
+val GameCtxTestMixin.copperPlate
+    get() = Material("copper-plate")
+val GameCtxTestMixin.electronicCircuit
+    get() = Material("electronic-circuit")
+val GameCtxTestMixin.advancedCircuit
+    get() = Material("advanced-circuit")
+val GameCtxTestMixin.processingUnit
+    get() = Material("processing-unit")
+val GameCtxTestMixin.coal
+    get() = Material("coal")
+val GameCtxTestMixin.ironPlate
+    get() = Material("iron-plate")
+val GameCtxTestMixin.gear
+    get() = Material("iron-gear-wheel")
+val GameCtxTestMixin.pipe
+    get() = Material("pipe")
+val GameCtxTestMixin.steelPlate
+    get() = Material("steel-plate")
+val GameCtxTestMixin.engineUnit
+    get() = Material("engine-unit")
+val GameCtxTestMixin.electricEngineUnit
+    get() = Material("electric-engine-unit")
+val GameCtxTestMixin.flyingRobotFrame
+    get() = Material("flying-robot-frame")
+val GameCtxTestMixin.battery
+    get() = Material("battery")
+val GameCtxTestMixin.smallElectricPole
+    get() = Material("small-electric-pole")
+val GameCtxTestMixin.wood
+    get() = Material("wood")
+val GameCtxTestMixin.water
+    get() = Material("water")
+val GameCtxTestMixin.lubricant
+    get() = Material("lubricant")
+val GameCtxTestMixin.sulfuricAcid
+    get() = Material("sulfuric-acid")
+val GameCtxTestMixin.sulfur
+    get() = Material("sulfur")
+val GameCtxTestMixin.plasticBar
+    get() = Material("plastic-bar")
+val GameCtxTestMixin.crudeOil
+    get() = Material("crude-oil")
+val GameCtxTestMixin.transportBelt
+    get() = Material("transport-belt")
+val GameCtxTestMixin.splitter
+    get() = Material("splitter")
+val GameCtxTestMixin.petroleum
+    get() = Material("petroleum-gas")
+val GameCtxTestMixin.utilitySciencePack
+    get() = Material("utility-science-pack")
+val GameCtxTestMixin.ice
+    get() = Material("ice")
+val GameCtxTestMixin.efficiencyModule2
+    get() = Material("efficiency-module-2")
+val GameCtxTestMixin.efficiencyModule
+    get() = Material("efficiency-module")
+val GameCtxTestMixin.ironBacteria
+    get() = Material("iron-bacteria")
+val GameCtxTestMixin.copperBacteria
+    get() = Material("copper-bacteria")
+val GameCtxTestMixin.yumako
+    get() = Material("yumako")
+val GameCtxTestMixin.jellynut
+    get() = Material("jellynut")
+val GameCtxTestMixin.moltenIron
+    get() = Material("molten-iron")
+val GameCtxTestMixin.heavyOil
+    get() = Material("heavy-oil")
+val GameCtxTestMixin.ammoniacalSolution
+    get() = Material("ammoniacal-solution")
+val GameCtxTestMixin.holmiumSolution
+    get() = Material("holmium-solution")
+val GameCtxTestMixin.electrolyte
+    get() = Material("electrolyte")
+val GameCtxTestMixin.spaceScience
+    get() = Material("space-science-pack")
+val GameCtxTestMixin.satellite
+    get() = Material("satellite")
+val GameCtxTestMixin.quantumProcessor
+    get() = Material("quantum-processor")
+val GameCtxTestMixin.tungstenPlate
+    get() = Material("tungsten-plate")
+val GameCtxTestMixin.railgun
+    get() = Material("railgun")
+val GameCtxTestMixin.lava
+    get() = Material("lava")
+val GameCtxTestMixin.calcite
+    get() = Material("calcite")
+val GameCtxTestMixin.assemblingMachine1
+    get() = Material("assembling-machine-1")
+val GameCtxTestMixin.carbon
+    get() = Material("carbon")
+val GameCtxTestMixin.rawFish
+    get() = Material("raw-fish")
+val GameCtxTestMixin.nutrients
+    get() = Material("nutrients")
+val GameCtxTestMixin.bioflux
+    get() = Material("bioflux")
+val GameCtxTestMixin.uranium235
+    get() = Material("uranium-235")
+val GameCtxTestMixin.piercingRoundsMagazine
+    get() = Material("piercing-rounds-magazine")
+val GameCtxTestMixin.uraniumRoundsMagazine
+    get() = Material("uranium-rounds-magazine")
+val GameCtxTestMixin.metallicAsteroidChunk
+    get() = Material("metallic-asteroid-chunk")
+val GameCtxTestMixin.carbonicAsteroidChunk
+    get() = Material("carbonic-asteroid-chunk")
+val GameCtxTestMixin.oxideAsteroidChunk
+    get() = Material("oxide-asteroid-chunk")
+val GameCtxTestMixin.promethiumAsteroidChunk
+    get() = Material("promethium-asteroid-chunk")
+val GameCtxTestMixin.scrap
+    get() = Material("scrap")
+val GameCtxTestMixin.yumakoMash
+    get() = Material("yumako-mash")
+val GameCtxTestMixin.spoilage
+    get() = Material("spoilage")
+val GameCtxTestMixin.stone
+    get() = Material("stone")
+val GameCtxTestMixin.stoneBrick
+    get() = Material("stone-brick")
+val GameCtxTestMixin.concrete
+    get() = Material("concrete")
+val GameCtxTestMixin.refinedConcrete
+    get() = Material("refined-concrete")
+val GameCtxTestMixin.oilRefinery
+    get() = Material("oil-refinery")
+val GameCtxTestMixin.rocketSilo
+    get() = Material("rocket-silo")
+val GameCtxTestMixin.rocketPart
+    get() = Material("rocket-part")
+val GameCtxTestMixin.lowDensityStructure
+    get() = Material("low-density-structure")
+val GameCtxTestMixin.tungstenCarbide
+    get() = Material("tungsten-carbide")
+val GameCtxTestMixin.superconductor
+    get() = Material("superconductor")
+val GameCtxTestMixin.carbonFiber
+    get() = Material("carbon-fiber")
+val GameCtxTestMixin.lithiumPlate
+    get() = Material("lithium-plate")
+val GameCtxTestMixin.fluoroketoneCold
+    get() = Material("fluoroketone-cold")
+val GameCtxTestMixin.fluoroketoneHot
+    get() = Material("fluoroketone-hot")
+val GameCtxTestMixin.explosives
+    get() = Material("explosives")
+val GameCtxTestMixin.jelly
+    get() = Material("jelly")
+val GameCtxTestMixin.solarPanel
+    get() = Material("solar-panel")
+val GameCtxTestMixin.solidFuel
+    get() = Material("solid-fuel")
+val GameCtxTestMixin.rocketFuel
+    get() = Material("rocket-fuel")
+val GameCtxTestMixin.nuclearFuel
+    get() = Material("nuclear-fuel")
+val GameCtxTestMixin.biterEgg
+    get() = Material("biter-egg")
+val GameCtxTestMixin.lightOil
+    get() = Material("light-oil")
+val GameCtxTestMixin.steam
+    get() = Material("steam")
+val GameCtxTestMixin.foundry
+    get() = Material("foundry")
+val GameCtxTestMixin.flourine
+    get() = Material("fluorine")
+val GameCtxTestMixin.uranium238
+    get() = Material("uranium-238")
+val GameCtxTestMixin.uraniumFuelCell
+    get() = Material("uranium-fuel-cell")
+val GameCtxTestMixin.uraniumOre
+    get() = Material("uranium-ore")

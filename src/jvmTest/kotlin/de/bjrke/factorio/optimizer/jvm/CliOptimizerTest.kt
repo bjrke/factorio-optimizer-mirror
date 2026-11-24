@@ -2,7 +2,7 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
@@ -19,7 +19,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class CliOptimizerTest {
+class CliOptimizerTest : BaseGameCtxTest() {
 
     private val url = "http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1"
     private val vulcanusUrl = "#/2/advanced-circuit/Sv/1/1"
@@ -137,37 +137,37 @@ class CliOptimizerTest {
         assertAll(
             {
                 assertEquals(
-                    setOf(Material("gear"), Material("pipe")),
+                    "gear,pipe",
                     parseArgs(arrayOf("#/4.5/advanced-circuit/CFSXbmr/1/1/10/gear,pipe"))
-                        .excludedMaterials,
+                        .excludedSegment,
                 )
             },
             {
                 assertEquals(
-                    setOf(Material("gear")),
-                    parseArgs(arrayOf("--exclude=gear")).excludedMaterials,
+                    listOf("gear"),
+                    parseArgs(arrayOf("--exclude=gear")).excludedNames,
                 )
             },
             {
                 assertEquals(
-                    setOf(Material("gear"), Material("pipe")),
-                    parseArgs(arrayOf("--exclude=gear", "--exclude=pipe")).excludedMaterials,
+                    listOf("gear", "pipe"),
+                    parseArgs(arrayOf("--exclude=gear", "--exclude=pipe")).excludedNames,
                 )
             },
             // explicit flags replace the URL's list
             {
                 assertEquals(
-                    setOf(Material("pipe")),
+                    listOf("pipe"),
                     parseArgs(
                             arrayOf(
                                 "#/4.5/advanced-circuit/CFSXbmr/1/1/10/gear",
                                 "--exclude=pipe",
                             ),
                         )
-                        .excludedMaterials,
+                        .excludedNames,
                 )
             },
-            { assertEquals(emptySet(), parseArgs(emptyArray()).excludedMaterials) },
+            { assertEquals(emptyList(), parseArgs(emptyArray()).excludedNames) },
         )
 
     @Test
@@ -388,20 +388,23 @@ class CliOptimizerTest {
                     inserterStack = 6,
                 ),
             )
+        val cli =
+            parseArgs(
+                arrayOf(
+                    "advanced-circuit",
+                    "--belt=express-transport-belt",
+                    "--inserter=stack-inserter",
+                    "--full-belt",
+                    "--belt-stack=4",
+                    "--exclude=iron-gear-wheel",
+                ),
+            )
         val text =
             settingsText(
-                parseArgs(
-                    arrayOf(
-                        "advanced-circuit",
-                        "--belt=express-transport-belt",
-                        "--inserter=stack-inserter",
-                        "--full-belt",
-                        "--belt-stack=4",
-                        "--exclude=iron-gear-wheel",
-                    ),
-                ),
+                cli,
                 factories = setOf(Factory.ASSEMBLING_MACHINE_3, Factory.FOUNDRY),
                 logistics = logistics,
+                excluded = cli.excludedNames.mapTo(mutableSetOf()) { Material(it) },
             )
 
         assertAll(

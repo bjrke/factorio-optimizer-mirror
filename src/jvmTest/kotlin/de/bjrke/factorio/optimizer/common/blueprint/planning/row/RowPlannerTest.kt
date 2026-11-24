@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.logistics
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.planned
 import de.bjrke.factorio.optimizer.common.core.model.LineSide
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
@@ -52,7 +53,7 @@ private fun testRecipe(
 private fun testRow(recipe: Recipe, material: Material) =
     PlannedRow.copies(planned(recipe, material, Factory.ASSEMBLING_MACHINE_3), 1)
 
-class RowPlannerTest {
+class RowPlannerTest : BaseGameCtxTest() {
 
     private val planner = RowPlanner(basePlan, logistics)
 

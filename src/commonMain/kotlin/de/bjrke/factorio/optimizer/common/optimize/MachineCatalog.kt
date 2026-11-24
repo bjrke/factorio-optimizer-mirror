@@ -31,8 +31,13 @@ internal class MachineCatalog(
     private fun fuelOf(factory: Factory): Fuel? {
         val (ingredient, burned) =
             when (factory.fuel) {
-                FactoryFuel.BURNING -> burnerFuel(parsedRecipe.surface).let { it to it }
-                FactoryFuel.NUTRIENTS -> biochamberFuel to nutrients
+                FactoryFuel.BURNING ->
+                    parsedRecipe.gameCtx.materialRegistry.burnerFuel(parsedRecipe.surface).let {
+                        it to it
+                    }
+                FactoryFuel.NUTRIENTS ->
+                    parsedRecipe.gameCtx.materialRegistry.biochamberFuel() to
+                        parsedRecipe.gameCtx.materialRegistry.nutrients()
                 null -> return null
             }
         val value = parsedRecipe.fuelValues[burned] ?: 0.0

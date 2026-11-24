@@ -1,12 +1,13 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
-import de.bjrke.factorio.optimizer.common.fixtures.lightOil
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuel
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
@@ -23,7 +24,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** How the result block measures up: widths, overflow, rotations and mirrored icons. */
-class OptimizationResultLayoutTest : OptimizationResultTestBase() {
+class OptimizationResultLayoutTest :
+    OptimizationResultTestBase(), GameCtxTestMixin by BaseGameCtxTest() {
 
     @Test
     fun ingredientAndOutputBeltsAreRotatedOppositely() {
@@ -146,7 +148,7 @@ class OptimizationResultLayoutTest : OptimizationResultTestBase() {
 
     @Test
     fun solidAndFluidRowsHaveTheSameWidth() {
-        val calculator = LogisticsCalculator(testLogistics.copy(fluids = setOf(lightOil)))
+        val calculator = LogisticsCalculator(testLogistics)
 
         val rendered =
             renderResult(

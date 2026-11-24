@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.fluidRowPlan
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
@@ -21,7 +22,7 @@ import kotlin.test.assertEquals
  * The placer derives its columns from [inserterPortColumns], so this suite pins that derivation
  * against the table itself and against the inserters the layout really places.
  */
-class MachineInserterPortTest {
+class MachineInserterPortTest : BaseGameCtxTest() {
 
     /** Every machine with a port table; a machine without one has no fluid columns to keep. */
     private val machines = Factory.entries.filter { prototypeFluidPorts(it).isNotEmpty() }

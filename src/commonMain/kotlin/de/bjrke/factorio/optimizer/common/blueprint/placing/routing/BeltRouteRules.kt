@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.hasMaterial
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -68,7 +69,7 @@ internal class BeltRouteRules(private val board: LayoutBoard) {
             val belt = board.entityAt(neighbor) as? ConveyorEntity ?: return@any false
             if (belt is UndergroundBeltEntity && belt.io == Io.INPUT) return@any false
             belt.direction == directionBetween(neighbor, coordinate) &&
-                (material == null || material !in belt.materials)
+                (material == null || !belt.hasMaterial(material))
         }
 
     /**

@@ -1,16 +1,14 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.fixtures.fluoroketoneCold
 import de.bjrke.factorio.optimizer.common.fixtures.fluoroketoneHot
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessorRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.railgun
 import de.bjrke.factorio.optimizer.common.fixtures.railgunRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.testLogistics
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -35,15 +33,12 @@ private fun production(
         0.0,
     )
 
-private fun fluids(vararg materials: Material) =
-    LogisticsCalculator(testLogistics.copy(fluids = materials.toSet()))
-
 private fun factories(vararg productions: FactoryProduction) = productions.associateBy {
     it.recipe
 }
 
 /** The belted rows beside a band: what the plan still has to build on a belt, and at what rate. */
-class DirectFeedBeltTest {
+class DirectFeedBeltTest : BaseGameCtxTest() {
 
     @Test
     fun aFluidLabelledRecipeSizesItsBeltRowByTheSolidProduct() {
@@ -56,7 +51,7 @@ class DirectFeedBeltTest {
             directFeed(
                 rail,
                 factories(rail, quantum),
-                logistics = fluids(fluoroketoneHot, fluoroketoneCold),
+                logistics = calculator(),
             )
 
         // 0.3 quantum processors/s at one per machine craft needs nine machines, not the two the

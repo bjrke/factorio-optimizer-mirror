@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.jvm
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.FactorioUrl
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.parseFactorioUrl
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.production.DEFAULT_NORMALIZE_TARGET
 import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
@@ -14,7 +13,6 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Surface
 import de.bjrke.factorio.optimizer.common.game.prototype.validIntermediateLimit
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromIdentifier
 import de.bjrke.factorio.optimizer.common.game.selection.beltEndFromSelection
-import de.bjrke.factorio.optimizer.common.game.selection.excludedMaterialsFromUrl
 import de.bjrke.factorio.optimizer.common.game.selection.spaceAgeIn
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromPlanet
 import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
@@ -57,9 +55,8 @@ fun parseArgs(args: Array<String>): CliArgs {
             validIntermediateLimit(
                 args.valueOption("intermediates") ?: url?.intermediates,
             ),
-        excludedMaterials =
-            if (excluded.isEmpty()) excludedMaterialsFromUrl(url?.excluded)
-            else excluded.mapTo(mutableSetOf()) { Material(it) },
+        excludedSegment = url?.excluded,
+        excludedNames = excluded,
         outputs = resolveOutputs(args),
     )
 }

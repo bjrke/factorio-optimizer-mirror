@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.placing.special
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperOre
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -9,7 +9,7 @@ import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class MaterialSearchTest {
+class MaterialSearchTest : BaseGameCtxTest() {
 
     private val materials =
         listOf(

@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesWired
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.Surface
@@ -15,7 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** Pole coverage, pole networks and the neighbor list a blueprint needs to rebuild wires. */
-class BlueprintPowerIntegrationTest {
+class BlueprintPowerIntegrationTest : BaseGameCtxTest() {
 
     @Test
     fun realBlueprintsPowerEveryMachine() =

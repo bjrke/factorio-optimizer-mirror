@@ -8,13 +8,14 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoOv
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNonNegativeOrigin
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertPolesCoverAndConnect
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.chestMarkers
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** The real dumps with each chest belt end: overlap, origin, tunnels, power and the output wire. */
-class BlueprintBeltEndIntegrationTest {
+class BlueprintBeltEndIntegrationTest : BaseGameCtxTest() {
 
     /**
      * Every chest marker design, the five-tile chest included, leaves every tile at or east of

@@ -22,6 +22,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
@@ -43,35 +44,40 @@ private const val MARKER = "constant-combinator"
 private const val MACHINE = "assembling-machine-3"
 private const val SPLITTER = "express-splitter"
 
-private fun belt(x: Int, y: Int, material: Material = ironOre, direction: Direction = EAST) =
-    BeltEntity(areaTile(x, y), BELT, material, direction)
+class LayoutCompactionTest : BaseGameCtxTest() {
 
-/** A splitter facing [direction]; its two tiles lie across that facing. */
-private fun splitter(x: Int, y: Int, direction: Direction, material: Material = ironOre) =
-    SplitterEntity(
-        if (direction == EAST || direction == WEST) Area(x, y, 1, 2) else Area(x, y, 2, 1),
-        SPLITTER,
-        material,
-        direction,
-    )
+    private fun belt(
+        x: Int,
+        y: Int,
+        material: Material = ironOre,
+        direction: Direction = EAST,
+    ) = BeltEntity(areaTile(x, y), BELT, material, direction)
 
-private fun marker(x: Int, y: Int, material: Material = ironOre) =
-    MarkerEntity(areaTile(x, y), MARKER, Signal(material))
+    /** A splitter facing [direction]; its two tiles lie across that facing. */
+    private fun splitter(x: Int, y: Int, direction: Direction, material: Material = ironOre) =
+        SplitterEntity(
+            if (direction == EAST || direction == WEST) Area(x, y, 1, 2) else Area(x, y, 2, 1),
+            SPLITTER,
+            material,
+            direction,
+        )
 
-private fun machine(x: Int, y: Int) =
-    MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(x, y, 3, 3), MACHINE)
+    private fun marker(x: Int, y: Int, material: Material = ironOre) =
+        MarkerEntity(areaTile(x, y), MARKER, Signal(material))
 
-private fun pipe(x: Int, y: Int, fluid: Material = water) = PipeEntity(areaTile(x, y), PIPE, fluid)
+    private fun machine(x: Int, y: Int) =
+        MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(x, y, 3, 3), MACHINE)
 
-private fun underground(
-    x: Int,
-    y: Int,
-    direction: Direction,
-    io: Io,
-    material: Material = ironOre,
-) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, material, direction, io)
+    private fun pipe(x: Int, y: Int, fluid: Material = water) =
+        PipeEntity(areaTile(x, y), PIPE, fluid)
 
-class LayoutCompactionTest {
+    private fun underground(
+        x: Int,
+        y: Int,
+        direction: Direction,
+        io: Io,
+        material: Material = ironOre,
+    ) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, material, direction, io)
 
     @Test
     fun theWidestEmptyCorridorIsRemovedInOneShift() =

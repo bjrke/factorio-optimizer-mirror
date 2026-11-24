@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.layout
 
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.crudeOil
 import de.bjrke.factorio.optimizer.common.fixtures.water
 import de.bjrke.test.assertTable
@@ -9,7 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class LayoutPipesTest {
+class LayoutPipesTest : BaseGameCtxTest() {
 
     private fun newBoard() =
         LayoutBoard(

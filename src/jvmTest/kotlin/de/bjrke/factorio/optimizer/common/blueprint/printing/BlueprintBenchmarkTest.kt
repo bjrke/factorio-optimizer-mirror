@@ -9,7 +9,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.Layout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.decode
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.RecipeLoader
 import de.bjrke.factorio.optimizer.common.game.prototype.FactoryConfig
 import de.bjrke.factorio.optimizer.common.game.prototype.MAX_INTERMEDIATE_LIMIT
@@ -470,7 +469,9 @@ private fun assertCase(spaceAge: Boolean, surface: Surface, case: SweepCase) {
 private fun layoutOf(spaceAge: Boolean, surface: Surface, case: SweepCase): Layout {
     val recipes = RecipeLoader.forSurface(spaceAge, surface)
     val factories = FactoryConfig(spaceAge).defaults
-    val result = Optimizer(recipes, factories, MAX_INTERMEDIATE_LIMIT)[Material(case.material)]
+    val result =
+        Optimizer(recipes, factories, MAX_INTERMEDIATE_LIMIT)[
+            recipes.gameCtx.materialRegistry.Material(case.material)]
     val logistics = LogisticsCalculator(recipes.logistics)
     val planned = blueprintPlan(result, logistics, case.normalize)
     val plan = assertIs<BlueprintPlanResult.Planned>(planned, planned.toString()).plan

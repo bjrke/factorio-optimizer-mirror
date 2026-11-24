@@ -3,7 +3,9 @@ package de.bjrke.factorio.optimizer.common.blueprint.printing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.speedModule
+import de.bjrke.factorio.optimizer.common.fixtures.steelPlate
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -12,7 +14,7 @@ import kotlin.test.assertEquals
 /**
  * The reported row-rate URLs: belts carry the plan's scaled demand, not every copy at full rate.
  */
-class BlueprintRowRateIntegrationTest {
+class BlueprintRowRateIntegrationTest : BaseGameCtxTest() {
 
     /**
      * The target band repeats the machine, so its row rate must follow the plan's scaled demand. At
@@ -28,13 +30,7 @@ class BlueprintRowRateIntegrationTest {
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            {
-                assertContains(
-                    mixed,
-                    setOf(Material("speed-module"), Material("steel-plate")),
-                    mixed.toString(),
-                )
-            },
+            { assertContains(mixed, setOf(speedModule, steelPlate), mixed.toString()) },
         )
     }
 }

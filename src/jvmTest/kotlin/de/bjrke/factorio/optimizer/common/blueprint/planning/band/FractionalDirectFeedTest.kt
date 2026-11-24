@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
@@ -42,7 +43,7 @@ private fun factories(vararg productions: FactoryProduction) = productions.assoc
 }
 
 /** Fractional machine needs, overfeed and the repeated windows they produce. */
-class FractionalDirectFeedTest {
+class FractionalDirectFeedTest : BaseGameCtxTest() {
 
     private val logistics = calculator()
 
@@ -87,12 +88,7 @@ class FractionalDirectFeedTest {
     fun anOverfedPairIsBuiltInsteadOfUnderfeeding() {
         val circuit = production(electronicCircuitRecipe, electronicCircuit, amount = 1.0)
         val cable = production(copperCableRecipe, copperCable, amount = 2.0)
-        val feed =
-            directFeed(
-                circuit,
-                factories(circuit, cable),
-                logistics = logistics,
-            )
+        val feed = directFeed(circuit, factories(circuit, cable), logistics = logistics)
 
         assertAll(
             {
@@ -103,10 +99,7 @@ class FractionalDirectFeedTest {
             },
             // two cable machines feed one circuit machine; overfeed is allowed
             {
-                assertEquals(
-                    List(2) { copperCable },
-                    feed.bands.single().links.map { it.material },
-                )
+                assertEquals(List(2) { copperCable }, feed.bands.single().links.map { it.material })
             },
         )
     }

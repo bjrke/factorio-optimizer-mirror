@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.areaTile
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -20,18 +21,6 @@ import kotlin.test.assertEquals
 private const val BELT = "express-transport-belt"
 private const val SPLITTER = "express-splitter"
 
-private fun belt(x: Int, y: Int, direction: Direction = EAST, material: Material = ironOre) =
-    BeltEntity(areaTile(x, y), BELT, material, direction)
-
-/** A splitter facing [direction]; its two tiles lie across that facing. */
-private fun splitter(x: Int, y: Int, direction: Direction) =
-    SplitterEntity(
-        if (direction == EAST || direction == WEST) Area(x, y, 1, 2) else Area(x, y, 2, 1),
-        SPLITTER,
-        ironOre,
-        direction,
-    )
-
 /** One splitter case: the entities, the reported message and the area that message must blame. */
 private data class SplitterCase(
     val entities: List<LayoutEntity>,
@@ -39,7 +28,23 @@ private data class SplitterCase(
     val area: Area,
 )
 
-class LayoutValidationFlowTest {
+class LayoutValidationFlowTest : BaseGameCtxTest() {
+
+    private fun belt(
+        x: Int,
+        y: Int,
+        direction: Direction = EAST,
+        material: Material = ironOre,
+    ) = BeltEntity(areaTile(x, y), BELT, material, direction)
+
+    /** A splitter facing [direction]; its two tiles lie across that facing. */
+    private fun splitter(x: Int, y: Int, direction: Direction) =
+        SplitterEntity(
+            if (direction == EAST || direction == WEST) Area(x, y, 1, 2) else Area(x, y, 2, 1),
+            SPLITTER,
+            ironOre,
+            direction,
+        )
 
     /**
      * The reported fusion-reactor layout had a circuit splitter sitting in front of a machine: the

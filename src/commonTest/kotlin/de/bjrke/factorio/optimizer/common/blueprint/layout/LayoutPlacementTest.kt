@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLa
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.heavyOil
 import de.bjrke.factorio.optimizer.common.fixtures.water
@@ -23,7 +24,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class LayoutPlacementTest {
+class LayoutPlacementTest : BaseGameCtxTest() {
 
     private fun newBoard() =
         LayoutBoard(

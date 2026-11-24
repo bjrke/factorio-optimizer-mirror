@@ -1,11 +1,12 @@
 package de.bjrke.factorio.optimizer.common.game.prototype
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class RecipeUsageTest {
+class RecipeUsageTest : BaseGameCtxTest() {
 
     private val ore = Material("ore")
     private val plate = Material("plate")

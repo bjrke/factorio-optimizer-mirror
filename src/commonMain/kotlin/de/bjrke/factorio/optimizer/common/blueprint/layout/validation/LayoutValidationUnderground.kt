@@ -11,9 +11,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.isSingleMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.core.model.Io
-import de.bjrke.factorio.optimizer.common.core.model.Material
 
 /**
  * Every underground input needs an output of the same material, direction and kind, within the
@@ -169,9 +169,6 @@ internal fun undergroundReach(input: UndergroundEntity): Int =
         input.name.contains("fast") -> 7
         else -> 5
     }
-
-/** A single-material belt (full or half), so a tunnel never swallows a mixed belt. */
-private fun ConveyorEntity.isSingleMaterial(material: Material) = materials == setOf(material)
 
 /** Whether [candidate] is the partner of [input]: an output of its own run. */
 private fun pairsWith(input: UndergroundEntity, candidate: UndergroundEntity): Boolean {

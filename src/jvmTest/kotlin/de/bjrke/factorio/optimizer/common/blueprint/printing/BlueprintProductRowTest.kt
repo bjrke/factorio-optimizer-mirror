@@ -5,14 +5,15 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.assertNoLoaderOverTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.printing.fixtures.layoutFromUrl
-import de.bjrke.factorio.optimizer.common.core.model.Material
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
+import de.bjrke.factorio.optimizer.common.fixtures.utilitySciencePack
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /** The product row is a routing wall, and a trimmed import marker stays off tunnel spans. */
-class BlueprintProductRowTest {
+class BlueprintProductRowTest : BaseGameCtxTest() {
 
     /**
      * The target product row is a routing wall from the output belt east: no foreign belt may run
@@ -24,7 +25,7 @@ class BlueprintProductRowTest {
             layoutFromUrl(
                 "http://localhost:8080/#/0.178571428571/utility-science-pack/FSXbr/1/1",
             )
-        val target = Material("utility-science-pack")
+        val target = utilitySciencePack
         val belts = layout.entities.filterIsInstance<BeltEntity>()
         val productRow = belts.filter { it.material == target }.maxOf { it.area.y }
         val productEnd =
