@@ -5,14 +5,19 @@ import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.findProductionByRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.test.TOLERANCE
+import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-/** The arrangement search's pruning and its cached ratio penalty. */
+/** The arrangement search's pruning, the machine budget before it, and the cached ratio penalty. */
 class BandSearchTest : BaseGameCtxTest() {
 
     private val logistics = calculator()
@@ -57,4 +62,49 @@ class BandSearchTest : BaseGameCtxTest() {
             links.toString(),
         )
     }
+
+    @Test
+    fun aSingleLinkGroupFillsItsTenMachineBudget() =
+        assertTableOf(
+            // 4 circuits need 6 cable machines, so the group's need is exactly the ten machines a
+            // one-link band may build; a fraction more circuit no longer fits
+            4.0 to true,
+            4.4 to false,
+        ) { (circuitAmount, expected) ->
+            val result =
+                optimizationResult(
+                    production(electronicCircuitRecipe, amount = circuitAmount),
+                    production(copperCableRecipe, amount = circuitAmount * 1.5),
+                )
+            val context = DirectFeedContext(result, logistics = logistics)
+            val circuit = result.findProductionByRecipe(electronicCircuitRecipe)
+            val cable = result.findProductionByRecipe(copperCableRecipe)
+
+            assertEquals(expected, context.groupMayFit(listOf(context.feedLink(cable, circuit))))
+        }
+
+    @Test
+    fun aTwoLinkGroupIsOneMachineShorter() =
+        assertTableOf(
+            // 6 engine units need one gear and two plate machines, so six, one and two machines
+            // fill the nine a band of two links may build
+            6.0 to true,
+            // 7 engine units need ten machines: the same need a single link may build, which the
+            // two-link budget rejects
+            7.0 to false,
+        ) { (engineAmount, expected) ->
+            val result =
+                optimizationResult(
+                    production(engineUnitRecipe, amount = engineAmount),
+                    production(ironGearWheelRecipe),
+                    production(ironPlateRecipe),
+                )
+            val context = DirectFeedContext(result, logistics = logistics)
+            val engine = result.findProductionByRecipe(engineUnitRecipe)
+            val gear = result.findProductionByRecipe(ironGearWheelRecipe)
+            val plate = result.findProductionByRecipe(ironPlateRecipe)
+            val links = listOf(context.feedLink(plate, gear), context.feedLink(gear, engine))
+
+            assertEquals(expected, context.groupMayFit(links))
+        }
 }

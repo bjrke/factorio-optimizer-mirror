@@ -39,14 +39,7 @@ private fun arrangeBest(
     requireComplete: Boolean,
 ): BandPlan? {
     if (recipes.size > MAX_BAND_RECIPES) return null
-    val cycles =
-        BandCycleSearch(
-            group,
-            recipes,
-            bandPlanComparator(),
-            { it.isFluid },
-            requireComplete,
-        )
+    val cycles = BandCycleSearch(group, recipes, requireComplete)
     var best: BandPlan? = null
     for (length in recipes.size..maxBandMachines(group.links.size)) {
         val bestLength = best?.machines?.size
@@ -60,6 +53,16 @@ private fun arrangeBest(
 }
 
 /**
+ * Plan order: fewest machines first, so a longer window can never win, then the smallest ratio
+ * penalty, the least machine-to-machine flow, and the recipe names for a stable pick.
+ */
+private val comparator: Comparator<BandPlan> =
+    compareBy<BandPlan> { it.machines.size }
+        .thenBy { it.ratioPenalty }
+        .thenBy { plan -> plan.feeds.sumOf { it.flow } }
+        .then { a, b -> compareNames(a.machines, b.machines) }
+
+/**
  * One DFS over the cycles with a fixed machine-count vector. Placing a machine covers the links to
  * its predecessor; a link whose two recipes are both used up but that is not on the cycle's wrap
  * boundary can never become adjacent, so that branch is cut. At the boundary the last machine
@@ -70,8 +73,6 @@ private fun arrangeBest(
 private class BandCycleSearch(
     private val group: FeedGroup,
     private val recipes: List<FactoryProduction>,
-    private val comparator: Comparator<BandPlan>,
-    private val isFluid: (Material) -> Boolean,
     private val requireComplete: Boolean,
 ) {
     private val links = group.links
@@ -166,14 +167,15 @@ private class BandCycleSearch(
      * is not a valid band. A material produced and consumed outside the window (an export) is fine.
      */
     private fun BandPlan.hasInBandBeltInput(): Boolean {
-        val produced = machines.flatMap { it.recipe.result.keys }.filterNot(isFluid).toSet()
+        val produced =
+            machines.flatMap { it.recipe.result.keys }.filterNot(Material::isFluid).toSet()
         val incoming =
             feeds.mapTo(mutableSetOf()) { feed ->
                 (if (feed.producerIsLeft) feed.gap + 1 else feed.gap) to feed.link.material
             }
         return machines.withIndex().any { (index, machine) ->
             machine.recipe.ingredients.keys.any { material ->
-                !isFluid(material) && material in produced && (index to material) !in incoming
+                !material.isFluid && material in produced && (index to material) !in incoming
             }
         }
     }
@@ -245,12 +247,6 @@ private fun compareNames(first: List<FactoryProduction>, second: List<FactoryPro
     first.zip(second) { a, b -> a.recipe.name.compareTo(b.recipe.name) }.firstOrNull { it != 0 }
         ?: 0
 
-private fun bandPlanComparator(): Comparator<BandPlan> =
-    compareBy<BandPlan> { it.machines.size }
-        .thenBy { it.ratioPenalty }
-        .thenBy { plan -> plan.feeds.sumOf { it.flow } }
-        .then { a, b -> compareNames(a.machines, b.machines) }
-
 /**
  * The whole machines each recipe of the group needs. Only recipes whose product leaves the group
  * start from the plan's own machine need; every other recipe is propagated from its consumers.
@@ -294,23 +290,22 @@ internal fun DirectFeedContext.groupNeeds(links: List<FeedLink>): Map<FactoryPro
 internal fun DirectFeedContext.groupMayFit(links: List<FeedLink>): Boolean {
     val nodes = links.flatMap { listOf(it.producer, it.consumer) }.distinct()
     if (nodes.size > MAX_BAND_RECIPES) return false
-    val budget = maxBandMachines(links.size)
+    var budget = maxBandMachines(links.size).toDouble()
     // The plan's per-recipe machine count overstates a group that internalizes links; the
-    // propagated needs are the rates the window actually has to cover.
-    val needs = groupNeeds(links)
-    val machines =
-        if (needs != null) {
-            needs.values.sumOf { need ->
-                ceil(max(1.0, need) - FEED_EPSILON).toInt().coerceAtMost(budget + 1)
-            }
-        } else {
-            nodes.sumOf { node ->
-                ceil(max(1.0, node.production.amount * scale) - FEED_EPSILON)
-                    .toInt()
-                    .coerceAtMost(budget + 1)
-            }
+    // propagated needs are the rates the window actually has to cover. Without a converged
+    // propagation the plan's own per-recipe rate is the best estimate left.
+    val machineNeeds =
+        when (val needs = groupNeeds(links)) {
+            null -> nodes.asSequence().map { it.production.amount * scale }
+            else -> needs.values.asSequence()
         }
-    return machines <= budget
+
+    for (need in machineNeeds) {
+        if (budget < 0) return false
+        budget -= ceil(max(1.0, need) - FEED_EPSILON)
+    }
+
+    return budget >= 0
 }
 
 /** How far a plan's machine counts are from the links' per-machine rates. */
