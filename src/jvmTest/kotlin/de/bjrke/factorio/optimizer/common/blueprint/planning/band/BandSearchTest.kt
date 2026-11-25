@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -107,4 +108,65 @@ class BandSearchTest : BaseGameCtxTest() {
 
             assertEquals(expected, context.groupMayFit(links))
         }
+
+    @Test
+    fun aLinkHoldingAnEqualCopyStillPairsByRecipeSlot() =
+        assertTableOf(CopiedEndpoint.PRODUCER, CopiedEndpoint.CONSUMER, CopiedEndpoint.BOTH) {
+            copied ->
+            val cable = production(copperCableRecipe, amount = 6.0)
+            val circuit = production(electronicCircuitRecipe, amount = 4.0)
+            val result = optimizationResult(circuit, cable)
+            val context = DirectFeedContext(result, logistics = logistics)
+            val original =
+                context.feedLink(
+                    result.findProductionByRecipe(copperCableRecipe),
+                    result.findProductionByRecipe(electronicCircuitRecipe),
+                )
+            // the link holds an equal copy of an endpoint, not the instance the context owns; an
+            // identity match would never pair it with the canonical machine
+            val copyLink =
+                FeedLink(
+                    if (copied == CopiedEndpoint.CONSUMER) original.producer
+                    else FeedNode(context, original.producer.production.copy()),
+                    if (copied == CopiedEndpoint.PRODUCER) original.consumer
+                    else FeedNode(context, original.consumer.production.copy()),
+                    original.material,
+                )
+
+            val plan = assertNotNull(context.arrange(listOf(copyLink)))
+
+            assertContains(plan.feeds.map { it.link }, copyLink)
+        }
+
+    @Test
+    fun aLinkHoldingAnUnequalCopyStillPairsByRecipeSlot() {
+        val cable = production(copperCableRecipe, amount = 6.0)
+        val circuit = production(electronicCircuitRecipe, amount = 4.0)
+        val result = optimizationResult(circuit, cable)
+        val context = DirectFeedContext(result, logistics = logistics)
+        val original =
+            context.feedLink(
+                result.findProductionByRecipe(copperCableRecipe),
+                result.findProductionByRecipe(electronicCircuitRecipe),
+            )
+        // the belted pass copies a production with its own amount, so a copy can share the slot
+        // but not be value-equal; a value match would miss the slot's machine
+        val copyLink =
+            FeedLink(
+                FeedNode(context, original.producer.production.copy(amount = 7.0)),
+                original.consumer,
+                original.material,
+            )
+
+        val plan = assertNotNull(context.arrange(listOf(copyLink)))
+
+        assertContains(plan.feeds.map { it.link }, copyLink)
+    }
+}
+
+/** Which endpoint of a link the copy test replaces with an equal copy. */
+private enum class CopiedEndpoint {
+    PRODUCER,
+    CONSUMER,
+    BOTH,
 }

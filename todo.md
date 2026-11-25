@@ -163,25 +163,6 @@ Add tests: a board unit case that places entities across negative coordinates an
 `entityAt`/`isReserved`/`removeAt` after `replaceAll`; the full layout suite (every golden URL and
 blueprint) unchanged.
 
-### Stop the band search comparing machines by value and rebuilding lists
-
-`BandSearch.window` (`BandSearch.kt:147-150`) builds `List(length) { cycle[...] }` and counts with
-`machines.count { it == recipe }` for every length and offset, and `FeedWindow`
-(`BandSearch.kt:337`) compares `machine == link.consumer.production` in `init`, `seedSupply` and
-`consume`. Each comparison descends `FactoryProduction` → `Material` → `String.equals`, which is
-where the 56 `Material.equals` and 27 `String.equals` samples come from; the lists alone cost
-137 MB of `Object[]` in `ArrayList.<init>` plus 121 MB in `ArrayList.grow`.
-
-First make the six `FeedWindow` comparisons identity comparisons (`===`): the machines and the
-link endpoints are the same instances. Then keep the cycle as recipe indices — `search` already
-holds `cycle: IntArray` — and count with an `IntArray` histogram, materializing a
-`FactoryProduction` only for the winning plan. The band bounds (`GROUP_MAX_MACHINES`,
-`MAX_ROW_BELTS`, `MAX_COPIES`) and the rate model stay untouched.
-
-Add tests: a unit case where two equal-but-distinct `FactoryProduction` values appear in
-`group.needs`/`links` and the band must still pair them (guards against an identity compare being
-wrong), and the existing band and golden layout suites unchanged.
-
 ### Key the route search by packed node ids
 
 `RouteSearch.relax` is 187 inclusive samples (11%). `gScore` and `previous`

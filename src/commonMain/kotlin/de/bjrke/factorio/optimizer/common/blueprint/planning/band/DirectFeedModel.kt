@@ -80,12 +80,6 @@ internal fun cycleRatio(ratio: Double) = cycleFit(ratio).first
 /** The cost of the preferred small cycle for [ratio]. */
 internal fun cyclePenalty(ratio: Double) = cycleFit(ratio).second
 
-/** A group of recipes that feed each other directly, with the plan machine need of each recipe. */
-internal class FeedGroup(
-    val links: List<FeedLink>,
-    val needs: Map<RecipeIndex, Double>,
-)
-
 /** The solid inputs a band draws from outside its links. */
 internal fun bandBeltInputs(links: List<FeedLink>): Set<Material> {
     val internal = links.mapTo(mutableSetOf()) { it.material }
@@ -235,11 +229,9 @@ internal class FeedNode(
  * the belted pass runs on part of the plan, so [optimizationResult] then describes more than
  * [factories] holds.
  *
- * The search addresses needs and machine counts by [RecipeIndex] and [FeedWindow] matches a machine
- * to a link's production by value, so a recipe must be held by exactly one production of [included]
- * — [target] included, since it is one of them: a second production of the same recipe would merge
- * into one need slot while the window still treats it as a different machine. The belted pass
- * builds its copies in a context of its own, so they never meet the main plan's productions.
+ * The search addresses needs, machine counts and window matches by [RecipeIndex], and a band builds
+ * the context's production for a slot even when a link holds an equal copy. The belted pass builds
+ * its copies in a context of its own, so they never meet the main plan's productions.
  */
 internal data class DirectFeedContext(
     val optimizationResult: OptimizationResult,
@@ -307,10 +299,9 @@ internal data class DirectFeedContext(
     private val feedLinks = mutableMapOf<Int, FeedLink>()
 
     fun feedLink(p: FactoryProduction, c: FactoryProduction): FeedLink {
-        val index = p.index.value * arraySize + c.index.value
-        return feedLinks.getOrPut(index) {
+        val key = p.index.value * arraySize + c.index.value
+        return feedLinks.getOrPut(key) {
             FeedLink(
-                index,
                 nodeOf(p),
                 nodeOf(c),
                 c.recipe.ingredients.keys.intersect(p.recipe.result.keys).single(),

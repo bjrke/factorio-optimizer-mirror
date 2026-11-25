@@ -22,11 +22,9 @@ private const val OVERFEED_SCORE_WEIGHT = 30.0
 
 /**
  * One feed link: [producer] makes [material] and [consumer] takes it. A producer may have several
- * consumer links, and a consumer several producer links. [index] is the packed producer/consumer
- * slot pair that [DirectFeedContext.feedLink] caches the link under.
+ * consumer links, and a consumer several producer links.
  */
 internal data class FeedLink(
-    val index: Int,
     val producer: FeedNode,
     val consumer: FeedNode,
     val material: Material,
