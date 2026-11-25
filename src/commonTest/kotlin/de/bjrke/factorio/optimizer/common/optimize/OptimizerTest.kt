@@ -555,23 +555,20 @@ class OptimizerTest : BaseGameCtxTest() {
                 ),
             )[gear]
 
+        val productions = result.factories.values
         assertAll(
-            { assertTrue(result.factories.isNotEmpty()) },
+            { assertTrue(productions.isNotEmpty()) },
+            { assertTrue(productions.all { result.factories[it.recipe.index] == it }) },
             {
-                assertTrue(
-                    result.factories.all { (recipe, production) -> production.recipe === recipe },
+                assertEquals(
+                    productions.size,
+                    productions.map { it.recipe.index }.distinct().size,
                 )
             },
             {
                 assertEquals(
-                    result.factories.size,
-                    result.factories.values.map { it.recipe.index }.distinct().size,
-                )
-            },
-            {
-                assertEquals(
-                    (0 until result.factories.size).toSet(),
-                    result.factories.values.map { it.recipe.index.value }.toSet(),
+                    productions.indices.sorted(),
+                    productions.map { it.recipe.index.value }.sorted(),
                 )
             },
         )

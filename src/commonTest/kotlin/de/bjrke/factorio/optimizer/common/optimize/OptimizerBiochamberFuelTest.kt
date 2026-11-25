@@ -67,7 +67,7 @@ class OptimizerBiochamberFuelTest : BaseGameCtxTest() {
  * producer, so it is an ingredient edge that never closes a cycle.
  */
 private fun OptimizationResult.productionCycles(): Set<Material> {
-    val recipes = factories.keys.filter { Category.IMPORT !in it.categories }
+    val recipes = factories.values.map { it.recipe }.filter { Category.IMPORT !in it.categories }
     val produced = recipes.flatMapTo(mutableSetOf()) { it.result.keys }
     val dependency =
         buildMap<Material, MutableSet<Material>> {

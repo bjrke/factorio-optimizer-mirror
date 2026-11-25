@@ -1,6 +1,5 @@
 package de.bjrke.factorio.optimizer.common.optimize
 
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
@@ -35,7 +34,7 @@ class OptimizerTargetTest : BaseGameCtxTest() {
             {
                 assertSame(
                     result.targetProduction,
-                    result.factories.getValue(result.targetProduction.recipe),
+                    result.factories.getValue(result.targetProduction.recipe.index),
                 )
             },
         )
@@ -66,7 +65,7 @@ class OptimizerTargetTest : BaseGameCtxTest() {
             {
                 assertSame(
                     result.targetProduction,
-                    result.factories.getValue(result.targetProduction.recipe),
+                    result.factories.getValue(result.targetProduction.recipe.index),
                 )
             },
         )

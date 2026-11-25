@@ -8,6 +8,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.castingIronRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.findProductionByRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
@@ -25,7 +26,6 @@ import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
-import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -313,24 +313,31 @@ class DirectFeedTest : BaseGameCtxTest() {
     fun nodeOfCreatesANodeEvenWhenTheProductionIsNotIncluded() {
         // two recipes make solid fuel, so neither is part of the plan's producer index; nodeOf
         // still resolves them lazily and returns the same node for repeated lookups
-        val first = production(solidFuelFromLightOilRecipe)
-        val second = production(solidFuelFromPetroleumGasRecipe)
-        val targetProduction = production(rocketFuelRecipe)
+        val optimizationResult =
+            optimizationResult(
+                production(rocketFuelRecipe),
+                production(solidFuelFromLightOilRecipe),
+                production(solidFuelFromPetroleumGasRecipe),
+            )
+
+        val fromLightOilProduction =
+            optimizationResult.findProductionByRecipe(solidFuelFromLightOilRecipe)
+
         val context =
             DirectFeedContext(
-                optimizationResult(targetProduction, first, second),
+                optimizationResult,
                 logistics = logistics,
             )
-        val node = context.nodeOf(first)
+        val node = context.nodeOf(fromLightOilProduction)
 
         assertAll(
             {
                 assertContainsNot(
-                    context.included.keys.map { it.recipe },
+                    context.included.values.map { it.recipe.recipe },
                     solidFuelFromLightOilRecipe,
                 )
             },
-            { assertEquals(node, context.nodeOf(first)) },
+            { assertEquals(node, context.nodeOf(fromLightOilProduction)) },
             // the target node is the cached one, not a second node for the same production
             { assertEquals(context.target, context.nodeOf(context.targetProduction)) },
         )
@@ -367,17 +374,15 @@ class DirectFeedTest : BaseGameCtxTest() {
                 production(copperCableRecipe),
             )
 
-        fun findProduction(recipe: Recipe) =
-            optimizationResult.factories.values.first { it.recipe.recipe == recipe }
-
-        val context =
-            DirectFeedContext(
-                optimizationResult,
-                logistics = logistics,
-            )
-        val cableNode = context.nodeOf(findProduction(copperCableRecipe))
-        val circuitNode = context.nodeOf(findProduction(electronicCircuitRecipe))
-        val links = context.nodeOf(findProduction(processingUnitRecipe)).traverse().toList()
+        val context = DirectFeedContext(optimizationResult, logistics = logistics)
+        val cableNode = context.nodeOf(optimizationResult.findProductionByRecipe(copperCableRecipe))
+        val circuitNode =
+            context.nodeOf(optimizationResult.findProductionByRecipe(electronicCircuitRecipe))
+        val links =
+            context
+                .nodeOf(optimizationResult.findProductionByRecipe(processingUnitRecipe))
+                .traverse()
+                .toList()
 
         assertAll(
             {

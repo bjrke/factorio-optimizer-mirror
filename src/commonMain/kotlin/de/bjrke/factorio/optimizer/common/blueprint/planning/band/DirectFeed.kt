@@ -10,6 +10,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.SparseProductionMap
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -99,25 +100,27 @@ private fun DirectFeedContext.bandOverflow(
  */
 private fun DirectFeedContext.beltedBands(rows: List<PlannedRow>): List<PlannedRow> {
     if (rows.size < 2) return rows
-    val productions = rows.associate { row ->
-        val production = row.machines.first()
-        production.recipe to production.copy(amount = row.machines.size.toDouble())
-    }
+    val productions = rows.map { it.machines.first().copy(amount = it.machines.size.toDouble()) }
+    val rowProductions =
+        SparseProductionMap<FactoryProduction>(arraySize) {
+            for (element in productions) {
+                this[element.index] = element
+            }
+        }
     // the belted pass must still see the main plan's consumers, so a shared product is not
     // internalized just because its other consumer is in the main band
-    val scope =
-        included.values.map { production -> productions[production.recipe] ?: production }.toSet()
+    val scope = included.values.map { production -> rowProductions[production.index] ?: production }
     val context =
         DirectFeedContext(
             optimizationResult = optimizationResult,
-            targetProduction = productions.values.first(),
-            factories = productions,
+            targetProduction = productions.first(),
+            factories = rowProductions,
             logistics,
             scale = 1.0,
             consumerScope = scope,
             policy = BandPolicy(rejectedGroups = policy.rejectedGroups),
         )
-    val plans = context.maximalGroups(context.linksBetween(productions.values))
+    val plans = context.maximalGroups(context.linksBetween(productions))
     if (plans.isEmpty()) return rows
     val banded = plans.flatMap { plan -> plan.machines }.mapTo(mutableSetOf()) { it.recipe }
     return buildBands(plans) + rows.filterNot { it.machines.first().recipe in banded }

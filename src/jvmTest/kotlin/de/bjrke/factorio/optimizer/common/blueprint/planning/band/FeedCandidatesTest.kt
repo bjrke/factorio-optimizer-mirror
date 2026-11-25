@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.findProductionByRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.production
@@ -20,15 +21,21 @@ class FeedCandidatesTest : BaseGameCtxTest() {
 
     @Test
     fun aSharedProductCannotBeInternalizedWhileAnotherConsumerNeedsIt() {
-        val processing = production(processingUnitRecipe)
-        val advanced = production(advancedCircuitRecipe)
-        val circuit = production(electronicCircuitRecipe)
-        val cable = production(copperCableRecipe)
-        val context =
-            DirectFeedContext(
-                optimizationResult(processing, advanced, circuit, cable),
-                logistics = logistics,
+
+        val optimizationResult =
+            optimizationResult(
+                production(processingUnitRecipe),
+                production(advancedCircuitRecipe),
+                production(electronicCircuitRecipe),
+                production(copperCableRecipe),
             )
+
+        val context = DirectFeedContext(optimizationResult, logistics = logistics)
+
+        val advanced = optimizationResult.findProductionByRecipe(advancedCircuitRecipe)
+        val circuit = optimizationResult.findProductionByRecipe(electronicCircuitRecipe)
+        val cable = optimizationResult.findProductionByRecipe(copperCableRecipe)
+
         val intoCircuit = context.feedLink(cable, circuit)
         val intoAdvanced = context.feedLink(circuit, advanced)
 

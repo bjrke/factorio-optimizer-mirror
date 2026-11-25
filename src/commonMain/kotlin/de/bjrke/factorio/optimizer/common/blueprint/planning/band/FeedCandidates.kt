@@ -1,6 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
-import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.IndexSet
 import de.bjrke.factorio.optimizer.common.util.MinHeap
 
 // Maximal grouping for direct feed: a group keeps growing while an arrangement exists, merging
@@ -26,7 +26,7 @@ import de.bjrke.factorio.optimizer.common.util.MinHeap
 internal fun DirectFeedContext.maximalGroups(candidates: List<FeedLink>): List<BandPlan> {
     val pool = candidates.toMutableList()
     val groups = mutableListOf<MutableList<FeedLink>>()
-    val assigned = mutableSetOf<FactoryProduction>()
+    val assigned = IndexSet(arraySize)
     val completeCache = mutableMapOf<List<FeedLink>, BandPlan?>()
     val growthCache = mutableMapOf<List<FeedLink>, BandPlan?>()
     val seedComparator =
@@ -40,7 +40,7 @@ internal fun DirectFeedContext.maximalGroups(candidates: List<FeedLink>): List<B
 
     while (true) {
         pool.sortWith(seedComparator)
-        val seed = pool.indexOfFirst { link -> link.productions().none { it in assigned } }
+        val seed = pool.indexOfFirst { link -> link.productions().none { it.index in assigned } }
         if (seed < 0) break
         val seedLink = pool.removeAt(seed)
         val group = mutableListOf(seedLink)
@@ -53,7 +53,12 @@ internal fun DirectFeedContext.maximalGroups(candidates: List<FeedLink>): List<B
             continue
         }
         mergeIntoGroup(group, groups, ::arranged)
-        assigned += group.flatMap { it.productions() }
+        for (link in group) {
+            for (production in link.productions()) {
+                assigned[production.index] = true
+            }
+        }
+
         groups += group
     }
     mergeGroups(groups, ::arranged)
@@ -99,7 +104,7 @@ internal fun DirectFeedContext.internalizesSharedOutput(
 private tailrec fun DirectFeedContext.growGroup(
     group: MutableList<FeedLink>,
     pool: MutableList<FeedLink>,
-    assigned: Set<FactoryProduction>,
+    assigned: IndexSet,
     arranged: (List<FeedLink>) -> BandPlan?,
 ) {
 
@@ -113,7 +118,7 @@ private tailrec fun DirectFeedContext.growGroup(
 
     for (candidate in adjacent) {
         // a production belongs to exactly one row: never grow into a group another seed assigned
-        if (candidate.productions().any { it in assigned && it !in groupNodes }) continue
+        if (candidate.productions().any { it.index in assigned && it !in groupNodes }) continue
         if (!mayGrow(group, candidate)) continue
         if (arranged(group + candidate) != null) {
             group += candidate

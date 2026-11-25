@@ -5,6 +5,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.FullProductionMap
 import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.RecipeIndex
@@ -40,15 +41,19 @@ internal fun optimizationResult(recipe: Recipe, factory: Factory) =
     optimizationResult(production(recipe, factory))
 
 internal fun optimizationResult(vararg productions: FactoryProduction): OptimizationResult {
-    val indexedProductions = indexProductions(productions)
+    val indexedProductions =
+        Array(productions.size) { index ->
+            val production = productions[index]
+            production.copy(
+                recipe = IndexedRecipe.of(RecipeIndex(index), production.recipe.recipe),
+            )
+        }
 
     return OptimizationResult(
         targetProduction = indexedProductions.first(),
-        factories = indexedProductions.associateBy { it.recipe },
+        factories = FullProductionMap(indexedProductions),
     )
 }
 
-private fun indexProductions(productions: Array<out FactoryProduction>) =
-    productions.withIndex().map { (index, production) ->
-        production.copy(recipe = IndexedRecipe.of(RecipeIndex(index), production.recipe.recipe))
-    }
+internal fun OptimizationResult.findProductionByRecipe(recipe: Recipe): FactoryProduction =
+    factories.values.first { it.recipe.recipe == recipe }

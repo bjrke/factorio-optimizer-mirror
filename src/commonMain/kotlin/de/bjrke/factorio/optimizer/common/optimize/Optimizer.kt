@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Subgroup
 import de.bjrke.factorio.optimizer.common.game.prototype.unplannedRecipes
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.FullProductionMap
 import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.RecipeIndex
@@ -302,10 +303,10 @@ class Optimizer(
      * Builds the per-production machine counts from the LP solution: one entry per running recipe,
      * then one per displayed import.
      *
-     * The slot is the entry's position in this map, not the recipe's LP column, so it stays dense
-     * for the array that will replace the map: recipes come in [finalRecipes] order, then the
-     * imports. The target's best producer is reported even below [EPSILON], so planning always sees
-     * what makes the target; other recipes that merely also yield it stay suppressed.
+     * The slot is the entry's position in the emitted list, not the recipe's LP column, so it stays
+     * dense for the [FullProductionMap] this returns: recipes come in [finalRecipes] order, then
+     * the imports. The target's best producer is reported even below [EPSILON], so planning always
+     * sees what makes the target; other recipes that merely also yield it stay suppressed.
      */
     private fun factoryProductions(
         finalRecipes: List<Recipe>,
@@ -313,7 +314,7 @@ class Optimizer(
         solution: DoubleArray,
         materials: Set<Material>,
         target: Material,
-    ) = buildMap {
+    ) = buildList {
         val consumption = consumptionOf(finalRecipes, solution)
         val recipeVariables = finalRecipes.size
         val depth = DepthIndex(effectiveProducersOf(finalRecipes, solution))
@@ -325,12 +326,10 @@ class Optimizer(
                 ?.value
 
         fun add(material: Material, recipe: Recipe, factory: Factory, amount: Double) {
-            val indexed = IndexedRecipe.of(RecipeIndex(size), recipe)
-            put(
-                indexed,
+            add(
                 FactoryProduction(
                     material = material,
-                    recipe = indexed,
+                    recipe = IndexedRecipe.of(RecipeIndex(size), recipe),
                     factory = factory,
                     amount = amount,
                     level = depth.of(material),
@@ -353,6 +352,8 @@ class Optimizer(
             add(material, freeSource(material), Factory.NO_FACTORY, imported)
         }
     }
+        .toTypedArray()
+        .let { FullProductionMap(it) }
 
     /** Total consumption per material in the LP solution, used to label multi-output recipes. */
     private fun consumptionOf(recipes: List<Recipe>, solution: DoubleArray) = buildMap {

@@ -11,8 +11,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.ProductionMap
+import de.bjrke.factorio.optimizer.common.model.SparseProductionMap
 import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.math.max
 
@@ -237,7 +238,7 @@ internal class FeedNode(
 internal data class DirectFeedContext(
     val optimizationResult: OptimizationResult,
     val targetProduction: FactoryProduction = optimizationResult.targetProduction,
-    val factories: Map<IndexedRecipe, FactoryProduction> = optimizationResult.factories,
+    val factories: ProductionMap<FactoryProduction> = optimizationResult.factories,
     val logistics: LogisticsCalculator,
     val scale: Double = 1.0,
     /**
@@ -245,17 +246,19 @@ internal data class DirectFeedContext(
      * subset of the plan, so it passes the main context's productions here; the default is this
      * context's own [included] set.
      */
-    val consumerScope: Set<FactoryProduction>? = null,
+    val consumerScope: Iterable<FactoryProduction>? = null,
     /** The band search policy the finished plan applies on top of the arrangement. */
     val policy: BandPolicy = BandPolicy(),
 ) {
-    private val nodeCache = mutableMapOf<FactoryProduction, FeedNode>()
+    val arraySize = factories.arraySize
+
+    private val nodeCache = SparseProductionMap<FeedNode>(arraySize)
 
     val target = nodeOf(targetProduction)
 
     val producers =
-        factories
-            .flatMap { (recipe, factory) -> recipe.result.keys.map { it to factory } }
+        factories.values
+            .flatMap { factory -> factory.recipe.result.keys.map { it to factory } }
             // stone is a byproduct of Vulcanus' lava recipes, so it is always imported instead of
             // being fed from one of several producers.
             .filter { (m, p) -> m.name != "stone" && buildable(p.recipe) }
@@ -263,8 +266,8 @@ internal data class DirectFeedContext(
             .filterKeys { !it.isFluid }
 
     val consumers =
-        factories
-            .flatMap { (recipe, factory) -> recipe.ingredients.keys.map { it to factory } }
+        factories.values
+            .flatMap { factory -> factory.recipe.ingredients.keys.map { it to factory } }
             .filter { (_, p) -> buildable(p.recipe) }
             .groupBy({ (m, _) -> m }, { (_, p) -> p })
             .filterKeys { !it.isFluid }
@@ -274,22 +277,31 @@ internal data class DirectFeedContext(
      * when the optimizer runs several recipes for its material: it is always built, and its inputs
      * must still be reported as sources.
      */
-    val included = buildMap {
-        putAll(producers.values.mapNotNull { it.singleOrNull() }.associateBy { it.recipe })
-        put(target.production.recipe, target.production)
-    }
+    val included =
+        SparseProductionMap<FactoryProduction>(arraySize) {
+            for (production in producers.values.mapNotNull { it.singleOrNull() }) {
+                this[production.index] = production
+            }
+            this[target.production.index] = targetProduction
+        }
 
     /** The plan's consumers, including the ones outside a belted sub-plan. */
-    val consumersInPlan = consumerScope ?: included.values.toSet()
+    val consumersInPlan = consumerScope ?: included.values
 
     /** The one node for [production], created on first use. */
     internal fun nodeOf(production: FactoryProduction) =
-        nodeCache.getOrPut(production) { FeedNode(this, production) }
+        nodeCache[production.index]
+            ?: FeedNode(this, production).also { nodeCache[production.index] = it }
 
-    private val feedLinks = mutableMapOf<Pair<FactoryProduction, FactoryProduction>, FeedLink>()
+    /**
+     * The feed links already built, keyed by the packed producer/consumer slot pair. A plan holds
+     * few actual links, so a sparse map keeps only those instead of the [arraySize]² slots a dense
+     * pair array would allocate per context.
+     */
+    private val feedLinks = mutableMapOf<Int, FeedLink>()
 
-    fun feedLink(p: FactoryProduction, c: FactoryProduction) =
-        feedLinks.getOrPut(p to c) {
+    fun feedLink(p: FactoryProduction, c: FactoryProduction): FeedLink =
+        feedLinks.getOrPut(p.index.value * arraySize + c.index.value) {
             FeedLink(
                 nodeOf(p),
                 nodeOf(c),

@@ -452,7 +452,9 @@ class OptimizerSurfaceTest : BaseGameCtxTest() {
             val result = Optimizer(forSurface(surface))[target]
             // the import pseudo recipe is named after its material, so filter it out by category
             val planned =
-                result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
+                result.factories.values
+                    .filter { Category.IMPORT !in it.recipe.categories }
+                    .map { it.recipe.name }
             assertContainsNot(planned, banned)
         }
     }
@@ -464,7 +466,9 @@ class OptimizerSurfaceTest : BaseGameCtxTest() {
             // policy (Gleba uses bioplastic and Fulgora recycles it instead)
             val result = Optimizer(forSurface(surface))[plasticBar]
             val planned =
-                result.factories.keys.filter { Category.IMPORT !in it.categories }.map { it.name }
+                result.factories.values
+                    .filter { Category.IMPORT !in it.recipe.categories }
+                    .map { it.recipe.name }
             assertAll(
                 {
                     assertContains(
