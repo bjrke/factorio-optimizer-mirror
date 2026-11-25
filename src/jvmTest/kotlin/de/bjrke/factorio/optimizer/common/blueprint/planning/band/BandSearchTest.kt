@@ -5,7 +5,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.factories
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.test.TOLERANCE
 import kotlin.test.Test
@@ -21,7 +21,7 @@ class BandSearchTest : BaseGameCtxTest() {
     fun anArrangedPlanCarriesItsRatioPenalty() {
         val circuit = production(electronicCircuitRecipe, amount = 4.0)
         val cable = production(copperCableRecipe, amount = 6.0)
-        val context = DirectFeedContext(circuit, factories(circuit, cable), logistics)
+        val context = DirectFeedContext(optimizationResult(circuit, cable), logistics = logistics)
         val plan = assertNotNull(context.arrange(context.candidateLinks()))
 
         // the 6:4 need is the exact 3:2 cycle, so the stored penalty is zero
@@ -32,7 +32,7 @@ class BandSearchTest : BaseGameCtxTest() {
     fun arrangePicksTheShortestWindow() {
         val circuit = production(electronicCircuitRecipe, amount = 4.0)
         val cable = production(copperCableRecipe, amount = 6.0)
-        val context = DirectFeedContext(circuit, factories(circuit, cable), logistics)
+        val context = DirectFeedContext(optimizationResult(circuit, cable), logistics = logistics)
         val plan = assertNotNull(context.arrange(context.candidateLinks()))
 
         // 6 cable + 4 circuit is the shortest window; a longer valid window must not win
@@ -46,7 +46,8 @@ class BandSearchTest : BaseGameCtxTest() {
         val advanced = production(advancedCircuitRecipe)
         val circuit = production(electronicCircuitRecipe, amount = 4.0)
         val cable = production(copperCableRecipe, amount = 6.0)
-        val context = DirectFeedContext(advanced, factories(advanced, circuit, cable), logistics)
+        val context =
+            DirectFeedContext(optimizationResult(advanced, circuit, cable), logistics = logistics)
         val links = context.candidateLinks()
         val plan = assertNotNull(context.arrange(links))
 

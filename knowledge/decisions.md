@@ -16,18 +16,22 @@ an entry rewrites or deletes it — never add a "supersedes" note.
 
 ## 2026-11-24 — A recipe gets a result-local index after the optimizer
 
-**Decision.** `RecipeIndexer` mints one dense `RecipeIndex` per recipe of an
-`OptimizationResult`; `IndexedRecipe` mirrors `Recipe` and equals/hashes only by that
-index, so every post-optimizer recipe map/set hashes one int. `FactoryProduction`
-keeps structural equality, so its recipe hash is the index and a belted copy with a
-different amount remains a distinct production.
+**Decision.** Each `OptimizationResult` mints one dense `RecipeIndex` per production it
+emits — the running recipes in LP order, then the displayed imports — and `IndexedRecipe`
+mirrors `Recipe` and equals/hashes only by that slot, so every post-optimizer recipe
+map/set hashes one int. `FactoryProduction` keeps structural equality, so its recipe hash
+is the index and a belted copy with a different amount remains a distinct production.
+There is no shared indexer: the slot order is the production order the map will become an
+array in, and indexing by first use cannot supply it.
 
 **Guardrail.** A recipe index is result-local: never compare or mix recipes from two
-optimizer results, and mint slots only through `RecipeIndexer`. `IndexedRecipe` must
-mirror every `Recipe` field; the index is identity, not a new recipe dimension.
+optimizer results, and let the optimizer mint slots from the production order. Two equal
+`Recipe` values get two slots; the index is not a recipe identity across results.
+`IndexedRecipe` must mirror every `Recipe` field; the index is identity, not a new recipe
+dimension.
 
-**See.** `model/IndexedRecipe.kt`, `model/OptimizationResult.kt`,
-`optimize/Optimizer.kt`, `blueprint/planning/band/DirectFeed.kt`.
+**See.** `model/IndexedRecipe.kt`, `model/OptimizationResult.kt`, `optimize/Optimizer.kt`,
+`blueprint/planning/band/DirectFeed.kt`.
 
 ## 2026-11-23 — A material belongs to one registry
 
@@ -51,13 +55,14 @@ disagreement instead of reclassifying one.
 
 **Decision.** `ParsedRecipe.forSurface` keeps the dump-wide `materials` list, so the picker and a
 pasted URL can name a material another surface produces. `blueprintPlan` refuses a target whose
-`result.recipe` is the `Category.IMPORT` pseudo source, the web blueprint panel renders nothing for
-any `Unavailable` result, and the CLI fails only a target that no recipe in the dump produces.
+`result.targetProduction.recipe` is the `Category.IMPORT` pseudo source, the web blueprint panel
+renders nothing for any `Unavailable` result, and the CLI fails only a target that no recipe in the
+dump produces.
 
 **Guardrail.** Never lay out an import production: `DirectFeed.targetRow` would place
 `Factory.NO_FACTORY` with the material as its recipe. Keep the `Unavailable` reason on the copy
-button, and keep an imported *ingredient* a planned source — only the target recipe decides
-availability.
+button, and keep an imported *ingredient* a planned source — only the target production
+decides availability.
 
 **See.** `blueprint/planning/BlueprintPlan.kt`, `game/prototype/SurfaceRecipes.kt`,
 `js/component/{MaterialSelector,BlueprintExport}.kt`, `jvm/CliOptimizer.kt`.

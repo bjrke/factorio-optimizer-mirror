@@ -2,7 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.fixtures.entry
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
@@ -39,11 +39,7 @@ class BeltRowLimitTest : BaseGameCtxTest() {
         val widgetProduction = production(widgetRecipe)
         val feed =
             directFeed(
-                gadgetProduction,
-                mapOf(
-                    gadgetProduction.entry(),
-                    widgetProduction.entry(),
-                ),
+                optimizationResult(gadgetProduction, widgetProduction),
                 calculator(),
             )
 

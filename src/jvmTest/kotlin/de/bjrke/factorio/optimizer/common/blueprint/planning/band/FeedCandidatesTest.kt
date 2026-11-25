@@ -5,7 +5,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.factories
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.test.assertAll
@@ -26,9 +26,8 @@ class FeedCandidatesTest : BaseGameCtxTest() {
         val cable = production(copperCableRecipe)
         val context =
             DirectFeedContext(
-                processing,
-                factories(processing, advanced, circuit, cable),
-                logistics,
+                optimizationResult(processing, advanced, circuit, cable),
+                logistics = logistics,
             )
         val intoCircuit = context.feedLink(cable, circuit)
         val intoAdvanced = context.feedLink(circuit, advanced)

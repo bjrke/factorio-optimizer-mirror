@@ -6,8 +6,8 @@ import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuit
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.factories
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.splitterRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.transportBelt
@@ -33,8 +33,7 @@ class FractionalDirectFeedTest : BaseGameCtxTest() {
         val cable = production(copperCableRecipe, amount = 0.1)
         val feed =
             directFeed(
-                target,
-                factories(target, belt, gear, circuit, cable),
+                optimizationResult(target, belt, gear, circuit, cable),
                 logistics = logistics,
             )
 
@@ -65,7 +64,7 @@ class FractionalDirectFeedTest : BaseGameCtxTest() {
     fun anOverfedPairIsBuiltInsteadOfUnderfeeding() {
         val circuit = production(electronicCircuitRecipe, amount = 1.0)
         val cable = production(copperCableRecipe, amount = 2.0)
-        val feed = directFeed(circuit, factories(circuit, cable), logistics = logistics)
+        val feed = directFeed(optimizationResult(circuit, cable), logistics = logistics)
 
         assertAll(
             {
@@ -87,8 +86,7 @@ class FractionalDirectFeedTest : BaseGameCtxTest() {
         val cable = production(copperCableRecipe, amount = 6.0)
         val feed =
             directFeed(
-                circuit,
-                factories(circuit, cable),
+                optimizationResult(circuit, cable),
                 logistics = logistics,
             )
 

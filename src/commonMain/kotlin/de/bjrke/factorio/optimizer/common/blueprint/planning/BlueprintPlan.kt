@@ -67,12 +67,10 @@ fun blueprintPlan(
                 "all-science-packs needs every science pack and is too large for one " +
                     "blueprint; choose a specific material",
             )
-        else if Category.IMPORT in result.recipe.categories ->
+        else if Category.IMPORT in result.targetProduction.recipe.categories ->
             BlueprintPlanResult.Unavailable(
                 "no recipe produces $targetName on this surface; choose a material a recipe makes there",
             )
-        else if result.factories[result.recipe] == null ->
-            BlueprintPlanResult.Unavailable("no buildable factory for $targetName")
         else -> plannedPlan(result, logistics, scale)
     }
 
@@ -89,12 +87,10 @@ private fun plannedPlan(
     var effective = scale
     var forced = emptySet<Material>()
     val rejected = mutableSetOf<Set<IndexedRecipe>>()
-    val targetProduction = result.factories.getValue(result.recipe)
 
     fun directFeed() =
         directFeed(
-            targetProduction,
-            result.factories,
+            result,
             logistics,
             effective,
             BandPolicy(forced, rejected),

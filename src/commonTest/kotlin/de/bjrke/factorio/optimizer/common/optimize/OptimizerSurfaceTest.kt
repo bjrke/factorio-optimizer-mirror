@@ -411,7 +411,7 @@ class OptimizerSurfaceTest : BaseGameCtxTest() {
             val solidFuelRecipes = parsed.recipes.filter { it.name.startsWith("solid-fuel-from-") }
             val result = Optimizer(parsed.copy(recipes = solidFuelRecipes))[solidFuel]
 
-            assertEquals(expected, result.recipe.name, "surface $surface")
+            assertEquals(expected, result.targetProduction.recipe.name, "surface $surface")
         }
 
     @Test

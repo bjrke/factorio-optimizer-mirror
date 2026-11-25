@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.plannedMachine
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -108,8 +109,9 @@ private fun DirectFeedContext.beltedBands(rows: List<PlannedRow>): List<PlannedR
         included.values.map { production -> productions[production.recipe] ?: production }.toSet()
     val context =
         DirectFeedContext(
-            productions.values.first(),
-            productions,
+            optimizationResult = optimizationResult,
+            targetProduction = productions.values.first(),
+            factories = productions,
             logistics,
             scale = 1.0,
             consumerScope = scope,
@@ -259,18 +261,16 @@ private fun DirectFeedContext.targetRow(built: Map<FactoryProduction, Int>): Lis
  * [rejectedGroups] are the recipe sets the finished plan could not pack; they stay belted.
  */
 internal fun directFeed(
-    targetProduction: FactoryProduction,
-    factories: Map<IndexedRecipe, FactoryProduction>,
+    optimizationResult: OptimizationResult,
     logistics: LogisticsCalculator,
     scale: Double = 1.0,
     policy: BandPolicy = BandPolicy(),
 ) =
     DirectFeedContext(
-            targetProduction,
-            factories,
-            logistics,
-            scale,
-            null,
-            policy,
+            optimizationResult,
+            logistics = logistics,
+            scale = scale,
+            consumerScope = null,
+            policy = policy,
         )
         .build()

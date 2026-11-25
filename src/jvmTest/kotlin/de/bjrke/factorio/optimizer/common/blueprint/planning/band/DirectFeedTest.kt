@@ -8,16 +8,14 @@ import de.bjrke.factorio.optimizer.common.fixtures.castingIronRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.copperCableRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.electronicCircuitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.entry
-import de.bjrke.factorio.optimizer.common.fixtures.factories
 import de.bjrke.factorio.optimizer.common.fixtures.gear
-import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironOreMiningRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnit
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
@@ -27,6 +25,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromLightOilRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.solidFuelFromPetroleumGasRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.transportBeltRecipe
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertAll
 import de.bjrke.test.assertContainsNot
@@ -94,8 +93,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val ecProduction = production(electronicCircuitRecipe, amount = 2.0, speed = 1.0)
         val feed =
             directFeed(
-                ecProduction,
-                factories(
+                optimizationResult(
                     ecProduction,
                     production(copperCableRecipe, amount = 3.0, speed = 1.0),
                 ),
@@ -128,8 +126,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val beltProduction = production(transportBeltRecipe)
         val feed =
             directFeed(
-                beltProduction,
-                factories(
+                optimizationResult(
                     beltProduction,
                     production(ironPlateSmeltingRecipe),
                     production(ironGearWheelRecipe),
@@ -155,8 +152,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val ironPlateProduction = production(ironPlateSmeltingRecipe)
         val feed =
             directFeed(
-                ironPlateProduction,
-                factories(
+                optimizationResult(
                     ironPlateProduction,
                     production(ironOreRecipe, amount = 0.05),
                 ),
@@ -181,8 +177,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val gearProduction = gearBase.copy(amount = gearAmount)
         val feed =
             directFeed(
-                gearProduction,
-                factories(gearProduction, plate),
+                optimizationResult(gearProduction, plate),
                 logistics = logistics,
             )
 
@@ -202,8 +197,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val acProduction = production(advancedCircuitRecipe)
         val feed =
             directFeed(
-                acProduction,
-                factories(
+                optimizationResult(
                     acProduction,
                     production(electronicCircuitRecipe),
                     production(copperCableRecipe),
@@ -249,8 +243,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val plastic = production(plasticBarRecipe, amount = 4.0)
         val feed =
             directFeed(
-                processing,
-                factories(processing, advanced, plastic),
+                optimizationResult(processing, advanced, plastic),
                 logistics = calculator(),
             )
         assertEquals(
@@ -264,8 +257,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val targetProduction = production(processingUnitRecipe)
         val feed =
             directFeed(
-                targetProduction,
-                factories(
+                optimizationResult(
                     targetProduction,
                     production(advancedCircuitRecipe),
                     production(electronicCircuitRecipe),
@@ -288,8 +280,7 @@ class DirectFeedTest : BaseGameCtxTest() {
         val beltProduction = production(transportBeltRecipe)
         val feed =
             directFeed(
-                beltProduction,
-                factories(
+                optimizationResult(
                     beltProduction,
                     production(ironPlateSmeltingRecipe),
                     production(ironGearWheelRecipe),
@@ -327,14 +318,18 @@ class DirectFeedTest : BaseGameCtxTest() {
         val targetProduction = production(rocketFuelRecipe)
         val context =
             DirectFeedContext(
-                targetProduction,
-                factories(targetProduction, first, second),
-                logistics,
+                optimizationResult(targetProduction, first, second),
+                logistics = logistics,
             )
         val node = context.nodeOf(first)
 
         assertAll(
-            { assertContainsNot(context.included, solidFuelFromLightOilRecipe.indexedForTest()) },
+            {
+                assertContainsNot(
+                    context.included.keys.map { it.recipe },
+                    solidFuelFromLightOilRecipe,
+                )
+            },
             { assertEquals(node, context.nodeOf(first)) },
             // the target node is the cached one, not a second node for the same production
             { assertEquals(context.target, context.nodeOf(context.targetProduction)) },
@@ -348,16 +343,15 @@ class DirectFeedTest : BaseGameCtxTest() {
         val targetProduction = production(rocketFuelRecipe)
         val context =
             DirectFeedContext(
-                targetProduction,
-                factories(
+                optimizationResult(
                     targetProduction,
                     production(solidFuelFromLightOilRecipe),
                     production(solidFuelFromPetroleumGasRecipe),
                 ),
-                logistics,
+                logistics = logistics,
             )
 
-        assertEquals(mapOf(targetProduction.entry()), context.included)
+        assertEquals(listOf(rocketFuelRecipe), context.included.values.map { it.recipe.recipe })
     }
 
     @Test
@@ -365,30 +359,27 @@ class DirectFeedTest : BaseGameCtxTest() {
         // electronic circuits feed both advanced circuits and processing units, so the circuit
         // producer has two parents. The walk must expand its upstream cable chain and still yield
         // both outgoing links.
-        val productProduction = production(processingUnitRecipe)
+        val optimizationResult =
+            optimizationResult(
+                production(processingUnitRecipe),
+                production(advancedCircuitRecipe),
+                production(electronicCircuitRecipe),
+                production(copperCableRecipe),
+            )
+
+        fun findProduction(recipe: Recipe) =
+            optimizationResult.factories.values.first { it.recipe.recipe == recipe }
+
         val context =
             DirectFeedContext(
-                productProduction,
-                factories(
-                    productProduction,
-                    production(advancedCircuitRecipe),
-                    production(electronicCircuitRecipe),
-                    production(copperCableRecipe),
-                ),
-                logistics,
+                optimizationResult,
+                logistics = logistics,
             )
-        val cableNode = context.nodeOf(production(copperCableRecipe))
-        val circuitNode = context.nodeOf(production(electronicCircuitRecipe))
-        val links = context.nodeOf(productProduction).traverse().toList()
+        val cableNode = context.nodeOf(findProduction(copperCableRecipe))
+        val circuitNode = context.nodeOf(findProduction(electronicCircuitRecipe))
+        val links = context.nodeOf(findProduction(processingUnitRecipe)).traverse().toList()
 
         assertAll(
-            // both parents resolve to the same node, not to two path-local copies
-            {
-                assertEquals(
-                    circuitNode,
-                    context.nodeOf(production(electronicCircuitRecipe)),
-                )
-            },
             {
                 assertEquals(
                     setOf(advancedCircuit, processingUnit),
@@ -410,14 +401,13 @@ class DirectFeedTest : BaseGameCtxTest() {
         val productProduction = production(processingUnitRecipe)
         val context =
             DirectFeedContext(
-                productProduction,
-                factories(
+                optimizationResult(
                     productProduction,
                     production(advancedCircuitRecipe),
                     production(electronicCircuitRecipe),
                     production(copperCableRecipe),
                 ),
-                logistics,
+                logistics = logistics,
             )
         val links = context.candidateLinks()
 

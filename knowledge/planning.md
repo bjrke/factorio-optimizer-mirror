@@ -7,11 +7,11 @@ band search; the layout that consumes the plan is in `layout.md`.
 ## Recipe identity after the optimizer
 
 `Optimizer` is the last stage that creates recipes. Its result mints a dense
-`RecipeIndex` per recipe through `RecipeIndexer`; `IndexedRecipe` mirrors every
-`Recipe` field and equals/hashes only by that index, and `OptimizationResult.factories`
-is keyed by it. Every later recipe map/set therefore hashes one int instead of the
-recipe's ingredient and result maps. A `RecipeIndex` is result-local: never compare
-recipes from two optimizer results.
+`RecipeIndex` per production it emits — the running recipes, then the displayed imports —
+and `IndexedRecipe` mirrors every `Recipe` field and equals/hashes only by that index,
+with `OptimizationResult.factories` keyed by it. Every later recipe map/set therefore
+hashes one int instead of the recipe's ingredient and result maps. A `RecipeIndex` is
+result-local: never compare recipes from two optimizer results.
 
 `FactoryProduction` keeps its structural equality. Its recipe hash is the index, so
 the belted pass can still copy a production with its whole-machine amount; the copy

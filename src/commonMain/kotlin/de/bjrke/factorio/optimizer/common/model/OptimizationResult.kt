@@ -49,12 +49,13 @@ data class FactoryProduction(
 }
 
 data class OptimizationResult(
-    val target: Material,
-    val recipe: IndexedRecipe,
+    val targetProduction: FactoryProduction,
     // keyed by recipe: several recipes can produce the same material and run in parallel. An
     // IndexedRecipe hashes its index, so the map stays cheap even though the recipe carries maps.
     val factories: Map<IndexedRecipe, FactoryProduction>,
-)
+) {
+    val target = targetProduction.material
+}
 
 /**
  * Display order: by material, so a plan update (an excluded row that turns into an import, a

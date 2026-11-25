@@ -7,14 +7,12 @@ import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import kotlin.test.assertSame
 
 class OptimizationResultTest : BaseGameCtxTest() {
 
@@ -55,14 +53,5 @@ class OptimizationResultTest : BaseGameCtxTest() {
             { assertEquals(production, production.copy()) },
             { assertNotEquals(production, production.copy(amount = production.amount + 1.0)) },
         )
-    }
-
-    @Test
-    fun aFactoryIsFoundByAnEqualRecipeIndex() {
-        val production = rows.first()
-        val result = optimizationResult(production)
-        val lookup = IndexedRecipe.of(production.recipe.index, ironGearWheelRecipe)
-
-        assertSame(production, result.factories[lookup])
     }
 }

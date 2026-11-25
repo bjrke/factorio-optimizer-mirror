@@ -2,9 +2,9 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
-import de.bjrke.factorio.optimizer.common.fixtures.factories
 import de.bjrke.factorio.optimizer.common.fixtures.fluoroketoneHot
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
 import de.bjrke.factorio.optimizer.common.fixtures.quantumProcessorRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.railgunRecipe
@@ -24,8 +24,7 @@ class DirectFeedBeltTest : BaseGameCtxTest() {
         val quantum = production(quantumProcessorRecipe, material = fluoroketoneHot)
         val feed =
             directFeed(
-                rail,
-                factories(rail, quantum),
+                optimizationResult(rail, quantum),
                 logistics = calculator(),
             )
 
@@ -46,8 +45,7 @@ class DirectFeedBeltTest : BaseGameCtxTest() {
         val beltProduction = production(transportBeltRecipe)
         val feed =
             directFeed(
-                gearProduction,
-                factories(gearProduction, beltProduction),
+                optimizationResult(gearProduction, beltProduction),
                 logistics = calculator(),
             )
 

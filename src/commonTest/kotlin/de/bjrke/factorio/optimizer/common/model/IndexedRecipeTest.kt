@@ -3,7 +3,6 @@ package de.bjrke.factorio.optimizer.common.model
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperCable
 import de.bjrke.factorio.optimizer.common.fixtures.gear
-import de.bjrke.factorio.optimizer.common.fixtures.indexedForTest
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
@@ -17,7 +16,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
-import kotlin.test.assertSame
 
 class IndexedRecipeTest : BaseGameCtxTest() {
 
@@ -39,7 +37,7 @@ class IndexedRecipeTest : BaseGameCtxTest() {
                 surfaceConditions = listOf(SurfaceCondition(SurfaceProperty.GRAVITY, 10..20)),
             )
 
-        val indexed = RecipeIndexer().index(recipe)
+        val indexed = IndexedRecipe.of(RecipeIndex(0), recipe)
 
         assertAll(
             { assertEquals(recipe.name, indexed.name) },
@@ -71,27 +69,5 @@ class IndexedRecipeTest : BaseGameCtxTest() {
         val values = mapOf(key to "found")
 
         assertEquals("found", values[lookup])
-    }
-
-    @Test
-    fun theIndexerReusesASlotAndMintsDenseOnes() {
-        val indexer = RecipeIndexer()
-        val first = indexer.index(ironPlateRecipe)
-        val same = indexer.index(ironPlateRecipe.copy())
-        val second = indexer.index(ironGearWheelRecipe)
-
-        assertAll(
-            { assertEquals(RecipeIndex(0), first.index) },
-            { assertSame(first, same) },
-            { assertEquals(RecipeIndex(1), second.index) },
-        )
-    }
-
-    @Test
-    fun theFixtureIndexerKeepsOneSlotPerRecipe() {
-        val first = ironPlateRecipe.indexedForTest()
-        val same = ironPlateRecipe.indexedForTest()
-
-        assertSame(first, same)
     }
 }

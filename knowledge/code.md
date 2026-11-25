@@ -74,12 +74,12 @@ CLI (JVM) from one shared core.
     excluded.
   - `model` — the shared result models: `OptimizationResult`, `FactoryProduction`
     (per-machine production), `IndexedRecipe`/`RecipeIndex` (the post-optimizer
-    recipe identity), the `RecipeIndexer` that mints its dense slots, and
-    `factoryProductionComparator`. `IndexedRecipe` mirrors a `Recipe`'s fields and
-    equals/hashes only by its result-local index, so the planning code's recipe
-    maps and sets hash one int. `FactoryProduction` keeps structural equality, so
-    a belted copy with a different amount stays a distinct production. They sit
-    above the rulebook (`game/prototype`) and are consumed by both the optimizer
+    recipe identity), and `factoryProductionComparator`. `IndexedRecipe` mirrors a
+    `Recipe`'s fields and equals/hashes only by its result-local index, which the
+    optimizer mints per emitted production, so the planning code's recipe maps and
+    sets hash one int. `FactoryProduction` keeps structural equality, so a belted
+    copy with a different amount stays a distinct production. They sit above the
+    rulebook (`game/prototype`) and are consumed by both the optimizer
     and the blueprint planner, so `optimize` and the `planning` packages need not
     couple to each other — both reach the *models* instead. A leaf of its own:
     it imports only `core/model` and `game/prototype`.

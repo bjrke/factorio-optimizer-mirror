@@ -44,10 +44,12 @@ whenever they apply.
   only the immutable `PrototypeDump` is shared. The context must already know every fluid a kept
   recipe uses — the parse throws on a disagreement instead of routing a fluid as a solid.
 - Recipe fixtures reach a production `FactoryProduction` through
-  `Recipe.indexedForTest()` (`common/fixtures/RecipeIndexFixtures.kt`). It is one
-  shared test `RecipeIndexer`, so an equal recipe value reuses its slot and tests
-  never assert absolute slot numbers; a suite that needs its own slots builds a
-  local `RecipeIndexer`.
+  `Recipe.indexedForTest()` (`common/fixtures/RecipeIndexFixtures.kt`). Every recipe
+  shares the sentinel `RecipeIndex(Int.MAX_VALUE)`, and `IndexedRecipe` compares slots
+  only, so fixture productions of different recipes compare equal: never assert recipe
+  identity through an `IndexedRecipe`, compare `recipe.recipe` instead. Tests never
+  assert absolute slot numbers; `optimizationResult(vararg)` re-indexes its productions
+  `0 until size`, and a suite that needs its own slots mints them explicitly.
 - Prefer data that can be tested alone: `LayoutCompaction` already takes a
   `List<LayoutEntity>` and `LayoutRouter` only reads the board, so neither needs a
   full `BlueprintPlan` to test.

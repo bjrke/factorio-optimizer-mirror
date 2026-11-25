@@ -6,12 +6,12 @@ import de.bjrke.factorio.optimizer.common.fixtures.batteryRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
 import de.bjrke.factorio.optimizer.common.fixtures.electricEngineUnitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.engineUnitRecipe
-import de.bjrke.factorio.optimizer.common.fixtures.factories
 import de.bjrke.factorio.optimizer.common.fixtures.gear
 import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateSmeltingRecipe
+import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBar
 import de.bjrke.factorio.optimizer.common.fixtures.plasticBarRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.processingUnitRecipe
@@ -44,8 +44,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val target = production(processingUnitRecipe)
         val feed =
             directFeed(
-                target,
-                factories(target, production(advancedCircuitRecipe)),
+                optimizationResult(target, production(advancedCircuitRecipe)),
                 logistics = calculator(),
             )
 
@@ -63,8 +62,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val advanced = production(advancedCircuitRecipe)
         val feed =
             directFeed(
-                advanced,
-                factories(advanced, production(plasticBarRecipe)),
+                optimizationResult(advanced, production(plasticBarRecipe)),
                 logistics = calculator(),
             )
 
@@ -96,8 +94,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val electric = production(electricEngineUnitRecipe)
         val feed =
             directFeed(
-                electric,
-                factories(electric, production(engineUnitRecipe)),
+                optimizationResult(electric, production(engineUnitRecipe)),
                 logistics = calculator(),
             )
 
@@ -115,8 +112,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val thirdProduction = production(transportBeltRecipe)
         val feed =
             directFeed(
-                thirdProduction,
-                factories(
+                optimizationResult(
                     thirdProduction,
                     production(ironGearWheelRecipe),
                     production(ironPlateSmeltingRecipe),
@@ -141,8 +137,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val fourthProduction = production(splitterRecipe)
         val feed =
             directFeed(
-                fourthProduction,
-                factories(
+                optimizationResult(
                     fourthProduction,
                     production(transportBeltRecipe),
                     production(ironGearWheelRecipe),
@@ -168,8 +163,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val sulfuricAcidProduction = production(sulfuricAcidRecipe)
         val feed =
             directFeed(
-                sulfuricAcidProduction,
-                factories(sulfuricAcidProduction, production(ironPlateRecipe)),
+                optimizationResult(sulfuricAcidProduction, production(ironPlateRecipe)),
                 logistics = calculator(),
             )
 
@@ -197,8 +191,7 @@ class DirectFeedFluidTest : BaseGameCtxTest() {
         val batteryProduction = production(batteryRecipe)
         val feed =
             directFeed(
-                batteryProduction,
-                factories(batteryProduction, production(sulfuricAcidRecipe)),
+                optimizationResult(batteryProduction, production(sulfuricAcidRecipe)),
                 logistics = calculator(),
             )
 

@@ -5,7 +5,9 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.RecipeIndex
 
 /**
  * Every planned production in plan order; a production may appear once per row. A test-only view:
@@ -13,8 +15,6 @@ import de.bjrke.factorio.optimizer.common.model.OptimizationResult
  */
 internal val BlueprintPlan.recipes: List<FactoryProduction>
     get() = rows.flatMap { it.productions }
-
-fun FactoryProduction.entry() = this.recipe to this
 
 @Suppress("LongParameterList")
 fun production(
@@ -36,16 +36,19 @@ fun production(
         productivity,
     )
 
-fun factories(vararg productions: FactoryProduction) = productions.associateBy {
-    it.recipe
-}
-
 internal fun optimizationResult(recipe: Recipe, factory: Factory) =
     optimizationResult(production(recipe, factory))
 
-internal fun optimizationResult(vararg productions: FactoryProduction) =
-    OptimizationResult(
-        target = productions.first().material,
-        recipe = productions.first().recipe,
-        factories = productions.associateBy { it.recipe },
+internal fun optimizationResult(vararg productions: FactoryProduction): OptimizationResult {
+    val indexedProductions = indexProductions(productions)
+
+    return OptimizationResult(
+        targetProduction = indexedProductions.first(),
+        factories = indexedProductions.associateBy { it.recipe },
     )
+}
+
+private fun indexProductions(productions: Array<out FactoryProduction>) =
+    productions.withIndex().map { (index, production) ->
+        production.copy(recipe = IndexedRecipe.of(RecipeIndex(index), production.recipe.recipe))
+    }

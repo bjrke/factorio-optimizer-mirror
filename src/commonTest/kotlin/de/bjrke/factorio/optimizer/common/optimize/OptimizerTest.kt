@@ -128,7 +128,7 @@ class OptimizerTest : BaseGameCtxTest() {
                 vulcanusFactories,
             )[moltenIron]
 
-        assertEquals("molten-iron-from-lava", result.recipe.name)
+        assertEquals("molten-iron-from-lava", result.targetProduction.recipe.name)
     }
 
     @Test
@@ -150,7 +150,7 @@ class OptimizerTest : BaseGameCtxTest() {
             )[steelPlate]
 
         assertAll(
-            { assertEquals("casting-steel", result.recipe.name) },
+            { assertEquals("casting-steel", result.targetProduction.recipe.name) },
             {
                 assertEquals(
                     emptyList(),
@@ -180,7 +180,7 @@ class OptimizerTest : BaseGameCtxTest() {
                 vulcanusFactories,
             )[moltenIron]
 
-        assertEquals("iron-ore-melting", result.recipe.name)
+        assertEquals("iron-ore-melting", result.targetProduction.recipe.name)
     }
 
     @Test
@@ -437,7 +437,7 @@ class OptimizerTest : BaseGameCtxTest() {
                 excludedMaterials = setOf(plate),
             )[target]
 
-        assertEquals("target", result.recipe.name)
+        assertEquals("target", result.targetProduction.recipe.name)
         assertContains(result.factories.values.map { it.recipe.name }, "target")
     }
 
@@ -464,7 +464,7 @@ class OptimizerTest : BaseGameCtxTest() {
                 excludedMaterials = setOf(target),
             )[target]
 
-        assertEquals("target", result.recipe.name)
+        assertEquals("target", result.targetProduction.recipe.name)
         assertContains(result.factories.values.map { it.recipe.name }, "target")
     }
 
@@ -534,7 +534,7 @@ class OptimizerTest : BaseGameCtxTest() {
 
         assertAll(
             // the cycle member may be imported, but the target itself must be produced
-            { assertEquals("back", result.recipe.name) },
+            { assertEquals("back", result.targetProduction.recipe.name) },
             { assertContains(result.factories.values.map { it.recipe.name }, "back") },
         )
     }
@@ -574,7 +574,6 @@ class OptimizerTest : BaseGameCtxTest() {
                     result.factories.values.map { it.recipe.index.value }.toSet(),
                 )
             },
-            { assertNotNull(result.factories[result.recipe]) },
         )
     }
 }

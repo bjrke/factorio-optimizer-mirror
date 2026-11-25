@@ -12,6 +12,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
+import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.math.max
 
@@ -222,15 +223,21 @@ internal class FeedNode(
 /**
  * The plan the direct-feed search walks: the [target] production, every [included] production, the
  * [scale] the plan is drawn at, the [logistics] that size the inserters, and the per-material
- * producer index.
+ * producer index. [optimizationResult] is the whole result the context was built from; the array
+ * the result will become is why it is kept.
+ *
+ * [targetProduction] and [factories] default to that result's, but a subset context passes its own:
+ * the belted pass runs on part of the plan, so [optimizationResult] then describes more than
+ * [factories] holds.
  *
  * The search keys machines and needs by [FactoryProduction], so a recipe must be held by exactly
  * one production of [included] — [target] included, since it is one of them: two of the same recipe
  * would be counted as two different machines, splitting their needs and ratios.
  */
 internal data class DirectFeedContext(
-    val targetProduction: FactoryProduction,
-    val factories: Map<IndexedRecipe, FactoryProduction>,
+    val optimizationResult: OptimizationResult,
+    val targetProduction: FactoryProduction = optimizationResult.targetProduction,
+    val factories: Map<IndexedRecipe, FactoryProduction> = optimizationResult.factories,
     val logistics: LogisticsCalculator,
     val scale: Double = 1.0,
     /**
