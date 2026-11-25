@@ -558,17 +558,17 @@ class OptimizerTest : BaseGameCtxTest() {
         val productions = result.factories.values
         assertAll(
             { assertTrue(productions.isNotEmpty()) },
-            { assertTrue(productions.all { result.factories[it.recipe.index] == it }) },
+            { assertTrue(productions.all { result.factories[it.index] == it }) },
             {
                 assertEquals(
                     productions.size,
-                    productions.map { it.recipe.index }.distinct().size,
+                    productions.map { it.index }.distinct().size,
                 )
             },
             {
                 assertEquals(
                     productions.indices.sorted(),
-                    productions.map { it.recipe.index.value }.sorted(),
+                    productions.map { it.index.value }.sorted(),
                 )
             },
         )

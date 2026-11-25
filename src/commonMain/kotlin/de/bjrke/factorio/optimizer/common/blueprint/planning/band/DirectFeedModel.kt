@@ -11,8 +11,10 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
+import de.bjrke.factorio.optimizer.common.model.IndexSet
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.ProductionMap
+import de.bjrke.factorio.optimizer.common.model.RecipeIndex
 import de.bjrke.factorio.optimizer.common.model.SparseProductionMap
 import de.bjrke.factorio.optimizer.common.util.EPSILON
 import kotlin.math.max
@@ -81,7 +83,7 @@ internal fun cyclePenalty(ratio: Double) = cycleFit(ratio).second
 /** A group of recipes that feed each other directly, with the plan machine need of each recipe. */
 internal class FeedGroup(
     val links: List<FeedLink>,
-    val needs: Map<FactoryProduction, Double>,
+    val needs: Map<RecipeIndex, Double>,
 )
 
 /** The solid inputs a band draws from outside its links. */
@@ -176,6 +178,8 @@ internal class FeedNode(
 
     val recipe = production.recipe
 
+    val index = production.index
+
     /**
      * The links that feed this production: one per in-plan producer of a solid ingredient. Fluids
      * are never links. Multi-producer materials are not filtered here; the explicit stone and
@@ -204,11 +208,11 @@ internal class FeedNode(
      * `knowledge/planning.md`).
      */
     fun traverse() = sequence {
-        val visited = mutableSetOf<FeedNode>()
+        val visited = IndexSet(ctx.arraySize)
 
         context(seq: SequenceScope<FeedLink>)
         suspend fun FeedNode.walk() {
-            if (!visited.add(this)) return
+            if (!visited.add(index)) return
             for (link in ingredients) {
                 seq.yield(link)
                 link.producer.walk()
@@ -231,9 +235,11 @@ internal class FeedNode(
  * the belted pass runs on part of the plan, so [optimizationResult] then describes more than
  * [factories] holds.
  *
- * The search keys machines and needs by [FactoryProduction], so a recipe must be held by exactly
- * one production of [included] — [target] included, since it is one of them: two of the same recipe
- * would be counted as two different machines, splitting their needs and ratios.
+ * The search addresses needs and machine counts by [RecipeIndex] and [FeedWindow] matches a machine
+ * to a link's production by value, so a recipe must be held by exactly one production of [included]
+ * — [target] included, since it is one of them: a second production of the same recipe would merge
+ * into one need slot while the window still treats it as a different machine. The belted pass
+ * builds its copies in a context of its own, so they never meet the main plan's productions.
  */
 internal data class DirectFeedContext(
     val optimizationResult: OptimizationResult,
@@ -282,7 +288,7 @@ internal data class DirectFeedContext(
             for (production in producers.values.mapNotNull { it.singleOrNull() }) {
                 this[production.index] = production
             }
-            this[target.production.index] = targetProduction
+            this[targetProduction.index] = targetProduction
         }
 
     /** The plan's consumers, including the ones outside a belted sub-plan. */
@@ -300,12 +306,15 @@ internal data class DirectFeedContext(
      */
     private val feedLinks = mutableMapOf<Int, FeedLink>()
 
-    fun feedLink(p: FactoryProduction, c: FactoryProduction): FeedLink =
-        feedLinks.getOrPut(p.index.value * arraySize + c.index.value) {
+    fun feedLink(p: FactoryProduction, c: FactoryProduction): FeedLink {
+        val index = p.index.value * arraySize + c.index.value
+        return feedLinks.getOrPut(index) {
             FeedLink(
+                index,
                 nodeOf(p),
                 nodeOf(c),
                 c.recipe.ingredients.keys.intersect(p.recipe.result.keys).single(),
             )
         }
+    }
 }

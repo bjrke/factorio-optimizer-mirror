@@ -12,8 +12,9 @@ and `IndexedRecipe` mirrors every `Recipe` field and equals/hashes only by that 
 `OptimizationResult.factories` is a `FullProductionMap`, one production per slot read at
 that index, so a post-optimizer lookup is a bounds-checked array access instead of a hash
 of the recipe's ingredient and result maps; the band search's caches use the same index
-through `SparseProductionMap` and `IndexSet`. A `RecipeIndex` is result-local: never
-compare recipes from two optimizer results.
+through `SparseProductionMap`, the dense `ProductionIntMap`/`ProductionDoubleMap` and
+`IndexSet`, and `FeedGroup.needs` is keyed by it too. A `RecipeIndex` is result-local:
+never compare recipes from two optimizer results.
 
 `FactoryProduction` keeps its structural equality. Its recipe hash is the index, so
 the belted pass can still copy a production with its whole-machine amount; the copy

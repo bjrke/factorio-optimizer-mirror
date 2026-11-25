@@ -18,8 +18,7 @@ data class FactoryProduction(
     val productivity: Double = factory.productivity,
 ) {
 
-    inline val index
-        get() = recipe.index
+    val index = recipe.index
 
     // crafts per second at the machine's speed, before productivity
     private val rate by lazy {

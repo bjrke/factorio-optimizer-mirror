@@ -34,7 +34,7 @@ class OptimizerTargetTest : BaseGameCtxTest() {
             {
                 assertSame(
                     result.targetProduction,
-                    result.factories.getValue(result.targetProduction.recipe.index),
+                    result.factories.getValue(result.targetProduction.index),
                 )
             },
         )
@@ -65,7 +65,7 @@ class OptimizerTargetTest : BaseGameCtxTest() {
             {
                 assertSame(
                     result.targetProduction,
-                    result.factories.getValue(result.targetProduction.recipe.index),
+                    result.factories.getValue(result.targetProduction.index),
                 )
             },
         )

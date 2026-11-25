@@ -24,6 +24,7 @@ interface ProductionMap<T> {
     /** The number of addressable slots: every index below it is a valid lookup. */
     val arraySize: Int
 
+    /** Whether [index] addresses a present slot; a sparse map is false for its holes. */
     operator fun contains(index: RecipeIndex): Boolean
 }
 
@@ -89,11 +90,14 @@ internal value class SparseProductionMap<T> private constructor(private val cont
 }
 
 /**
- * A mutable set of [RecipeIndex] slots, one byte each, for the band search's assignment
- * bookkeeping.
+ * A mutable membership set of [RecipeIndex] slots, one byte each, sized once to a result's array
+ * size so a lookup is a byte read with no hashing.
+ *
+ * A slot answers false until it is marked. [set] marks or clears it, and [add] marks it and reports
+ * whether it was unset before, so a caller can stop on a repeat.
  *
  * It is deliberately not a [ProductionMap]: that contract lists only present values and throws on a
- * hole, while every slot of this set is addressable and simply answers false.
+ * hole, while a membership set must make every slot addressable.
  */
 @JvmInline
 internal value class IndexSet private constructor(private val content: ByteArray) {
@@ -106,8 +110,47 @@ internal value class IndexSet private constructor(private val content: ByteArray
         content[index.value] = if (value) TRUE else FALSE
     }
 
+    /** Marks [index] and answers whether it was unset before, so a walk can stop on a repeat. */
+    fun add(index: RecipeIndex): Boolean {
+        val result = content[index.value] == FALSE
+        content[index.value] = TRUE
+        return result
+    }
+
     companion object {
         private const val FALSE: Byte = 0
         private const val TRUE: Byte = Byte.MIN_VALUE
+    }
+}
+
+/**
+ * Dense per-recipe values for the band search: one slot per [RecipeIndex], read and written without
+ * hashing. A slot that was never written answers 0.
+ */
+@JvmInline
+internal value class ProductionIntMap private constructor(private val content: IntArray) {
+
+    constructor(size: Int) : this(IntArray(size))
+
+    operator fun get(index: RecipeIndex) = content[index.value]
+
+    operator fun set(index: RecipeIndex, value: Int) {
+        content[index.value] = value
+    }
+}
+
+/**
+ * Dense per-recipe rates for the band search: one slot per [RecipeIndex], read and written without
+ * hashing. A slot that was never written answers 0.0.
+ */
+@JvmInline
+internal value class ProductionDoubleMap private constructor(private val content: DoubleArray) {
+
+    constructor(size: Int) : this(DoubleArray(size))
+
+    operator fun get(index: RecipeIndex) = content[index.value]
+
+    operator fun set(index: RecipeIndex, value: Double) {
+        content[index.value] = value
     }
 }

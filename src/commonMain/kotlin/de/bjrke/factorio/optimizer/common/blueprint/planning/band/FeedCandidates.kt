@@ -93,12 +93,17 @@ internal fun DirectFeedContext.internalizesSharedOutput(
     group: List<FeedLink>,
     candidate: FeedLink,
 ): Boolean {
-    val groupNodes = group.flatMap { it.productions() }.toSet()
-    if (candidate.producer.production !in groupNodes) return false
-    val groupProducers = group.mapTo(mutableSetOf()) { it.producer.production }
-    if (candidate.producer.production in groupProducers) return false
-    val nodes = groupNodes + candidate.consumer.production
-    return consumersInPlan.any { it !in nodes && candidate.material in it.recipe.ingredients }
+    val groupNodes = IndexSet(arraySize)
+    for (link in group) for (production in link.productions()) groupNodes[production.index] = true
+    val producerInGroup = candidate.producer.index in groupNodes
+    val producerFeedsGroup = group.any { it.producer.index == candidate.producer.index }
+    return producerInGroup &&
+        !producerFeedsGroup &&
+        consumersInPlan.any { consumer ->
+            consumer.index !in groupNodes &&
+                consumer.index != candidate.consumer.index &&
+                candidate.material in consumer.recipe.ingredients
+        }
 }
 
 private tailrec fun DirectFeedContext.growGroup(
@@ -107,8 +112,9 @@ private tailrec fun DirectFeedContext.growGroup(
     assigned: IndexSet,
     arranged: (List<FeedLink>) -> BandPlan?,
 ) {
+    val groupNodes = IndexSet(arraySize)
+    for (link in group) for (production in link.productions()) groupNodes[production.index] = true
 
-    val groupNodes = group.flatMap { it.productions() }.toSet()
     val adjacent =
         MinHeap(
                 linkComparator,
@@ -118,7 +124,8 @@ private tailrec fun DirectFeedContext.growGroup(
 
     for (candidate in adjacent) {
         // a production belongs to exactly one row: never grow into a group another seed assigned
-        if (candidate.productions().any { it.index in assigned && it !in groupNodes }) continue
+        if (candidate.productions().any { it.index in assigned && it.index !in groupNodes })
+            continue
         if (!mayGrow(group, candidate)) continue
         if (arranged(group + candidate) != null) {
             group += candidate

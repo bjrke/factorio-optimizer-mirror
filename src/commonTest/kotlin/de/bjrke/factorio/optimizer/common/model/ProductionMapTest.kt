@@ -8,7 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The dense and sparse production maps, and the bit set the band search assigns slots in. */
+/** The production maps, the dense primitive maps the band search counts with, and its slot set. */
 class ProductionMapTest {
 
     private val dense = FullProductionMap(arrayOf("a", "b"))
@@ -68,6 +68,34 @@ class ProductionMapTest {
             { assertTrue(RecipeIndex(0) in assigned) },
             { assertFalse(RecipeIndex(1) in assigned) },
             { assertFalse(RecipeIndex(2) in assigned) },
+        )
+    }
+
+    @Test
+    fun indexSetAddReportsWhetherTheSlotWasNew() {
+        val assigned = IndexSet(3)
+
+        assertAll(
+            { assertTrue(assigned.add(RecipeIndex(1))) },
+            { assertFalse(assigned.add(RecipeIndex(1))) },
+            { assertTrue(RecipeIndex(1) in assigned) },
+            { assertFalse(RecipeIndex(0) in assigned) },
+        )
+    }
+
+    @Test
+    fun denseMapsReadAndWritePrimitiveValues() {
+        val counts = ProductionIntMap(3)
+        val rates = ProductionDoubleMap(3)
+        counts[RecipeIndex(1)] += 1
+        counts[RecipeIndex(1)] += 1
+        rates[RecipeIndex(2)] = 1.5
+
+        assertAll(
+            { assertEquals(0, counts[RecipeIndex(0)]) },
+            { assertEquals(2, counts[RecipeIndex(1)]) },
+            { assertEquals(0.0, rates[RecipeIndex(1)]) },
+            { assertEquals(1.5, rates[RecipeIndex(2)]) },
         )
     }
 }
