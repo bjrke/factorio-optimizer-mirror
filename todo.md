@@ -120,30 +120,24 @@ S=.opencode/skills/jfr-profiles/scripts/jfr-top.sh ; $S self -n 25 ; $S alloc -n
 it sits in the test method and the stage split is invisible. Track the
 `HashMap`/`equals` sample count (11,286) next to the stage totals.
 
-### Make the layout board and tile index dense grids
+### Make the layout board a dense grid
 
 `LayoutBoard.grid` (`blueprint/layout/LayoutBoard.kt:74`) is
 `mutableMapOf<Coordinate, Cell>()` and every query hashes a `Coordinate`
 (`entityAt` `:101`, `isFree` `:103`, `isReserved` `:105`, `reservedMaterialAt`
-`:121`).
-`LayoutIndex.tiles` (`blueprint/layout/LayoutIndex.kt:12`) is the same shape,
-rebuilt for every compaction candidate
-(`blueprint/placing/compaction/LayoutCompaction.kt:67`) and every validation
-(`blueprint/placing/compaction/CompactionPass.kt:56`) and `UndergroundStretcher`;
-`LayoutIndex.<init>` is 100 self samples and `LayoutIndex.at` 115. `Tunnels`
-(`blueprint/layout/LayoutBoard.kt:77`) still keys its marks by `Coordinate`:
-`Tunnels$Key.equals` is 59 self samples and `Tunnels.has` allocates 1,396 MB.
+`:121`). `Tunnels` (`blueprint/layout/LayoutBoard.kt:77`) still keys its marks
+by `Coordinate`: `Tunnels$Key.equals` is 59 self samples and `Tunnels.has`
+allocates 1,396 MB.
 
-Replace both with flat storage over the bounds the board already tracks
+Replace it with flat storage over the bounds the board already tracks
 (`minX`/`endX`/`minY`/`endY`, updated in `place()` at `:132-139` and reset in
 `replaceAll` at `:150-158`): index `(x - originX) + (y - originY) * width`, and
 grow the origin to the west and north so `IMPORT_FEED` and negative tiles
 survive. Prefer parallel arrays over one `Cell` object per tile (entity index
 `IntArray` with `-1`, `BooleanArray reserved`, a reserved-material array and an
-edge-fluid array). `LayoutIndex` fills in two passes (bounds, then dense), so
-`at()` becomes an index computation. Keep the public queries and add int
-overloads so the hot paths stop passing `Coordinate` at all, and fold `Tunnels`
-into the same dense storage.
+edge-fluid array). Keep the public queries and add int overloads so the hot
+paths stop passing `Coordinate` at all, and fold `Tunnels` into the same dense
+storage.
 
 `RowReservations.sections` (`LayoutBoard.kt:169`) is a `Map<Int, Section>` read
 as `sections[coordinate.y]` at `:175-179`, for at most a few dozen rows. Store

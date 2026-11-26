@@ -4,7 +4,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
-import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 
 /**
  * The invariant checks a compacted layout has to keep. It is deliberately absolute rather than a
@@ -33,13 +32,4 @@ internal fun validateLayout(entities: List<LayoutEntity>): List<LayoutIssue> {
 private fun validateOverlaps(
     entities: List<LayoutEntity>,
     errors: MutableList<LayoutIssue>,
-): LayoutIndex {
-    val tiles = HashMap<Coordinate, LayoutEntity>()
-    for (entity in entities) {
-        for (tile in entity.area) {
-            val previous = tiles.put(tile, entity)
-            if (previous != null && previous !== entity) errors += tile.issue("overlap at $tile")
-        }
-    }
-    return LayoutIndex(entities)
-}
+): LayoutIndex = LayoutIndex(entities) { tile -> errors += tile.issue("overlap at $tile") }

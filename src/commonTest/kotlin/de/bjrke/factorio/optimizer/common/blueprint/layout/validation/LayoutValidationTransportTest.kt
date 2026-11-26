@@ -17,6 +17,7 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironOre
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 private const val BELT = "express-transport-belt"
@@ -39,6 +40,21 @@ class LayoutValidationTransportTest : BaseGameCtxTest() {
         io: Io,
         load: LaneLoad = LaneLoad.full(ironOre),
     ) = UndergroundBeltEntity(areaTile(x, y), UNDERGROUND_BELT, load.material, direction, io, load)
+
+    @Test
+    fun twoEntitiesOnOneTileReportAnOverlap() {
+        val entities: List<LayoutEntity> =
+            listOf(belt(0, 0), belt(0, 0, material = ironPlate, direction = NORTH))
+
+        val errors = validateLayout(entities)
+        val overlap =
+            assertNotNull(
+                errors.firstOrNull { "overlap" in it.message },
+                errors.joinToString { it.message },
+            )
+
+        assertEquals(areaTile(0, 0), overlap.area)
+    }
 
     /**
      * An underground entrance dives into its run; the belt above the tunnel span is independent of
