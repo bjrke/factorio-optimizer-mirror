@@ -10,8 +10,8 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.planLabel
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
-import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
+import de.bjrke.factorio.optimizer.common.model.RecipeIndex
 import de.bjrke.factorio.optimizer.common.util.EPSILON
 
 /** Slack for a delivered rate that should fit one lane but carries floating-point noise. */
@@ -86,7 +86,7 @@ private fun plannedPlan(
 ): BlueprintPlanResult.Planned {
     var effective = scale
     var forced = emptySet<Material>()
-    val rejected = mutableSetOf<Set<IndexedRecipe>>()
+    val rejected = mutableSetOf<Set<RecipeIndex>>()
 
     fun directFeed() =
         directFeed(

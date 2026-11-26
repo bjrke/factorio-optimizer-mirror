@@ -3,8 +3,6 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.blueprintMachineFootprint
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.IndexSet
-import de.bjrke.factorio.optimizer.common.model.ProductionDoubleMap
 import de.bjrke.factorio.optimizer.common.model.ProductionIntMap
 import de.bjrke.factorio.optimizer.common.model.RecipeIndex
 import de.bjrke.factorio.optimizer.common.util.countVectors
@@ -22,25 +20,26 @@ internal fun DirectFeedContext.arrange(
     requireComplete: Boolean = true,
 ): BandPlan? {
     val needs = groupNeeds(links) ?: return null
-    val recipeIndices = needs.keys.toList()
 
     return when {
-        recipeIndices.isEmpty() -> null
-        recipeIndices.size > MAX_BAND_RECIPES -> null
-        footPrintsHaveDifferentSize(recipeIndices) -> null
-        else -> BandCycleSearch(this, links, needs, recipeIndices).arrangeBest(requireComplete)
+        needs.isEmpty() -> null
+        needs.size > MAX_BAND_RECIPES -> null
+        footPrintsHaveDifferentSize(needs.keys) -> null
+        else -> BandCycleSearch(this, links, needs).arrangeBest(requireComplete)
     }
 }
 
 /**
  * Plan order: fewest machines first, so a longer window can never win, then the smallest ratio
- * penalty, the least machine-to-machine flow, and the recipe names for a stable pick.
+ * penalty, the least machine-to-machine flow, and the recipe indices for a stable pick.
  */
 private val comparator: Comparator<BandPlan> =
-    compareBy<BandPlan> { it.machines.size }
-        .thenBy { it.ratioPenalty }
-        .thenBy { plan -> plan.feeds.sumOf { it.flow } }
-        .then { a, b -> compareNames(a.machines, b.machines) }
+    compareBy<BandPlan>(
+            { it.machines.size },
+            { it.ratioPenalty },
+            { plan -> plan.feeds.sumOf { it.flow } },
+        )
+        .then(::compareMachineIndices)
 
 /**
  * One DFS over the cycles with a fixed machine-count vector. Placing a machine covers the links to
@@ -54,150 +53,172 @@ private class BandCycleSearch(
     private val ctx: DirectFeedContext,
     private val links: List<FeedLink>,
     private val needs: Map<RecipeIndex, Double>,
-    private val recipeIndices: List<RecipeIndex>,
 ) {
+
+    private val recipeIndices = needs.keys.toTypedArray()
+
     private val firstRecipeIndex = recipeIndices.first()
 
     /** The machines still to place per recipe. */
     private val remaining = ProductionIntMap(ctx.arraySize)
 
     /**
-     * Each group recipe's position in [recipeIndices]. Window counts read it to address a small
-     * `IntArray(recipeIndices.size)` instead of one entry per recipe index.
+     * Each group recipe's position in [recipeIndices]. The window counts, the link buckets and the
+     * coverage array address their entries by it, so they never grow with the plan's recipe count.
      */
-    private val recipePositions = ProductionIntMap(ctx.arraySize)
+    private val recipePositions =
+        ProductionIntMap(ctx.arraySize).also {
+            for ((position, recipeIndex) in recipeIndices.withIndex()) {
+                it[recipeIndex] = position
+            }
+        }
 
     /** What one machine of each recipe makes per second. */
-    private val outputPerRecipe = ProductionDoubleMap(ctx.arraySize)
-
-    /** The recipes that produce something the band inserts. */
-    private val producerRecipeIndices = IndexSet(ctx.arraySize)
-
-    /**
-     * The links that become adjacent for each unordered recipe pair. A pair is keyed the same way
-     * whichever machine is the producer, because adjacency realizes both directions on one gap.
-     */
-    private val pairLinks =
-        links.indices
-            .groupBy { pairKey(links[it].producer.index, links[it].consumer.index) }
-            .mapValues { (_, linkIndices) -> linkIndices.toIntArray() }
-    private val covered = IntArray(links.size)
-    private var counts: Map<RecipeIndex, Int> = emptyMap()
-    private var best: BandPlan? = null
-
-    init {
-        for ((position, recipeIndex) in recipeIndices.withIndex()) {
-            outputPerRecipe[recipeIndex] = ctx.factories.getValue(recipeIndex).outputPerMachine()
-            recipePositions[recipeIndex] = position
+    private val outputPerRecipe =
+        DoubleArray(recipeIndices.size) { position ->
+            ctx.factories.getValue(recipeIndices[position]).outputPerMachine()
         }
-        for (link in links) producerRecipeIndices[link.producer.index] = true
-    }
 
-    fun bestPlan(
-        counts: Map<RecipeIndex, Int>,
-        best: BandPlan?,
-        requireComplete: Boolean,
-    ): BandPlan? {
-        this.counts = counts
-        this.best = best
-        var total = 0
-        for (recipeIndex in recipeIndices) {
-            val count = counts.getValue(recipeIndex)
-            remaining[recipeIndex] = count
-            total += count
+    /** The links each position takes, as indices into [links]; [positionOf] picks the end. */
+    private fun linksByEnd(positionOf: (FeedLink) -> FeedNode) =
+        links
+            .withIndex()
+            .groupBy(
+                { (_, link) -> recipePositions[positionOf(link).index] },
+                { (index, _) -> index },
+            )
+            .mapValues { it.value.toIntArray() }
+            .let { grouped ->
+                Array(recipeIndices.size) { position -> grouped[position] ?: IntArray(0) }
+            }
+
+    /** The links each consumer position takes, as indices into [links]. */
+    private val linksByConsumerPosition = linksByEnd(FeedLink::consumer)
+    /** The links each producer position makes, as indices into [links]. */
+    private val linksByProducerPosition = linksByEnd(FeedLink::producer)
+
+    /** The coverage slot of every link's recipe pair. */
+    private val linkPairKeys =
+        IntArray(links.size) {
+            val link = links[it]
+            pairKey(recipePositions[link.producer.index], recipePositions[link.consumer.index])
         }
-        // one recipe index per machine slot, in built order; the first is fixed, the DFS fills
-        // the rest
-        val recipeCycle = Array(total) { firstRecipeIndex }
-        remaining[firstRecipeIndex] -= 1
-        search(1, recipeCycle, requireComplete)
-        return this.best
-    }
 
-    private fun search(
-        position: Int,
-        recipeCycle: Array<RecipeIndex>,
-        requireComplete: Boolean,
+    /** How many placed gaps realize each unordered pair of recipe positions. */
+    private val covered = IntArray(recipeIndices.size * recipeIndices.size)
+
+    inner class InnerBandSearch(
+        val counts: Map<RecipeIndex, Int>,
+        var best: BandPlan?,
+        val requireComplete: Boolean,
     ) {
-        if (position == recipeCycle.size) {
-            finish(recipeCycle, requireComplete)
-            return
-        }
-        val previousIndex = recipeCycle[position - 1]
-        for (nextIndex in recipeIndices) {
-            if (remaining[nextIndex] == 0) continue
-            recipeCycle[position] = nextIndex
-            remaining[nextIndex] -= 1
-            cover(previousIndex, nextIndex, 1)
-            if (position + 1 == recipeCycle.size || linksStillReachable(nextIndex)) {
-                search(position + 1, recipeCycle, requireComplete)
+
+        private var maxLength = maxBandMachines(links.size)
+
+        // one recipe position per machine slot, in built order; the first is fixed, the DFS
+        // fills the rest
+        val recipeCycle = IntArray(counts.values.sum())
+
+        init {
+            for (recipeIndex in recipeIndices) {
+                val count = counts.getValue(recipeIndex)
+                remaining[recipeIndex] = count
             }
-            cover(previousIndex, nextIndex, -1)
-            remaining[nextIndex] += 1
+            remaining[firstRecipeIndex] -= 1
+
+            best?.let {
+                if (it.machines.size < maxLength) maxLength = it.machines.size
+            }
+
+            search(1)
         }
-    }
 
-    /**
-     * The band built from cycling [recipeCycle]: the pattern repeated often enough to cover every
-     * recipe's plan machine need, cut to the shortest window at which no consumer is underfed and
-     * no producer is left without a consumer next to it. Null when even [maxBandMachines] machines
-     * cannot do it.
-     */
-    private fun window(
-        recipeCycle: Array<RecipeIndex>,
-        counts: Map<RecipeIndex, Int>,
-        maxLength: Int,
-        requireComplete: Boolean,
-    ): BandPlan? {
-        val repetitions =
-            needs.maxOfOrNull { (recipeIndex, count) ->
-                if (count <= FEED_EPSILON) 0
-                else ceil(count / counts.getValue(recipeIndex) - FEED_EPSILON).toInt()
-            } ?: 0
-        val start = repetitions.coerceAtLeast(1) * recipeCycle.size
-        if (start > maxLength) return null
-        for (length in start..minOf(maxBandMachines(links.size), maxLength)) {
+        fun bestPlan() = best
 
-            val extendedCycle = Array(length) { recipeCycle[0] }
-
-            for (offset in recipeCycle.indices) {
-                for (position in 0 until length) {
-                    extendedCycle[position] = recipeCycle[(offset + position) % recipeCycle.size]
+        private fun search(position: Int) {
+            val previousPos = recipeCycle[position - 1]
+            for ((nextPos, nextIndex) in recipeIndices.withIndex()) {
+                if (remaining[nextIndex] == 0) continue
+                recipeCycle[position] = nextPos
+                remaining[nextIndex] -= 1
+                val key = pairKey(previousPos, nextPos)
+                cover(key, 1)
+                if (position + 1 == recipeCycle.size) {
+                    finish()
+                } else if (linksStillReachable(nextIndex)) {
+                    search(position + 1)
                 }
 
-                val plan =
-                    windowPlan(extendedCycle)?.takeUnless {
-                        requireComplete && it.hasInBandBeltInput()
+                cover(key, -1)
+                remaining[nextIndex] += 1
+            }
+        }
+
+        private fun finish() {
+            val key = pairKey(recipeCycle.last(), 0)
+            cover(key, 1)
+            if (linkPairKeys.all { covered[it] > 0 }) {
+                window()
+                    ?.takeIf {
+                        val current = best
+                        current == null || comparator.compare(it, current) < 0
                     }
-                if (plan != null) {
-                    return plan
+                    ?.let {
+                        best = it
+                        if (it.machines.size < maxLength) maxLength = it.machines.size
+                    }
+            }
+            cover(key, -1)
+        }
+
+        /**
+         * The band built from cycling [recipeCycle]: the pattern repeated often enough to cover
+         * every recipe's plan machine need, cut to the shortest window at which no consumer is
+         * underfed and no producer is left without a consumer next to it. Null when even
+         * [maxBandMachines] machines cannot do it.
+         */
+        private fun window(): BandPlan? {
+            val repetitions =
+                needs.maxOfOrNull { (recipeIndex, count) ->
+                    if (count <= FEED_EPSILON) 0
+                    else ceil(count / counts.getValue(recipeIndex) - FEED_EPSILON).toInt()
+                } ?: 0
+            val start = repetitions.coerceAtLeast(1) * recipeCycle.size
+            for (length in start..maxLength) {
+
+                val extendedCycle = IntArray(length)
+
+                for (offset in recipeCycle.indices) {
+                    for (position in 0 until length) {
+                        extendedCycle[position] =
+                            recipeCycle[(offset + position) % recipeCycle.size]
+                    }
+
+                    return FeedWindow(extendedCycle).plan(requireComplete) ?: continue
                 }
             }
+            return null
         }
-        return null
     }
 
-    /** The plan for the window at [offset] of [length] machines, or null when its flow fails. */
-    private fun windowPlan(extendedCycle: Array<RecipeIndex>): BandPlan? {
+    /** How far the window's per-recipe machine counts are from the links' per-machine rates */
+    private fun ratioPenalty(extendedCycleIndices: IntArray): Double {
         // counts per group recipe, addressed by its position in [recipeIndices] rather than by
         // its recipe index
         val machinesPerRecipe = IntArray(recipeIndices.size)
-        for (recipeIndex in extendedCycle) {
-            machinesPerRecipe[recipePositions[recipeIndex]] += 1
+        for (cycleIndex in extendedCycleIndices) {
+            machinesPerRecipe[cycleIndex] += 1
         }
-        val allNeedsFulfilled = needs.all { (recipeIndex, count) ->
-            machinesPerRecipe[recipePositions[recipeIndex]] + FEED_EPSILON >= count
-        }
-        if (!allNeedsFulfilled) return null
+        return links.sumOf { linkPenalty(machinesPerRecipe, it) }
+    }
 
-        return FeedWindow(extendedCycle).feeds()?.let { feeds ->
-            val machines = extendedCycle.map { ctx.factories.getValue(it) }
-            BandPlan(
-                machines,
-                feeds,
-                ratioPenalty(links, machinesPerRecipe, recipePositions),
-            )
-        }
+    private fun linkPenalty(machinesPerRecipe: IntArray, link: FeedLink): Double {
+        val wanted = link.ioRatio
+        val p = machinesPerRecipe[recipePositions[link.producer.index]]
+        val c = machinesPerRecipe[recipePositions[link.consumer.index]]
+
+        val diff = 1.0 - p / (c * wanted)
+        return diff * if (diff < 0.0) -OVERFEED_PENALTY else UNDERFEED_PENALTY
     }
 
     /**
@@ -205,7 +226,10 @@ private class BandCycleSearch(
      * same window. The band would need an extra belt for a resource it already makes; such a window
      * is not a valid band. A material produced and consumed outside the window (an export) is fine.
      */
-    private fun BandPlan.hasInBandBeltInput(): Boolean {
+    private fun hasInBandBeltInput(
+        machines: List<FactoryProduction>,
+        feeds: List<BandFeed>,
+    ): Boolean {
         val produced =
             machines.flatMap { it.recipe.result.keys }.filterNot(Material::isFluid).toSet()
         val incoming =
@@ -219,82 +243,57 @@ private class BandCycleSearch(
         }
     }
 
-    private fun finish(recipeCycle: Array<RecipeIndex>, requireComplete: Boolean) {
-        val lastRecipeIndex = recipeCycle.last()
-        cover(lastRecipeIndex, firstRecipeIndex, 1)
-        if (covered.all { it > 0 }) {
-            val current = best
-            val plan =
-                window(
-                    recipeCycle,
-                    counts,
-                    current?.machines?.size ?: maxBandMachines(links.size),
-                    requireComplete,
-                )
-            if (plan != null && (current == null || comparator.compare(plan, current) < 0))
-                best = plan
-        }
-        cover(lastRecipeIndex, firstRecipeIndex, -1)
-    }
-
     /** Whether every uncovered link can still become adjacent somewhere in the remaining cycle. */
     private fun linksStillReachable(lastRecipeIndex: RecipeIndex): Boolean {
         val hasRemaining = recipeIndices.any { remaining[it] > 0 }
-        return links.indices.all { link ->
-            covered[link] > 0 || reachable(link, lastRecipeIndex, hasRemaining)
+        return links.withIndex().all { (index, link) ->
+            covered[linkPairKeys[index]] > 0 || reachable(link, lastRecipeIndex, hasRemaining)
         }
     }
 
     private fun reachable(
-        link: Int,
+        link: FeedLink,
         lastRecipeIndex: RecipeIndex,
         hasRemaining: Boolean,
     ): Boolean {
-        val producerIndex = links[link].producer.index
-        val consumerIndex = links[link].consumer.index
+        val producerIndex = link.producer.index
+        val consumerIndex = link.consumer.index
+        val remainingProducer = remaining[producerIndex]
+        val remainingConsumer = remaining[consumerIndex]
         val bothRemain =
-            remaining[producerIndex] > 0 &&
-                remaining[consumerIndex] > 0 &&
-                (producerIndex != consumerIndex || remaining[producerIndex] >= 2)
+            remainingProducer > 0 &&
+                remainingConsumer > 0 &&
+                (producerIndex != consumerIndex || remainingProducer >= 2)
         val afterLast =
-            (lastRecipeIndex == producerIndex && remaining[consumerIndex] > 0) ||
-                (lastRecipeIndex == consumerIndex && remaining[producerIndex] > 0)
+            (lastRecipeIndex == producerIndex && remainingConsumer > 0) ||
+                (lastRecipeIndex == consumerIndex && remainingProducer > 0)
         val viaWrap =
             hasRemaining &&
-                ((producerIndex == firstRecipeIndex && remaining[consumerIndex] > 0) ||
-                    (consumerIndex == firstRecipeIndex && remaining[producerIndex] > 0))
+                ((producerIndex == firstRecipeIndex && remainingConsumer > 0) ||
+                    (consumerIndex == firstRecipeIndex && remainingProducer > 0))
         return bothRemain || afterLast || viaWrap
     }
 
-    private fun cover(
-        fromIndex: RecipeIndex,
-        toIndex: RecipeIndex,
-        delta: Int,
-    ) {
-        val pair = pairLinks[pairKey(fromIndex, toIndex)] ?: return
-        for (link in pair) covered[link] += delta
+    private fun cover(key: Int, delta: Int) {
+        covered[key] += delta
     }
 
     /**
-     * The unordered key of two recipe indices, packed for [ctx]'s dense array size. Adjacency has
-     * no direction: the same gap realizes a link from either machine to the other, so `(a, b)` and
-     * `(b, a)` must address the same entry of [pairLinks].
+     * The coverage slot of the two recipes' positions in [recipeIndices]. Adjacency has no
+     * direction: the same gap realizes a link from either machine to the other, so `(a, b)` and
+     * `(b, a)` share one slot.
      */
-    private fun pairKey(
-        firstIndex: RecipeIndex,
-        secondIndex: RecipeIndex,
-    ) =
-        minOf(firstIndex.value, secondIndex.value) * ctx.arraySize +
-            maxOf(firstIndex.value, secondIndex.value)
+    private fun pairKey(first: Int, second: Int): Int {
+        return minOf(first, second) * recipeIndices.size + maxOf(first, second)
+    }
 
     fun arrangeBest(requireComplete: Boolean): BandPlan? {
         var best: BandPlan? = null
         for (length in recipeIndices.size..maxBandMachines(links.size)) {
-            val bestLength = best?.machines?.size
-            if (bestLength != null && length > bestLength) break
+            if (best != null && length > best.machines.size) break
             for (counts in countVectors(recipeIndices, length)) {
                 if (counts.values.reduce(::greatestCommonDivisor) != 1) continue
-                best = bestPlan(counts, best, requireComplete)
+                best = InnerBandSearch(counts, best, requireComplete).bestPlan()
             }
         }
         return best
@@ -306,109 +305,113 @@ private class BandCycleSearch(
      * machine is allowed and overfeed is harmless. The window is valid only when every consumer is
      * covered and every producer slot fed someone, so no machine is left starving or unused.
      */
-    private inner class FeedWindow(private val extendedCycle: Array<RecipeIndex>) {
-        private val length = extendedCycle.size
-        private val consumerCounts = IntArray(links.size)
-        private val demand =
-            DoubleArray(links.size) { index ->
-                (needs[links[index].consumer.index] ?: 0.0) * links[index].inputPerMachine
-            }
+    private inner class FeedWindow(private val extendedCycle: IntArray) {
 
+        private val demand = run {
+            val consumerCounts =
+                IntArray(links.size).also {
+                    for (position in extendedCycle) {
+                        for (linkIndex in linksByConsumerPosition[position]) {
+                            it[linkIndex]++
+                        }
+                    }
+                }
+            DoubleArray(links.size) {
+                val link = links[it]
+                (needs[link.consumer.index] ?: 0.0) * link.inputPerMachine / consumerCounts[it]
+            }
+        }
+
+        private val length = extendedCycle.size
         private val supply = DoubleArray(length * links.size)
-        private val remaining = extendedCycle.map { outputPerRecipe[it] }.toDoubleArray()
+        private val remaining = DoubleArray(length) { outputPerRecipe[extendedCycle[it]] }
         private val used = BooleanArray(length)
         private val feeds = arrayOfNulls<BandFeed>(length - 1)
 
-        init {
-            for (recipeIndex in extendedCycle) {
-                for ((index, link) in links.withIndex()) {
-                    if (recipeIndex == link.consumer.index) consumerCounts[index]++
-                }
-            }
-        }
-
-        fun feeds(): List<BandFeed>? {
-            seedSupply()
+        @Suppress("ReturnCount")
+        private fun feeds(): List<BandFeed>? {
+            // seedSupply
             for (position in extendedCycle.indices) {
-                val recipeIndex = extendedCycle[position]
-                for ((index, link) in links.withIndex()) {
-                    if (recipeIndex != link.consumer.index) continue
-                    if (!consume(position, link, index)) return null
+                val producer = extendedCycle[position]
+                for (linkIndex in linksByProducerPosition[producer]) {
+                    supply[position * links.size + linkIndex] = links[linkIndex].outputPerMachine
                 }
             }
-            return if (everythingUsed()) feeds.filterNotNull() else null
-        }
 
-        private fun seedSupply() {
             for (position in extendedCycle.indices) {
-                val recipeIndex = extendedCycle[position]
-                if (recipeIndex !in producerRecipeIndices) continue
-                for ((index, link) in links.withIndex()) {
-                    if (recipeIndex != link.producer.index) continue
-                    supply[position * links.size + index] = link.outputPerMachine
+                val consumer = extendedCycle[position]
+                for (linkIndex in linksByConsumerPosition[consumer]) {
+                    if (!consume(position, links[linkIndex], linkIndex)) return null
                 }
             }
+
+            // everythingUsed
+            for (position in extendedCycle.indices) {
+                val producer = extendedCycle[position]
+                if (linksByProducerPosition[producer].isNotEmpty() && !used[position]) {
+                    return null
+                }
+            }
+
+            return feeds.filterNotNull()
         }
 
-        private fun consume(position: Int, link: FeedLink, index: Int): Boolean {
-            val consumerCount = consumerCounts[index]
-            var demandLeft = if (consumerCount <= 0) 0.0 else demand[index] / consumerCount
-            for (side in listOf(position - 1, position + 1)) {
-                if (side !in 0 until length) continue
-                if (extendedCycle[side] != link.producer.index) continue
-                val slot = side * links.size + index
+        private fun consume(position: Int, link: FeedLink, linkIndex: Int): Boolean {
+            var demandLeft = demand[linkIndex]
+
+            fun consume(side: Int, gap: Int) {
+                val slot = side * links.size + linkIndex
                 val taken = minOf(supply[slot], remaining[side], demandLeft)
-                if (taken <= FEED_EPSILON) continue
+                if (taken <= FEED_EPSILON) return
                 supply[slot] -= taken
                 remaining[side] -= taken
                 used[side] = true
-                val gap = minOf(position, side)
+
                 val known = feeds[gap]?.flow ?: 0.0
-                feeds[gap] = BandFeed(gap, link, known + taken, side < position)
+                feeds[gap] = BandFeed(gap, link, known + taken, side <= gap)
                 demandLeft -= taken
             }
+
+            val left = position - 1
+            val right = position + 1
+
+            if (position > 0 && recipeIndices[extendedCycle[left]] == link.producer.index) {
+                consume(left, left)
+            }
+
+            if (right < length && recipeIndices[extendedCycle[right]] == link.producer.index) {
+                consume(right, position)
+            }
+
             return demandLeft <= FEED_EPSILON
         }
 
-        /** Every producer machine must have fed a consumer, or it would be built unused. */
-        private fun everythingUsed() =
-            extendedCycle.withIndex().all { (position, recipeIndex) ->
-                recipeIndex !in producerRecipeIndices || used[position]
-            }
+        /** The plan for the window described by [extendedCycle] , or null when its flow fails. */
+        fun plan(requireComplete: Boolean): BandPlan? {
+            val feeds = feeds() ?: return null
+            val machines = extendedCycle.map { ctx.factories.getValue(recipeIndices[it]) }
+
+            if (requireComplete && hasInBandBeltInput(machines, feeds)) return null
+
+            val ratioPenalty = ratioPenalty(extendedCycle)
+            return BandPlan(machines, feeds, ratioPenalty)
+        }
     }
 }
 
-/**
- * How far the window's per-recipe machine counts [machinesPerRecipe] are from the links'
- * per-machine rates; [recipePositions] maps a recipe to its entry in that array.
- */
-private fun ratioPenalty(
-    links: List<FeedLink>,
-    machinesPerRecipe: IntArray,
-    recipePositions: ProductionIntMap,
-): Double = links.sumOf { link ->
-    val producerCount = machinesPerRecipe[recipePositions[link.producer.index]]
-    if (producerCount <= 0) return@sumOf 0.0
-    val consumerCount = machinesPerRecipe[recipePositions[link.consumer.index]]
-    if (consumerCount <= 0) return@sumOf 0.0
-    val wanted = link.ioRatio
-    if (wanted <= 0.0) return@sumOf 0.0
-    val value = producerCount.toDouble() / consumerCount
-    val under = max(0.0, wanted - value) / wanted
-    val over = max(0.0, value - wanted) / wanted
-    under * UNDERFEED_PENALTY + over * OVERFEED_PENALTY
-}
-
-private fun DirectFeedContext.footPrintsHaveDifferentSize(recipeIndices: List<RecipeIndex>) =
+private fun DirectFeedContext.footPrintsHaveDifferentSize(recipeIndices: Iterable<RecipeIndex>) =
     recipeIndices
         .asSequence()
         .map { blueprintMachineFootprint(factories.getValue(it).factory) }
         .zipWithNext()
         .any { (a, b) -> a != b }
 
-private fun compareNames(first: List<FactoryProduction>, second: List<FactoryProduction>) =
-    first.zip(second) { a, b -> a.recipe.name.compareTo(b.recipe.name) }.firstOrNull { it != 0 }
-        ?: 0
+private fun compareMachineIndices(planA: BandPlan, planB: BandPlan) =
+    planA.machines
+        .zip(planB.machines) { machineA, machineB ->
+            machineA.index.value.compareTo(machineB.index.value)
+        }
+        .firstOrNull { it != 0 } ?: 0
 
 /**
  * The whole machines each recipe of the group needs. Only recipes whose product leaves the group

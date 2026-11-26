@@ -9,7 +9,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.oneLaneCapacit
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.pairsNeeded
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowInputs
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.rowOutputs
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
 import de.bjrke.factorio.optimizer.common.model.IndexSet
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
@@ -80,36 +79,23 @@ internal fun cycleRatio(ratio: Double) = cycleFit(ratio).first
 /** The cost of the preferred small cycle for [ratio]. */
 internal fun cyclePenalty(ratio: Double) = cycleFit(ratio).second
 
-/** The solid inputs a band draws from outside its links. */
-internal fun bandBeltInputs(links: List<FeedLink>): Set<Material> {
-    val internal = links.mapTo(mutableSetOf()) { it.material }
-    return links
-        .asSequence()
-        .flatMap { listOf(it.producer.production, it.consumer.production) }
-        .distinct()
-        .flatMap { production -> production.recipe.ingredients.keys }
-        .filterNot { it.isFluid }
-        .filterNot { it in internal }
-        .toSet()
-}
-
-/** The solid results a band puts on a belt rather than inserting them. */
-internal fun bandBeltOutputs(links: List<FeedLink>): Set<Material> {
-    val internal = links.mapTo(mutableSetOf()) { it.material }
-    return links
-        .asSequence()
-        .flatMap { listOf(it.producer.production, it.consumer.production) }
-        .distinct()
-        .flatMap { production -> production.recipe.result.keys }
-        .filterNot { it.isFluid }
-        .filterNot { it in internal }
-        .toSet()
-}
-
 /** The belt rows [links] need, ignoring lane capacity: the quick pre-filter for growth. */
 internal fun bandBeltRows(links: List<FeedLink>): Int {
-    val inputs = bandBeltInputs(links)
-    val outputs = bandBeltOutputs(links)
+    val internal = links.mapTo(mutableSetOf()) { it.material }
+    val productions =
+        links
+            .flatMap { listOf(it.producer.production, it.consumer.production) }
+            .distinctBy { it.index }
+    val inputs =
+        productions.flatMapTo(mutableSetOf()) { production ->
+            production.recipe.ingredients.keys.filterNot { it.isFluid || it in internal }
+        }
+
+    val outputs =
+        productions.flatMapTo(mutableSetOf()) { production ->
+            production.recipe.result.keys.filterNot { it.isFluid || it in internal }
+        }
+
     val materials = (inputs + outputs).size
     val pairable = (inputs - outputs).size
     return materials - minOf(pairsNeeded(materials), pairable / MAX_MATERIALS_PER_BELT)
@@ -130,14 +116,14 @@ internal fun DirectFeedContext.bandBeltFits(plan: BandPlan): Boolean {
     // A band repeats a production to balance its links. Spread the plan's machine need over those
     // copies, exactly as the finished plan's `machineRate` does, so the band is not sized for every
     // copy at full rate. Other rows may add copies later, which only lowers the final rate.
-    val copies = plan.machines.groupingBy { it }.eachCount()
-    val bandRate = { production: FactoryProduction ->
-        machineRate(production, copies[production] ?: 1, scale)
-    }
-    val inputs = rowInputs(plan.machines, bandRate) - internal
-    val outputs = rowOutputs(plan.machines, bandRate) - internal
-    val singleRecipe = plan.machines.map { it.recipe }.distinct().size == 1
-    return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity(), singleRecipe).fits
+
+    fun bandRate(production: FactoryProduction) =
+        machineRate(production, plan.copies[production.index] ?: 1, scale)
+
+    val inputs = rowInputs(plan.machines, ::bandRate) - internal
+    val outputs = rowOutputs(plan.machines, ::bandRate) - internal
+    val allowOverCapacityPairs = plan.copies.size == 1
+    return beltRowBudget(inputs, outputs, logistics.oneLaneCapacity(), allowOverCapacityPairs).fits
 }
 
 /** One machine-to-machine insertion an arrangement realizes. */
@@ -156,7 +142,9 @@ internal class BandPlan(
     val machines: List<FactoryProduction>,
     val feeds: List<BandFeed>,
     val ratioPenalty: Double,
-)
+) {
+    val copies by lazy { machines.groupingBy { it.index }.eachCount() }
+}
 
 /**
  * One production in the direct-feed graph. A production may feed several consumers, so it is a

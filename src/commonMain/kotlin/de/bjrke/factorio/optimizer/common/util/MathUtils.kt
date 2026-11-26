@@ -5,7 +5,7 @@ import kotlin.math.ceil
 import kotlin.math.round
 
 /** Every way to give [elements] at least one each in [length] slots. */
-fun <T> countVectors(elements: List<T>, length: Int) = buildList {
+fun <T> countVectors(elements: Array<T>, length: Int) = buildList {
     if (elements.isEmpty()) return@buildList
     val current = IntArray(elements.size)
 

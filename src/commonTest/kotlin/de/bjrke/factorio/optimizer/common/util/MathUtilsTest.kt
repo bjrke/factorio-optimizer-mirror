@@ -31,13 +31,13 @@ class MathUtilsTest {
                 ),
         ) { (input, expected) ->
             val length = expected.maxOf { it.values.sum() }
-            assertEquals(expected, countVectors(input, length))
+            assertEquals(expected, countVectors(input.toTypedArray(), length))
         }
     }
 
     @Test
     fun testCountVectorsOfNoElements() {
-        assertEquals(emptyList(), countVectors(emptyList<String>(), 3))
+        assertEquals(emptyList(), countVectors(emptyArray<String>(), 3))
     }
 
     @Test

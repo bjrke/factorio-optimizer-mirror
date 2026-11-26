@@ -63,7 +63,7 @@ internal fun DirectFeedContext.maximalGroups(candidates: List<FeedLink>): List<B
     }
     mergeGroups(groups, ::arranged)
     return groups.mapNotNull(::arranged).filterNot { plan ->
-        plan.machines.mapTo(mutableSetOf()) { it.recipe } in policy.rejectedGroups
+        plan.copies.keys in policy.rejectedGroups
     }
 }
 

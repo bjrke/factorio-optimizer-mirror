@@ -8,9 +8,9 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.PlannedRow
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.plannedMachines
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.model.FactoryProduction
-import de.bjrke.factorio.optimizer.common.model.IndexedRecipe
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.model.ProductionDoubleMap
+import de.bjrke.factorio.optimizer.common.model.RecipeIndex
 import de.bjrke.factorio.optimizer.common.model.SparseProductionMap
 import kotlin.math.ceil
 import kotlin.math.max
@@ -21,7 +21,7 @@ import kotlin.math.max
  */
 internal data class BandPolicy(
     val forcedMaterials: Set<Material> = emptySet(),
-    val rejectedGroups: Set<Set<IndexedRecipe>> = emptySet(),
+    val rejectedGroups: Set<Set<RecipeIndex>> = emptySet(),
 )
 
 /**
@@ -122,8 +122,8 @@ private fun DirectFeedContext.beltedBands(rows: List<PlannedRow>): List<PlannedR
         )
     val plans = context.maximalGroups(context.linksBetween(productions))
     if (plans.isEmpty()) return rows
-    val banded = plans.flatMap { plan -> plan.machines }.mapTo(mutableSetOf()) { it.recipe }
-    return buildBands(plans) + rows.filterNot { it.machines.first().recipe in banded }
+    val banded = plans.flatMapTo(mutableSetOf()) { plan -> plan.copies.keys }
+    return buildBands(plans) + rows.filterNot { it.machines.first().index in banded }
 }
 
 /** Every solid producer link between the [productions], for the belted band search. */
@@ -156,10 +156,10 @@ private fun buildBands(bandPlans: List<BandPlan>) = bandPlans.map { plan ->
 // cover the outside consumers.
 private fun onBeltOf(bandPlans: List<BandPlan>) = buildMap {
     for (plan in bandPlans) {
-        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer.production }
-        for ((recipe, machines) in plan.machines.groupingBy { it }.eachCount()) {
-            if (recipe in inserted) continue
-            this[recipe] = (this[recipe] ?: 0) + machines
+        val inserted = plan.feeds.mapTo(mutableSetOf()) { it.link.producer.index }
+        for ((recipeIndex, machines) in plan.copies) {
+            if (recipeIndex in inserted) continue
+            this[recipeIndex] = (this[recipeIndex] ?: 0) + machines
         }
     }
 }
@@ -221,7 +221,7 @@ private data class BeltDemand(
 private fun DirectFeedContext.belted(
     production: FactoryProduction,
     demand: ProductionDoubleMap,
-    onBelt: Map<FactoryProduction, Int>,
+    onBelt: Map<RecipeIndex, Int>,
     built: Map<FactoryProduction, Int>,
 ): PlannedRow? {
     if (production == target.production) return null
@@ -229,7 +229,8 @@ private fun DirectFeedContext.belted(
     val perMachine = beltOutputPerMachine(production)
     val needed =
         if (perMachine > 0.0)
-            ceil(rate / perMachine - MACHINE_COUNT_EPSILON).toInt() - (onBelt[production] ?: 0)
+            ceil(rate / perMachine - MACHINE_COUNT_EPSILON).toInt() -
+                (onBelt[production.index] ?: 0)
         else 0
     val leftover = (plannedMachines(production, scale) - (built[production] ?: 0)).coerceAtLeast(0)
     val machines = maxOf(needed, leftover).coerceIn(0, MAX_COPIES)

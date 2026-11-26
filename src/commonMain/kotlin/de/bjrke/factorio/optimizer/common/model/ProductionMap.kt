@@ -6,16 +6,23 @@ import kotlin.jvm.JvmInline
  * A result's productions addressed by their dense [RecipeIndex].
  *
  * The array an [OptimizationResult] owns and the caches the band search builds share this shape: a
- * lookup addresses the slot directly instead of hashing a recipe. [get] answers null for an index
- * the map does not cover, so probing a slot from another result cannot crash; [getValue] is the
- * throwing form for a slot the caller knows is present.
+ * lookup addresses the slot directly instead of hashing a recipe. A dense [FullProductionMap]
+ * expects a slot of the result that minted the index and reads it unchecked; only a
+ * [SparseProductionMap] answers null for a hole. [getValue] is the throwing form for a slot the
+ * caller knows is present.
  */
 interface ProductionMap<T> {
 
-    /** The value at [index], or null when the map covers no slot there. */
+    /**
+     * The value at [index]; a sparse map answers null for a slot it does not cover, while a dense
+     * map reads its own array unchecked, so a caller probing a slot must use [contains].
+     */
     operator fun get(index: RecipeIndex): T?
 
-    /** The value at [index]; throws [NoSuchElementException] when the map covers no slot there. */
+    /**
+     * The value at [index]. A sparse map throws [NoSuchElementException] for a hole; a dense map
+     * assumes the slot belongs to its own result.
+     */
     fun getValue(index: RecipeIndex): T
 
     /** The present values in index order. */
@@ -30,16 +37,16 @@ interface ProductionMap<T> {
 
 /**
  * The [ProductionMap] of one [OptimizationResult]: one production per minted [RecipeIndex], in
- * production order, so a lookup is a bounds-checked array read and [values] keeps the optimizer's
- * order.
+ * production order, so a lookup is a direct array read and [values] keeps the optimizer's order.
+ * The index must come from the result that minted it; unlike a [SparseProductionMap], the dense
+ * read does not turn a foreign slot into null.
  */
 @JvmInline
 value class FullProductionMap<T>(private val content: Array<T>) : ProductionMap<T> {
 
-    override operator fun get(index: RecipeIndex) = content.getOrNull(index.value)
+    override operator fun get(index: RecipeIndex) = content[index.value]
 
-    override fun getValue(index: RecipeIndex): T =
-        content.getOrNull(index.value) ?: throw NoSuchElementException("no value at $index")
+    override fun getValue(index: RecipeIndex): T = content[index.value]
 
     override val values
         get() = content.asList()

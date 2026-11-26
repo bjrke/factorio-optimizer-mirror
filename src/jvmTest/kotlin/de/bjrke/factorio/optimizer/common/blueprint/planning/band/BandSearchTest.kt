@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.band
 
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.advancedCircuitRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
@@ -11,6 +12,8 @@ import de.bjrke.factorio.optimizer.common.fixtures.ironGearWheelRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.ironPlateRecipe
 import de.bjrke.factorio.optimizer.common.fixtures.optimizationResult
 import de.bjrke.factorio.optimizer.common.fixtures.production
+import de.bjrke.factorio.optimizer.common.game.prototype.Category
+import de.bjrke.factorio.optimizer.common.game.prototype.Recipe
 import de.bjrke.test.TOLERANCE
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
@@ -32,6 +35,41 @@ class BandSearchTest : BaseGameCtxTest() {
 
         // the 6:4 need is the exact 3:2 cycle, so the stored penalty is zero
         assertEquals(0.0, plan.ratioPenalty, TOLERANCE)
+    }
+
+    @Test
+    fun aWindowThatCannotHitTheRatioCarriesItsPenalty() {
+        // the consumer wants 1.2 producer machines; only a 5:4 window fits the machine budget,
+        // so it overfeeds the link by 1/24 of the wanted ratio and pays half of that
+        val wire = Material("wire")
+        val gadget = Material("gadget")
+        val producer =
+            production(
+                Recipe(
+                    name = "make-wire",
+                    ingredients = emptyMap(),
+                    result = mapOf(wire to 1.0),
+                    time = 1.0,
+                    categories = setOf(Category.CRAFTING),
+                ),
+            )
+        val consumer =
+            production(
+                Recipe(
+                    name = "make-gadget",
+                    ingredients = mapOf(wire to 1.2),
+                    result = mapOf(gadget to 1.0),
+                    time = 1.0,
+                    categories = setOf(Category.CRAFTING),
+                ),
+                amount = 4.0,
+            )
+        val context =
+            DirectFeedContext(optimizationResult(consumer, producer), logistics = logistics)
+        val plan = assertNotNull(context.arrange(context.candidateLinks()))
+
+        assertEquals(9, plan.machines.size)
+        assertEquals(1.0 / 48.0, plan.ratioPenalty, TOLERANCE)
     }
 
     @Test

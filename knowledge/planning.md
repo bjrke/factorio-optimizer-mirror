@@ -10,10 +10,10 @@ band search; the layout that consumes the plan is in `layout.md`.
 `RecipeIndex` per production it emits — the running recipes, then the displayed imports —
 and `IndexedRecipe` mirrors every `Recipe` field and equals/hashes only by that index.
 `OptimizationResult.factories` is a `FullProductionMap`, one production per slot read at
-that index, so a post-optimizer lookup is a bounds-checked array access instead of a hash
-of the recipe's ingredient and result maps; the band search's caches use the same index
-through `SparseProductionMap`, the dense `ProductionIntMap`/`ProductionDoubleMap` and
-`IndexSet`, and the arrangement search's `groupNeeds` map is keyed by it too. A
+that index, so a post-optimizer lookup is a direct array read instead of a hash of the
+recipe's ingredient and result maps; the band search's caches use the same index through
+`SparseProductionMap`, the dense `ProductionIntMap` and `IndexSet`, and the arrangement
+search's `groupNeeds` map is keyed by it too. A
 `RecipeIndex` is result-local: never compare recipes from two optimizer results.
 
 `FactoryProduction` keeps its structural equality. Its recipe hash is the index, so
@@ -48,10 +48,10 @@ one band. `BandSearch.kt` arranges a group into the shortest window that satisfi
 the built consumer machines, and `arrange` keeps the best plan and passes its machine count as an
 upper bound to `window`; it walks the cycles with a DFS that cuts a branch as soon as an uncovered
 link can no longer become adjacent, counting the cycle's wrap boundary. `BandPlan` caches its ratio
-penalty. The window is a cycle of `RecipeIndex` slots: it counts with `ProductionIntMap`, reads each
-recipe's machine output from `ProductionDoubleMap`, and resolves the productions through the
-context's `ProductionMap` only for the accepted plan, so an equal production copy on a link still
-pairs by slot.
+penalty. The window is a cycle of the group's dense recipe positions: the per-recipe counts, the
+links each consumer and producer position takes, and the pair coverage are plain arrays sized to
+the group, and the productions are resolved through the context's `ProductionMap` only for the
+accepted plan, so an equal production copy on a link still pairs by slot.
 
 A band is bounded by `GROUP_MAX_MACHINES = 10` (9 when it has more than one link, so the row stays
 powerable) and `MAX_BAND_RECIPES = 8`; a finished group must fit `MAX_ROW_BELTS = 4` belt rows

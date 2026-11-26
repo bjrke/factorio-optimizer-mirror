@@ -119,8 +119,8 @@ class BandPlanTest : BaseGameCtxTest() {
                 assertEquals(
                     setOf(
                         setOf(
-                            band.linkProducer.recipe,
-                            band.consumerRecipe.indexedForTest(),
+                            band.linkProducer.index,
+                            band.consumerRecipe.indexedForTest().index,
                         ),
                     ),
                     failingBandGroups(band.rows, band.target, 1.0, logistics),

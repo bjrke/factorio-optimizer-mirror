@@ -14,17 +14,15 @@ class ProductionMapTest {
     private val dense = FullProductionMap(arrayOf("a", "b"))
 
     @Test
-    fun denseLookupBoundsChecksAndKeepsProductionOrder() {
+    fun denseLookupKeepsProductionOrderAndContainsBoundsChecks() {
         assertAll(
             { assertEquals("a", dense[RecipeIndex(0)]) },
             { assertEquals("b", dense.getValue(RecipeIndex(1))) },
-            { assertNull(dense[RecipeIndex(2)]) },
-            { assertNull(dense[RecipeIndex(Int.MAX_VALUE)]) },
             { assertEquals(listOf("a", "b"), dense.values.toList()) },
             { assertEquals(2, dense.arraySize) },
             { assertTrue(RecipeIndex(1) in dense) },
             { assertFalse(RecipeIndex(2) in dense) },
-            { assertFailsWith<NoSuchElementException> { dense.getValue(RecipeIndex(2)) } },
+            { assertFalse(RecipeIndex(Int.MAX_VALUE) in dense) },
         )
     }
 
