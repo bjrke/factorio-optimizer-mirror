@@ -12,8 +12,8 @@ import de.bjrke.factorio.optimizer.common.core.model.Material
  *
  * A plain input belt fills both lanes with the same [material]. A mixed input belt carries one
  * material per lane. An output belt only fills the lane its inserters drop onto; the other lane is
- * `null` and is free for a later side-load. Left and right are the belt's own sides (looking along
- * [BeltEntity.direction]), not the compass; a turn keeps the slots.
+ * `null` until a later feed fills it and marks it. Left and right are the belt's own sides (looking
+ * along [BeltEntity.direction]), not the compass; a turn keeps the slots.
  */
 data class LaneLoad(val left: Material?, val right: Material?) {
 
@@ -22,11 +22,50 @@ data class LaneLoad(val left: Material?, val right: Material?) {
     }
 
     /** The materials on the belt, without duplicates. */
-    val materials: Set<Material>
-        get() = setOfNotNull(left, right)
+    val materials =
+        when {
+            left == right -> setOfNotNull(left)
+            left == null -> setOfNotNull(right)
+            right == null -> setOf(left)
+            else -> setOf(left, right)
+        }
 
     /** Whether [material] is on either lane, without allocating the [materials] set. */
     fun has(material: Material) = left == material || right == material
+
+    /**
+     * Whether both loads carry the same materials, ignoring lane order and an empty lane. This is
+     * the allocation-free form of `materials == other.materials`: a half output belt may feed a
+     * full trunk. Compare the loads themselves where the lane frame is kept.
+     */
+    fun sameMaterialsAs(other: LaneLoad): Boolean =
+        when {
+            isMixed ->
+                other.left != null &&
+                    other.right != null &&
+                    other.left != other.right &&
+                    has(other.left) &&
+                    has(other.right)
+            other.left != null && other.right != null && other.left != other.right -> false
+            else -> has(other.material)
+        }
+
+    /**
+     * Whether [feeder] may pour into this load at a tunnel end. A mixed load must match lane for
+     * lane; a single material may feed a fuller target (the other lane is a capacity reservation),
+     * but a feeder lane the target does not claim is rejected.
+     */
+    fun feedsInto(feeder: LaneLoad): Boolean =
+        if (isMixed || feeder.isMixed) this == feeder else takesStraightFrom(feeder)
+
+    /**
+     * Whether [feeder] pours into this load in the same lane frame: every lane it fills must be the
+     * same lane here, while an empty feeder lane leaves this lane free. A single-material target
+     * may be fuller than the feeder (a capacity reservation).
+     */
+    fun takesStraightFrom(feeder: LaneLoad): Boolean =
+        (feeder.left == null || left == feeder.left) &&
+            (feeder.right == null || right == feeder.right)
 
     /** The material the belt is labelled with; a half belt uses its one filled lane. */
     val material: Material

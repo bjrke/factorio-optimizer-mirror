@@ -2,11 +2,10 @@ package de.bjrke.factorio.optimizer.common.blueprint.layout.validation
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.ConveyorEntity
-import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.joinsAt
@@ -48,6 +47,7 @@ private fun checkConveyor(
     if (conveyor.feedsAhead() && ahead is ConveyorEntity) {
         checkAhead(conveyor, ahead, aheadTile, errors)
     }
+    if (conveyor is SplitterEntity) conveyor.checkOutputs(index, errors)
     for (side in tile.neighbors) {
         val other = index.at(side) as? ConveyorEntity ?: continue
         // a buried entrance dives instead of feeding the tile it faces
@@ -66,7 +66,7 @@ private fun checkAhead(
 ) {
     when (ahead.direction) {
         conveyor.direction -> {
-            if (ahead.materials != conveyor.materials) {
+            if (!ahead.load.takesStraightFrom(conveyor.load)) {
                 errors +=
                     aheadTile.issue(
                         "${conveyor.material.name} runs into " +
@@ -82,11 +82,12 @@ private fun checkAhead(
                 )
         else -> {
             // a turn with the same load is fine (the mixed merge tile into its lane head)
-            if (ahead.materials == conveyor.materials) return
+            if (ahead.load.sameMaterialsAs(conveyor.load)) return
             val lane =
-                ahead
-                    .laneLoad()
-                    .laneAt(ahead.direction, directionBetween(aheadTile, conveyor.area.topLeft))
+                ahead.load.laneAt(
+                    ahead.direction,
+                    directionBetween(aheadTile, conveyor.area.topLeft),
+                )
             if (lane != conveyor.material) {
                 errors +=
                     aheadTile.issue(
@@ -94,6 +95,22 @@ private fun checkAhead(
                             "${lane?.name ?: "the empty lane"} at $aheadTile",
                     )
             }
+        }
+    }
+}
+
+/** A splitter feeds both tiles in front; a mixed one must not empty into another material set. */
+private fun SplitterEntity.checkOutputs(index: LayoutIndex, errors: MutableList<LayoutIssue>) {
+    if (!load.isMixed) return
+    for (face in area) {
+        if (face == area.topLeft) continue
+        val targetTile = face + direction.step
+        val target = index.at(targetTile) as? ConveyorEntity ?: continue
+        if (!target.load.takesStraightFrom(load)) {
+            errors +=
+                targetTile.issue(
+                    "mixed splitter at ${area.topLeft} runs into ${target.material.name}",
+                )
         }
     }
 }
@@ -106,15 +123,12 @@ private fun checkSideLoad(
     side: Coordinate,
     errors: MutableList<LayoutIssue>,
 ) {
-    if (other.materials == conveyor.materials) return
-    val lane = conveyor.laneLoad().laneAt(conveyor.direction, directionBetween(tile, side))
+    if (other.load.sameMaterialsAs(conveyor.load)) return
+    val lane = conveyor.load.laneAt(conveyor.direction, directionBetween(tile, side))
     if (lane != other.material) {
         errors += tile.issue("foreign side-load into ${conveyor.material.name} at $tile")
     }
 }
-
-private fun ConveyorEntity.laneLoad(): LaneLoad =
-    (this as? BeltEntity)?.load ?: LaneLoad.full(material)
 
 private fun checkPlumbing(
     plumbing: Plumbing,

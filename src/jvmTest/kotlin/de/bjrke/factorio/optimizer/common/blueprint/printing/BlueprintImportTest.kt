@@ -268,7 +268,7 @@ class BlueprintImportTest : BaseGameCtxTest() {
         val laneRow = marker.area.y
         val lane =
             layout.entities.filterIsInstance<BeltEntity>().filter {
-                plasticBar in it.load.materials && it.area.y == laneRow
+                it.load.has(plasticBar) && it.area.y == laneRow
             }
         // a mixed input's marker may sit on the merge row rather than a lane row; what matters is
         // that its own feed tile still runs unbroken from the connector: a hole would mean

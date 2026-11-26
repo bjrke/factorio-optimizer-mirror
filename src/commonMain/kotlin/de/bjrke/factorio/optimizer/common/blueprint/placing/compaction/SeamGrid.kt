@@ -9,6 +9,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.isSingleMaterial
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io
@@ -83,30 +84,33 @@ private fun beltCuttable(
     belt: BeltEntity,
     orientation: SeamOrientation,
 ): Boolean {
-    if (
-        acrossTiles(orientation, tile).any { side ->
-            val other = index.at(side)
-            // a perpendicular belt facing into this tile would lose its side-load
-            other is ConveyorEntity && other.direction.step == tile - side
-        }
-    ) {
-        return false
+    for (side in acrossTiles(orientation, tile)) {
+        val other = index.at(side)
+        // a perpendicular belt facing into this tile would lose its side-load
+        if (other is ConveyorEntity && other.direction.step == tile - side) return false
     }
     val behind = index.at(tile - belt.direction.step)
     val ahead = index.at(tile + belt.direction.step)
-    val straight =
-        alongTiles(orientation, tile).all { side ->
-            when (val other = index.at(side)) {
-                null -> true
-                is BeltEntity ->
-                    other.materials == belt.materials && other.direction == belt.direction
-                else -> false
-            }
-        }
-    if (straight) return true
-    if (replacedByTunnelOutput(behind, ahead, belt)) return true
-    // a corner into a perpendicular lane: drop the turn belt, the one behind it side-loads the lane
-    return cornersIntoPerpendicularLane(behind, ahead, belt)
+
+    val takesFromBehind =
+        behind == null ||
+            behind is BeltEntity &&
+                behind.direction == belt.direction &&
+                belt.load.takesStraightFrom(behind.load)
+    val takesFromAhead =
+        ahead == null ||
+            ahead is BeltEntity &&
+                ahead.direction == belt.direction &&
+                ahead.load.takesStraightFrom(belt.load)
+
+    return when {
+        takesFromBehind && takesFromAhead -> true
+        replacedByTunnelOutput(behind, ahead, belt) -> true
+
+        // a corner into a perpendicular lane: drop the turn belt, the one behind it side-loads the
+        // lane
+        else -> cornersIntoPerpendicularLane(behind, ahead, belt)
+    }
 }
 
 /** Whether the belt behind turns into a perpendicular lane of the same material ahead. */
@@ -116,10 +120,10 @@ private fun cornersIntoPerpendicularLane(
     belt: BeltEntity,
 ): Boolean =
     behind is BeltEntity &&
-        behind.materials == belt.materials &&
+        behind.load.sameMaterialsAs(belt.load) &&
         behind.direction == belt.direction &&
         ahead is BeltEntity &&
-        ahead.materials == belt.materials &&
+        ahead.load.sameMaterialsAs(belt.load) &&
         ahead.direction != belt.direction &&
         ahead.direction != belt.direction.opposite()
 
@@ -137,11 +141,13 @@ private fun replacedByTunnelOutput(
     behind is UndergroundBeltEntity &&
         behind.io == Io.OUTPUT &&
         behind.direction == belt.direction &&
-        belt.materials == setOf(behind.material) &&
+        behind.isSingleMaterial(belt.load.material) &&
+        belt.isSingleMaterial(behind.material) &&
         when (ahead) {
-            is BeltEntity -> ahead.direction == belt.direction && ahead.materials == belt.materials
+            is BeltEntity ->
+                ahead.direction == belt.direction && ahead.load.sameMaterialsAs(belt.load)
             is SplitterEntity ->
-                ahead.direction == belt.direction && ahead.material == behind.material
+                ahead.direction == belt.direction && ahead.isSingleMaterial(behind.material)
             else -> false
         }
 

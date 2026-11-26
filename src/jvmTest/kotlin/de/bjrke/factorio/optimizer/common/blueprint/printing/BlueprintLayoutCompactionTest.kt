@@ -99,7 +99,6 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             { assertEquals(3, laneRows.size) },
-            { assertEquals(emptyList(), mixed.filterNot { it.load.materials.size == 2 }) },
             { assertNotNull(product.firstOrNull(), "no product belt") },
             { assertEquals(emptyList(), product.filter { it.load.isFull }) },
             { assertEquals(emptyList(), inputs.filterNot { it in carried }) },
@@ -148,7 +147,6 @@ class BlueprintLayoutCompactionTest : BaseGameCtxTest() {
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
             { assertEquals(setOf(EAST, WEST), lanes.map { it.direction }.toSet()) },
-            { assertEquals(emptyList(), mixed.filterNot { it.load.materials.size == 2 }) },
         )
     }
 

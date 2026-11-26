@@ -6,6 +6,7 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.core.model.Direction.NORTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
+import de.bjrke.factorio.optimizer.common.core.model.Io
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.copperPlate
 import de.bjrke.factorio.optimizer.common.fixtures.gear
@@ -15,6 +16,7 @@ import de.bjrke.test.assertTable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -90,6 +92,122 @@ class LaneLoadTest : BaseGameCtxTest() {
             { assertTrue(mixed.has(copperPlate)) },
             { assertFalse(mixed.has(gear)) },
             { assertTrue(LaneLoad.half(ironPlate, left = true).has(ironPlate)) },
+        )
+    }
+
+    @Test
+    fun sameMaterialsAsIgnoresLaneOrderAndAnEmptyLane() {
+        val mixed = LaneLoad.mixed(left = ironPlate, right = copperPlate)
+
+        assertAll(
+            {
+                assertTrue(
+                    LaneLoad.full(ironPlate).sameMaterialsAs(LaneLoad.half(ironPlate, left = true)),
+                )
+            },
+            {
+                assertTrue(
+                    LaneLoad.half(ironPlate, left = true)
+                        .sameMaterialsAs(LaneLoad.half(ironPlate, left = false)),
+                )
+            },
+            {
+                assertFalse(
+                    LaneLoad.half(ironPlate, left = true)
+                        .sameMaterialsAs(LaneLoad.half(gear, left = true)),
+                )
+            },
+            {
+                assertTrue(
+                    mixed.sameMaterialsAs(LaneLoad.mixed(left = copperPlate, right = ironPlate)),
+                )
+            },
+            { assertFalse(mixed.sameMaterialsAs(LaneLoad.full(ironPlate))) },
+            // a half product lane may feed a fuller single target, but a mixed target needs both
+            {
+                assertTrue(
+                    LaneLoad.full(ironPlate).feedsInto(LaneLoad.half(ironPlate, left = false)),
+                )
+            },
+            {
+                assertTrue(
+                    mixed.feedsInto(LaneLoad.mixed(left = ironPlate, right = copperPlate)),
+                )
+            },
+            {
+                assertFalse(
+                    mixed.feedsInto(LaneLoad.mixed(left = copperPlate, right = ironPlate)),
+                )
+            },
+            {
+                assertFalse(
+                    LaneLoad.half(ironPlate, left = true).feedsInto(LaneLoad.full(ironPlate)),
+                )
+            },
+            {
+                assertFalse(
+                    mixed.feedsInto(LaneLoad.half(ironPlate, left = true)),
+                )
+            },
+            // a tunnel keeps the lane frame, so the loads themselves differ
+            { assertNotEquals(mixed, LaneLoad.mixed(left = copperPlate, right = ironPlate)) },
+        )
+    }
+
+    @Test
+    fun takesStraightFromKeepsTheLanePositions() {
+        val mixed = LaneLoad.mixed(left = ironPlate, right = copperPlate)
+
+        assertAll(
+            {
+                assertTrue(
+                    LaneLoad.full(ironPlate)
+                        .takesStraightFrom(LaneLoad.half(ironPlate, left = true)),
+                )
+            },
+            {
+                assertFalse(
+                    LaneLoad.half(ironPlate, left = false)
+                        .takesStraightFrom(LaneLoad.half(ironPlate, left = true)),
+                )
+            },
+            {
+                assertFalse(
+                    LaneLoad.half(ironPlate, left = true)
+                        .takesStraightFrom(LaneLoad.full(ironPlate)),
+                )
+            },
+            { assertTrue(mixed.takesStraightFrom(mixed)) },
+            {
+                assertFalse(
+                    LaneLoad.mixed(left = copperPlate, right = ironPlate).takesStraightFrom(mixed),
+                )
+            },
+        )
+    }
+
+    @Test
+    fun anUndergroundAndASplitterCarryTheLoadTheyAreGiven() {
+        val load = LaneLoad.mixed(left = ironPlate, right = copperPlate)
+        val underground =
+            UndergroundBeltEntity(
+                Area(0, 0, 1, 1),
+                "underground-belt",
+                ironPlate,
+                EAST,
+                Io.INPUT,
+                load,
+            )
+        val splitter = SplitterEntity(Area(0, 0, 1, 2), "splitter", ironPlate, EAST, load)
+
+        assertAll(
+            { assertEquals(load, underground.load) },
+            { assertEquals(setOf(ironPlate, copperPlate), underground.materials) },
+            { assertTrue(underground.hasMaterial(copperPlate)) },
+            { assertFalse(underground.isSingleMaterial(ironPlate)) },
+            { assertEquals(load, splitter.load) },
+            { assertTrue(splitter.hasMaterial(copperPlate)) },
+            { assertFalse(splitter.isSingleMaterial(ironPlate)) },
         )
     }
 

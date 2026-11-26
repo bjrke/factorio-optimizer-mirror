@@ -189,21 +189,60 @@ Add tests: a routing unit case where two nodes differ only in `straight` and mus
 `gScore` entry, one where they differ only in heading, and the existing routing and golden layout
 suites unchanged.
 
-### Stop building a `Set` on every `LaneLoad.materials` read
+### Compare the receiving lane, not the material set, where belts meet perpendicular
 
-`LaneLoad.materials` (`LaneLoad.kt:25`) is a computed getter, `get() = setOfNotNull(left, right)`,
-and it is read by hot comparisons: `SeamGrid.kt:102`, `:119` and `:140` compare
-`other.materials == belt.materials` or `belt.materials == setOf(behind.material)`,
-`BeltRouteRules.poursInto` tests `material !in belt.materials`, and
-`LayoutValidationUnderground.kt:167` compares `materials == setOf(material)`. That is 246 MB
-attributed to the getter and most of the 557 MB of `LinkedHashSet`, plus a hash lookup and a
-`Material.equals` per comparison.
+`SeamGrid.cornersIntoPerpendicularLane`
+(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/placing/compaction/SeamGrid.kt:114`)
+compares `ahead.load.sameMaterialsAs(belt.load)` even though `ahead` faces perpendicular;
+`LayoutValidationTransport`
+(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/layout/validation/LayoutValidationTransport.kt:85`
+and `:126`) does the same in `checkAhead`'s turn branch and `checkSideLoad`'s early return, and
+`SplitDeliveryRouter`
+(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/placing/routing/SplitDeliveryRouter.kt:128`)
+compares single-material labels. Same-direction comparisons are safe because both belts share one
+lane frame. Perpendicular ones are not: a mixed belt (`A` left, `B` right) turning into a mixed belt
+(`B` left, `A` right) has equal material sets, passes, and both materials then land on the receiving
+belt's near lane.
 
-Compute the set once per instance (a `val`), and add
-`fun carries(material: Material): Boolean` and `fun sameAs(other: LaneLoad): Boolean` so the
-comparison sites never build a set at all — replace `materials == setOf(m)` with `carries(m)` and
-`a.materials == b.materials` with `a.sameAs(b)`. Keep `materials` for the callers that genuinely
-want a collection. Check every `materials` call site, including `BeltEntity`.
+Correct rule: the source must be single-material `M` and
+`ahead.load.laneAt(ahead.direction, directionBetween(aheadTile, fromTile)) == M`; a mixed source
+must not side-load at all. The same applies to the mixed splitter's second output.
 
-Add tests: a unit case for `carries`/`sameAs` on a full, a half and a mixed lane load, and the
-existing compaction, routing and validation suites unchanged.
+Add tests: a seam-compaction unit case where a mixed corner would mis-splice only under the set
+comparison; a validation case where a mixed belt turns into a mixed belt with swapped lanes and
+must report a foreign side-load.
+
+### Let an inserter carry more than one material
+
+`InserterEntity.material` is singular; `MachineInserterPlacer`
+(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/planning/row/MachineInserterPlacer.kt:100`)
+labels the inserter with the biggest share of a mixed belt or a multi-solid-result recipe, and
+`LayoutValidationInserter`
+(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/layout/validation/LayoutValidationInserter.kt:45`
+and `:61`) checks only that label. A second ingredient/result is invisible to validation, and a
+missing one is never reported. A blueprint encodes no inserter material
+(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/printing/json/BlueprintEntityJson.kt`),
+so this is model-only: give the inserter a material set, check the source/drop carries every recipe
+material it moves, keep one label for messages.
+
+Add tests: a mixed input belt where the recipe needs both lanes' materials but the inserter is
+labelled with one; a multi-solid-result recipe whose output inserter must move both results; a
+missing second material must report instead of passing.
+
+### Decide whether a full belt may claim a lane its source never fills
+
+`LaneLoad` lets a half source feed a fuller single-material target (`feedsInto`/`takesStraightFrom`),
+so the target's other lane is marked with a material no feeder supplies; that is the deliberate
+"half output belt may feed a full trunk" rule. A lane-coverage validation that requires every
+claimed lane to have a feeder (straight belt, side feeder, inserter drop or loader) reports 73 of
+the reported layouts, starting with produced-delivery paths and tunnels that begin on a half product
+output: the full label is a capacity reservation, not content.
+
+Either propagate the producer's half load through `DeliveryPreparation`/`DeliveryRouter` and the
+consumer's row input belts (loads are not emitted, so the blueprints stay the same, but compaction,
+tunnels and every lane check change), or keep the capacity reservation and state that a full belt
+does not promise both lanes are fed. Decide before adding lane-coverage validation.
+
+Add tests: a half producer feeding a consumer path whose plan needs both lanes must either be
+rejected or get a half consumer input; a half source into a mixed target must keep the existing
+lane-for-lane requirement.

@@ -25,7 +25,10 @@ class BlueprintRowRateIntegrationTest : BaseGameCtxTest() {
     fun theReportedAssemblingMachine3BandMergesSpeedAndSteel() {
         val layout =
             layoutFromUrl("http://localhost:8080/#/2.0/assembling-machine-3/CFSbmr/1/1/50/-")
-        val mixed = layout.entities.filterIsInstance<BeltEntity>().map { it.load.materials.toSet() }
+        val mixed =
+            layout.entities.filterIsInstance<BeltEntity>().mapTo(mutableSetOf()) {
+                it.load.materials
+            }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },

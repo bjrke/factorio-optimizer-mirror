@@ -183,11 +183,20 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   a feed like the utility-science LDS belt east of the marker; leaving a belt east of the
   finished connector is reported in `failures`. Evidence:
   `theReportedUtilityScienceUrlKeepsTheProductRowClear`.
-- **A half output belt may feed a full trunk, but not enter a tunnel or a route side.** Compare
-  `materials` for a straight continuation and for a seam splice; use exact full loads for
-  `UndergroundStretcher.swallowable`, `BeltRouteRules` and the tunnel-end checks. A mixed belt is
-  never swallowed, never spliced into a tunnel and never side-loaded by a route. Evidence:
-  `aRunLeavesAHalfBeltLane`.
+- **A half output belt may feed a full trunk, and a tunnel keeps the load it is given.** Compare
+  the lane frame with `LaneLoad.takesStraightFrom` for a straight continuation, a tunnel exit's turn
+  and a seam splice: every lane the feeder fills must be the same lane here, while a single-material
+  target may be fuller (its other lane is a capacity reservation, not a content claim). Use
+  `feedsInto` at a tunnel end: it allows that single-material reservation, requires a mixed target
+  to match lane for lane, and rejects a feeder that would leave a target lane it claims unfed.
+  `sameMaterialsAs` is only the material-set question and ignores lane order. A half product belt
+  that tunnels stays half: `placePath` forwards its load to `placeEnd`. Underground ends and
+  splitters carry a `LaneLoad` too (both splitter outputs keep it), so a mixed belt can run through
+  either and turn at the exit. The stretcher still swallows only a full plain belt or a straight
+  pipe and never grows an entrance into a splitter: it never swallows a mixed belt, compaction
+  never splices one into a tunnel, and a route never side-loads one. Evidence:
+  `aRunLeavesAHalfBeltLane`, `aMixedBeltRunsThroughAMixedTunnel`, `aMixedBeltTurnsOffAMixedTunnel`,
+  `aFullBeltDoesNotFeedAHalfTunnel`.
 - **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed,
   prefers the ones whose rate fits a lane, and never pairs a fluid or an output; `bandBeltFits(plan)`
   must read the arranged machine rates, not a raw material count. A row that still needs

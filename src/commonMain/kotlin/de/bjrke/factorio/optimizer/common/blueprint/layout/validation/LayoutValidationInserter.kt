@@ -42,7 +42,7 @@ private fun checkSource(
 ) {
     if (!canHold(source)) {
         errors += inserter.area.issue("inserter at ${inserter.area.topLeft} has no source")
-    } else if (source is TransportEntity && inserter.material !in source.materials) {
+    } else if (source is TransportEntity && !source.hasMaterial(inserter.material)) {
         errors +=
             inserter.area.issue(
                 "inserter at ${inserter.area.topLeft} draws ${source.material.name} " +
@@ -58,7 +58,7 @@ private fun checkDrop(
 ) {
     if (!canHold(drop)) {
         errors += inserter.area.issue("inserter at ${inserter.area.topLeft} has no drop")
-    } else if (drop is TransportEntity && inserter.material !in drop.materials) {
+    } else if (drop is TransportEntity && !drop.hasMaterial(inserter.material)) {
         errors +=
             inserter.area.issue(
                 "inserter at ${inserter.area.topLeft} drops ${drop.material.name} " +

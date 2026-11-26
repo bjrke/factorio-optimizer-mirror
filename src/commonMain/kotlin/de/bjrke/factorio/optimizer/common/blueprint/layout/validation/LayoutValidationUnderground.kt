@@ -55,13 +55,14 @@ private fun checkBeltFeed(
     val facesIn =
         when (val feeder = index.at(back)) {
             is UndergroundBeltEntity ->
-                feeder.material == input.material &&
+                input.load.feedsInto(feeder.load) &&
                     feeder.io == Io.OUTPUT &&
                     feeder.direction == input.direction
             is ConveyorEntity ->
-                feeder.isSingleMaterial(input.material) && feeder.direction == input.direction
+                input.load.feedsInto(feeder.load) && feeder.direction == input.direction
             is LoaderEntity ->
-                feeder.material == input.material &&
+                input.isSingleMaterial(input.material) &&
+                    feeder.material == input.material &&
                     feeder.io == Io.OUTPUT &&
                     feeder.direction == input.direction
             else -> false
@@ -86,19 +87,7 @@ private fun checkBeltExit(
 ) {
     if (index.isConnectorEnd(output)) return
     val ahead = output.area.topLeft + output.direction.step
-    val accepts =
-        when (val target = index.at(ahead)) {
-            is UndergroundBeltEntity ->
-                target.material == output.material &&
-                    target.io == Io.INPUT &&
-                    target.direction == output.direction
-            is ConveyorEntity ->
-                target.isSingleMaterial(output.material) &&
-                    target.direction != output.direction.opposite()
-            is LoaderEntity -> target.material == output.material && target.io == Io.INPUT
-            else -> false
-        }
-    if (!accepts) {
+    if (!acceptsExit(index, index.at(ahead), output)) {
         errors +=
             output.area.issue(
                 "underground ${output.material.name} output at ${output.area.topLeft} " +
@@ -106,6 +95,49 @@ private fun checkBeltExit(
             )
     }
 }
+
+/** Whether [target] takes the exit: the next run's input, a belt along the run, or a loader. */
+private fun acceptsExit(
+    index: LayoutIndex,
+    target: LayoutEntity?,
+    output: UndergroundBeltEntity,
+): Boolean =
+    when (target) {
+        is UndergroundBeltEntity ->
+            target.load.feedsInto(output.load) &&
+                target.io == Io.INPUT &&
+                target.direction == output.direction
+        is ConveyorEntity -> exitsInto(index, target, output)
+        is LoaderEntity ->
+            output.isSingleMaterial(output.material) &&
+                target.material == output.material &&
+                target.io == Io.INPUT
+        else -> false
+    }
+
+/**
+ * A belt the exit empties onto: straight keeps the lanes, and a perpendicular belt keeps them only
+ * when it turns the run, not when it is already fed from behind and takes the exit as a side-load.
+ */
+private fun exitsInto(
+    index: LayoutIndex,
+    target: ConveyorEntity,
+    output: UndergroundBeltEntity,
+): Boolean =
+    when {
+        target.direction == output.direction -> target.load.takesStraightFrom(output.load)
+        target.direction == output.direction.opposite() -> false
+        target.load.takesStraightFrom(output.load) -> !fedStraight(index, target)
+        else -> false
+    }
+
+/** Whether a belt of the same material already feeds [target] from its back. */
+private fun fedStraight(index: LayoutIndex, target: ConveyorEntity): Boolean =
+    when (val behind = index.at(target.area.topLeft - target.direction.step)) {
+        is UndergroundBeltEntity -> behind.io == Io.OUTPUT && behind.direction == target.direction
+        is ConveyorEntity -> behind.direction == target.direction
+        else -> false
+    }
 
 /**
  * A connector end is one half of the two-tile (label) or four-tile (chest) connector: its partner
@@ -120,9 +152,7 @@ private fun LayoutIndex.isConnectorEnd(end: UndergroundBeltEntity): Boolean {
         val partner =
             at(end.area.topLeft + step * distance * sign) as? UndergroundBeltEntity ?: continue
         if (
-            partner.io == end.io ||
-                partner.material != end.material ||
-                partner.direction != end.direction
+            partner.io == end.io || partner.load != end.load || partner.direction != end.direction
         ) {
             continue
         }
@@ -174,6 +204,10 @@ internal fun undergroundReach(input: UndergroundEntity): Int =
 private fun pairsWith(input: UndergroundEntity, candidate: UndergroundEntity): Boolean {
     if (candidate.io != Io.OUTPUT) return false
     if (candidate.direction != input.direction) return false
-    if (candidate.material != input.material) return false
-    return (input is PipeToGroundEntity) == (candidate is PipeToGroundEntity)
+    if ((input is PipeToGroundEntity) != (candidate is PipeToGroundEntity)) return false
+    return if (input is UndergroundBeltEntity && candidate is UndergroundBeltEntity) {
+        input.load == candidate.load
+    } else {
+        input.material == candidate.material
+    }
 }

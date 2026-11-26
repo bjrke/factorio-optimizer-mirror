@@ -54,8 +54,8 @@ internal fun placePath(
                 } else {
                     board.placeSurface(material, tile, role.direction)
                 }
-            is TunnelInputRole -> board.placeEnd(material, tile, role.direction, Io.INPUT)
-            is TunnelOutputRole -> board.placeEnd(material, tile, role.direction, Io.OUTPUT)
+            is TunnelInputRole -> board.placeEnd(material, tile, role.direction, Io.INPUT, load)
+            is TunnelOutputRole -> board.placeEnd(material, tile, role.direction, Io.OUTPUT, load)
         }
     }
     board.markTunnels(nodes, board.endName(material))

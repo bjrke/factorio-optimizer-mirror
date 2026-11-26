@@ -67,11 +67,21 @@ sealed interface TransportEntity : LayoutEntity {
     /** Every material the entity can carry. A single-lane entity has exactly one. */
     val materials: Set<Material>
         get() = setOf(material)
+
+    fun hasMaterial(material: Material) = this.material == material
 }
 
 /** A belt, underground belt or splitter: a transport entity that faces a [direction]. */
 sealed interface ConveyorEntity : TransportEntity {
     val direction: Direction
+
+    /** The two lanes; an underground end and a splitter keep both. */
+    val load: LaneLoad
+
+    override val materials: Set<Material>
+        get() = load.materials
+
+    override fun hasMaterial(material: Material) = load.has(material)
 }
 
 /** A belt or underground belt: the belt-like carriers the layout treats as item movers. */

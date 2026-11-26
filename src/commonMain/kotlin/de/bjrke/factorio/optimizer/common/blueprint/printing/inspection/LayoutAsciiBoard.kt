@@ -124,17 +124,16 @@ private class AsciiCodes(entities: List<LayoutEntity>) {
 }
 
 /** The materials a layout moves, in name order: the order the legend codes follow. */
-private fun materials(entities: List<LayoutEntity>): List<Material> =
-    entities
-        .flatMap { entity ->
-            when (entity) {
-                is TransportEntity -> entity.materials
-                is MarkerEntity -> setOf(entity.signal.material)
-                else -> emptySet()
-            }
+private fun materials(entities: List<LayoutEntity>) = buildSet {
+    for (entity in entities) {
+        when (entity) {
+            is TransportEntity -> addAll(entity.materials)
+            is MarkerEntity -> add(entity.signal.material)
+            else -> {}
         }
-        .distinct()
-        .sortedBy { it.name }
+    }
+}
+    .sortedBy { it.name }
 
 /** Direction arrows for inserters and loaders, which point their material instead of naming it. */
 private fun arrow(direction: Direction) =

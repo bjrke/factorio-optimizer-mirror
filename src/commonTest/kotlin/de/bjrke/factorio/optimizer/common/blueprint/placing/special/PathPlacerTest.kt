@@ -2,6 +2,9 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.special
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Direction.EAST
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
@@ -57,6 +60,30 @@ class PathPlacerTest : BaseGameCtxTest() {
         assertAll(
             { assertEquals(emptySet(), conflicts) },
             { assertNotNull(board.placed.firstOrNull(), "nothing was placed") },
+        )
+    }
+
+    /** A half product lane keeps its filled side across an underground run. */
+    @Test
+    fun aHalfLoadSurvivesAnUndergroundRun() {
+        val board = board()
+        val load = LaneLoad.half(ironPlate, left = false)
+
+        placePath(
+            board,
+            ironPlate,
+            listOf(Coordinate(0, 0), Coordinate(3, 0), Coordinate(4, 0)),
+            load = load,
+        )
+
+        val input = board.entityAt(Coordinate(0, 0)) as UndergroundBeltEntity
+        val output = board.entityAt(Coordinate(3, 0)) as UndergroundBeltEntity
+        val surface = board.entityAt(Coordinate(4, 0)) as BeltEntity
+
+        assertAll(
+            { assertEquals(load, input.load) },
+            { assertEquals(load, output.load) },
+            { assertEquals(load, surface.load) },
         )
     }
 

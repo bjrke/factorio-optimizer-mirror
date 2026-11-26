@@ -3,9 +3,11 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.routing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIssue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LoaderEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.isSingleMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.placing.route.LayoutRouter
 import de.bjrke.factorio.optimizer.common.blueprint.placing.special.pathConflicts
@@ -50,6 +52,8 @@ internal class SplitDeliveryRouter(
         /** The splitter's free output, where the branch belt starts. */
         val exit: Coordinate,
         val direction: Direction,
+        /** The trunk's lanes, which the splitter and both of its outputs keep. */
+        val load: LaneLoad,
     )
 
     fun deliver(material: Material, sink: Sink): Boolean {
@@ -67,7 +71,7 @@ internal class SplitDeliveryRouter(
 
         split(candidate, material)
         val nodes = listOf(candidate.exit) + segment
-        placePath(board, material, nodes, sink.heading)
+        placePath(board, material, nodes, sink.heading, candidate.load)
         networks.record(material, nodes, sink)
         return true
     }
@@ -125,10 +129,10 @@ internal class SplitDeliveryRouter(
         val tiles = networks[material]
         return tiles.flatMap { tile ->
             val belt = board.entityAt(tile) as? BeltEntity ?: return@flatMap emptyList()
-            if (belt.material != material) return@flatMap emptyList()
+            if (!belt.isSingleMaterial(material)) return@flatMap emptyList()
             val direction = belt.direction
             val next = board.entityAt(tile + direction.step) as? BeltEntity
-            if (next == null || next.material != material || next.direction != direction) {
+            if (next == null || !next.isSingleMaterial(material) || next.direction != direction) {
                 return@flatMap emptyList()
             }
             // a splitter takes items on its back only: on a turn the trunk would feed its side and
@@ -148,7 +152,7 @@ internal class SplitDeliveryRouter(
                 if (splitterTiles.any { rules.sideLoadedByForeign(it, material, splitterTiles) }) {
                     return@mapNotNull null
                 }
-                SplitCandidate(tile, side, exit, direction)
+                SplitCandidate(tile, side, exit, direction, belt.load)
             }
         }
     }
@@ -169,8 +173,8 @@ internal class SplitDeliveryRouter(
             is UndergroundBeltEntity ->
                 feeder.io == Io.OUTPUT &&
                     feeder.direction == direction &&
-                    feeder.material == material
-            is BeltEntity -> feeder.direction == direction && feeder.material == material
+                    feeder.isSingleMaterial(material)
+            is BeltEntity -> feeder.direction == direction && feeder.isSingleMaterial(material)
             is LoaderEntity ->
                 feeder.io == Io.OUTPUT &&
                     feeder.direction == direction &&
@@ -206,6 +210,7 @@ internal class SplitDeliveryRouter(
                 board.names.splitter,
                 material,
                 candidate.direction,
+                candidate.load,
             ),
         )
     }

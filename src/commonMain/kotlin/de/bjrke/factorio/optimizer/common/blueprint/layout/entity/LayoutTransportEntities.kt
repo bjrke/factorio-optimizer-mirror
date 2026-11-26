@@ -11,11 +11,11 @@ data class BeltEntity(
     override val material: Material,
     override val direction: Direction,
     /** The two lanes; [material] is one of them, the primary the entity is labelled with. */
-    val load: LaneLoad = LaneLoad.full(material),
+    override val load: LaneLoad = LaneLoad.full(material),
 ) : BeltLikeEntity {
 
     init {
-        require(material in load.materials) { "primary $material is not on the belt $load" }
+        require(load.has(material)) { "primary $material is not on the belt $load" }
     }
 
     constructor(
@@ -25,28 +25,12 @@ data class BeltEntity(
         load: LaneLoad,
     ) : this(area, name, load.material, direction, load)
 
-    override val materials: Set<Material>
-        get() = load.materials
-
     override fun withArea(area: Area) = copy(area = area)
 }
 
-/**
- * Whether [material] is on this conveyor, without building the [TransportEntity.materials] set a
- * mixed belt would allocate.
- */
-fun ConveyorEntity.hasMaterial(material: Material): Boolean =
-    when (this) {
-        is BeltEntity -> load.has(material)
-        else -> this.material == material
-    }
-
 /** Whether this conveyor carries only [material]; a mixed belt carries two materials. */
 fun ConveyorEntity.isSingleMaterial(material: Material): Boolean =
-    when (this) {
-        is BeltEntity -> !load.isMixed && load.has(material)
-        else -> this.material == material
-    }
+    !load.isMixed && load.has(material)
 
 data class UndergroundBeltEntity(
     override val area: Area,
@@ -54,7 +38,14 @@ data class UndergroundBeltEntity(
     override val material: Material,
     override val direction: Direction,
     override val io: Io,
+    /** The two lanes the run carries; a tunnel keeps both. */
+    override val load: LaneLoad = LaneLoad.full(material),
 ) : BeltLikeEntity, UndergroundEntity {
+
+    init {
+        require(load.has(material)) { "primary $material is not on the underground belt $load" }
+    }
+
     override fun withArea(area: Area) = copy(area = area)
 }
 
@@ -63,7 +54,14 @@ data class SplitterEntity(
     override val name: String,
     override val material: Material,
     override val direction: Direction,
+    /** The two lanes the splitter carries; both outputs keep them. */
+    override val load: LaneLoad = LaneLoad.full(material),
 ) : ConveyorEntity {
+
+    init {
+        require(load.has(material)) { "primary $material is not on the splitter $load" }
+    }
+
     override fun withArea(area: Area) = copy(area = area)
 }
 

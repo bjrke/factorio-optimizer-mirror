@@ -12,14 +12,13 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.Plumbing
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.SplitterEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.isSingleMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.layout.hasTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.layout.placeTunnel
 import de.bjrke.factorio.optimizer.common.blueprint.layout.range
 import de.bjrke.factorio.optimizer.common.blueprint.layout.undergroundOutputOf
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
-import de.bjrke.factorio.optimizer.common.core.model.Direction
 import de.bjrke.factorio.optimizer.common.core.model.Io.INPUT
-import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.east
 import de.bjrke.factorio.optimizer.common.core.model.manhattanDist
 
@@ -81,10 +80,8 @@ internal class UndergroundStretcher(private val board: LayoutBoard) {
         val output = board.undergroundOutputOf(input) ?: return
         RunGrowth(
                 board,
-                input.area.topLeft,
+                input,
                 output.area.topLeft,
-                input.direction,
-                input.material,
                 protected,
             )
             .stretch()
@@ -99,13 +96,15 @@ internal class UndergroundStretcher(private val board: LayoutBoard) {
  */
 private class RunGrowth(
     private val board: LayoutBoard,
-    private val inputTile: Coordinate,
+    input: UndergroundEntity,
     private val outputTile: Coordinate,
-    private val direction: Direction,
-    private val material: Material,
     /** Tiles the run must leave on the surface: machine ports and inserter pickup/drop tiles. */
     private val protected: Set<Coordinate>,
 ) {
+    private val inputTile = input.area.topLeft
+    private val direction = input.direction
+    private val material = input.material
+    private val load = (input as? UndergroundBeltEntity)?.load
     private val step = direction.step
     private val backward = step * -1
     private val budget = board.range(material) - inputTile.manhattanDist(outputTile)
@@ -124,7 +123,7 @@ private class RunGrowth(
         val newInput = inputTile + backward * back
         val newOutput = outputTile + step * forward
 
-        board.placeTunnel(material, newInput, newOutput, direction)
+        board.placeTunnel(material, newInput, newOutput, direction, load)
     }
 
     /**
@@ -160,11 +159,11 @@ private class RunGrowth(
     private fun continues(tile: LayoutEntity, entrance: Boolean): Boolean =
         when (tile) {
             is BeltEntity ->
-                tile.materials == setOf(material) && tile.load.isFull && tile.direction == direction
+                tile.isSingleMaterial(material) && tile.load.isFull && tile.direction == direction
             // a splitter may receive the run's exit, but its output may not feed an entrance:
             // that would feed one side of a tunnel end directly
             is SplitterEntity ->
-                !entrance && tile.material == material && tile.direction == direction
+                !entrance && tile.isSingleMaterial(material) && tile.direction == direction
             else -> false
         }
 
@@ -174,7 +173,7 @@ private class RunGrowth(
                 !fluid &&
                     tile !in protected &&
                     // a mixed or half belt would lose its lanes; only a plain full belt continues
-                    entity.materials == setOf(material) &&
+                    entity.isSingleMaterial(material) &&
                     entity.load.isFull &&
                     entity.direction == direction
             // a pipe is only swallowable when it is a straight pass-through of the same fluid;

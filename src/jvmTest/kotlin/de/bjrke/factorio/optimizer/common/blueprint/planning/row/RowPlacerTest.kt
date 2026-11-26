@@ -233,12 +233,9 @@ class RowPlacerTest : BaseGameCtxTest() {
 
         assertAll(
             // the busiest input keeps a full belt; the two slower ones share a lane pair
-            { assertEquals(setOf(ironPlate), inputs.single { it.materials.size == 1 }.materials) },
+            { assertEquals(setOf(ironPlate), inputs.single { !it.isMixed }.materials) },
             {
-                assertEquals(
-                    setOf(gear, electronicCircuit),
-                    inputs.single { it.materials.size == 2 }.materials,
-                )
+                assertEquals(setOf(gear, electronicCircuit), inputs.single { it.isMixed }.materials)
             },
         )
     }
@@ -283,13 +280,8 @@ class RowPlacerTest : BaseGameCtxTest() {
         val inputs = row.belts.filter { it.io == Io.INPUT }
 
         assertAll(
-            { assertEquals(setOf(ironPlate), inputs.single { it.materials.size == 1 }.materials) },
-            {
-                assertEquals(
-                    setOf(pipe, steelPlate),
-                    inputs.single { it.materials.size == 2 }.materials,
-                )
-            },
+            { assertEquals(setOf(ironPlate), inputs.single { !it.isMixed }.materials) },
+            { assertEquals(setOf(pipe, steelPlate), inputs.single { it.isMixed }.materials) },
         )
     }
 
@@ -324,7 +316,7 @@ class RowPlacerTest : BaseGameCtxTest() {
             {
                 assertEquals(
                     4,
-                    inputs.flatMap { it.materials }.toSet().size,
+                    inputs.flatMapTo(mutableSetOf()) { it.materials }.size,
                     "every target input keeps a lane",
                 )
             },

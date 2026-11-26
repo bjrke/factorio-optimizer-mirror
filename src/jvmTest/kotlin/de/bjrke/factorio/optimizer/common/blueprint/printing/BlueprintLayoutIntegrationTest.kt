@@ -441,13 +441,16 @@ class BlueprintLayoutIntegrationTest : BaseGameCtxTest() {
     @Test
     fun aFiveInputRealRecipeUsesAMixedBelt() {
         val layout = Layout(target = "oil-refinery")
-        val mixed = layout.entities.filterIsInstance<BeltEntity>().filter { it.load.isMixed }
 
         assertAll(
             { assertEquals(emptyList(), layout.failures) },
             { assertEquals(emptyList(), validateLayout(layout.entities)) },
-            { assertNotNull(mixed.firstOrNull(), "no mixed belt") },
-            { assertEquals(emptyList(), mixed.filterNot { it.load.materials.size == 2 }) },
+            {
+                assertNotNull(
+                    layout.entities.filterIsInstance<BeltEntity>().firstOrNull { it.load.isMixed },
+                    "no mixed belt",
+                )
+            },
         )
     }
 
@@ -574,11 +577,11 @@ class BlueprintLayoutUrlCompactionTest : BaseGameCtxTest() {
         val copperIntoCircuit =
             layout.entities
                 .filterIsInstance<BeltEntity>()
-                .filter { copperPlate in it.load.materials }
+                .filter { it.load.has(copperPlate) }
                 .filter { belt ->
                     val ahead = belt.area.topLeft + belt.direction.step
                     conveyors.any {
-                        it.area.topLeft == ahead && electronicCircuit in it.materials
+                        it.area.topLeft == ahead && it.hasMaterial(electronicCircuit)
                     }
                 }
 

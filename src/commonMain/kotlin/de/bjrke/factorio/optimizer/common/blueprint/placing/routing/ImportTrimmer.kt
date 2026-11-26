@@ -152,8 +152,7 @@ internal class ImportTrimmer(
         val belt = board.entityAt(feedTile) as? BeltEntity ?: return null
         val target = board.entityAt(feedTile + belt.direction.step) as? BeltEntity ?: return null
         // a mixed merge tile contains both feeder materials; a lane head contains its one
-        if (feed.material !in target.materials) return null
-        return target.area.topLeft
+        return if (target.hasMaterial(feed.material)) target.area.topLeft else null
     }
 
     /**

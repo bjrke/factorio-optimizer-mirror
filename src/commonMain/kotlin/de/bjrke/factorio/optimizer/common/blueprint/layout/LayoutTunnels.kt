@@ -1,5 +1,6 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout
 
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeToGroundEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundBeltEntity
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -32,6 +33,8 @@ internal fun LayoutBoard.placeEnd(
     coordinate: Coordinate,
     direction: Direction,
     io: Io,
+    /** The lanes a solid run carries; ignored for a fluid. */
+    load: LaneLoad? = null,
 ) {
     place(
         if (material.isFluid)
@@ -43,6 +46,7 @@ internal fun LayoutBoard.placeEnd(
                 material,
                 direction,
                 io,
+                load ?: LaneLoad.full(material),
             ),
     )
 }
@@ -53,9 +57,10 @@ internal fun LayoutBoard.placeTunnel(
     from: Coordinate,
     to: Coordinate,
     direction: Direction = directionBetween(from, to),
+    load: LaneLoad? = null,
 ) {
-    placeEnd(material, from, direction, INPUT)
-    placeEnd(material, to, direction, OUTPUT)
+    placeEnd(material, from, direction, INPUT, load)
+    placeEnd(material, to, direction, OUTPUT, load)
     markTunnel(from, to, endName(material))
 }
 
