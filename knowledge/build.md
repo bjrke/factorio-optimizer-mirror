@@ -54,6 +54,21 @@ includes Gradle's test framework and regex/class-loading work. For the agent
 workflow (filtering to `de.bjrke`, allocation/exception views), see
 `.opencode/skills/jfr-profiles/SKILL.md`.
 
+### Whole-material benchmark
+
+`./gradlew jvmTest -Pbenchmark -Pprofile` profiles the opt-in
+`BlueprintBenchmarkTest` sweep. It costs minutes and is a stress run, not a
+verification step. The 2026-11-26 baseline spans 214 s (253 s with JFR and
+213 s without), 18,172 samples and ~287 GB of allocation:
+routing 50%, compaction 30%, band search 9%, validation 8%, and 62% of samples
+in hash/equals/boxing frames. The per-block numbers live in `todo.md`
+§Performance findings; re-profile before comparing them, because the code moves
+and the numbers are only a snapshot. Classify each sample by the first frame in a
+stage package (`blueprint/planning/band`, `blueprint/placing/route` plus
+`blueprint/placing/routing`, `blueprint/placing/compaction`,
+`blueprint/layout/validation`) to get the split; `jfr print` defaults to five
+frames, so pass `--stack-depth 40`.
+
 ## Prerequisites
 
 - JDK 25 is required. `gradle.properties` sets

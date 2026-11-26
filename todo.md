@@ -86,123 +86,222 @@ without an output belt.
 
 ## Performance findings — prompt-ready
 
-Each block below is self-contained: copy one as the task prompt.
+Each block below is self-contained: copy one as the task prompt. Each is one
+branch with its own re-profile. The board block lands first because the route
+block uses its int-based queries.
 
-They come from `./gradlew jvmTest -Pprofile`; the baseline recording is
-`build/profiles/jvmTest/jvmTest-73260.jfr`. Over the 22 s suite it holds 1,710 CPU samples, 18.6 GB
-of sampled allocation (~850 MB/s) and 102 young GCs (677 ms total, P99 17 ms). By inclusive samples
-the stages split into compaction 526 (31%), routing 394 (23%), band planning 184 (11%), validation
-145 (8.5%). 711 of the 1,710 samples (42%) sit inside `java.util.HashMap` internals —
-`getNode` 439, `putVal` 117, `resize` 107, `put` 48 — and the hottest self-time entries are
-`Material.equals` 56, `Coordinate.equals` 41, `BeltRouteRules.poursInto` 40, `RouteNode.equals` 39,
-`BandCycleSearch.window` 37, `CorridorShift.accept` 32.
+Baseline: the 2026-11-26 `./gradlew jvmTest -Pbenchmark -Pprofile` run. The
+`jvmTest` task took 253 s with JFR attached and 213 s without; the recording
+spans 214 s and holds 18,172 main-thread CPU samples. It allocates ~287 GB
+(2,420 young GCs, 2,706 pauses, 4.59 s total pause, P99 8.66 ms), so the cost
+is still boxing and cache misses, not pauses.
+By the first project frame: delivered-feed routing 9,086 samples (50%),
+compaction 5,399 (30%), band search 1,688 (9%), validation 1,394 (8%),
+everything else 605 (3%). **11,286 samples (62%) sit inside
+`HashMap`/`equals`/`hashCode`/boxing internals** — `getNode` 4,642 (26%),
+`Intrinsics.areEqual` 1,756 (10%), `Coordinate.equals` 1,424 (8%), `putVal`
+1,302 (7%), `resize` 1,220 (7%), `MinHeap`'s comparator 830 (5%) — and only 38%
+in the search logic. The hash share is 6,200 of 9,086 routing samples (68%) and
+4,033 of 5,399 compaction samples (75%), while band search is down to 132 of
+1,688 (8%): the recipe-index keying and the interned materials did their job.
 
 Re-measure every block the same way:
 
 ```sh
-./gradlew jvmTest -Pprofile
-S=.opencode/skills/jfr-profiles/scripts/jfr-top.sh
-$S self -n 25 ; $S alloc -n 20
-env -u JAVA_TOOL_OPTIONS jfr view gc-pauses build/profiles/jvmTest/*.jfr
+./gradlew jvmTest -Pbenchmark                          # wall clock, compare against 213 s
+./gradlew jvmTest -Pbenchmark -Pprofile                # fresh recording, 1 fork, deletes the dir; 253 s with JFR
+F=$(ls -t build/profiles/jvmTest/*.jfr | head -1)
+env -u JAVA_TOOL_OPTIONS jfr view --width 160 hot-methods "$F"
+env -u JAVA_TOOL_OPTIONS jfr print --events jdk.ExecutionSample --stack-depth 40 --json "$F" > /tmp/opencode/samples.json
+S=.opencode/skills/jfr-profiles/scripts/jfr-top.sh ; $S self -n 25 ; $S alloc -n 20
 ```
 
-### Move the seam grid and its DP onto flat arrays
-
-The compaction stage costs 31% of the suite and most of it is hash-map traffic.
-`SeamGrid` (`SeamGrid.kt:184-185`) stores `runs: HashMap<Coordinate, IntRange>` and
-`cost: HashMap<Coordinate, Int>` with one entry per removable tile, and `SeamSearch`
-(`SeamGrid.kt:227-229`) keeps `bottleneck`/`cost`/`previous` in three more
-`HashMap<Coordinate, _>`. `Step` (`SeamGrid.kt:232`) is allocated per candidate. In the profile
-that is `SeamGrid.<init>` 78 inclusive samples, `SeamSearch.extend` 111, `bestPredecessor` 101,
-316 + 311 map-allocation samples, 285 MB of `IntRange`, 1.4 GB of `Coordinate` from `tileAt`
-(`SeamGrid.kt:24`) and 309 MB of `SeamSearch$Step`.
-
-`primaryRange`/`secondaryRange` already describe an exact rectangle, so replace the four maps with
-arrays indexed by `(primary - primaryRange.first) * cols + (secondary - secondaryRange.first)`:
-`IntArray` run starts and ends (`-1` for "not removable"), `IntArray` bottleneck (`-1` for
-"unreachable"), `IntArray` cost and `IntArray` predecessor. Delete `Step` and let
-`bestPredecessor` compare three ints locally. `pathTo` then walks the predecessor array and maps
-indices back to coordinates, and `CompactedSeam` keeps its current shape.
-
-The tie-break order documented on `bestPredecessor`/`isBetter` (width, then cost, then
-northernmost/leftmost) must stay exactly as it is, and `tileAt`/`primaryOf`/`secondaryOf` stay for
-`corridorOf`, `CorridorShift` and `nextCompaction`. Expected effect: the compaction stage's hash
-lookups and its 600-plus allocation samples disappear.
-
-Add tests only where the shape is not already covered: the existing compaction and golden layout
-suites must pass unchanged; add a unit case asserting the seam's tie-break on a hand-built grid
-where two predecessors share width and cost, and one where the widest run is reachable only
-through the `-1` sentinel edge rows.
+`jfr print` defaults to five stack frames; at that depth every sample looks like
+it sits in the test method and the stage split is invisible. Track the
+`HashMap`/`equals` sample count (11,286) next to the stage totals.
 
 ### Make the layout board and tile index dense grids
 
-`LayoutBoard.grid` (`LayoutBoard.kt:73`) is `mutableMapOf<Coordinate, Cell>()` and every query
-hashes a `Coordinate`: `isReserved` 65 inclusive samples, `entityAt` 31, `reservedMaterialAt` 19,
-`isFree` 12. `LayoutIndex.tiles` (`LayoutIndex.kt:12`) is the same shape and is rebuilt from
-scratch per compaction candidate (`LayoutCompaction.kt:67`) and per validation
-(`CompactionPass.kt:56`), costing 53 inclusive samples and 88 map-allocation samples just to build
-a lookup table. `HashMap.getNode` callers are `RouteSearch.relax` 85, `SeamSearch.bestPredecessor`
-80, `LayoutBoard.isReserved` 51, `LayoutIndex.at` 41, `SeamSearch.extend` 40, `RouteSearch.find`
-36, `LayoutBoard.entityAt` 27.
+`LayoutBoard.grid` (`blueprint/layout/LayoutBoard.kt:74`) is
+`mutableMapOf<Coordinate, Cell>()` and every query hashes a `Coordinate`
+(`entityAt` `:101`, `isFree` `:103`, `isReserved` `:105`, `reservedMaterialAt`
+`:121`).
+`LayoutIndex.tiles` (`blueprint/layout/LayoutIndex.kt:12`) is the same shape,
+rebuilt for every compaction candidate
+(`blueprint/placing/compaction/LayoutCompaction.kt:67`) and every validation
+(`blueprint/placing/compaction/CompactionPass.kt:56`) and `UndergroundStretcher`;
+`LayoutIndex.<init>` is 100 self samples and `LayoutIndex.at` 115. `Tunnels`
+(`blueprint/layout/LayoutBoard.kt:77`) still keys its marks by `Coordinate`:
+`Tunnels$Key.equals` is 59 self samples and `Tunnels.has` allocates 1,396 MB.
 
-Replace both with flat storage over the bounds the board already tracks (`minX`/`maxX`/`minY`/
-`maxY`, updated in `place()` at `LayoutBoard.kt:132-135` and reset in `replaceAll`): index
-`(x - originX) + (y - originY) * width`. For `LayoutIndex` that is two passes — bounds, then
-fill — so `at()` becomes an index computation. Prefer parallel arrays over one `Cell` object per
-tile (entity index `IntArray` with `-1`, `BooleanArray` reserved, a reserved material array and an
-edge fluid array). `Tunnels` (`LayoutBoard.kt:76`) needs the same treatment to stop per-tile map
-churn, and `RowReservations.sections` (`LayoutBoard.kt:165`) is a `Map<Int, Section>` that boxes
-148 MB of `Integer` in `isReserved` alone (`:171`) plus 49 MB in `materialAt`, for at most a few
-dozen rows — give it an array too.
+Replace both with flat storage over the bounds the board already tracks
+(`minX`/`endX`/`minY`/`endY`, updated in `place()` at `:132-139` and reset in
+`replaceAll` at `:150-158`): index `(x - originX) + (y - originY) * width`, and
+grow the origin to the west and north so `IMPORT_FEED` and negative tiles
+survive. Prefer parallel arrays over one `Cell` object per tile (entity index
+`IntArray` with `-1`, `BooleanArray reserved`, a reserved-material array and an
+edge-fluid array). `LayoutIndex` fills in two passes (bounds, then dense), so
+`at()` becomes an index computation. Keep the public queries and add int
+overloads so the hot paths stop passing `Coordinate` at all, and fold `Tunnels`
+into the same dense storage.
 
-Keep the public queries (`entityAt`, `isFree`, `isReserved`, `reservedMaterialAt`) and add int
-overloads so the hot paths stop passing `Coordinate` at all. The west bound `IMPORT_FEED` and
-the ability to grow the origin in either direction must survive.
+`RowReservations.sections` (`LayoutBoard.kt:169`) is a `Map<Int, Section>` read
+as `sections[coordinate.y]` at `:175-179`, for at most a few dozen rows. Store
+an offset `Array<Section?>` over the reserved row range, cleared on `clear()`.
 
-Add tests: a board unit case that places entities across negative coordinates and asserts
-`entityAt`/`isReserved`/`removeAt` after `replaceAll`; the full layout suite (every golden URL and
-blueprint) unchanged.
+Then stop rebuilding the index more than once per compaction pass:
+`CompactionPass.compact` builds it for both orientations, again per
+`validateLayout` (`CompactionPass.kt:56`), and `UndergroundStretcher` rebuilds
+it; `CorridorShift.shift` rescans every entity per candidate
+(`blueprint/placing/compaction/LayoutCompaction.kt:165`, `accept` `:175`)
+against `MAX_COMPACTION_PASSES = 256`
+(`blueprint/placing/compaction/CompactionPass.kt:11`). Build once per pass and pass it down; replace the
+per-corridor full `validateLayout` with an incremental check only if the
+re-profile still names it (`beltLoops` and `trimAcyclic` are still in the top
+self-time list).
+
+Add tests: a board unit case that places entities across negative coordinates
+and asserts `entityAt`/`isReserved`/`removeAt` after `replaceAll`; a
+`RowReservations` case with negative and sparse rows; the full layout suite
+(every golden URL and blueprint) unchanged.
+
+### Move the seam grid and its DP onto flat arrays
+
+Compaction is 30% of the run (5,399 samples, 75% of it hash traffic).
+`SeamGrid` (`blueprint/placing/compaction/SeamGrid.kt:194-195`) stores
+`runs: HashMap<Coordinate, IntRange>`
+and `cost: HashMap<Coordinate, Int>` with one entry per removable tile, and
+`SeamSearch` (`:238-240`) keeps `bottleneck`/`cost`/`previous` in three more
+`HashMap<Coordinate, _>`; `Step` (`:243`) is allocated per candidate;
+`forbidden + parallelUndergroundSpans(...)` (`:198`) builds a new set per
+orientation. The allocation is `SeamGridKt.tileAt` 29,344 MB,
+`HashMap.newNode` 27,533 MB, `HashMap.resize` 11,932 MB,
+`SeamSearch.bestPredecessor` 7,812 MB and `Area$iterator$1.next` 2,959 MB. Self
+time is `CorridorShift.accept` 595, `SeamGridKt.isRemovable` 299,
+`SeamGrid.<init>` 61 and `CorridorShift.sideOf` 39 samples.
+
+`primaryRange`/`secondaryRange` already describe an exact rectangle, so index
+every table by `(primary - primaryRange.first) * cols + (secondary -
+secondaryRange.first)`: `IntArray` run starts and ends (`-1` for "not
+removable"), `IntArray` bottleneck (`-1` for "unreachable"), `IntArray` cost and
+`IntArray` predecessor. Delete `Step` and let `bestPredecessor` compare ints
+locally; `pathTo` walks the predecessor array and maps indices back to
+coordinates, and `CompactedSeam` keeps its shape. Compute the parallel
+underground spans once per orientation instead of per grid. The documented
+tie-break order (width, then cost, then northernmost/leftmost) must stay
+exactly as it is, and `tileAt`/`primaryOf`/`secondaryOf` (`:25`) stay for
+`corridorOf`, `CorridorShift` and `nextCompaction`.
+
+Add tests: a seam tie-break case on a hand-built grid where two predecessors
+share width and cost, and one where the widest run is reachable only at the
+`-1` sentinel edge rows; the existing compaction, validation and golden layout
+suites unchanged.
 
 ### Key the route search by packed node ids
 
-`RouteSearch.relax` is 187 inclusive samples (11%). `gScore` and `previous`
-(`RouteSearch.kt:81-82`) are keyed by the three-component data class `RouteNode`
-(`RouteSearch.kt:41`), so each lookup runs `Objects.hash` on a fresh `Object[]`, boxes the `Int`
-score (55 MB of `Integer` from `relax` alone) and compares three fields. The node itself is
-allocated per expansion, and `MinHeap` orders the frontier through `naturalOrder()`'s comparator
-lambda (`MinHeap.kt:87`), 38 self samples.
+Delivered-feed routing is 50% of the run (9,086 samples) and 68% of it is hash
+traffic. `RouteSearch.relax` is 2,773 inclusive samples (15%) and
+`expandSurface` 6,006 (33%); `gScore`
+(`blueprint/placing/route/RouteSearch.kt:84`) and `previous` (`:85`) are keyed
+by the three-component data class `RouteNode` (`:41`), and
+`HashMap.getNode` is 4,642 self samples (26%). `RouteNode.equals` itself is
+only 13 self samples now, but a fresh `RouteNode` and `Coordinate` are
+allocated for every expansion attempt and the `Int` score is boxed. The
+allocation is `TileGeometryKt.getNeighbors` 14,138 MB plus the four helpers
+(south 13,254, north 12,466, east 12,320, west 10,595 MB), `Coordinate.plus`
+15,756 MB and `Integer.valueOf` 12,337 MB. `MAX_ROUTE_EXPANSIONS` is 1,000,000
+per route (`:34`), so a route that never fits burns the full budget in hash
+lookups.
 
-Encode a node as one `Int`/`Long` instead: `x` is bounded by `ROUTE_WEST_BOUND..eastBound`, `y` by
-`northBound..southBound`, the heading is one of four ordinals and `straight` is a small int, so
-the region size is known once per search. Use a small int-keyed open-addressing map owned by the
-route package (commonMain has no primitive map) for `gScore`, and store the predecessor as a
-packed key too; keep `RouteNode` only for `reconstructRoute`.
+Encode a node as one `Int`/`Long` instead: `x` is bounded by
+`ROUTE_WEST_BOUND..eastBound`, `y` by `northBound..southBound`, the heading is
+one of four ordinals and `straight` is a small int, so the region size is known
+once per search. Use a small int-keyed open-addressing map owned by the route
+package (commonMain has no primitive map) for `gScore`, and store the
+predecessor as a packed key too; keep `RouteNode` only for `reconstructRoute`.
+`RouteSearch.kt:134` also computes `surface.neighbors.any(board::isReserved)`,
+which allocates an `ArrayList` plus four `Coordinate`s per expansion
+(`TileGeometry.kt:53`); replace it with the four ordered checks against the
+int-based board query from the dense-grid item. The documented neighbor order
+(north, east, south, west) and the `MAX_ROUTE_EXPANSIONS` cap stay as they are.
+Let `MinHeap` compare through the element's own `compareTo` when no comparator
+is passed (`MinHeap.kt:87`) — the comparator lambda is 830 self samples (5%),
+and `siftDown`/`siftUp` add 304 + 106; drop the second write of the element in
+`add` (`MinHeap.kt:24-25`).
 
-`RouteSearch.kt:131` also computes `surface.neighbors.any(board::isReserved)`, which allocates an
-`ArrayList` plus four `Coordinate`s per expansion (`TileGeometry.kt:53`); replace it with the four
-ordered checks against the int-based board query from the dense-grid item. The documented neighbor
-order (north, east, south, west) and the `MAX_ROUTE_EXPANSIONS` cap stay as they are. Let `MinHeap`
-compare through the element's own `compareTo` when no comparator is passed (`MinHeap.kt:87`), so
-the frontier no longer hops through `naturalOrder()`'s lambda.
+Add tests: a routing unit case where two nodes differ only in `straight` and
+must not share a `gScore` entry, one where they differ only in heading, one
+where two nodes from different regions must not collide when the packing is
+wrong, and the existing routing and golden layout suites unchanged.
 
-Add tests: a routing unit case where two nodes differ only in `straight` and must not share a
-`gScore` entry, one where they differ only in heading, and the existing routing and golden layout
+### Reuse the band-search feed windows
+
+Band search is down to 9% of the run (1,688 samples, only 132 hash samples)
+because the recipe-index keying and interned materials landed, but its
+allocation is still the largest single site: `FeedWindow.<init>`
+(`blueprint/planning/band/BandSearch.kt:308`) is 31,945 MB (11% of the sweep)
+for `demand`, `supply`,
+`remaining`, `used` and `feeds` (`:310-329`), `InnerBandSearch.window` adds
+2,987 MB and `FeedWindow.consume` 1,889 MB. `RecipeIndex.box-impl` adds 5,058 MB
+from the generic `Map<RecipeIndex, _>` reads (`:55`, `:111`, `:321`).
+
+Reuse one scratch `FeedWindow` per `BandCycleSearch`, resetting the arrays and
+allocating only the `BandFeed` list a plan keeps, or memoize windows by the
+cycle pattern; keep the recipe-index pairing, the rate model and the plan it
+settles on byte-identical.
+Index `needs` and the machine counts by `RecipeIndex.value` in a `DoubleArray`
+and `IntArray` where the boxing remains. Keep the documented `GROUP_MAX_MACHINES`,
+`MAX_ROW_BELTS` and `MAX_COPIES` bounds.
+
+Add tests: a case where the same cycle pattern is asked for twice and the
+memoized/reused window returns the same plan; a mixed input belt where two
+equal-but-distinct `FactoryProduction` values appear in `group.needs`/`links`
+and must still pair by recipe slot; the existing band, plan and golden layout
+suites unchanged.
+
+### Stop tile and area walks allocating
+
+`Coordinate.hashCode` is still the generated `31x + y`: `data class
+Coordinate(x, y)` (`core/model/Tile.kt:13`) only has the default hash. The profile shows
+49 `HashMap$TreeNode.find`, 39 `balanceInsertion` and 22 `treeifyBin` self
+samples (0.6%) plus 1,424 `Coordinate.equals` (8%). Override `hashCode` with a
+mixed hash (e.g. `x * 0x9E3779B1 xor y * 0x85EBCA77`). The board, seam and route
+blocks remove most `Coordinate`-keyed maps, so land this with the `Area` change
+below rather than as a separate branch.
+
+`Area.iterator` (`core/model/Tile.kt:117`) builds a fresh `Iterator` per walk and
+yields a new `Coordinate` per tile; `Area$iterator$1.next` allocates 5,813 MB
+(2% of allocation) and `hasNext` is 19 self samples. Add
+`inline fun Area.forEachTile { }` and use it in
+`blueprint/layout/LayoutBoard.kt:134` and `:146`,
+`blueprint/layout/LayoutIndex.kt:18-27`,
+`blueprint/placing/compaction/LayoutCompaction.kt:191`,
+`blueprint/layout/validation/LayoutValidation.kt:39`,
+`blueprint/layout/validation/LayoutValidationFlow.kt:93` and
+`blueprint/layout/validation/LayoutValidationTransport.kt:107`. `ArrayList`
+iterators are another 3.7 GB in band search, so hot loops should index a list
+instead of iterating it.
+
+Add tests: `forEachTile` covering an empty and a 1×1 area; a `Coordinate` hash
+contract case; the existing compaction, routing, validation and golden layout
 suites unchanged.
 
 ### Let an inserter carry more than one material
 
-`InserterEntity.material` is singular; `MachineInserterPlacer`
+`InserterEntity.material` (`LayoutTransportEntities.kt:71`) is singular;
+`MachineInserterPlacer`
 (`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/planning/row/MachineInserterPlacer.kt:100`)
-labels the inserter with the biggest share of a mixed belt or a multi-solid-result recipe, and
-`LayoutValidationInserter`
+labels the inserter with the biggest share of a mixed belt or a multi-solid-result
+recipe, and `LayoutValidationInserter`
 (`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/layout/validation/LayoutValidationInserter.kt:45`
-and `:61`) checks only that label. A second ingredient/result is invisible to validation, and a
-missing one is never reported. A blueprint encodes no inserter material
+and `:61`) checks only that label. A second ingredient/result is invisible to
+validation, and a missing one is never reported. A blueprint encodes no inserter
+material
 (`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/printing/json/BlueprintEntityJson.kt`),
-so this is model-only: give the inserter a material set, check the source/drop carries every recipe
-material it moves, keep one label for messages.
+so this is model-only: give the inserter a material set, check the source/drop
+carries every recipe material it moves, keep one label for messages.
 
-Add tests: a mixed input belt where the recipe needs both lanes' materials but the inserter is
-labelled with one; a multi-solid-result recipe whose output inserter must move both results; a
-missing second material must report instead of passing.
-
+Add tests: a mixed input belt where the recipe needs both lanes' materials but
+the inserter is labelled with one; a multi-solid-result recipe whose output
+inserter must move both results; a missing second material must report instead
+of passing.
