@@ -113,6 +113,45 @@ class LayoutValidationTransportTest : BaseGameCtxTest() {
         assertEquals(emptyList(), validateLayout(entities))
     }
 
+    /** A mixed belt may turn into a lane head, but it can never side-load a belt already fed. */
+    @Test
+    fun aMixedBeltDoesNotSideLoadAFedBelt() {
+        val mixed = LaneLoad.mixed(left = ironOre, right = ironPlate)
+        val entities: List<LayoutEntity> =
+            listOf(
+                belt(0, 1, load = mixed),
+                belt(1, 1, load = mixed),
+                belt(1, 0, direction = Direction.SOUTH, load = mixed),
+            )
+
+        val errors = validateLayout(entities)
+        assertTrue(
+            errors.any { "foreign side-load" in it.message },
+            errors.joinToString { it.message },
+        )
+    }
+
+    @Test
+    fun aMixedBeltTurnWithSwappedLanesIsAForeignSideLoad() {
+        val entities: List<LayoutEntity> =
+            listOf(
+                belt(0, 0, load = LaneLoad.mixed(left = ironOre, right = ironPlate)),
+                belt(
+                    1,
+                    0,
+                    material = ironPlate,
+                    direction = NORTH,
+                    load = LaneLoad.mixed(left = ironPlate, right = ironOre),
+                ),
+            )
+
+        val errors = validateLayout(entities)
+        assertTrue(
+            errors.any { "foreign side-load" in it.message },
+            errors.joinToString { it.message },
+        )
+    }
+
     @Test
     fun aStraightMixedBeltDoesNotSwapItsLanePositions() {
         val entities: List<LayoutEntity> =

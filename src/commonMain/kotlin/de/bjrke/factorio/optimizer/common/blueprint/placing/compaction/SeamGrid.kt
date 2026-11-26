@@ -107,25 +107,29 @@ private fun beltCuttable(
         takesFromBehind && takesFromAhead -> true
         replacedByTunnelOutput(behind, ahead, belt) -> true
 
-        // a corner into a perpendicular lane: drop the turn belt, the one behind it side-loads the
+        // a corner into a perpendicular lane: drop the turn belt, the one behind it turns into the
         // lane
         else -> cornersIntoPerpendicularLane(behind, ahead, belt)
     }
 }
 
-/** Whether the belt behind turns into a perpendicular lane of the same material ahead. */
+/**
+ * Whether the belt behind turns into a perpendicular lane [belt] can feed: the lane head the shift
+ * moves onto the corner keeps the feeder's lane frame, so a mixed feeder survives only when both
+ * sides agree lane for lane. Material sets alone would splice a swapped corner and merge its lanes.
+ */
 private fun cornersIntoPerpendicularLane(
     behind: LayoutEntity?,
     ahead: LayoutEntity?,
     belt: BeltEntity,
 ): Boolean =
     behind is BeltEntity &&
-        behind.load.sameMaterialsAs(belt.load) &&
         behind.direction == belt.direction &&
+        behind.load.sameMaterialsAs(belt.load) &&
         ahead is BeltEntity &&
-        ahead.load.sameMaterialsAs(belt.load) &&
         ahead.direction != belt.direction &&
-        ahead.direction != belt.direction.opposite()
+        ahead.direction != belt.direction.opposite() &&
+        ahead.load.takesStraightFrom(behind.load)
 
 /**
  * Whether the tunnel output behind [belt] takes over its feed when a corridor removes it: the

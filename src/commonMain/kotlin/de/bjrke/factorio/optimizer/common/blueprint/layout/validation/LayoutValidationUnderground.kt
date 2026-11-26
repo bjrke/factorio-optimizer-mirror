@@ -14,6 +14,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.UndergroundEnt
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.isSingleMaterial
 import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.core.model.directionBetween
 
 /**
  * Every underground input needs an output of the same material, direction and kind, within the
@@ -116,8 +117,8 @@ private fun acceptsExit(
     }
 
 /**
- * A belt the exit empties onto: straight keeps the lanes, and a perpendicular belt keeps them only
- * when it turns the run, not when it is already fed from behind and takes the exit as a side-load.
+ * A belt the exit empties onto: straight keeps the lanes. A perpendicular belt turns the run when
+ * it is not fed from behind, keeping the lane frame; otherwise the exit side-loads the near lane.
  */
 private fun exitsInto(
     index: LayoutIndex,
@@ -127,12 +128,20 @@ private fun exitsInto(
     when {
         target.direction == output.direction -> target.load.takesStraightFrom(output.load)
         target.direction == output.direction.opposite() -> false
-        target.load.takesStraightFrom(output.load) -> !fedStraight(index, target)
-        else -> false
+        else ->
+            takesPerpendicular(
+                index,
+                output,
+                target,
+                target.load.laneAt(
+                    target.direction,
+                    directionBetween(target.area.topLeft, output.area.topLeft),
+                ),
+            )
     }
 
-/** Whether a belt of the same material already feeds [target] from its back. */
-private fun fedStraight(index: LayoutIndex, target: ConveyorEntity): Boolean =
+/** Whether a belt already feeds [target] from its back, so a perpendicular feed is a side-load. */
+internal fun fedStraight(index: LayoutIndex, target: ConveyorEntity): Boolean =
     when (val behind = index.at(target.area.topLeft - target.direction.step)) {
         is UndergroundBeltEntity -> behind.io == Io.OUTPUT && behind.direction == target.direction
         is ConveyorEntity -> behind.direction == target.direction

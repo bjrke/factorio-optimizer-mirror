@@ -11,6 +11,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.issue
 import de.bjrke.factorio.optimizer.common.blueprint.layout.joinsAt
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.Io
+import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.core.model.directionBetween
 import de.bjrke.factorio.optimizer.common.core.model.neighbors
 
@@ -45,7 +46,7 @@ private fun checkConveyor(
     val aheadTile = tile + conveyor.direction.step
     val ahead = index.at(aheadTile)
     if (conveyor.feedsAhead() && ahead is ConveyorEntity) {
-        checkAhead(conveyor, ahead, aheadTile, errors)
+        checkAhead(conveyor, ahead, aheadTile, index, errors)
     }
     if (conveyor is SplitterEntity) conveyor.checkOutputs(index, errors)
     for (side in tile.neighbors) {
@@ -53,7 +54,7 @@ private fun checkConveyor(
         // a buried entrance dives instead of feeding the tile it faces
         if (!other.feedsAhead()) continue
         if (other.direction.step != tile - side) continue
-        checkSideLoad(conveyor, other, tile, side, errors)
+        checkSideLoad(conveyor, other, side, index, errors)
     }
 }
 
@@ -62,6 +63,7 @@ private fun checkAhead(
     conveyor: ConveyorEntity,
     ahead: ConveyorEntity,
     aheadTile: Coordinate,
+    index: LayoutIndex,
     errors: MutableList<LayoutIssue>,
 ) {
     when (ahead.direction) {
@@ -81,14 +83,14 @@ private fun checkAhead(
                         "at $aheadTile",
                 )
         else -> {
-            // a turn with the same load is fine (the mixed merge tile into its lane head)
-            if (ahead.load.sameMaterialsAs(conveyor.load)) return
+            // a mixed feeder may only turn into a lane head, keeping its lane frame; a single one
+            // enters the near lane
             val lane =
                 ahead.load.laneAt(
                     ahead.direction,
                     directionBetween(aheadTile, conveyor.area.topLeft),
                 )
-            if (lane != conveyor.material) {
+            if (!takesPerpendicular(index, conveyor, ahead, lane)) {
                 errors +=
                     aheadTile.issue(
                         "${conveyor.material.name} side-loads " +
@@ -119,16 +121,31 @@ private fun SplitterEntity.checkOutputs(index: LayoutIndex, errors: MutableList<
 private fun checkSideLoad(
     conveyor: ConveyorEntity,
     other: ConveyorEntity,
-    tile: Coordinate,
     side: Coordinate,
+    index: LayoutIndex,
     errors: MutableList<LayoutIssue>,
 ) {
-    if (other.load.sameMaterialsAs(conveyor.load)) return
-    val lane = conveyor.load.laneAt(conveyor.direction, directionBetween(tile, side))
-    if (lane != other.material) {
+    val tile = conveyor.area.topLeft
+    // a belt from behind or head-on is not a side-load; the ahead checks cover those
+    val lane = conveyor.load.laneAt(conveyor.direction, directionBetween(tile, side)) ?: return
+    if (!takesPerpendicular(index, other, conveyor, lane)) {
         errors += tile.issue("foreign side-load into ${conveyor.material.name} at $tile")
     }
 }
+
+/**
+ * Whether [target] takes a perpendicular pour from [source] in [nearLane]. A lane head turns the
+ * run and keeps the source's lane frame, so a mixed source may turn; a side-load needs a
+ * single-material source in the lane it opens toward it.
+ */
+internal fun takesPerpendicular(
+    index: LayoutIndex,
+    source: ConveyorEntity,
+    target: ConveyorEntity,
+    nearLane: Material?,
+): Boolean =
+    (!fedStraight(index, target) && target.load.takesStraightFrom(source.load)) ||
+        (!source.load.isMixed && nearLane == source.load.material)
 
 private fun checkPlumbing(
     plumbing: Plumbing,

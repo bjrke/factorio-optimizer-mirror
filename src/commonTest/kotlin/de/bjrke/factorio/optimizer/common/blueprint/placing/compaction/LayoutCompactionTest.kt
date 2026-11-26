@@ -3,6 +3,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.compaction
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.InserterEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LaneLoad
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
@@ -367,6 +368,29 @@ class LayoutCompactionTest : BaseGameCtxTest() {
             },
             { assertEquals(emptyList(), validateLayout(result.entities)) },
         )
+    }
+
+    /**
+     * A mixed corner only splices when both sides agree lane for lane: the set comparison saw the
+     * swapped lane frames as equal and dropped the corner, merging the two materials into one lane.
+     */
+    @Test
+    fun aMixedCornerWithSwappedLanesIsNotDropped() {
+        val mixed = LaneLoad.mixed(left = ironOre, right = ironPlate)
+        val swapped = LaneLoad.mixed(left = ironPlate, right = ironOre)
+        fun mixedBelt(x: Int, y: Int, direction: Direction, load: LaneLoad) =
+            BeltEntity(areaTile(x, y), BELT, ironOre, direction, load)
+        val entities =
+            listOf(
+                marker(0, -1),
+                mixedBelt(0, 0, SOUTH, mixed),
+                mixedBelt(0, 1, SOUTH, mixed),
+                mixedBelt(0, 2, WEST, swapped),
+                mixedBelt(-1, 2, WEST, swapped),
+                mixedBelt(-2, 2, WEST, swapped),
+            )
+
+        assertNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
     }
 
     /**

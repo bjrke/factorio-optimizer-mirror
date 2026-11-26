@@ -189,14 +189,22 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   target may be fuller (its other lane is a capacity reservation, not a content claim). Use
   `feedsInto` at a tunnel end: it allows that single-material reservation, requires a mixed target
   to match lane for lane, and rejects a feeder that would leave a target lane it claims unfed.
-  `sameMaterialsAs` is only the material-set question and ignores lane order. A half product belt
-  that tunnels stays half: `placePath` forwards its load to `placeEnd`. Underground ends and
-  splitters carry a `LaneLoad` too (both splitter outputs keep it), so a mixed belt can run through
-  either and turn at the exit. The stretcher still swallows only a full plain belt or a straight
-  pipe and never grows an entrance into a splitter: it never swallows a mixed belt, compaction
-  never splices one into a tunnel, and a route never side-loads one. Evidence:
-  `aRunLeavesAHalfBeltLane`, `aMixedBeltRunsThroughAMixedTunnel`, `aMixedBeltTurnsOffAMixedTunnel`,
+  A half product belt that tunnels stays half: `placePath` forwards its load to `placeEnd`.
+  Underground ends and splitters carry a `LaneLoad` too (both splitter outputs keep it), so a mixed
+  belt can run through either and turn at the exit. The stretcher still swallows only a full plain
+  belt or a straight pipe and never grows an entrance into a splitter: it never swallows a mixed
+  belt, and compaction never splices one into a tunnel. Evidence: `aRunLeavesAHalfBeltLane`,
+  `aMixedBeltRunsThroughAMixedTunnel`, `aMixedBeltTurnsOffAMixedTunnel`,
   `aFullBeltDoesNotFeedAHalfTunnel`.
+- **Where belts meet perpendicular, compare the receiving lane, not the material set.**
+  `sameMaterialsAs` ignores lane order and accepts a mixed source wherever the target has the same
+  materials. A lane head that is not fed from behind turns the run and keeps the source's lane
+  frame (`takesStraightFrom`), so a mixed source may turn into the T-merge head or a tunnel exit;
+  a side-load into a belt fed from behind needs a single-material source in the target's near lane
+  (`LaneLoad.laneAt`). `takesPerpendicular` applies both and `SeamGrid` uses the frame rule for a
+  corner. A mixed source never side-loads, and `BeltRouteRules` counts it as foreign even when it
+  carries the routed material. Evidence: `aMixedCornerWithSwappedLanesIsNotDropped`,
+  `aMixedBeltTurnWithSwappedLanesIsAForeignSideLoad`, `aMixedBeltTurnsOffAMixedTunnel`.
 - **The budget is rows, not materials.** `packRowBelts` pairs only as many inputs as are needed,
   prefers the ones whose rate fits a lane, and never pairs a fluid or an output; `bandBeltFits(plan)`
   must read the arranged machine rates, not a raw material count. A row that still needs

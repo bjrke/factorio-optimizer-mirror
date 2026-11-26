@@ -189,29 +189,6 @@ Add tests: a routing unit case where two nodes differ only in `straight` and mus
 `gScore` entry, one where they differ only in heading, and the existing routing and golden layout
 suites unchanged.
 
-### Compare the receiving lane, not the material set, where belts meet perpendicular
-
-`SeamGrid.cornersIntoPerpendicularLane`
-(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/placing/compaction/SeamGrid.kt:114`)
-compares `ahead.load.sameMaterialsAs(belt.load)` even though `ahead` faces perpendicular;
-`LayoutValidationTransport`
-(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/layout/validation/LayoutValidationTransport.kt:85`
-and `:126`) does the same in `checkAhead`'s turn branch and `checkSideLoad`'s early return, and
-`SplitDeliveryRouter`
-(`src/commonMain/kotlin/de/bjrke/factorio/optimizer/common/blueprint/placing/routing/SplitDeliveryRouter.kt:128`)
-compares single-material labels. Same-direction comparisons are safe because both belts share one
-lane frame. Perpendicular ones are not: a mixed belt (`A` left, `B` right) turning into a mixed belt
-(`B` left, `A` right) has equal material sets, passes, and both materials then land on the receiving
-belt's near lane.
-
-Correct rule: the source must be single-material `M` and
-`ahead.load.laneAt(ahead.direction, directionBetween(aheadTile, fromTile)) == M`; a mixed source
-must not side-load at all. The same applies to the mixed splitter's second output.
-
-Add tests: a seam-compaction unit case where a mixed corner would mis-splice only under the set
-comparison; a validation case where a mixed belt turns into a mixed belt with swapped lanes and
-must report a foreign side-load.
-
 ### Let an inserter carry more than one material
 
 `InserterEntity.material` is singular; `MachineInserterPlacer`
