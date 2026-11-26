@@ -193,9 +193,11 @@ trimming, fluid ports, lane shape and the feeders. Load this file when you chang
   Underground ends and splitters carry a `LaneLoad` too (both splitter outputs keep it), so a mixed
   belt can run through either and turn at the exit. The stretcher still swallows only a full plain
   belt or a straight pipe and never grows an entrance into a splitter: it never swallows a mixed
-  belt, and compaction never splices one into a tunnel. Evidence: `aRunLeavesAHalfBeltLane`,
+  belt, and compaction never splices one into a tunnel. The plan scales a producer to one lane
+  rather than propagating the half load. Evidence: `aRunLeavesAHalfBeltLane`,
   `aMixedBeltRunsThroughAMixedTunnel`, `aMixedBeltTurnsOffAMixedTunnel`,
-  `aFullBeltDoesNotFeedAHalfTunnel`.
+  `aFullBeltDoesNotFeedAHalfTunnel`, `aHalfBeltFeedsAFullBeltStraight`,
+  `aHalfBeltDoesNotFeedAMixedBeltStraight`.
 - **Where belts meet perpendicular, compare the receiving lane, not the material set.**
   `sameMaterialsAs` ignores lane order and accepts a mixed source wherever the target has the same
   materials. A lane head that is not fed from behind turns the run and keeps the source's lane

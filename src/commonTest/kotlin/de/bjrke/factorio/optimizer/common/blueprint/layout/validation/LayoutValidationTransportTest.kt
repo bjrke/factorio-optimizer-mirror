@@ -187,6 +187,34 @@ class LayoutValidationTransportTest : BaseGameCtxTest() {
         )
     }
 
+    /**
+     * A full single-material belt reserves its second lane instead of claiming that lane is fed, so
+     * a half product belt may feed a consumer path straight; the plan bounds that producer by one
+     * lane's capacity.
+     */
+    @Test
+    fun aHalfBeltFeedsAFullBeltStraight() {
+        val entities: List<LayoutEntity> =
+            listOf(
+                belt(0, 0, load = LaneLoad.half(ironOre, left = true)),
+                belt(1, 0, load = LaneLoad.full(ironOre)),
+            )
+
+        assertEquals(emptyList(), validateLayout(entities))
+    }
+
+    @Test
+    fun aHalfBeltDoesNotFeedAMixedBeltStraight() {
+        val entities: List<LayoutEntity> =
+            listOf(
+                belt(0, 0, load = LaneLoad.half(ironOre, left = true)),
+                belt(1, 0, load = LaneLoad.mixed(left = ironOre, right = ironPlate)),
+            )
+
+        val errors = validateLayout(entities)
+        assertTrue(errors.any { "runs into" in it.message }, errors.joinToString { it.message })
+    }
+
     @Test
     fun aFullBeltDoesNotFeedAHalfTunnel() {
         val half = LaneLoad.half(ironOre, left = true)

@@ -206,20 +206,3 @@ Add tests: a mixed input belt where the recipe needs both lanes' materials but t
 labelled with one; a multi-solid-result recipe whose output inserter must move both results; a
 missing second material must report instead of passing.
 
-### Decide whether a full belt may claim a lane its source never fills
-
-`LaneLoad` lets a half source feed a fuller single-material target (`feedsInto`/`takesStraightFrom`),
-so the target's other lane is marked with a material no feeder supplies; that is the deliberate
-"half output belt may feed a full trunk" rule. A lane-coverage validation that requires every
-claimed lane to have a feeder (straight belt, side feeder, inserter drop or loader) reports 73 of
-the reported layouts, starting with produced-delivery paths and tunnels that begin on a half product
-output: the full label is a capacity reservation, not content.
-
-Either propagate the producer's half load through `DeliveryPreparation`/`DeliveryRouter` and the
-consumer's row input belts (loads are not emitted, so the blueprints stay the same, but compaction,
-tunnels and every lane check change), or keep the capacity reservation and state that a full belt
-does not promise both lanes are fed. Decide before adding lane-coverage validation.
-
-Add tests: a half producer feeding a consumer path whose plan needs both lanes must either be
-rejected or get a half consumer input; a half source into a mixed target must keep the existing
-lane-for-lane requirement.

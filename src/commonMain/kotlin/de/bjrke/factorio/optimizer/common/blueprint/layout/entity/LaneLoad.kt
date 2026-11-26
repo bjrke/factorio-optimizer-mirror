@@ -55,17 +55,21 @@ data class LaneLoad(val left: Material?, val right: Material?) {
      * lane; a single material may feed a fuller target (the other lane is a capacity reservation),
      * but a feeder lane the target does not claim is rejected.
      */
-    fun feedsInto(feeder: LaneLoad): Boolean =
-        if (isMixed || feeder.isMixed) this == feeder else takesStraightFrom(feeder)
+    fun feedsInto(feeder: LaneLoad): Boolean = takesStraightFrom(feeder)
 
     /**
-     * Whether [feeder] pours into this load in the same lane frame: every lane it fills must be the
-     * same lane here, while an empty feeder lane leaves this lane free. A single-material target
-     * may be fuller than the feeder (a capacity reservation).
+     * Whether [feeder] pours into this load in the same lane frame. A mixed target must match it
+     * lane for lane, because both its lanes claim content. A single-material target may be fuller
+     * than the feeder: an empty feeder lane leaves this lane free, since that lane only reserves
+     * capacity.
      */
     fun takesStraightFrom(feeder: LaneLoad): Boolean =
-        (feeder.left == null || left == feeder.left) &&
-            (feeder.right == null || right == feeder.right)
+        if (isMixed) {
+            this == feeder
+        } else {
+            (feeder.left == null || left == feeder.left) &&
+                (feeder.right == null || right == feeder.right)
+        }
 
     /** The material the belt is labelled with; a half belt uses its one filled lane. */
     val material: Material

@@ -183,6 +183,12 @@ class LaneLoadTest : BaseGameCtxTest() {
                     LaneLoad.mixed(left = copperPlate, right = ironPlate).takesStraightFrom(mixed),
                 )
             },
+            // a mixed target claims both lanes, so a half feeder leaves one claim unfed
+            {
+                assertFalse(
+                    mixed.takesStraightFrom(LaneLoad.half(ironPlate, left = true)),
+                )
+            },
         )
     }
 
