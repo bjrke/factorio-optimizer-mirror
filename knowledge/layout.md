@@ -359,6 +359,11 @@ baselines, so every finding fails.
   move together. A run across the seam stays cuttable: shortening a tunnel still pairs.
   Evidence: `aSeamDoesNotCutThroughAParallelUndergroundSpan`,
   `theReportedExpressSplitterUrlCompactsItsEmptyBand`.
+- **A `-1` sentinel in the seam grid is an offset, not a coordinate.** `SeamGrid`'s run ends and
+  `SeamSearch`'s tables use `-1` for "not removable"/"unreachable", but a secondary coordinate may
+  itself be `-1`, so the arrays store `secondary - secondaryRange.first`. An absolute `-1` looked
+  like a missing run and hid a whole edge column. Evidence:
+  `aRunThatStartsAtNegativeOneIsNotTheNoRunSentinel`.
 - **Compaction is all-or-nothing on the whole layout.** `CompactionPass` accepts a
   corridor only when `validateLayout(candidate).isEmpty()`; a single pre-existing
   error anywhere rejects every candidate and the pass returns after its first

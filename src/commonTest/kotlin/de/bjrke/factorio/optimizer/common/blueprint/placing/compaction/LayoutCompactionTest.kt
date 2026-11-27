@@ -146,31 +146,81 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     fun aSeamDoesNotCutThroughAParallelUndergroundSpan() {
         val entities = listOf(underground(0, 0, EAST, Io.INPUT), underground(5, 0, EAST, Io.OUTPUT))
         val index = LayoutIndex(entities)
-        fun grid(orientation: SeamOrientation) =
-            SeamGrid(
-                orientation,
-                if (orientation == SeamOrientation.VERTICAL) index.minY..index.maxY
-                else index.minX..index.maxX,
-                if (orientation == SeamOrientation.VERTICAL) index.minX..index.maxX
-                else index.minY..index.maxY,
-                index,
-                emptySet(),
-            )
         val span = Coordinate(3, 0)
+        fun run(orientation: SeamOrientation): IntRange? {
+            val grid =
+                SeamGrid(
+                    orientation,
+                    if (orientation == SeamOrientation.VERTICAL) index.minY..index.maxY
+                    else index.minX..index.maxX,
+                    if (orientation == SeamOrientation.VERTICAL) index.minX..index.maxX
+                    else index.minY..index.maxY,
+                    index,
+                    emptySet(),
+                    parallelUndergroundSpans(index, orientation),
+                )
+            return grid.run(
+                grid.offset(primaryOf(orientation, span), secondaryOf(orientation, span)),
+            )
+        }
 
         assertAll(
             {
-                assertNull(
-                    grid(SeamOrientation.HORIZONTAL).runs[span],
-                    "a seam along the run cuts its span",
-                )
+                assertNull(run(SeamOrientation.HORIZONTAL), "a seam along the run cuts its span")
             },
             {
                 assertNotNull(
-                    grid(SeamOrientation.VERTICAL).runs[span],
+                    run(SeamOrientation.VERTICAL),
                     "a seam across the run may shorten it",
                 )
             },
+        )
+    }
+
+    /**
+     * A seam ties on width and cost, so the documented last tie-break has to pick the
+     * northernmost/leftmost tile: an empty block leaves every candidate equal, and the seam must
+     * run down its leftmost column.
+     */
+    @Test
+    fun aSeamTieTakesTheLeftmostTile() {
+        val grid =
+            SeamGrid(
+                SeamOrientation.VERTICAL,
+                0..2,
+                0..2,
+                LayoutIndex(emptyList()),
+                emptySet(),
+                emptySet(),
+            )
+
+        assertEquals(
+            CompactedSeam(SeamOrientation.VERTICAL, mapOf(0 to 0, 1 to 0, 2 to 0), 3),
+            findSeam(grid),
+        )
+    }
+
+    /**
+     * The "no run" sentinel is -1, but a secondary coordinate of -1 is a real column: a run that
+     * starts there must stay removable, or the seam cannot reach the only wide-enough tile of its
+     * last row.
+     */
+    @Test
+    fun aRunThatStartsAtNegativeOneIsNotTheNoRunSentinel() {
+        val index = LayoutIndex(listOf(marker(0, 1), marker(1, 1)))
+        val grid =
+            SeamGrid(
+                SeamOrientation.VERTICAL,
+                0..1,
+                -1..1,
+                index,
+                emptySet(),
+                parallelUndergroundSpans(index, SeamOrientation.VERTICAL),
+            )
+
+        assertEquals(
+            CompactedSeam(SeamOrientation.VERTICAL, mapOf(0 to -1, 1 to -1), 1),
+            findSeam(grid),
         )
     }
 

@@ -68,6 +68,8 @@ internal fun nextCompaction(
 ): CompactionResult? {
     if (index.isEmpty) return null
     val blocked = forbidden.toMutableSet()
+    // the same underground runs block every seam attempt of this orientation
+    val undergroundSpans = parallelUndergroundSpans(index, orientation)
     repeat(MAX_SEAM_ATTEMPTS) {
         val grid =
             SeamGrid(
@@ -76,6 +78,7 @@ internal fun nextCompaction(
                 secondaryRange(index, orientation),
                 index,
                 blocked,
+                undergroundSpans,
             )
         val seam = findSeam(grid) ?: return null
         var width = seam.width
@@ -133,7 +136,7 @@ private fun corridorOf(
     val corridor = HashMap<Int, IntRange>()
     for (primary in grid.primaryRange) {
         val secondary = seam.path[primary] ?: return null
-        val run = grid.runs[grid.tile(primary, secondary)] ?: return null
+        val run = grid.run(grid.offset(primary, secondary)) ?: return null
         val minStart = maxOf(run.first, secondary - width + 1)
         val maxStart = minOf(secondary, run.last - width + 1)
         if (minStart > maxStart) return null

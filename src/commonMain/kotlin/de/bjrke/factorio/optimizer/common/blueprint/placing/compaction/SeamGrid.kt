@@ -183,6 +183,11 @@ private fun pipeCuttable(
 /**
  * The removable runs of the current orientation. Each removable tile remembers the run it belongs
  * to; the run width is how wide a corridor through it can become.
+ *
+ * The runs are flat arrays over the exact rectangle [primaryRange] x [secondaryRange], indexed by
+ * `(primary - primaryRange.first) * columns + (secondary - secondaryRange.first)`: compaction
+ * builds this grid for every candidate seam, so a `Coordinate`-keyed map would hash on the hot
+ * path. [undergroundSpans] is passed in because it is the same for every grid of one orientation.
  */
 internal class SeamGrid(
     val orientation: SeamOrientation,
@@ -190,12 +195,22 @@ internal class SeamGrid(
     val secondaryRange: IntRange,
     index: LayoutIndex,
     forbidden: Set<Coordinate>,
+    undergroundSpans: Set<Coordinate>,
 ) {
-    val runs = HashMap<Coordinate, IntRange>()
-    val cost = HashMap<Coordinate, Int>()
+    /** Tiles across the seam: the secondary axis of the scanned block. */
+    val columns = secondaryRange.last - secondaryRange.first + 1
+
+    /** One array slot per tile of the scanned block. */
+    val size = (primaryRange.last - primaryRange.first + 1) * columns
+
+    // -1 marks a tile outside any removable run; the ends are row offsets, because the absolute
+    // secondary coordinate may itself be -1
+    private val runFrom = IntArray(size) { -1 }
+    private val runTo = IntArray(size) { -1 }
+    private val runCost = IntArray(size)
 
     init {
-        val blocked = forbidden + parallelUndergroundSpans(index, orientation)
+        val blocked = forbidden + undergroundSpans
         for (primary in primaryRange) {
             var secondary = secondaryRange.first
             while (secondary <= secondaryRange.last) {
@@ -216,68 +231,80 @@ internal class SeamGrid(
                 ) {
                     secondary++
                 }
-                val run = start..secondary
                 for (member in start..secondary) {
-                    val memberTile = tileAt(orientation, primary, member)
-                    runs[memberTile] = run
-                    cost[memberTile] = if (index.at(memberTile) == null) 0 else 1
+                    val offset = offset(primary, member)
+                    runFrom[offset] = start - secondaryRange.first
+                    runTo[offset] = secondary - secondaryRange.first
+                    runCost[offset] =
+                        if (index.at(tileAt(orientation, primary, member)) == null) 0 else 1
                 }
                 secondary++
             }
         }
     }
 
-    fun tile(primary: Int, secondary: Int) = tileAt(orientation, primary, secondary)
+    fun offset(primary: Int, secondary: Int) =
+        (primary - primaryRange.first) * columns + (secondary - secondaryRange.first)
 
-    fun primary(tile: Coordinate) = primaryOf(orientation, tile)
+    /** The removable run through the tile at [offset], or null when it is not removable. */
+    fun run(offset: Int): IntRange? {
+        val from = runFrom[offset]
+        return if (from < 0) null
+        else (secondaryRange.first + from)..(secondaryRange.first + runTo[offset])
+    }
 
-    fun secondary(tile: Coordinate) = secondaryOf(orientation, tile)
+    fun cost(offset: Int) = runCost[offset]
+
+    fun primaryAt(offset: Int) = primaryRange.first + offset / columns
+
+    fun secondaryAt(offset: Int) = secondaryRange.first + offset % columns
 }
 
 private class SeamSearch(private val grid: SeamGrid) {
-    private val bottleneck = HashMap<Coordinate, Int>()
-    private val cost = HashMap<Coordinate, Int>()
-    private val previous = HashMap<Coordinate, Coordinate>()
+    private val columns = grid.columns
 
-    /** One dynamic-programming step: the tile, its widest bottleneck and its belt/pipe cost. */
-    private data class Step(val tile: Coordinate, val width: Int, val cost: Int)
+    // -1 marks an unreachable tile
+    private val bottleneck = IntArray(grid.size) { -1 }
+    private val cost = IntArray(grid.size)
+    private val previous = IntArray(grid.size) { -1 }
 
     fun find(): CompactedSeam? {
         val first = grid.primaryRange.first
         val last = grid.primaryRange.last
         if (first > last) return null
         seed(first)
-        return if (bottleneck.isEmpty()) null
-        else {
-            for (primary in first + 1..last) extend(primary)
-            bestOn(last)?.let {
-                CompactedSeam(grid.orientation, pathTo(it.tile), it.width)
-            }
-        }
+        for (primary in first + 1..last) extend(primary)
+        val best = bestOn(last) ?: return null
+        return CompactedSeam(grid.orientation, pathTo(best), bottleneck[best])
     }
 
     /** Seeds the first primary row: every removable run is a candidate seam start. */
     private fun seed(primary: Int) {
         for (secondary in grid.secondaryRange) {
-            val tile = grid.tile(primary, secondary)
-            val run = grid.runs[tile] ?: continue
-            bottleneck[tile] = run.last - run.first + 1
-            cost[tile] = grid.cost[tile] ?: 0
+            val offset = grid.offset(primary, secondary)
+            val run = grid.run(offset) ?: continue
+            bottleneck[offset] = run.last - run.first + 1
+            cost[offset] = grid.cost(offset)
         }
     }
 
     /** Extends the seam into [primary] from the best of the three previous-row neighbors. */
     private fun extend(primary: Int) {
         for (secondary in grid.secondaryRange) {
-            val tile = grid.tile(primary, secondary)
-            val run = grid.runs[tile] ?: continue
-            val step =
-                bestPredecessor(primary, secondary, tile, run.last - run.first + 1) ?: continue
-            bottleneck[tile] = step.width
-            cost[tile] = step.cost
-            previous[tile] = step.tile
+            val offset = grid.offset(primary, secondary)
+            val run = grid.run(offset) ?: continue
+            val runWidth = run.last - run.first + 1
+            val predecessor = bestPredecessor(primary, secondary, offset, runWidth) ?: continue
+            bottleneck[offset] = minOf(bottleneck[predecessor], runWidth)
+            cost[offset] = cost[predecessor] + grid.cost(offset)
+            previous[offset] = predecessor
         }
     }
+
+    // The best candidate of the pass in progress; reset before each pass.
+    private var best = -1
+    private var bestWidth = 0
+    private var bestCost = 0
 
     /**
      * The previous-row tile that leaves the widest bottleneck: wider wins, then cheaper, then the
@@ -286,62 +313,72 @@ private class SeamSearch(private val grid: SeamGrid) {
     private fun bestPredecessor(
         primary: Int,
         secondary: Int,
-        tile: Coordinate,
+        offset: Int,
         runWidth: Int,
-    ): Step? {
-        var best: Step? = null
+    ): Int? {
+        resetBest()
+        val tileCost = grid.cost(offset)
         for (previousSecondary in secondary - 1..secondary + 1) {
             if (previousSecondary !in grid.secondaryRange) continue
-            val previousTile = grid.tile(primary - 1, previousSecondary)
-            val previousWidth = bottleneck[previousTile] ?: continue
-            val previousCost = cost[previousTile] ?: continue
-            val step =
-                Step(
-                    previousTile,
-                    minOf(previousWidth, runWidth),
-                    previousCost + (grid.cost[tile] ?: 0),
-                )
-            if (best == null || isBetter(step, best)) best = step
+            val previousOffset = grid.offset(primary - 1, previousSecondary)
+            val previousWidth = bottleneck[previousOffset]
+            if (previousWidth < 0) continue
+            val width = minOf(previousWidth, runWidth)
+            choose(width, cost[previousOffset] + tileCost, previousOffset)
         }
-        return best
+        return if (best < 0) null else best
     }
 
     /** The best seam end on [primary]: widest bottleneck, then cheapest, then leftmost. */
-    private fun bestOn(primary: Int): Step? {
-        var best: Step? = null
+    private fun bestOn(primary: Int): Int? {
+        resetBest()
         for (secondary in grid.secondaryRange) {
-            val tile = grid.tile(primary, secondary)
-            val width = bottleneck[tile] ?: continue
-            val step = Step(tile, width, cost[tile] ?: 0)
-            if (best == null || isBetter(step, best)) best = step
+            val offset = grid.offset(primary, secondary)
+            val width = bottleneck[offset]
+            if (width < 0) continue
+            choose(width, cost[offset], offset)
         }
-        return best
+        return if (best < 0) null else best
     }
 
     /** Walks the predecessor chain back into a row-to-tile path. */
-    private fun pathTo(tile: Coordinate): Map<Int, Int> {
+    private fun pathTo(tile: Int): Map<Int, Int> {
         val path = HashMap<Int, Int>()
-        var current: Coordinate? = tile
-        while (current != null) {
-            path[grid.primary(current)] = grid.secondary(current)
+        var current = tile
+        while (current >= 0) {
+            path[grid.primaryAt(current)] = grid.secondaryAt(current)
             current = previous[current]
         }
         return path
     }
 
-    /** The final tie-break: the northernmost/leftmost tile wins. */
-    private fun compareTiles(a: Coordinate, b: Coordinate): Int {
-        val secondary = secondaryOf(grid.orientation, a).compareTo(secondaryOf(grid.orientation, b))
-        if (secondary != 0) return secondary
-        return primaryOf(grid.orientation, a).compareTo(primaryOf(grid.orientation, b))
+    private fun resetBest() {
+        best = -1
+        bestWidth = 0
+        bestCost = 0
     }
 
-    private fun isBetter(candidate: Step, best: Step) =
-        candidate.width > best.width ||
-            (candidate.width == best.width && candidate.cost < best.cost) ||
-            (candidate.width == best.width &&
-                candidate.cost == best.cost &&
-                compareTiles(candidate.tile, best.tile) < 0)
+    private fun choose(width: Int, cost: Int, tile: Int) {
+        val better =
+            when {
+                best < 0 -> true
+                width != bestWidth -> width > bestWidth
+                cost != bestCost -> cost < bestCost
+                else -> compareTiles(tile, best) < 0
+            }
+        if (better) {
+            best = tile
+            bestWidth = width
+            bestCost = cost
+        }
+    }
+
+    /** The final tie-break: the northernmost/leftmost tile wins. */
+    private fun compareTiles(a: Int, b: Int): Int {
+        val secondary = (a % columns).compareTo(b % columns)
+        if (secondary != 0) return secondary
+        return (a / columns).compareTo(b / columns)
+    }
 }
 
 /**

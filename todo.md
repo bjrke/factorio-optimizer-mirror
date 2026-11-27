@@ -148,38 +148,6 @@ and asserts `entityAt`/`isReserved`/`removeAt` after `replaceAll`; a
 `RowReservations` case with negative and sparse rows; the full layout suite
 (every golden URL and blueprint) unchanged.
 
-### Move the seam grid and its DP onto flat arrays
-
-Compaction is 30% of the run (5,399 samples, 75% of it hash traffic).
-`SeamGrid` (`blueprint/placing/compaction/SeamGrid.kt:194-195`) stores
-`runs: HashMap<Coordinate, IntRange>`
-and `cost: HashMap<Coordinate, Int>` with one entry per removable tile, and
-`SeamSearch` (`:238-240`) keeps `bottleneck`/`cost`/`previous` in three more
-`HashMap<Coordinate, _>`; `Step` (`:243`) is allocated per candidate;
-`forbidden + parallelUndergroundSpans(...)` (`:198`) builds a new set per
-orientation. The allocation is `SeamGridKt.tileAt` 29,344 MB,
-`HashMap.newNode` 27,533 MB, `HashMap.resize` 11,932 MB,
-`SeamSearch.bestPredecessor` 7,812 MB and `Area$iterator$1.next` 2,959 MB. Self
-time is `CorridorShift.accept` 595, `SeamGridKt.isRemovable` 299,
-`SeamGrid.<init>` 61 and `CorridorShift.sideOf` 39 samples.
-
-`primaryRange`/`secondaryRange` already describe an exact rectangle, so index
-every table by `(primary - primaryRange.first) * cols + (secondary -
-secondaryRange.first)`: `IntArray` run starts and ends (`-1` for "not
-removable"), `IntArray` bottleneck (`-1` for "unreachable"), `IntArray` cost and
-`IntArray` predecessor. Delete `Step` and let `bestPredecessor` compare ints
-locally; `pathTo` walks the predecessor array and maps indices back to
-coordinates, and `CompactedSeam` keeps its shape. Compute the parallel
-underground spans once per orientation instead of per grid. The documented
-tie-break order (width, then cost, then northernmost/leftmost) must stay
-exactly as it is, and `tileAt`/`primaryOf`/`secondaryOf` (`:25`) stay for
-`corridorOf`, `CorridorShift` and `nextCompaction`.
-
-Add tests: a seam tie-break case on a hand-built grid where two predecessors
-share width and cost, and one where the widest run is reachable only at the
-`-1` sentinel edge rows; the existing compaction, validation and golden layout
-suites unchanged.
-
 ### Key the route search by packed node ids
 
 Delivered-feed routing is 50% of the run (9,086 samples) and 68% of it is hash
