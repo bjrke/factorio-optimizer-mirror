@@ -26,11 +26,11 @@ internal fun tileAt(orientation: SeamOrientation, primary: Int, secondary: Int) 
     if (orientation == SeamOrientation.VERTICAL) Coordinate(secondary, primary)
     else Coordinate(primary, secondary)
 
-internal fun primaryOf(orientation: SeamOrientation, tile: Coordinate) =
-    if (orientation == SeamOrientation.VERTICAL) tile.y else tile.x
+internal fun primaryOf(orientation: SeamOrientation, x: Int, y: Int) =
+    if (orientation == SeamOrientation.VERTICAL) y else x
 
-internal fun secondaryOf(orientation: SeamOrientation, tile: Coordinate) =
-    if (orientation == SeamOrientation.VERTICAL) tile.x else tile.y
+internal fun secondaryOf(orientation: SeamOrientation, x: Int, y: Int) =
+    if (orientation == SeamOrientation.VERTICAL) x else y
 
 /** The tiles along the corridor's flow axis; a splice joins these two sides. */
 private fun alongTiles(orientation: SeamOrientation, tile: Coordinate) =

@@ -6,6 +6,13 @@ import de.bjrke.factorio.optimizer.common.core.model.Direction.SOUTH
 import de.bjrke.factorio.optimizer.common.core.model.Direction.WEST
 
 /**
+ * The largest prime below 2^16: `x * 65521` stays inside an `Int` for `|x| <= 32767` and the sum
+ * stays inside it for `|y| <= 32760`, so two coordinates of a 65536-tile blueprint cannot hash
+ * equal. A smaller prime lets a diagonal pair collide again, a larger one overflows earlier.
+ */
+private const val COORDINATE_PRIME = 65_521
+
+/**
  * A tile position. The arithmetic operators stay on the type; the geometry and compass helpers live
  * in `CoordinateGeometry.kt`, so a tile stays a small value and the helpers can be read as one
  * vocabulary.
@@ -17,6 +24,13 @@ data class Coordinate(val x: Int, val y: Int) {
 
     operator fun times(factor: Int) = Coordinate(x * factor, y * factor)
 
+    /**
+     * A prime-multiplier hash instead of the generated `31 * x + y`, which collides along every
+     * 31-tile diagonal and treeified the grid maps. See [COORDINATE_PRIME] for the span it keeps
+     * collision-free.
+     */
+    override fun hashCode() = x * COORDINATE_PRIME + y
+
     companion object {
         val origin = Coordinate(0, 0)
 
@@ -25,6 +39,9 @@ data class Coordinate(val x: Int, val y: Int) {
         val west = origin.west()
         val east = origin.east()
     }
+
+    override fun equals(other: Any?) =
+        this === other || other is Coordinate && x == other.x && y == other.y
 }
 
 /** A cardinal facing, stored in a blueprint as 0/4/8/12 (see the entity JSON writer). */
@@ -134,6 +151,19 @@ data class Area(val topLeft: Coordinate, val dimension: Dimension) : Set<Coordin
                 return tile
             }
         }
+
+    /**
+     * Visits every tile in the order [iterator] does, but inline and with the axes as `Int`s: a
+     * walk allocates no iterator and no [Coordinate] per tile. It is inline, so the body may still
+     * `return` out of the calling function.
+     */
+    inline fun forEachTile(action: (x: Int, y: Int) -> Unit) {
+        for (tileX in x until endX) {
+            for (tileY in y until endY) {
+                action(tileX, tileY)
+            }
+        }
+    }
 
     override fun containsAll(elements: Collection<Coordinate>) = elements.all(::contains)
 

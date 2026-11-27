@@ -42,6 +42,25 @@ class AreaTest {
         }
 
     @Test
+    fun forEachTileVisitsTheTilesInIteratorOrder() {
+        val area = Area(-2, -1, 2, 2)
+        val tiles = mutableListOf<Coordinate>()
+        area.forEachTile { x, y -> tiles += Coordinate(x, y) }
+        assertEquals(area.toList(), tiles)
+    }
+
+    @Test
+    fun forEachTileVisitsNoTileOfAnEmptyAreaAndTheOneTileOfATileArea() =
+        assertTableOf(
+            emptyList<Coordinate>() to Area(1, 2, 0, 3),
+            listOf(Coordinate(3, 4)) to areaTile(3, 4),
+        ) { (expected, area) ->
+            val tiles = mutableListOf<Coordinate>()
+            area.forEachTile { x, y -> tiles += Coordinate(x, y) }
+            assertEquals(expected, tiles)
+        }
+
+    @Test
     fun neighborsAreTheRingOutsideTheAreaWithoutCorners() {
         val area = Area(2, 3, 2, 2)
         assertEquals(

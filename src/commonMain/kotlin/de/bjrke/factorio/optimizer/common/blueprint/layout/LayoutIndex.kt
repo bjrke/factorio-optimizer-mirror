@@ -46,11 +46,11 @@ internal class LayoutIndex(
         grid = arrayOfNulls(width * extent.height)
         if (grid.isNotEmpty()) {
             for (entity in entities) {
-                for (tile in entity.area) {
-                    val slot = (tile.x - minX) + (tile.y - minY) * width
+                entity.area.forEachTile { x, y ->
+                    val slot = (x - minX) + (y - minY) * width
                     val previous = grid[slot]
                     if (onOverlap != null && previous != null && previous !== entity) {
-                        onOverlap(tile)
+                        onOverlap(Coordinate(x, y))
                     }
                     grid[slot] = entity
                 }

@@ -192,9 +192,9 @@ private class CorridorShift(
      */
     private fun sideOf(entity: LayoutEntity): Int? {
         var side = 0
-        for (tile in entity.area) {
-            val range = corridor[primaryOf(orientation, tile)] ?: return null
-            val secondary = secondaryOf(orientation, tile)
+        entity.area.forEachTile { x, y ->
+            val range = corridor[primaryOf(orientation, x, y)] ?: return null
+            val secondary = secondaryOf(orientation, x, y)
             val tileSide =
                 when {
                     secondary < range.first -> CORRIDOR_BEFORE

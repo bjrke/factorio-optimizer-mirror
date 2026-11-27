@@ -210,33 +210,6 @@ equal-but-distinct `FactoryProduction` values appear in `group.needs`/`links`
 and must still pair by recipe slot; the existing band, plan and golden layout
 suites unchanged.
 
-### Stop tile and area walks allocating
-
-`Coordinate.hashCode` is still the generated `31x + y`: `data class
-Coordinate(x, y)` (`core/model/Tile.kt:13`) only has the default hash. The profile shows
-49 `HashMap$TreeNode.find`, 39 `balanceInsertion` and 22 `treeifyBin` self
-samples (0.6%) plus 1,424 `Coordinate.equals` (8%). Override `hashCode` with a
-mixed hash (e.g. `x * 0x9E3779B1 xor y * 0x85EBCA77`). The board, seam and route
-blocks remove most `Coordinate`-keyed maps, so land this with the `Area` change
-below rather than as a separate branch.
-
-`Area.iterator` (`core/model/Tile.kt:117`) builds a fresh `Iterator` per walk and
-yields a new `Coordinate` per tile; `Area$iterator$1.next` allocates 5,813 MB
-(2% of allocation) and `hasNext` is 19 self samples. Add
-`inline fun Area.forEachTile { }` and use it in
-`blueprint/layout/LayoutBoard.kt:134` and `:146`,
-`blueprint/layout/LayoutIndex.kt:18-27`,
-`blueprint/placing/compaction/LayoutCompaction.kt:191`,
-`blueprint/layout/validation/LayoutValidation.kt:39`,
-`blueprint/layout/validation/LayoutValidationFlow.kt:93` and
-`blueprint/layout/validation/LayoutValidationTransport.kt:107`. `ArrayList`
-iterators are another 3.7 GB in band search, so hot loops should index a list
-instead of iterating it.
-
-Add tests: `forEachTile` covering an empty and a 1×1 area; a `Coordinate` hash
-contract case; the existing compaction, routing, validation and golden layout
-suites unchanged.
-
 ### Let an inserter carry more than one material
 
 `InserterEntity.material` (`LayoutTransportEntities.kt:71`) is singular;

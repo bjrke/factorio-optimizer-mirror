@@ -339,6 +339,16 @@ baselines, so every finding fails.
   `validateLayout` reported `copper-plate runs into electronic-circuit` and compaction stayed off.
   A candidate now rejects any foreign belt pouring into either splitter tile. Evidence:
   `theReportedExpressSplitterUrlKeepsForeignBeltsOffItsSplitters`, `realBlueprintsAreValid`.
+- **`Coordinate`'s generated hash collided on grid diagonals.** The data-class hash
+  `31 * x + y` gives `(x, y)` and `(x + 1, y - 31)` the same value, so the grid-keyed
+  maps grew long chains and treeified. `Coordinate` now hashes with a prime
+  multiplier that is injective over a 65536-tile blueprint. A walk that consumes the
+  axes directly (`LayoutIndex`'s fill, `CorridorShift.sideOf`) uses
+  `Area.forEachTile` and allocates no `Coordinate` per tile; a walk that keys a map
+  by tile keeps the iterator, because it has to build the coordinate anyway.
+  `BlueprintBenchmarkTest` ran at 120.0 s against 124.4 s unchanged, three
+  interleaved runs each. Evidence: `theGeneratedDiagonalCollisionIsGone`,
+  `distinctCoordinatesHashDistinctly`, `forEachTileVisitsTheTilesInIteratorOrder`.
 - **The nearest split points can all be walled off, so the split must be searched further.** `deliver`
   routes only the `SPLIT_CANDIDATES` (12) nearest candidates, because a belt is normally split beside
   its sink. A row that takes a produced material from the *other* side of the trunk puts its lane

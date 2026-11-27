@@ -160,7 +160,10 @@ class LayoutCompactionTest : BaseGameCtxTest() {
                     parallelUndergroundSpans(index, orientation),
                 )
             return grid.run(
-                grid.offset(primaryOf(orientation, span), secondaryOf(orientation, span)),
+                grid.offset(
+                    primaryOf(orientation, span.x, span.y),
+                    secondaryOf(orientation, span.x, span.y),
+                ),
             )
         }
 

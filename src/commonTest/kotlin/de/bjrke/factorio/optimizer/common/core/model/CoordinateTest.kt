@@ -1,10 +1,34 @@
 package de.bjrke.factorio.optimizer.common.core.model
 
+import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class CoordinateTest {
+
+    @Test
+    fun equalCoordinatesShareTheirHash() {
+        val first = Coordinate(7, -3)
+        val second = Coordinate(7, -3)
+        assertAll(
+            { assertEquals(first, second) },
+            { assertEquals(first.hashCode(), second.hashCode()) },
+        )
+    }
+
+    @Test
+    fun theGeneratedDiagonalCollisionIsGone() {
+        // the default data-class hash 31 * x + y put these two tiles in one bucket
+        assertNotEquals(Coordinate(2, 5).hashCode(), Coordinate(3, 5 - 31).hashCode())
+    }
+
+    @Test
+    fun distinctCoordinatesHashDistinctly() {
+        val hashes = (-8..8).flatMap { x -> (-8..8).map { y -> Coordinate(x, y).hashCode() } }
+        assertEquals(hashes.size, hashes.toSet().size)
+    }
 
     @Test
     fun areaWithoutParamsHasSize1() {
