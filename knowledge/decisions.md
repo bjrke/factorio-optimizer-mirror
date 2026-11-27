@@ -14,6 +14,19 @@ points at the owning symbol instead of restating it. No constant values, no layo
 test-function names. Keep an entry under ~10 lines and prepend a new one. A change that supersedes
 an entry rewrites or deletes it — never add a "supersedes" note.
 
+## 2026-11-27 — The grid vocabulary stays a data class
+
+**Decision.** `Coordinate`, `Dimension` and `Area` stay `data class`es. Packing them, or making them
+value classes, is only worth revisiting once the `Coordinate`-keyed maps and sets are gone.
+
+**Guardrail.** Measured on the whole `-Pbenchmark` sweep: packing `Coordinate` into one biased `Int`
+(`@JvmInline value class`) is ~25 % slower, a multi-field `value class` behind
+`-XXLanguage:+FullValueClasses` ~3 % slower with unchanged allocation, and both buy nothing the
+layout needs. The hot paths hold boxed keys in the `Coordinate`-keyed collections, so a value class
+adds boxing instead of removing an allocation. Re-measure both before reviving either.
+
+**See.** `core/model/Tile.kt`.
+
 ## 2026-11-24 — A recipe gets a result-local index after the optimizer
 
 **Decision.** Each `OptimizationResult` mints one dense `RecipeIndex` per production it
