@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.compaction
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.ImportExtension
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
@@ -14,7 +15,9 @@ private const val MAX_COMPACTION_PASSES = 256
  * Removes empty or spliceable corridors from the layout until none is left. Every corridor is
  * validated before it is kept; electricity is placed afterward, so poles follow the compacted
  * geometry. A corridor can expose a longer underground run, so the stretcher runs again after each
- * one; the pins and the west bound move with the import group compaction shifts.
+ * one; the pins and the west bound move with the import group compaction shifts. The pass
+ * alternates the axis after every corridor it applies, so neither orientation starves; when the
+ * preferred one has no corridor, the other is used.
  */
 internal class CompactionPass(
     private val board: LayoutBoard,
@@ -27,10 +30,13 @@ internal class CompactionPass(
         // tiles out of its own orientation and try the next candidate instead of stopping the pass
         val rejectedVertical = mutableSetOf<Coordinate>()
         val rejectedHorizontal = mutableSetOf<Coordinate>()
+        var preferVertical = true
         repeat(MAX_COMPACTION_PASSES) {
+            // one grid for both orientations; nothing changes between the two calls
+            val index = LayoutIndex(board.placed.toList())
             val vertical =
                 nextCompaction(
-                    board.placed.toList(),
+                    index,
                     SeamOrientation.VERTICAL,
                     forbidden = rejectedVertical,
                     pinned = imports.pinnedImportTiles,
@@ -38,17 +44,13 @@ internal class CompactionPass(
                 )
             val horizontal =
                 nextCompaction(
-                    board.placed.toList(),
+                    index,
                     SeamOrientation.HORIZONTAL,
                     forbidden = rejectedHorizontal,
                 )
-            val chosen =
-                when {
-                    vertical == null -> horizontal
-                    horizontal == null -> vertical
-                    vertical.width >= horizontal.width -> vertical
-                    else -> horizontal
-                } ?: return
+            val chosen = nextCorridor(vertical, horizontal, preferVertical) ?: return
+            // a rejected corridor also hands the next pass to the other orientation
+            preferVertical = chosen.orientation == SeamOrientation.HORIZONTAL
             val saved = board.placed.toList()
             board.replaceAll(chosen.entities)
             // a corridor can expose a longer underground run; grow it again before the next one
@@ -75,3 +77,13 @@ internal class CompactionPass(
         }
     }
 }
+
+/**
+ * The corridor to apply next: the preferred axis when it has one, otherwise the other. The pass
+ * flips its preference after every applied corridor, so neither axis starves.
+ */
+internal fun nextCorridor(
+    vertical: CompactionResult?,
+    horizontal: CompactionResult?,
+    preferVertical: Boolean,
+): CompactionResult? = if (preferVertical) vertical ?: horizontal else horizontal ?: vertical

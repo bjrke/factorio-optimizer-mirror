@@ -4,6 +4,7 @@ import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.BeltEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.PipeEntity
+import de.bjrke.factorio.optimizer.common.blueprint.layout.layoutExtent
 import de.bjrke.factorio.optimizer.common.blueprint.layout.validation.validateLayout
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 import de.bjrke.factorio.optimizer.common.core.model.east
@@ -48,23 +49,23 @@ internal data class CompactionResult(
 private const val MAX_SEAM_ATTEMPTS = 8
 
 /**
- * Finds the widest removable corridor in [orientation] and removes it in one shift. The corridor is
- * bounded by the seam: every tile inside it must be empty or a spliceable belt/pipe, and the two
- * sides stay on their own side. Everything beyond the corridor moves one corridor width towards the
- * seam, so the layout shrinks by exactly that width.
+ * Finds the widest removable corridor in [index] along [orientation] and removes it in one shift.
+ * The corridor is bounded by the seam: every tile inside it must be empty or a spliceable
+ * belt/pipe, and the two sides stay on their own side. Everything beyond the corridor moves one
+ * corridor width towards the seam, so the layout shrinks by exactly that width. The caller owns
+ * [index], so a pass can hand the same grid to both orientations.
  *
  * Returns `null` when no corridor shrinks the layout, or when every candidate fails
  * [validateLayout]. [forbidden] keeps a caller from finding a seam it already rejected. [pinned]
  * tiles (the import markers) may not be moved, so the import bus keeps its straight column.
  */
 internal fun nextCompaction(
-    entities: List<LayoutEntity>,
+    index: LayoutIndex,
     orientation: SeamOrientation,
     forbidden: Set<Coordinate> = emptySet(),
     pinned: Set<Coordinate> = emptySet(),
     westBound: Int = Int.MIN_VALUE,
 ): CompactionResult? {
-    val index = LayoutIndex(entities)
     if (index.isEmpty) return null
     val blocked = forbidden.toMutableSet()
     repeat(MAX_SEAM_ATTEMPTS) {
@@ -212,20 +213,22 @@ private class CorridorShift(
 
 /**
  * Whether the shift actually shrank the layout: a corridor of only empty tiles leaves nothing on
- * one side, and an empty layout must never count as the smaller one.
+ * one side, and an empty layout must never count as the smaller one. Only the extent matters here,
+ * so this reads the candidate's bounds instead of building a second tile grid.
  */
 private fun shrinks(
     before: LayoutIndex,
     after: List<LayoutEntity>,
     orientation: SeamOrientation,
 ): Boolean {
-    val afterIndex = LayoutIndex(after)
-    return !afterIndex.isEmpty &&
-        if (orientation == SeamOrientation.VERTICAL) {
-            afterIndex.maxX - afterIndex.minX < before.maxX - before.minX
-        } else {
-            afterIndex.maxY - afterIndex.minY < before.maxY - before.minY
-        }
+    // shortcut: one entity scan per candidate; if this ever shows, CorridorShift can carry the
+    // bounds it already walks
+    val extent = layoutExtent(after) ?: return false
+    return if (orientation == SeamOrientation.VERTICAL) {
+        extent.width < before.maxX - before.minX + 1
+    } else {
+        extent.height < before.maxY - before.minY + 1
+    }
 }
 
 private fun LayoutEntity.shifted(orientation: SeamOrientation, amount: Int): LayoutEntity {

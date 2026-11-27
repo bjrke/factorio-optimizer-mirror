@@ -1,6 +1,7 @@
 package de.bjrke.factorio.optimizer.common.blueprint.layout
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.LayoutEntity
+import de.bjrke.factorio.optimizer.common.core.model.Area
 import de.bjrke.factorio.optimizer.common.core.model.Coordinate
 
 /**
@@ -34,25 +35,15 @@ internal class LayoutIndex(
     private val grid: Array<LayoutEntity?>
 
     init {
-        var lowX = Int.MAX_VALUE
-        var highX = Int.MIN_VALUE
-        var lowY = Int.MAX_VALUE
-        var highY = Int.MIN_VALUE
-        for (entity in entities) {
-            val area = entity.area
-            // an area without tiles contributes nothing, just as iterating it would
-            if (area.isEmpty()) continue
-            lowX = minOf(lowX, area.x)
-            highX = maxOf(highX, area.endX - 1)
-            lowY = minOf(lowY, area.y)
-            highY = maxOf(highY, area.endY - 1)
-        }
-        minX = lowX
-        maxX = highX
-        minY = lowY
-        maxY = highY
-        width = if (lowX <= highX) highX - lowX + 1 else 0
-        grid = arrayOfNulls(if (lowY <= highY) width * (highY - lowY + 1) else 0)
+        // nothing covers a tile; a zero-size area at the origin keeps the bounds finite and the
+        // zero width makes at() miss every tile
+        val extent = layoutExtent(entities) ?: Area(0, 0, 0, 0)
+        minX = extent.x
+        maxX = extent.endX - 1
+        minY = extent.y
+        maxY = extent.endY - 1
+        width = extent.width
+        grid = arrayOfNulls(width * extent.height)
         if (grid.isNotEmpty()) {
             for (entity in entities) {
                 for (tile in entity.area) {
@@ -78,4 +69,25 @@ internal class LayoutIndex(
         val slot = x + y * width
         return if (slot >= grid.size) null else grid[slot]
     }
+}
+
+/**
+ * The bounding area of [entities], or null when they cover no tile. An entity with an empty area
+ * contributes nothing, just as iterating it would.
+ */
+internal fun layoutExtent(entities: List<LayoutEntity>): Area? {
+    var lowX = Int.MAX_VALUE
+    var highX = Int.MIN_VALUE
+    var lowY = Int.MAX_VALUE
+    var highY = Int.MIN_VALUE
+    for (entity in entities) {
+        val area = entity.area
+        if (area.isEmpty()) continue
+        lowX = minOf(lowX, area.x)
+        highX = maxOf(highX, area.endX)
+        lowY = minOf(lowY, area.y)
+        highY = maxOf(highY, area.endY)
+    }
+    if (lowX > highX || lowY > highY) return null
+    return Area(lowX, lowY, highX - lowX, highY - lowY)
 }

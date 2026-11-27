@@ -101,7 +101,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
                     )
                 }
 
-            val result = assertNotNull(nextCompaction(entities, orientation))
+            val result = assertNotNull(nextCompaction(LayoutIndex(entities), orientation))
             val belts = result.entities.filterIsInstance<BeltEntity>()
 
             assertAll(
@@ -122,7 +122,10 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     fun theWholeEmptyGapIsRemovedInOneShift() {
         val result =
             assertNotNull(
-                nextCompaction(listOf(machine(0, 0), machine(0, 10)), SeamOrientation.HORIZONTAL),
+                nextCompaction(
+                    LayoutIndex(listOf(machine(0, 0), machine(0, 10))),
+                    SeamOrientation.HORIZONTAL,
+                ),
             )
         val machines = result.entities.filterIsInstance<MachineEntity>().sortedBy { it.area.y }
 
@@ -175,7 +178,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     fun differentMaterialsAreNeverMerged() {
         val entities =
             listOf(marker(-1, 0), belt(0, 0, ironOre), belt(5, 0, ironPlate), marker(6, 0))
-        val result = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
+        val result = assertNotNull(nextCompaction(LayoutIndex(entities), SeamOrientation.VERTICAL))
         val belts = result.entities.filterIsInstance<BeltEntity>().sortedBy { it.area.x }
 
         assertAll(
@@ -194,7 +197,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     @Test
     fun differentFluidsAreNeverMerged() {
         val entities = listOf(marker(-1, 0), pipe(0, 0, water), pipe(5, 0, crudeOil), marker(6, 0))
-        val result = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
+        val result = assertNotNull(nextCompaction(LayoutIndex(entities), SeamOrientation.VERTICAL))
         val pipes = result.entities.filterIsInstance<PipeEntity>().sortedBy { it.area.x }
 
         assertAll(
@@ -311,9 +314,11 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     @Test
     fun theWestBoundKeepsTheFactoryEdgeInPlace() {
         val entities = listOf(machine(0, 0), belt(5, 0), marker(6, 0))
-        val free = assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL))
+        val free = assertNotNull(nextCompaction(LayoutIndex(entities), SeamOrientation.VERTICAL))
         val bounded =
-            assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL, westBound = 4))
+            assertNotNull(
+                nextCompaction(LayoutIndex(entities), SeamOrientation.VERTICAL, westBound = 4),
+            )
 
         assertAll(
             {
@@ -337,7 +342,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     @Test
     fun aPackedLayoutHasNoCorridor() =
         assertTableOf(SeamOrientation.VERTICAL, SeamOrientation.HORIZONTAL) { orientation ->
-            assertNull(nextCompaction(listOf(machine(0, 0)), orientation))
+            assertNull(nextCompaction(LayoutIndex(listOf(machine(0, 0))), orientation))
         }
 
     /**
@@ -352,7 +357,8 @@ class LayoutCompactionTest : BaseGameCtxTest() {
             listOf(marker(0, -1), belt(0, 0, direction = SOUTH), belt(0, 1, direction = SOUTH)) +
                 lane
 
-        val result = assertNotNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+        val result =
+            assertNotNull(nextCompaction(LayoutIndex(entities), SeamOrientation.HORIZONTAL))
         val movedLane = result.entities.filterIsInstance<BeltEntity>().filter { it.area.y == 1 }
         val feeder = result.entities.filterIsInstance<BeltEntity>().single { it.area.y == 0 }
 
@@ -390,7 +396,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
                 mixedBelt(-2, 2, WEST, swapped),
             )
 
-        assertNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+        assertNull(nextCompaction(LayoutIndex(entities), SeamOrientation.HORIZONTAL))
     }
 
     /**
@@ -403,7 +409,8 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     fun aBeltBeforeATunnelOutputIsDroppedWhenTheOutputFeedsItsSplitter() {
         val entities = tunnelBehindSplitter(ironOre, ironOre)
 
-        val result = assertNotNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+        val result =
+            assertNotNull(nextCompaction(LayoutIndex(entities), SeamOrientation.HORIZONTAL))
         val output =
             result.entities.filterIsInstance<UndergroundBeltEntity>().single { it.io == Io.OUTPUT }
         val splitter = result.entities.filterIsInstance<SplitterEntity>().single()
@@ -420,7 +427,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     @Test
     fun aTunnelOutputOnlyReplacesABeltOfItsOwnMaterial() {
         val entities = tunnelBehindSplitter(beltMaterial = ironOre, runMaterial = ironPlate)
-        assertNull(nextCompaction(entities, SeamOrientation.HORIZONTAL))
+        assertNull(nextCompaction(LayoutIndex(entities), SeamOrientation.HORIZONTAL))
     }
 
     /**
@@ -446,7 +453,7 @@ class LayoutCompactionTest : BaseGameCtxTest() {
     fun aCorridorOfOnlyEmptyTilesIsNotAShrink() =
         assertTableOf(SeamOrientation.VERTICAL, SeamOrientation.HORIZONTAL) { orientation ->
             // one marker at the west/north edge: every corridor beyond it is empty
-            assertNull(nextCompaction(listOf(marker(0, 0)), orientation))
+            assertNull(nextCompaction(LayoutIndex(listOf(marker(0, 0))), orientation))
         }
 
     /**
@@ -463,10 +470,20 @@ class LayoutCompactionTest : BaseGameCtxTest() {
 
         val loose =
             assertNotNull(
-                nextCompaction(entities, SeamOrientation.VERTICAL, pinned = connectorOnly),
+                nextCompaction(
+                    LayoutIndex(entities),
+                    SeamOrientation.VERTICAL,
+                    pinned = connectorOnly,
+                ),
             )
         val tight =
-            assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL, pinned = withLaneTile))
+            assertNotNull(
+                nextCompaction(
+                    LayoutIndex(entities),
+                    SeamOrientation.VERTICAL,
+                    pinned = withLaneTile,
+                ),
+            )
 
         assertAll(
             {
@@ -514,7 +531,9 @@ class LayoutCompactionTest : BaseGameCtxTest() {
         val pinned = setOf(Coordinate(0, 0), Coordinate(1, 0), Coordinate(0, 5), Coordinate(1, 5))
 
         val result =
-            assertNotNull(nextCompaction(entities, SeamOrientation.VERTICAL, pinned = pinned))
+            assertNotNull(
+                nextCompaction(LayoutIndex(entities), SeamOrientation.VERTICAL, pinned = pinned),
+            )
         val group = result.entities.filter { it.area.x <= 1 }.map { it.area.topLeft }.toSet()
 
         assertAll(

@@ -88,16 +88,29 @@ class LayoutIndexTest : BaseGameCtxTest() {
     }
 
     @Test
-    fun anEmptyListHasNoTileAndKeepsTheInvertedExtent() {
-        val index = LayoutIndex(emptyList())
+    fun theExtentIsTheBoundingAreaAndIsNullWhenNoTileIsCovered() {
+        assertAll(
+            { assertNull(layoutExtent(emptyList())) },
+            { assertEquals(Area(-3, -2, 6, 5), layoutExtent(listOf(machine(-3, -2), belt(2, 2)))) },
+        )
+    }
+
+    @Test
+    fun anIndexWithoutTilesIsEmpty() {
+        val empty = LayoutIndex(emptyList())
+        // an entity whose area covers no tile contributes nothing, just as iterating it would
+        val noTiles =
+            LayoutIndex(
+                listOf(
+                    MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(0, 0, 0, 0), MACHINE),
+                ),
+            )
 
         assertAll(
-            { assertTrue(index.isEmpty) },
-            { assertNull(index.at(Coordinate.origin)) },
-            { assertEquals(Int.MAX_VALUE, index.minX) },
-            { assertEquals(Int.MIN_VALUE, index.maxX) },
-            { assertEquals(Int.MAX_VALUE, index.minY) },
-            { assertEquals(Int.MIN_VALUE, index.maxY) },
+            { assertTrue(empty.isEmpty) },
+            { assertNull(empty.at(Coordinate.origin)) },
+            { assertTrue(noTiles.isEmpty) },
+            { assertNull(noTiles.at(Coordinate.origin)) },
         )
     }
 }

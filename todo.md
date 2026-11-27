@@ -143,17 +143,6 @@ storage.
 as `sections[coordinate.y]` at `:175-179`, for at most a few dozen rows. Store
 an offset `Array<Section?>` over the reserved row range, cleared on `clear()`.
 
-Then stop rebuilding the index more than once per compaction pass:
-`CompactionPass.compact` builds it for both orientations, again per
-`validateLayout` (`CompactionPass.kt:56`), and `UndergroundStretcher` rebuilds
-it; `CorridorShift.shift` rescans every entity per candidate
-(`blueprint/placing/compaction/LayoutCompaction.kt:165`, `accept` `:175`)
-against `MAX_COMPACTION_PASSES = 256`
-(`blueprint/placing/compaction/CompactionPass.kt:11`). Build once per pass and pass it down; replace the
-per-corridor full `validateLayout` with an incremental check only if the
-re-profile still names it (`beltLoops` and `trimAcyclic` are still in the top
-self-time list).
-
 Add tests: a board unit case that places entities across negative coordinates
 and asserts `entityAt`/`isReserved`/`removeAt` after `replaceAll`; a
 `RowReservations` case with negative and sparse rows; the full layout suite

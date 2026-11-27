@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.placing.compaction
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutBoard
+import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutIndex
 import de.bjrke.factorio.optimizer.common.blueprint.layout.LayoutNames
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MachineEntity
 import de.bjrke.factorio.optimizer.common.blueprint.layout.entity.MarkerEntity
@@ -18,6 +19,8 @@ import de.bjrke.test.assertAll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class CompactionPassTest : BaseGameCtxTest() {
 
@@ -27,6 +30,9 @@ class CompactionPassTest : BaseGameCtxTest() {
             undergroundRange = 6,
             temperatureOf = { 0 },
         )
+
+    private fun machine(y: Int) =
+        MachineEntity(Factory.ASSEMBLING_MACHINE_3, Area(0, y, 3, 3), "assembling-machine-3")
 
     /**
      * A corridor west of the pinned import group moves the group west. Its pins and the x bound the
@@ -56,6 +62,48 @@ class CompactionPassTest : BaseGameCtxTest() {
             { assertEquals(setOf(Coordinate(3, 0)), imports.pinnedImportTiles) },
             { assertEquals(9, imports.poleWestBound) },
             { assertEquals(emptyList(), validateLayout(board.placed)) },
+        )
+    }
+
+    /**
+     * Every column is occupied, so vertical compaction has no corridor; the empty rows between the
+     * machines are a horizontal one. The pass must fall through to the other orientation instead of
+     * stopping at the vertical dead end.
+     */
+    @Test
+    fun aVerticalDeadEndStillCompactsHorizontally() {
+        val board = board()
+        board.place(machine(0))
+        board.place(machine(10))
+        val entities = board.placed.toList()
+
+        assertAll(
+            { assertNull(nextCompaction(LayoutIndex(entities), SeamOrientation.VERTICAL)) },
+            { assertNotNull(nextCompaction(LayoutIndex(entities), SeamOrientation.HORIZONTAL)) },
+        )
+
+        CompactionPass(board, BeltEnd.CONSTANT_COMBINATOR, ImportExtension()).compact()
+
+        assertAll(
+            { assertEquals(6, board.endY - board.minY) },
+            { assertEquals(emptyList(), validateLayout(board.placed)) },
+        )
+    }
+
+    /** The pass alternates the preferred axis and falls back to the other when it is a dead end. */
+    @Test
+    fun thePassAlternatesAxesAndFallsBackToTheOther() {
+        val vertical = CompactionResult(emptyList(), 1, SeamOrientation.VERTICAL, 0, emptySet())
+        val horizontal = CompactionResult(emptyList(), 4, SeamOrientation.HORIZONTAL, 0, emptySet())
+
+        assertAll(
+            { assertEquals(vertical, nextCorridor(vertical, horizontal, preferVertical = true)) },
+            {
+                assertEquals(horizontal, nextCorridor(vertical, horizontal, preferVertical = false))
+            },
+            { assertEquals(horizontal, nextCorridor(null, horizontal, preferVertical = true)) },
+            { assertEquals(vertical, nextCorridor(vertical, null, preferVertical = false)) },
+            { assertNull(nextCorridor(null, null, preferVertical = true)) },
         )
     }
 }

@@ -116,12 +116,15 @@ belt-row and fluid-lane stages are in `lanes-fluids.md`.
   (`ImportExtension.pinnedImportTiles`, passed to `nextCompaction` as `pinned`),
   so compaction moves them as one column. Only a vertical corridor gets pins, and only
   it moves the pins and `poleWestBound`: a horizontal corridor shifts rows, so its y
-  shift must never touch the pole's x bound.
-- `blueprint/placing/compaction/LayoutCompaction.kt` — seam compaction over a `List<LayoutEntity>`;
+  shift must never touch the pole's x bound. The pass builds one `LayoutIndex` for both
+  orientations and alternates the axis after every applied corridor, falling back to the
+  other when the preferred one has none.
+- `blueprint/placing/compaction/LayoutCompaction.kt` — seam compaction over a `LayoutIndex`;
   `SeamGrid.kt` owns the removable-run grid and its `SeamSearch` dynamic program; a belt is
   spliceable when both sides of the cut continue it, when it is a corner, or when a same-material
   tunnel output behind it takes over its feed (`beltCuttable`); `CorridorShift` (in
-  `LayoutCompaction.kt`) cuts one corridor and moves the far side. `UndergroundSpans.kt` walls off
+  `LayoutCompaction.kt`) cuts one corridor and moves the far side; `shrinks` compares the
+  candidate's `layoutExtent`, never a second tile grid. `UndergroundSpans.kt` walls off
   a tunnel's span when the seam runs along it, so both ends stay on the same side.
 - `blueprint/placing/special/PowerPlacer.kt` — pole coverage and pole-wire neighbours over the
   final geometry. The pole comes from `PowerPole.forSelection`: none in space, the small pole for
