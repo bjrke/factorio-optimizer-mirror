@@ -229,8 +229,6 @@ enum class Factory(
     companion object {
         internal val factoriesByCode =
             Factory.entries.filter { it.code != null }.associateBy { it.code }
-
-        val factoriesByIdentifier = Factory.entries.associateBy { it.identifier }
     }
 }
 

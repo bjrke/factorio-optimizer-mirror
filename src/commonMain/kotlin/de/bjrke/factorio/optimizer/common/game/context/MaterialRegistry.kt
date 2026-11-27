@@ -46,4 +46,11 @@ class MaterialRegistry(private val fluidNames: Set<String>) {
 
     /** The material at [index], the inverse of [Material.index]. */
     fun atIndex(index: Int): Material = byIndex[index]
+
+    /**
+     * The interned material for [name], or null when this universe does not have it. Unlike
+     * [Material], it never creates or numbers a material, so a name decoded from a URL cannot grow
+     * the registry.
+     */
+    fun existing(name: String): Material? = cache[name]
 }

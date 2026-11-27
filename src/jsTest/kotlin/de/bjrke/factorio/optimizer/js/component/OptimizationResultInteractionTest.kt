@@ -93,15 +93,47 @@ class OptimizationResultInteractionTest :
     }
 
     @Test
-    fun editingTheBeltCountPinsIt() {
+    fun editingTheBeltCountPinsItWhenTheEditIsCommitted() {
         val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
         renderResult(result)
 
         val count = firstBeltInput().value.toDouble()
         fireEvent.change(firstBeltInput(), changeTo("1"))
+        fireEvent.blur(firstBeltInput())
 
         // changeNormalizeTo(count) makes the displayed count one
         assertEquals(count, normalizedTo.single(), 0.01)
+    }
+
+    @Test
+    fun typingABeltCountNeitherCommitsNorRewritesTheField() {
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
+        renderResult(result)
+
+        fireEvent.change(firstBeltInput(), changeTo("2"))
+        fireEvent.change(firstBeltInput(), changeTo("2.5"))
+
+        assertAll(
+            // nothing is planned or pushed while the number is still being typed
+            { assertEquals(emptyList(), normalizedTo) },
+            // the field keeps the typed text instead of re-formatting it to "2.0"
+            { assertEquals("2.5", firstBeltInput().value) },
+        )
+    }
+
+    @Test
+    fun anEmptyBeltCountFallsBackToTheShownValueOnBlur() {
+        val result = optimizationResult(ironGearWheelRecipe, Factory.ASSEMBLING_MACHINE_1)
+        renderResult(result)
+
+        val shown = firstBeltInput().value
+        fireEvent.change(firstBeltInput(), changeTo(""))
+        fireEvent.blur(firstBeltInput())
+
+        assertAll(
+            { assertEquals(emptyList(), normalizedTo) },
+            { assertEquals(shown, firstBeltInput().value) },
+        )
     }
 
     @Test

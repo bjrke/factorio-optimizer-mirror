@@ -2,6 +2,7 @@ package de.bjrke.factorio.optimizer.common.blueprint.planning.plan
 
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
@@ -135,7 +136,41 @@ class LogisticsCalculator(
     fun directInserterCount(rate: Double) = rate / inserterThroughput()
 
     fun pumpCount(rate: Double) = rate / pumpThroughput()
+
+    /**
+     * The transport that moves [rate] units per second of [material] for [factory] on the
+     * [isOutput] side of the machine: a fluid needs pumps (the pipe is fixed), a solid needs belts
+     * and, unless the machine drops its product straight onto the belt, inserters. The side also
+     * picks the stacking and the inserter rate, so the CLI listing and the preview read one rule.
+     */
+    fun transport(
+        factory: Factory,
+        material: Material,
+        rate: Double,
+        isOutput: Boolean,
+    ): TransportCounts {
+        if (material.isFluid) return TransportCounts(pumps = pumpCount(rate))
+        val directOutput = isOutput && factory.outputsDirectly
+        val outputStacks = if (directOutput) factory.stacksOnBelt else rates.stacksOnBelt
+        val stack = if (isOutput) beltStackFor(outputStacks) else inserterBeltStack
+        return TransportCounts(
+            belts = beltCount(rate, stack),
+            inserters = if (directOutput) 0.0 else inserterCount(rate, ontoBelt = isOutput),
+            directOutput = directOutput,
+        )
+    }
 }
+
+/**
+ * How [LogisticsCalculator.transport] moves one material: a fluid needs [pumps] and a pipe, a solid
+ * needs [belts] plus [inserters] unless the machine fills the belt itself ([directOutput]).
+ */
+data class TransportCounts(
+    val pumps: Double = 0.0,
+    val belts: Double = 0.0,
+    val inserters: Double = 0.0,
+    val directOutput: Boolean = false,
+)
 
 /**
  * The items per belt slot a belt carries when its source [stacks]: the requested

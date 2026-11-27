@@ -13,12 +13,15 @@ const val NO_EXCLUSIONS = "-"
  * The materials the `excluded` URL segment names, sorted and comma-separated. An excluded material
  * is imported instead of built: the optimizer drops every recipe that produces it, so the plan
  * neither calculates nor lays out its production. The target is never excluded.
+ *
+ * A name this universe does not have is dropped instead of interned: a typo or a hand-edited URL
+ * must not grow the registry or invent a material nothing produces.
  */
 fun MaterialRegistry.excludedMaterialsFromUrl(segment: String?): Set<Material> =
     segment
         ?.split(',')
         ?.filter { it.isNotEmpty() && it != NO_EXCLUSIONS }
-        ?.mapTo(mutableSetOf()) { Material(it) }
+        ?.mapNotNullTo(mutableSetOf()) { existing(it) }
         .orEmpty()
 
 /** Encodes [materials] into the `excluded` URL segment; the empty set becomes [NO_EXCLUSIONS]. */

@@ -58,4 +58,27 @@ class ExcludedSelectionTest : BaseGameCtxTest() {
             assertEquals(expected, materialRegistry.excludedMaterialsFromUrl(segment))
         }
     }
+
+    @Test
+    fun anUnknownNameIsDroppedInsteadOfInterned() {
+        val sizeBefore = materialRegistry.size
+
+        assertAll(
+            {
+                assertEquals(
+                    emptySet(),
+                    materialRegistry.excludedMaterialsFromUrl("not-a-material"),
+                )
+            },
+            // a typo must not grow the process-wide registry
+            { assertEquals(sizeBefore, materialRegistry.size) },
+            // and it must not hide the names that do exist next to it
+            {
+                assertEquals(
+                    setOf(gear),
+                    materialRegistry.excludedMaterialsFromUrl("not-a-material,${gear.name}"),
+                )
+            },
+        )
+    }
 }

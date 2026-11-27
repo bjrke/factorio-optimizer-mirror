@@ -36,6 +36,7 @@ import de.bjrke.factorio.optimizer.common.game.selection.fullBeltIn
 import de.bjrke.factorio.optimizer.common.model.OptimizationResult
 import de.bjrke.factorio.optimizer.common.optimize.Optimizer
 import de.bjrke.factorio.optimizer.jvm.parseArgs
+import de.bjrke.factorio.optimizer.jvm.resolveExclusions
 import java.util.*
 import java.util.zip.Inflater
 import kotlin.test.assertEquals
@@ -102,7 +103,7 @@ internal fun GameCtxTestMixin.layoutFromUrl(url: String): Layout {
         if (cli.excludedNames.isEmpty()) {
             materialRegistry.excludedMaterialsFromUrl(cli.excludedSegment)
         } else {
-            cli.excludedNames.mapTo(mutableSetOf()) { Material(it) }
+            resolveExclusions(cli.excludedNames, parsedRecipes.materials)
         }
     val result =
         Optimizer(parsedRecipes, factories, cli.intermediates, excluded)[Material(cli.material)]

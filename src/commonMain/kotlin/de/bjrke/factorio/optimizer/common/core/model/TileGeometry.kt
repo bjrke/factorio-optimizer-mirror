@@ -13,11 +13,6 @@ fun Coordinate.distanceSq(b: Coordinate): Long {
 val Coordinate.chebyshevLen: Int
     get() = maxOf(abs(x), abs(y))
 
-fun Coordinate.chebyshevDist(b: Coordinate) = (this - b).chebyshevLen
-
-val Coordinate.manhattanLen: Int
-    get() = abs(x) + abs(y)
-
 /** The tile distance without a subtraction, so the route search does not allocate per estimate. */
 fun Coordinate.manhattanDist(b: Coordinate) = abs(x - b.x) + abs(y - b.y)
 

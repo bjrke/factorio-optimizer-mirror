@@ -8,7 +8,6 @@ import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlan
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.BlueprintPlanResult
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.blueprint.printing.inspection.layoutAscii
 import de.bjrke.factorio.optimizer.common.blueprint.printing.json.toJson
 import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
@@ -110,9 +109,16 @@ internal fun runCli(
         return 1
     }
     val excluded =
-        if (cli.excludedNames.isEmpty())
-            materialRegistry.excludedMaterialsFromUrl(cli.excludedSegment)
-        else cli.excludedNames.mapTo(mutableSetOf()) { materialRegistry.Material(it) }
+        try {
+            if (cli.excludedNames.isEmpty()) {
+                materialRegistry.excludedMaterialsFromUrl(cli.excludedSegment)
+            } else {
+                resolveExclusions(cli.excludedNames, parsedRecipes.materials)
+            }
+        } catch (exception: CliUsageException) {
+            err(exception.message ?: "Invalid arguments")
+            return 1
+        }
 
     val run = resolve(cli, parsedRecipes, target, excluded)
     val outputs = cli.outputs.ifEmpty { setOf(Output.LISTING) }
@@ -126,25 +132,22 @@ internal fun runCli(
         sections += { out(settingsText(cli, run.factories, run.logistics, excluded)) }
     }
     if (Output.LISTING in outputs) sections += { printListing(run.result, run.logistics, out) }
-    val blueprintContext =
-        BlueprintContext(
-            run.logistics,
-            cli.beltEnd,
-            PowerPole.forSelection(cli.surface, run.factories),
-            out,
-        )
-    sections.addBlueprintSections(outcome, blueprintOutputs, blueprintContext)
+    sections.addBlueprintSections(outcome, blueprintOutputs, run, cli, out)
     sections.forEach { it() }
     return 0
 }
 
 /** Everything the blueprint outputs need besides the plan itself. */
 private data class BlueprintContext(
+    val plan: BlueprintPlan,
     val logistics: LogisticsCalculator,
     val beltEnd: BeltEnd,
     val powerPole: PowerPole,
     val out: (String) -> Unit,
-)
+) {
+    /** Laid out once on the first blueprint output, so a run that prints none never lays it out. */
+    val layout by lazy { RowLayout(plan, logistics, beltEnd, powerPole) }
+}
 
 /** The resolved configuration and plan one CLI run prints. */
 private data class Run(
@@ -199,19 +202,27 @@ private fun resolve(
 /** Appends the requested blueprint outputs, or the reason the plan cannot be built. */
 private fun MutableList<() -> Unit>.addBlueprintSections(
     outcome: BlueprintPlanResult?,
-    blueprintOutputs: List<Output>,
-    context: BlueprintContext,
+    outputs: List<Output>,
+    run: Run,
+    cli: CliArgs,
+    out: (String) -> Unit,
 ) {
     when (outcome) {
         null -> {}
         is BlueprintPlanResult.Unavailable ->
-            add {
-                context.out("No blueprint available: ${outcome.reason}")
-            }
-        is BlueprintPlanResult.Planned ->
-            for (output in blueprintOutputs) {
-                add { emitBlueprint(output, outcome.plan, context) }
-            }
+            add { out("No blueprint available: ${outcome.reason}") }
+        is BlueprintPlanResult.Planned -> {
+            // one context, so several outputs print the same layout instead of laying it out again
+            val context =
+                BlueprintContext(
+                    outcome.plan,
+                    run.logistics,
+                    cli.beltEnd,
+                    PowerPole.forSelection(cli.surface, run.factories),
+                    out,
+                )
+            for (output in outputs) add { emitBlueprint(output, context) }
+        }
     }
 }
 
@@ -241,10 +252,8 @@ internal fun settingsText(
         .trimIndent()
 
 /** Prints the requested blueprint [output]; the non-blueprint outputs never reach here. */
-private fun emitBlueprint(output: Output, plan: BlueprintPlan, context: BlueprintContext) {
-    blueprintGenerator(output)?.let {
-        context.out(it(RowLayout(plan, context.logistics, context.beltEnd, context.powerPole)))
-    }
+private fun emitBlueprint(output: Output, context: BlueprintContext) {
+    blueprintGenerator(output)?.let { context.out(it(context.layout)) }
 }
 
 private fun blueprintGenerator(output: Output) =
@@ -274,17 +283,11 @@ private fun printListing(
         rate: Double,
         isOutput: Boolean,
     ): String {
-        if (material.isFluid) {
-            return "${superRound(logistics.pumpCount(rate))} pumps + pipe"
-        }
-        // the big mining drill and the recycler drop their product straight onto the belt
-        val directOutput = isOutput && factory.outputsDirectly
-        val outputStacks = if (directOutput) factory.stacksOnBelt else logistics.rates.stacksOnBelt
-        val stack =
-            if (isOutput) logistics.beltStackFor(outputStacks) else logistics.inserterBeltStack
-        val belts = "${superRound(logistics.beltCount(rate, stack))} belts"
-        return if (directOutput) belts
-        else "$belts + ${superRound(logistics.inserterCount(rate, ontoBelt = isOutput))} inserters"
+        val counts = logistics.transport(factory, material, rate, isOutput)
+        if (material.isFluid) return "${superRound(counts.pumps)} pumps + pipe"
+        val belts = "${superRound(counts.belts)} belts"
+        return if (counts.directOutput) belts
+        else "$belts + ${superRound(counts.inserters)} inserters"
     }
 
     result.factories.values.sortedWith(factoryProductionComparator).forEach { production ->

@@ -28,10 +28,13 @@ import de.bjrke.factorio.optimizer.common.game.selection.surfaceFromUrl
  * code character; anything else fails with [CliUsageException]. Any argument may be replaced by a
  * pasted web UI URL, e.g. `http://localhost:8080/#/4.5/advanced-circuit/CFSXbmr/1/1/10`, whose
  * segments fill in the material, selection, normalize target, stack sizes, intermediate limit and
- * excluded materials. Explicit flags override it.
+ * excluded materials. Explicit flags override it. An argument the parser cannot use — an unknown
+ * option, a valued option without `=`, a second URL or a second material — is rejected with
+ * [CliUsageException] instead of being ignored.
  */
 fun parseArgs(args: Array<String>): CliArgs {
     val url = args.firstNotNullOfOrNull { parseFactorioUrl(it) }
+    validateArguments(args)
     // a positional argument that is not the URL overrides its target
     val positional = args.firstOrNull { !it.startsWith("--") && parseFactorioUrl(it) == null }
     val spaceAge = resolveSpaceAge(args, url)

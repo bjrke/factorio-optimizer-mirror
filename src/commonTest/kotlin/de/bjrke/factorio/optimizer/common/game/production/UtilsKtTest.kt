@@ -20,6 +20,10 @@ class UtilsKtTest {
             0.001 to 0.001,
             0.5 to 0.5,
             2.0 to 2.0,
+            // a huge factor overflows amount × factor to Infinity, where the display fails
+            1.0e7 to null,
+            1.0e308 to null,
+            MAX_NORMALIZE_TARGET to MAX_NORMALIZE_TARGET,
         ) { (value, expected) ->
             assertEquals(expected, validNormalizeTarget(value))
         }
@@ -36,8 +40,11 @@ class UtilsKtTest {
             "NaN" to DEFAULT_NORMALIZE_TARGET,
             "Infinity" to DEFAULT_NORMALIZE_TARGET,
             "-Infinity" to DEFAULT_NORMALIZE_TARGET,
+            "1.0E308" to DEFAULT_NORMALIZE_TARGET,
+            "1000001" to DEFAULT_NORMALIZE_TARGET,
             "0.5" to 0.5,
             "2" to 2.0,
+            "1000000" to MAX_NORMALIZE_TARGET,
         ) { (raw, expected) ->
             assertEquals(expected, normalizeTargetFromUrl(raw))
         }

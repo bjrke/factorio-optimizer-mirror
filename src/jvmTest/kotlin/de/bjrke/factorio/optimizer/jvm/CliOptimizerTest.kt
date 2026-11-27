@@ -2,8 +2,11 @@ package de.bjrke.factorio.optimizer.jvm
 
 import de.bjrke.factorio.optimizer.common.blueprint.layout.BeltEnd
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculatorSelection
+import de.bjrke.factorio.optimizer.common.blueprint.printing.output.blueprintString
 import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.gear
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.game.production.ALL_SCIENCE_PACKS
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Factory
@@ -15,6 +18,7 @@ import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -330,6 +334,83 @@ class CliOptimizerTest : BaseGameCtxTest() {
                 { assertEquals(message, errors.single()) },
             )
         }
+
+    @Test
+    fun argumentsTheParserCannotUseAreRejected() =
+        assertTableOf(
+            // a valued option written with a space would silently keep the default
+            arrayOf("--planet", "vulcanus"),
+            // a misspelled flag would silently print the listing
+            arrayOf("--blueprints"),
+            // a stray second material would silently be dropped
+            arrayOf("iron-plate", "extra"),
+            // only one pasted URL is understood
+            arrayOf(url, vulcanusUrl),
+            // a mode flag takes no value
+            arrayOf("--full-belt=true"),
+        ) { args ->
+            assertFailsWith<CliUsageException>(args.joinToString(" ")) { parseArgs(args) }
+        }
+
+    @Test
+    fun anUnknownExclusionIsRejected() =
+        assertAll(
+            {
+                assertFailsWith<CliUsageException> {
+                    resolveExclusions(listOf("iron-plat"), listOf(ironPlate))
+                }
+            },
+            {
+                assertEquals(
+                    setOf(ironPlate, gear),
+                    resolveExclusions(
+                        listOf("iron-plate", "iron-gear-wheel"),
+                        listOf(ironPlate, gear),
+                    ),
+                )
+            },
+            { assertEquals(emptySet(), resolveExclusions(emptyList(), listOf(ironPlate))) },
+        )
+
+    @Test
+    fun anUnknownExcludedMaterialExitsNonZero() {
+        val output = mutableListOf<String>()
+        val errors = mutableListOf<String>()
+
+        val code =
+            runCli(
+                arrayOf("iron-plate", "--base-game", "--exclude=iron-plat"),
+                out = { output += it },
+                err = { errors += it },
+            )
+
+        assertAll(
+            { assertEquals(1, code) },
+            { assertEquals(emptyList(), output) },
+            { assertContains(errors.single(), "iron-plat", message = errors.toString()) },
+        )
+    }
+
+    @Test
+    fun theBlueprintOutputsShareOneLayout() {
+        val output = mutableListOf<String>()
+        val errors = mutableListOf<String>()
+
+        val code =
+            runCli(
+                arrayOf("iron-plate", "--base-game", "--json", "--blueprint"),
+                out = { output += it },
+                err = { errors += it },
+            )
+
+        assertAll(
+            { assertEquals(0, code) },
+            { assertEquals(emptyList(), errors) },
+            // the JSON first, then the blueprint string that encodes exactly that JSON
+            { assertEquals(2, output.size) },
+            { assertEquals(blueprintString(output[0]), output[1]) },
+        )
+    }
 
     @Test
     fun theListingPrintsPrototypeIdentifiers() {

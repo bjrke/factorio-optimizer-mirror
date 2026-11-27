@@ -81,8 +81,31 @@ internal fun blueprintOverlay(entity: LayoutEntity): String? =
         else -> null
     }
 
+/**
+ * Copies [text] to the clipboard. The async Clipboard API is missing outside a secure context and
+ * can reject when the document is not focused, so a rejected or absent API falls back to the
+ * textarea + `execCommand` path instead of silently doing nothing.
+ */
 private fun copyToClipboard(text: String) {
-    js("navigator.clipboard && navigator.clipboard.writeText(text)")
+    js(
+        """
+        function fallbackCopy(value) {
+            var area = document.createElement("textarea");
+            area.value = value;
+            area.setAttribute("readonly", "");
+            area.style.position = "fixed";
+            area.style.opacity = "0";
+            document.body.appendChild(area);
+            area.select();
+            try { document.execCommand("copy"); } finally { document.body.removeChild(area); }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () { fallbackCopy(text); });
+        } else {
+            fallbackCopy(text);
+        }
+        """,
+    )
 }
 
 external interface BlueprintViewProps : Props {

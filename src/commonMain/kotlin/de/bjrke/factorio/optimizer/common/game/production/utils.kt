@@ -4,7 +4,17 @@ import de.bjrke.factorio.optimizer.common.util.superRound
 
 const val DEFAULT_NORMALIZE_TARGET = 1.0
 
-fun validNormalizeTarget(value: Double?): Double? = value?.takeIf { it.isFinite() && it > 0.0 }
+/**
+ * The largest normalize target a URL or the CLI accepts. The amount fields show `amount ×
+ * normalizeTarget`, so an unbounded value overflows the product to `Infinity` and the display
+ * fails; a million still covers every rate the picker offers.
+ */
+const val MAX_NORMALIZE_TARGET = 1_000_000.0
+
+/** A factor that keeps `amount × factor` a finite display value; null rejects the value. */
+fun validNormalizeTarget(value: Double?): Double? = value?.takeIf {
+    it.isFinite() && it > 0.0 && it <= MAX_NORMALIZE_TARGET
+}
 
 fun normalizeTargetFromUrl(raw: String?): Double =
     validNormalizeTarget(raw?.toDoubleOrNull()) ?: DEFAULT_NORMALIZE_TARGET

@@ -1,11 +1,15 @@
 package de.bjrke.factorio.optimizer.common.blueprint.planning.plan
 
+import de.bjrke.factorio.optimizer.common.fixtures.BaseGameCtxTest
 import de.bjrke.factorio.optimizer.common.fixtures.BeltCase
+import de.bjrke.factorio.optimizer.common.fixtures.GameCtxTestMixin
 import de.bjrke.factorio.optimizer.common.fixtures.beltCountAtOwnStack
 import de.bjrke.factorio.optimizer.common.fixtures.beltThroughputAtOwnStack
 import de.bjrke.factorio.optimizer.common.fixtures.calculator
+import de.bjrke.factorio.optimizer.common.fixtures.ironPlate
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltStats
 import de.bjrke.factorio.optimizer.common.game.prototype.BeltTier
+import de.bjrke.factorio.optimizer.common.game.prototype.Factory
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterStats
 import de.bjrke.factorio.optimizer.common.game.prototype.InserterTier
 import de.bjrke.factorio.optimizer.common.game.prototype.Logistics
@@ -14,10 +18,11 @@ import de.bjrke.test.assertAll
 import de.bjrke.test.assertTableOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** Belt, inserter and placing throughput, and the counts derived from them. */
-class LogisticsTest {
+class LogisticsTest : GameCtxTestMixin by BaseGameCtxTest() {
 
     @Test
     fun beltThroughputPerTierLanesAndStacking() =
@@ -246,6 +251,63 @@ class LogisticsTest {
                 )
             },
             { assertEquals(1.0, calculator().pumpCount(1200.0), TOLERANCE) },
+        )
+
+    @Test
+    fun transportCountsFollowTheMachineAndTheSideOfTheRow() =
+        assertAll(
+            {
+                val fluid =
+                    calculator()
+                        .transport(
+                            Factory.CHEMICAL_PLANT,
+                            Material("water"),
+                            1200.0,
+                            isOutput = false,
+                        )
+                assertAll(
+                    { assertEquals(1.0, fluid.pumps, TOLERANCE) },
+                    { assertEquals(0.0, fluid.belts, TOLERANCE) },
+                    { assertEquals(0.0, fluid.inserters, TOLERANCE) },
+                )
+            },
+            {
+                // an input inserter moves into the machine at the faster direct rate
+                val input =
+                    calculator()
+                        .transport(Factory.ASSEMBLING_MACHINE_3, ironPlate, 12.0, isOutput = false)
+                assertAll(
+                    { assertEquals(0.4, input.belts, TOLERANCE) },
+                    { assertEquals(5.0, input.inserters, TOLERANCE) },
+                    { assertFalse(input.directOutput) },
+                )
+            },
+            {
+                // an output inserter drops onto the belt, so it is belt-limited and slower
+                val output =
+                    calculator()
+                        .transport(Factory.ASSEMBLING_MACHINE_3, ironPlate, 12.0, isOutput = true)
+                assertAll(
+                    { assertEquals(0.4, output.belts, TOLERANCE) },
+                    { assertEquals(5.8, output.inserters, TOLERANCE) },
+                )
+            },
+            {
+                // a direct-output machine needs no inserter and stacks its own belt
+                val direct =
+                    calculator(
+                            LogisticsCalculatorSelection(
+                                inserter = InserterTier.STACK_INSERTER,
+                                beltStack = 4,
+                            ),
+                        )
+                        .transport(Factory.RECYCLER, ironPlate, 12.0, isOutput = true)
+                assertAll(
+                    { assertEquals(0.1, direct.belts, TOLERANCE) },
+                    { assertEquals(0.0, direct.inserters, TOLERANCE) },
+                    { assertTrue(direct.directOutput) },
+                )
+            },
         )
 
     @Test

@@ -1,7 +1,6 @@
 package de.bjrke.factorio.optimizer.js.component
 
 import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.LogisticsCalculator
-import de.bjrke.factorio.optimizer.common.blueprint.planning.plan.beltStackFor
 import de.bjrke.factorio.optimizer.common.core.model.Material
 import de.bjrke.factorio.optimizer.common.game.production.validNormalizeTarget
 import de.bjrke.factorio.optimizer.common.game.prototype.Category
@@ -18,6 +17,8 @@ import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.input
 import react.dom.html.ReactHTML.span
+import react.useEffect
+import react.useState
 import web.cssom.Border
 import web.cssom.Color
 import web.cssom.Display
@@ -46,7 +47,9 @@ external interface OptimizationResultPresenterDispatchProps : Props {
     var changeMaterial: (Material) -> Unit
     /** A click on an amount or icon: pins the amount and pushes one history entry. */
     var changeNormalizeTo: (Double) -> Unit
-    /** An amount typed into a field: replaces its history entry instead of one per keystroke. */
+    /**
+     * A committed amount edit (Enter or blur): replaces its history entry instead of one per edit.
+     */
     var editNormalizeTo: (Double) -> Unit
     /** Adds or removes [Material] from the exclusions; `true` excludes it from the plan. */
     var changeExcluded: (Material, Boolean) -> Unit
@@ -58,23 +61,78 @@ external interface OptimizationResultPresenterProps :
 /** `MouseEvent.button` value of the middle mouse button. */
 private val MIDDLE_BUTTON = MouseButton.AUXILIARY
 
+/**
+ * The amount of one derived row value as an editable field. It shows `value × normalizeTarget` and
+ * writes the URL only when the edit is committed (Enter or blur): a keystroke must neither replan
+ * the factory nor rewrite the field's caret mid-number. A committed value the display cannot show
+ * (empty, zero, or so large the product is not finite) is discarded and the field falls back.
+ */
+private val derivedNumberField =
+    FC<DerivedNumberFieldProps>("derivedNumberField") { props ->
+        val displayed = superRound(props.value * props.normalizeTarget).toString()
+        val (text, setText) = useState(displayed)
+        // an icon click or another row changes the plan under the field: follow it
+        useEffect(displayed) { setText(displayed) }
+
+        fun commit() {
+            val typed = text.toDoubleOrNull()
+            // the caller stores a plan scale, so the stored normalize target becomes value / typed
+            if (typed == null || validNormalizeTarget(typed / props.value) == null) {
+                setText(displayed)
+                return
+            }
+            props.edit(props.value / typed)
+        }
+
+        input {
+            type = InputType.number
+            min = "0"
+            title = props.title
+            css {
+                width = 4.rem
+                if (props.wide) marginRight = 1.ch else marginRight = 0.25.rem
+            }
+            value = text
+            onChange = { setText(it.target.value) }
+            onKeyDown = { event ->
+                if (event.key == "Enter") {
+                    event.preventDefault()
+                    commit()
+                }
+            }
+            onBlur = { commit() }
+        }
+    }
+
+external interface DerivedNumberFieldProps : Props {
+    /**
+     * The row's value before the plan scale; the field shows it multiplied by the normalize target.
+     */
+    var value: Double
+    var normalizeTarget: Double
+    var title: String?
+    /**
+     * The amount field sits next to a material and keeps a wider gap than a belt/inserter count.
+     */
+    var wide: Boolean
+
+    /**
+     * Receives the plan scale, the value [OptimizationResultPresenterDispatchProps.editNormalizeTo]
+     * expects.
+     */
+    var edit: (Double) -> Unit
+}
+
 private fun ChildrenBuilder.amountInput(
     props: OptimizationResultPresenterProps,
     amount: Double,
 ) {
-    input {
-        type = InputType.number
-        min = "0"
-        css {
-            width = 4.rem
-            marginRight = 1.ch
-        }
-        value = superRound(amount * props.normalizeTarget).toString()
-        onChange = { event ->
-            event.target.value.toDoubleOrNull()?.let { value ->
-                validNormalizeTarget(amount / value)?.let { props.editNormalizeTo(it) }
-            }
-        }
+    derivedNumberField {
+        value = amount
+        normalizeTarget = props.normalizeTarget
+        title = null
+        wide = true
+        edit = props.editNormalizeTo
     }
 }
 
@@ -116,7 +174,6 @@ private fun ChildrenBuilder.amountInputIcon(
 
 // fixed widths so a row is exactly as wide no matter whether it carries a belt+inserter, a
 // pump+pipe or (for recipes without ingredients) nothing at all
-private val LOGISTICS_INPUT_WIDTH = 4.rem
 private val LOGISTICS_ITEM_WIDTH = 6.75.rem
 
 /** Fixed input/output column width; empty and fluid columns are padded to match. */
@@ -218,22 +275,12 @@ private fun ChildrenBuilder.logisticsInputIcon(
     rotation: Int? = null,
     flipHorizontal: Boolean = false,
 ) {
-    input {
-        type = InputType.number
-        min = "0"
+    derivedNumberField {
+        value = amount
+        normalizeTarget = props.normalizeTarget
         title = unit
-        css {
-            width = LOGISTICS_INPUT_WIDTH
-            marginRight = 0.25.rem
-        }
-        value = superRound(amount * props.normalizeTarget).toString()
-        onChange = {
-            it.target.value.toDoubleOrNull()?.let { value ->
-                validNormalizeTarget(amount / value)?.let { scale ->
-                    props.editNormalizeTo(scale)
-                }
-            }
-        }
+        wide = false
+        edit = props.editNormalizeTo
     }
     a {
         css { marginRight = 0.5.rem }
@@ -261,14 +308,8 @@ private fun ChildrenBuilder.pipeMarker() {
 /**
  * The logistics needed to move [material] at [rate] items/fluid per second: a belt and an inserter
  * for solids, a pump plus a pipe marker for fluids. The counts are editable like the material
- * amounts.
- *
- * The big mining drill and the recycler drop their output straight onto the belt and stack it
- * themselves, so such an output needs no inserter and always uses the belt stacking. The other
- * drills place single items, and the remaining outputs are loaded by the selected inserter, so belt
- * stacking only applies when that inserter can stack, and the output inserter count uses the slower
- * belt-limited placing rate. An input belt is loaded by the selected inserter too, so it is also
- * unstacked unless that inserter stacks.
+ * amounts, and [LogisticsCalculator.transport] decides the stacking and whether an inserter is
+ * needed at all.
  */
 private fun ChildrenBuilder.materialLogistics(
     props: OptimizationResultPresenterProps,
@@ -278,32 +319,27 @@ private fun ChildrenBuilder.materialLogistics(
     isOutput: Boolean,
 ) {
     val calculator = props.logistics
+    val counts = calculator.transport(factory, material, rate, isOutput)
     if (material.isFluid) {
-        logisticsInputIcon(props, "pump", "pumps", calculator.pumpCount(rate))
+        logisticsInputIcon(props, "pump", "pumps", counts.pumps)
         pipeMarker()
         return
     }
 
-    val directOutput = isOutput && factory.outputsDirectly
-    // a direct output is stacked by the machine itself, any other output by the selected inserter
-    val outputStacks = if (directOutput) factory.stacksOnBelt else calculator.rates.stacksOnBelt
-    val stack =
-        if (isOutput) calculator.beltStackFor(outputStacks) else calculator.inserterBeltStack
     logisticsInputIcon(
         props,
         calculator.belt.identifier,
         "belts",
-        calculator.beltCount(rate, stack),
+        counts.belts,
         // an input belt feeds the machine (clockwise), an output belt carries the product away
         rotation = if (isOutput) -90 else 90,
     )
-    if (!directOutput) {
+    if (!counts.directOutput) {
         logisticsInputIcon(
             props,
             calculator.inserter.identifier,
             "inserters",
-            // an output inserter drops onto the belt, an input inserter into the machine
-            calculator.inserterCount(rate, ontoBelt = isOutput),
+            counts.inserters,
             // the output inserter points the other way, so mirror it
             flipHorizontal = isOutput,
         )
